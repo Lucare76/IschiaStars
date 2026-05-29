@@ -91,12 +91,44 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
     return <div className="rounded-2xl bg-white/90 p-6 text-sm font-semibold text-ischia-ink/70 shadow-soft">Configura almeno un hotel attivo prima di creare un preventivo.</div>;
   }
 
+  if (savedQuote) {
+    return (
+      <section className="rounded-2xl bg-white/90 p-6 shadow-soft">
+        <p className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800 ring-1 ring-emerald-100">
+          Preventivo generato. La richiesta non compare piu tra i preventivi da evadere.
+        </p>
+        <div className="mt-5 grid gap-4 text-sm">
+          <div>
+            <p className="font-black text-ischia-navy">Codice preventivo</p>
+            <p className="mt-1 text-lg font-black text-ischia-ink">{savedQuote.code}</p>
+          </div>
+          <div>
+            <p className="font-black text-ischia-navy">Link cliente</p>
+            <p className="mt-1 break-all rounded-xl bg-ischia-mist px-3 py-2 font-semibold text-ischia-ink">{publicQuoteUrl(savedQuote)}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <WhatsAppSendButton quote={savedQuote} />
+            <Link className="rounded-full bg-ischia-navy px-4 py-2 font-black text-white" href={publicQuoteUrl(savedQuote)}>
+              Apri link cliente
+            </Link>
+            <Link className="rounded-full bg-white px-4 py-2 font-black text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/preventivi/${savedQuote.code}`}>
+              Dettaglio preventivo
+            </Link>
+            <Link className="rounded-full bg-white px-4 py-2 font-black text-ischia-navy ring-1 ring-ischia-blue/20" href="/admin/preventivi">
+              Tutti i preventivi
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_0.36fr]">
       <form className="space-y-5" onSubmit={submit}>
         {initialRequest ? (
           <div className="rounded-2xl bg-ischia-sun/20 p-4 text-sm font-semibold text-ischia-navy ring-1 ring-ischia-sun/35">
-            Preventivo creato dalla richiesta di {initialRequest.firstName} {initialRequest.lastName}. I dati cliente e soggiorno sono stati precompilati.
+            Stai creando un preventivo dalla richiesta di {initialRequest.firstName} {initialRequest.lastName}. I dati cliente e soggiorno sono stati precompilati.
           </div>
         ) : requestedRequestId ? (
           <div className="rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-700 ring-1 ring-rose-100">
@@ -152,14 +184,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
       <aside className="space-y-4">
         <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
           <h2 className="text-xl font-black text-ischia-navy">Risultato</h2>
-          {savedQuote ? (
-            <div className="mt-4 space-y-3 text-sm">
-              <p><strong>Codice:</strong> {savedQuote.code}</p>
-              <p className="break-all"><strong>Link:</strong> {publicQuoteUrl(savedQuote)}</p>
-              <Link className="inline-flex rounded-full bg-ischia-navy px-4 py-2 font-black text-white" href={publicQuoteUrl(savedQuote)}>Apri preventivo cliente</Link>
-              <div><WhatsAppSendButton quote={savedQuote} /></div>
-            </div>
-          ) : <p className="mt-2 text-sm text-ischia-ink/70">Dopo il salvataggio vedrai qui link pubblico e invio WhatsApp.</p>}
+          <p className="mt-2 text-sm text-ischia-ink/70">Dopo il salvataggio vedrai link pubblico e invio WhatsApp.</p>
         </div>
       </aside>
     </div>
