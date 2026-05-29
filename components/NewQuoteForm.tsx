@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { FormEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
+import type { FormEvent, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { useMemo, useState } from "react";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { adminApiHeaders } from "@/lib/admin-api-client";
@@ -9,6 +9,7 @@ import { Hotel, Quote, QuoteRequest } from "@/lib/types";
 import { publicQuoteUrl } from "@/lib/utils";
 
 type SavedQuote = Quote | null;
+const treatmentOptions = ["Camera e Colazione", "Mezza Pensione", "Pensione Completa", "Solo Camera"];
 
 export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { hotels: Hotel[]; initialRequest?: QuoteRequest | null; requestedRequestId?: string }) {
   const activeHotels = hotels.filter((hotel) => hotel.active);
@@ -115,7 +116,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
             <Input label="Numero bambini" type="number" value={String(childrenCount)} onChange={(event) => setChildrenCount(Number(event.target.value))} min="0" />
             {Array.from({ length: childrenCount }, (_, index) => <Input key={index} name={`child-${index}`} label={`Data nascita bambino ${index + 1}`} required type="date" defaultValue={initialRequest?.children[index]?.birthDate} />)}
             <Input name="rooms" label="Camere" required type="number" defaultValue={String(initialRequest?.rooms ?? 1)} />
-            <Input name="treatment" label="Trattamento" placeholder="Mezza pensione, BB, pensione completa..." defaultValue={initialRequest?.requestedTreatment} />
+            <TreatmentSelect name="treatment" label="Trattamento" defaultValue={normalizeTreatment(initialRequest?.requestedTreatment)} />
           </div>
         </Section>
 
@@ -173,6 +174,27 @@ function Input({ label, ...props }: { label: string } & InputHTMLAttributes<HTML
   return <label className="text-sm font-semibold text-ischia-ink">{label}<input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" {...props} /></label>;
 }
 
+function TreatmentSelect({ label, ...props }: { label: string } & SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <label className="text-sm font-semibold text-ischia-ink">
+      {label}
+      <select className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" {...props}>
+        {treatmentOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+      </select>
+    </label>
+  );
+}
+
 function Textarea({ label, value, onChange, ...props }: { label: string; value?: string; onChange?: (value: string) => void } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange" | "value">) {
   return <label className="block text-sm font-semibold text-ischia-ink">{label}<textarea className="mt-1 min-h-28 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" value={value} onChange={onChange ? (event) => onChange(event.target.value) : undefined} {...props} /></label>;
+}
+
+function normalizeTreatment(value?: string) {
+  if (!value) return "Camera e Colazione";
+  const normalized = value.trim().toLowerCase();
+  if (["prima colazione", "bb", "b&b", "bed and breakfast", "camera e colazione"].includes(normalized)) return "Camera e Colazione";
+  if (["mezza pensione", "half board"].includes(normalized)) return "Mezza Pensione";
+  if (["pensione completa", "full board"].includes(normalized)) return "Pensione Completa";
+  if (["solo camera", "room only"].includes(normalized)) return "Solo Camera";
+  return treatmentOptions.find((option) => option.toLowerCase() === normalized) ?? "Camera e Colazione";
 }

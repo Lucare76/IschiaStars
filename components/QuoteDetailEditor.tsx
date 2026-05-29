@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { FormEvent, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { FormEvent, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { useState } from "react";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
@@ -10,6 +10,7 @@ import { Hotel, Quote, QuoteStatus, TransportOffer } from "@/lib/types";
 import { formatCurrency, publicQuoteUrl } from "@/lib/utils";
 
 const statusOptions: QuoteStatus[] = ["preventivo_inviato", "confermato", "perso_non_disponibile"];
+const treatmentOptions = ["Camera e Colazione", "Mezza Pensione", "Pensione Completa", "Solo Camera"];
 
 export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hotel[] }) {
   const [currentQuote, setCurrentQuote] = useState(quote);
@@ -107,7 +108,7 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
             <Input name="checkOut" label="Data partenza" defaultValue={currentQuote.departureDate} required type="date" />
             <Input name="adults" label="Adulti" defaultValue={String(currentQuote.adults)} required type="number" />
             <Input name="rooms" label="Camere" defaultValue={String(currentQuote.rooms)} required type="number" />
-            <Input name="treatment" label="Trattamento" defaultValue={currentQuote.treatment} />
+            <TreatmentSelect name="treatment" label="Trattamento" defaultValue={normalizeTreatment(currentQuote.treatment)} />
           </div>
         </Section>
 
@@ -175,8 +176,29 @@ function Input({ label, ...props }: { label: string } & InputHTMLAttributes<HTML
   return <label className="text-sm font-semibold text-ischia-ink">{label}<input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" {...props} /></label>;
 }
 
+function TreatmentSelect({ label, ...props }: { label: string } & SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <label className="text-sm font-semibold text-ischia-ink">
+      {label}
+      <select className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" {...props}>
+        {treatmentOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+      </select>
+    </label>
+  );
+}
+
 function Textarea({ label, value, onChange, ...props }: { label: string; value?: string; onChange?: (value: string) => void } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange" | "value">) {
   return <label className="block text-sm font-semibold text-ischia-ink">{label}<textarea className="mt-1 min-h-24 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" value={value} onChange={onChange ? (event) => onChange(event.target.value) : undefined} {...props} /></label>;
+}
+
+function normalizeTreatment(value?: string) {
+  if (!value) return "Camera e Colazione";
+  const normalized = value.trim().toLowerCase();
+  if (["prima colazione", "bb", "b&b", "bed and breakfast", "camera e colazione"].includes(normalized)) return "Camera e Colazione";
+  if (["mezza pensione", "half board"].includes(normalized)) return "Mezza Pensione";
+  if (["pensione completa", "full board"].includes(normalized)) return "Pensione Completa";
+  if (["solo camera", "room only"].includes(normalized)) return "Solo Camera";
+  return treatmentOptions.find((option) => option.toLowerCase() === normalized) ?? "Camera e Colazione";
 }
 
 function withDefaultTransportOffers(offers: TransportOffer[] = []) {
