@@ -7,7 +7,7 @@ import { listQuotes } from "@/lib/repositories/quotes";
 export const dynamic = "force-dynamic";
 
 export default async function QuotesPage() {
-  const quoteResult = await listQuotes();
+  const quoteResult = await listQuotes({ includeDeleted: true });
   const quotes = quoteResult.data;
   const statsByQuote: Record<string, Awaited<ReturnType<typeof getQuoteEventStats>>["data"]> = {};
 

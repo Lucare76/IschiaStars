@@ -240,9 +240,17 @@ function toImportedUpdateRow(current: Record<string, any>, importedRow: Record<s
       ...(importedImageUrl ? { importedImageUrl } : {})
     },
     updated_at: now,
+    // Aggiorna solo se il campo è vuoto — non sovrascrivere dati inseriti manualmente
     ...(!current.short_description && importedRow.short_description ? { short_description: importedRow.short_description } : {}),
-    ...(canUpdateImage ? { image_url: importedRow.image_url } : {})
+    ...(canUpdateImage ? { image_url: importedRow.image_url } : {}),
+    ...(isArrayEmpty(current.standard_services) && importedRow.standard_services?.length ? { standard_services: importedRow.standard_services } : {}),
+    ...(!current.payment_policy && importedRow.payment_policy ? { payment_policy: importedRow.payment_policy } : {}),
+    ...(!current.cancellation_policy && importedRow.cancellation_policy ? { cancellation_policy: importedRow.cancellation_policy } : {})
   };
+}
+
+function isArrayEmpty(value: unknown): boolean {
+  return !value || (Array.isArray(value) && value.length === 0);
 }
 
 function hasMeaningfulImportChanges(current: Record<string, any>, updateRow: Record<string, any>) {

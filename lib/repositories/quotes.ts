@@ -1,5 +1,5 @@
 import { hotels } from "@/lib/mock-data";
-import { addDemoQuote, allDemoQuotes, isQuoteConfirmedInDemo, markQuoteConfirmed as markDemoQuoteConfirmed, updateDemoQuote } from "@/lib/demo-store";
+import { addDemoQuote, allDemoQuotes, excludeDemoQuoteFromStats, isQuoteConfirmedInDemo, markQuoteConfirmed as markDemoQuoteConfirmed, restoreDemoQuote, softDeleteDemoQuote, updateDemoQuote } from "@/lib/demo-store";
 import { listHotels } from "@/lib/repositories/hotels";
 import { createQuoteStatusEvent } from "@/lib/repositories/quoteStatusEvents";
 import { fallback, fromSupabase, mapQuote, RepositoryResult } from "@/lib/repositories/shared";
@@ -35,13 +35,16 @@ export type QuoteInput = {
   internalNotes?: string;
 };
 
-export async function listQuotes(): Promise<RepositoryResult<Quote[]>> {
+export async function listQuotes({ includeDeleted = false }: { includeDeleted?: boolean } = {}): Promise<RepositoryResult<Quote[]>> {
   const supabase = createSupabaseAdminClient();
-  if (!supabase) return fallback(allDemoQuotes());
+  const demoQuotes = includeDeleted ? allDemoQuotes() : allDemoQuotes().filter((q) => !q.deletedAt);
+  if (!supabase) return fallback(demoQuotes);
 
   const hotelResult = await listHotels();
-  const { data, error } = await supabase.from("quotes").select("*").order("created_at", { ascending: false });
-  if (error) return fallback(allDemoQuotes(), error);
+  let query = supabase.from("quotes").select("*").order("created_at", { ascending: false });
+  if (!includeDeleted) query = query.is("deleted_at", null);
+  const { data, error } = await query;
+  if (error) return fallback(demoQuotes, error);
 
   const quoteIds = (data ?? []).map((row) => row.id);
   const { data: childRows } = quoteIds.length ? await supabase.from("quote_children").select("*").in("quote_id", quoteIds) : { data: [] };
@@ -113,7 +116,8 @@ export async function createQuoteFromRequest(input: QuoteInput, options: { acces
       customerNotes: normalizedInput.publicNotes ?? "",
       status: "preventivo_inviato",
       createdAt: new Date().toISOString(),
-      sentAt: new Date().toISOString()
+      sentAt: new Date().toISOString(),
+      excludedFromStats: false
     };
     addDemoQuote(quote);
     await createQuoteStatusEvent({
@@ -303,6 +307,44 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
     publicNotes: quote.customerNotes,
     internalNotes: `Duplicato da ${quote.code}. ${quote.internalNotes}`.trim()
   });
+}
+
+export async function excludeQuoteFromStats(id: string, excluded: boolean): Promise<RepositoryResult<Quote | null>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(excludeDemoQuoteFromStats(id, excluded));
+
+  const { error } = await supabase.from("quotes").update({ excluded_from_stats: excluded, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) return fallback(null, error);
+  return getQuoteById(id);
+}
+
+export async function softDeleteQuote(id: string, reason?: string): Promise<RepositoryResult<Quote | null>> {
+  const supabase = createSupabaseAdminClient();
+  const now = new Date().toISOString();
+  if (!supabase) return fallback(softDeleteDemoQuote(id, reason));
+
+  const { error } = await supabase.from("quotes").update({
+    deleted_at: now,
+    deleted_reason: reason ?? null,
+    excluded_from_stats: true,
+    updated_at: now
+  }).eq("id", id);
+  if (error) return fallback(null, error);
+  return getQuoteById(id);
+}
+
+export async function restoreQuote(id: string): Promise<RepositoryResult<Quote | null>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(restoreDemoQuote(id));
+
+  const { error } = await supabase.from("quotes").update({
+    deleted_at: null,
+    deleted_reason: null,
+    excluded_from_stats: false,
+    updated_at: new Date().toISOString()
+  }).eq("id", id);
+  if (error) return fallback(null, error);
+  return getQuoteById(id);
 }
 
 function toQuoteRow(input: Partial<QuoteInput>) {

@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
 
   const quoteResult = await getQuoteByCodeAndToken(body!.quoteCode!, body!.token!);
   if (!quoteResult.data) return NextResponse.json({ ok: false, error: "Preventivo non trovato o link non valido" }, { status: 404 });
+  if (quoteResult.data.deletedAt) return NextResponse.json({ ok: false, error: "Preventivo non disponibile" }, { status: 410 });
 
   const expectedChildren = quoteResult.data.children.length;
   if (expectedChildren > 0 && (body!.children?.filter((child) => Boolean(child.birthDate)).length ?? 0) < expectedChildren) {

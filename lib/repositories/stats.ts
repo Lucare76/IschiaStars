@@ -16,21 +16,38 @@ export type DashboardStats = {
 };
 
 export async function getDashboardStats(): Promise<RepositoryResult<DashboardStats>> {
-  const [quotesResult, requestsResult, eventsResult] = await Promise.all([listQuotes(), listQuoteRequests(), getDashboardEventStats()]);
-  const quotes = quotesResult.data;
+  const [quotesResult, requestsResult, eventsResult] = await Promise.all([
+    listQuotes({ includeDeleted: false }),
+    listQuoteRequests(),
+    getDashboardEventStats()
+  ]);
+
+  // Solo preventivi attivi nelle statistiche: non cancellati e non esclusi
+  const activeQuotes = quotesResult.data.filter((quote) => !quote.excludedFromStats);
+  const activeIds = new Set(activeQuotes.map((quote) => quote.id));
+
   const events = eventsResult.data;
-  const confirmed = quotes.filter((quote) => quote.status === "confermato" || events.confirmedEventIds.has(quote.id));
+
+  // Filtra eventi per soli preventivi attivi
+  const activeOpenedIds = new Set(Array.from(events.openedQuoteIds).filter((id) => activeIds.has(id)));
+  const activeConfirmedIds = new Set(Array.from(events.confirmedEventIds).filter((id) => activeIds.has(id)));
+  const activeWhatsappClicks = events.whatsappClickQuoteIds.filter((id) => activeIds.has(id)).length;
+
+  const confirmed = activeQuotes.filter((quote) => quote.status === "confermato" || activeConfirmedIds.has(quote.id));
+
   const stats = {
-    createdQuotes: quotes.length,
+    createdQuotes: activeQuotes.length,
     pendingRequests: requestsResult.data.filter((request) => request.status === "da_evadere").length,
-    sentQuotes: quotes.filter((quote) => quote.status === "preventivo_inviato").length,
-    openedQuotes: events.openedQuoteIds.size,
+    sentQuotes: activeQuotes.filter((quote) => quote.status === "preventivo_inviato").length,
+    openedQuotes: activeOpenedIds.size,
     confirmedQuotes: confirmed.length,
-    lostQuotes: quotes.filter((quote) => quote.status === "perso_non_disponibile").length,
-    conversionRate: quotes.length ? Math.round((confirmed.length / quotes.length) * 100) : 0,
-    whatsappClicks: events.whatsappClicks,
+    lostQuotes: activeQuotes.filter((quote) => quote.status === "perso_non_disponibile").length,
+    conversionRate: activeQuotes.length ? Math.round((confirmed.length / activeQuotes.length) * 100) : 0,
+    whatsappClicks: activeWhatsappClicks,
     confirmedValue: confirmed.reduce((sum, quote) => sum + quote.totalPrice, 0)
   };
 
-  return quotesResult.source === "supabase" || requestsResult.source === "supabase" || eventsResult.source === "supabase" ? fromSupabase(stats) : fallback(stats);
+  return quotesResult.source === "supabase" || requestsResult.source === "supabase" || eventsResult.source === "supabase"
+    ? fromSupabase(stats)
+    : fallback(stats);
 }

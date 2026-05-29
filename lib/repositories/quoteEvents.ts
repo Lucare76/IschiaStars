@@ -94,7 +94,7 @@ export async function getDashboardEventStats() {
 function eventDashboard(events: QuoteEvent[]) {
   return {
     openedQuoteIds: new Set(events.filter((event) => event.eventType === "quote_opened").map((event) => event.quoteId)),
-    whatsappClicks: events.filter((event) => event.eventType === "whatsapp_clicked").length,
+    whatsappClickQuoteIds: events.filter((event) => event.eventType === "whatsapp_clicked").map((event) => event.quoteId),
     confirmedEventIds: new Set(events.filter((event) => event.eventType === "quote_confirmed").map((event) => event.quoteId)),
     lastOpened: events.filter((event) => event.eventType === "quote_opened").at(-1)
   };

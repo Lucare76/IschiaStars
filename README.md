@@ -191,6 +191,53 @@ Rotte controllate:
 
 La stampa usa il browser con `window.print()`. Il CSS di stampa nasconde menu e bottoni, mantenendo visibili logo, codice preventivo, hotel, date, prezzo, servizi e policy.
 
+## Preventivi di Test e Statistiche
+
+Durante i test o le demo vengono spesso creati preventivi che falserebbero i conteggi reali. Il backoffice offre due azioni per gestirli.
+
+### Escludi dalle statistiche
+
+Usa **"Escludi dalle statistiche"** quando vuoi tenere il preventivo visibile nel backoffice ma non vuoi che influenzi i conteggi.
+
+- Il preventivo resta accessibile in `/admin/preventivi` con badge "Escluso stats".
+- Non viene conteggiato in: preventivi creati, aperture, click WhatsApp, conferme, conversion rate, valore confermato.
+- Il link pubblico del preventivo continua a funzionare.
+- Il cliente può ancora confermare (ma la conferma non conta nelle statistiche).
+- Puoi reincluderlo in qualsiasi momento con **"Reincludi nelle statistiche"**.
+
+### Cancella preventivo
+
+Usa **"Cancella"** per rimuovere un preventivo dalla vista operativa.
+
+- Il preventivo viene nascosto dall lista principale (soft delete).
+- Il link pubblico mostra "Preventivo non disponibile o link non valido".
+- Non accetta nuove conferme.
+- Non compare nelle statistiche.
+- Puoi visualizzarlo e ripristinarlo dal filtro **"Cancellati"** in `/admin/preventivi`.
+
+### Filtri disponibili
+
+In `/admin/preventivi` il selettore offre:
+
+| Filtro | Mostra |
+|--------|--------|
+| Attivi | Solo preventivi attivi e non esclusi |
+| Tutti (non cancellati) | Tutto eccetto cancellati |
+| Esclusi dalle statistiche | Solo gli esclusi |
+| Cancellati | Solo i cancellati (ripristinabili) |
+
+### Schema DB aggiunto
+
+```sql
+alter table public.quotes add column if not exists excluded_from_stats boolean not null default false;
+alter table public.quotes add column if not exists deleted_at timestamptz;
+alter table public.quotes add column if not exists deleted_reason text;
+```
+
+Esegui questa migration nel SQL editor di Supabase se stai aggiornando un progetto esistente.
+
+---
+
 ## Email Transazionali (Brevo)
 
 Il sistema invia due email automatiche tramite Brevo:

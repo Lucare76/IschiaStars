@@ -101,4 +101,6 @@ export type Quote = {
   createdAt: string;
   sentAt?: string;
   confirmation?: QuoteConfirmation;
+  excludedFromStats: boolean;
+  deletedAt?: string;
 };

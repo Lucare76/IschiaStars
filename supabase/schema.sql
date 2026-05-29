@@ -200,3 +200,11 @@ grant select, insert, update, delete on public.settings to authenticated, servic
 -- Public pages must not select directly from these tables.
 -- Use an API route or Supabase RPC that validates quotes.code + quotes.public_token,
 -- returns only public fields, writes quote_events, and never exposes internal_notes.
+
+-- Migration: preventivi test e statistiche
+alter table public.quotes add column if not exists excluded_from_stats boolean not null default false;
+alter table public.quotes add column if not exists deleted_at timestamptz;
+alter table public.quotes add column if not exists deleted_reason text;
+
+create index if not exists quotes_excluded_from_stats_idx on public.quotes(excluded_from_stats);
+create index if not exists quotes_deleted_at_idx on public.quotes(deleted_at) where deleted_at is not null;

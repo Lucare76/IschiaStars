@@ -132,3 +132,20 @@ export function markQuoteConfirmed(quoteId: string) {
 export function isQuoteConfirmedInDemo(quoteId: string) {
   return getDemoStore().confirmedQuoteIds.has(quoteId);
 }
+
+export function excludeDemoQuoteFromStats(quoteId: string, excluded: boolean) {
+  return updateDemoQuote(quoteId, (quote) => ({ ...quote, excludedFromStats: excluded }));
+}
+
+export function softDeleteDemoQuote(quoteId: string, reason?: string) {
+  return updateDemoQuote(quoteId, (quote) => ({
+    ...quote,
+    deletedAt: new Date().toISOString(),
+    excludedFromStats: true,
+    ...(reason ? {} : {})
+  }));
+}
+
+export function restoreDemoQuote(quoteId: string) {
+  return updateDemoQuote(quoteId, (quote) => ({ ...quote, deletedAt: undefined, excludedFromStats: false }));
+}

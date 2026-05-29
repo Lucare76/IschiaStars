@@ -79,6 +79,59 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
     if (response.ok && result?.data) setCurrentQuote(result.data);
   }
 
+  async function toggleExcludeFromStats() {
+    setMessage(null);
+    const next = !currentQuote.excludedFromStats;
+    const response = await fetch(`/api/quotes/${currentQuote.id}`, {
+      method: "PATCH",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({ excludedFromStats: next })
+    });
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    if (response.ok && result?.data) {
+      setCurrentQuote(result.data);
+      setMessage(next ? "Preventivo escluso dalle statistiche." : "Preventivo reinclueso nelle statistiche.");
+    } else {
+      setMessage("Operazione non riuscita.");
+    }
+  }
+
+  async function deleteCurrentQuote() {
+    setMessage(null);
+    const ok = window.confirm(
+      `Vuoi cancellare il preventivo ${currentQuote.code}?\n\nVerrà nascosto dalle liste operative e dalle statistiche.`
+    );
+    if (!ok) return;
+    const response = await fetch(`/api/quotes/${currentQuote.id}`, {
+      method: "PATCH",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({ softDelete: true })
+    });
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    if (response.ok && result?.data) {
+      setCurrentQuote(result.data);
+      setMessage("Preventivo cancellato.");
+    } else {
+      setMessage("Cancellazione non riuscita.");
+    }
+  }
+
+  async function restoreCurrentQuote() {
+    setMessage(null);
+    const response = await fetch(`/api/quotes/${currentQuote.id}`, {
+      method: "POST",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({ action: "restore" })
+    });
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    if (response.ok && result?.data) {
+      setCurrentQuote(result.data);
+      setMessage("Preventivo ripristinato.");
+    } else {
+      setMessage("Ripristino non riuscito.");
+    }
+  }
+
   async function duplicateCurrentQuote() {
     setMessage(null);
     const response = await fetch(`/api/quotes/${currentQuote.id}`, {
@@ -161,6 +214,44 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
           <h3 className="font-black text-ischia-navy">Cambia stato</h3>
           <div className="mt-3 grid gap-2">
             {statusOptions.map((status) => <button key={status} className="rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/20" onClick={() => void changeStatus(status)} type="button">{statusLabel(status)}</button>)}
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
+          <h3 className="font-black text-ischia-navy">Azioni preventivo</h3>
+          {currentQuote.excludedFromStats && !currentQuote.deletedAt ? (
+            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Escluso dalle statistiche</p>
+          ) : null}
+          {currentQuote.deletedAt ? (
+            <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">Preventivo cancellato</p>
+          ) : null}
+          <div className="mt-3 grid gap-2">
+            {!currentQuote.deletedAt ? (
+              <button
+                className="rounded-full bg-white px-4 py-2 text-sm font-black text-amber-700 ring-1 ring-amber-200"
+                onClick={() => void toggleExcludeFromStats()}
+                type="button"
+              >
+                {currentQuote.excludedFromStats ? "Reincludi nelle statistiche" : "Escludi dalle statistiche"}
+              </button>
+            ) : null}
+            {currentQuote.deletedAt ? (
+              <button
+                className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white"
+                onClick={() => void restoreCurrentQuote()}
+                type="button"
+              >
+                Ripristina preventivo
+              </button>
+            ) : (
+              <button
+                className="rounded-full bg-rose-50 px-4 py-2 text-sm font-black text-rose-700 ring-1 ring-rose-100"
+                onClick={() => void deleteCurrentQuote()}
+                type="button"
+              >
+                Cancella preventivo
+              </button>
+            )}
           </div>
         </div>
       </aside>

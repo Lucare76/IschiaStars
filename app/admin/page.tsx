@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
 import { StatsCards } from "@/components/StatsCards";
 import { QuoteCard, RequestCard } from "@/components/QuoteCard";
-import { listQuoteRequests } from "@/lib/repositories/quoteRequests";
+import { listPendingQuoteRequests } from "@/lib/repositories/quoteRequests";
 import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { getDashboardStats } from "@/lib/repositories/stats";
@@ -10,7 +10,7 @@ import { getDashboardStats } from "@/lib/repositories/stats";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const [requestResult, quoteResult, statsResult] = await Promise.all([listQuoteRequests(), listQuotes(), getDashboardStats()]);
+  const [requestResult, quoteResult, statsResult] = await Promise.all([listPendingQuoteRequests(), listQuotes(), getDashboardStats()]);
   const quoteRequests = requestResult.data;
   const quotes = quoteResult.data;
   const featuredQuote = quotes[0];

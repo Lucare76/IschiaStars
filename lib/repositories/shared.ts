@@ -82,6 +82,8 @@ export function mapQuote(row: Record<string, any>, allHotels: Hotel[], childRows
     status: normalizeStatus(row.status),
     createdAt: row.created_at,
     sentAt: row.sent_at ?? undefined,
+    excludedFromStats: row.excluded_from_stats ?? false,
+    deletedAt: row.deleted_at ?? undefined,
     confirmation: row.confirmed_at
       ? {
           confirmedAt: row.confirmed_at,

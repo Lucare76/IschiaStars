@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default async function QuotePublicRoute({ params, searchParams }: { params: { code: string }; searchParams: { token?: string } }) {
   const result = await getQuoteByCodeAndToken(params.code, searchParams.token);
   const quote = result.data;
-  if (!quote) return <InvalidQuotePage />;
+  if (!quote || quote.deletedAt) return <InvalidQuotePage />;
   return <PublicQuotePage quote={quote} />;
 }
 

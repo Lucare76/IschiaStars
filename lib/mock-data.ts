@@ -146,7 +146,8 @@ export const quotes: Quote[] = [
     customerNotes: "Abbiamo selezionato una proposta elegante e tranquilla a Lacco Ameno, con servizi benessere e assistenza IschiaStars.",
     status: "preventivo_inviato",
     createdAt: "2026-05-09T17:00:00+02:00",
-    sentAt: "2026-05-09T17:20:00+02:00"
+    sentAt: "2026-05-09T17:20:00+02:00",
+    excludedFromStats: false
   },
   {
     id: "quote-002",
@@ -182,7 +183,8 @@ export const quotes: Quote[] = [
     customerNotes: "La struttura richiesta non è disponibile per le date selezionate. Abbiamo selezionato per te una proposta alternativa con caratteristiche simili.",
     status: "preventivo_inviato",
     createdAt: "2026-05-08T12:00:00+02:00",
-    sentAt: "2026-05-08T12:20:00+02:00"
+    sentAt: "2026-05-08T12:20:00+02:00",
+    excludedFromStats: false
   },
   {
     id: "quote-003",
@@ -227,6 +229,7 @@ export const quotes: Quote[] = [
     status: "confermato",
     createdAt: "2026-05-08T12:00:00+02:00",
     sentAt: "2026-05-08T12:20:00+02:00",
+    excludedFromStats: false,
     confirmation: {
       confirmedAt: "2026-05-09T09:05:00+02:00",
       fiscalCode: "SPSFGL80A01F839X",
