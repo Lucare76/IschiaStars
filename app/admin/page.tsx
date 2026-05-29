@@ -18,8 +18,8 @@ export default async function AdminDashboardPage() {
 
   return (
     <AdminShell title="Dashboard preventivi" subtitle="Panoramica delle richieste, dei preventivi inviati e delle conferme cliente.">
-      <div className="grid gap-6 lg:grid-cols-[1fr_0.38fr]">
-        <section className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.34fr)]">
+        <section className="min-w-0 space-y-6">
           <StatsCards stats={statsResult.data} />
           <div>
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -32,7 +32,7 @@ export default async function AdminDashboardPage() {
           </div>
         </section>
 
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4">
           <div className="rounded-2xl bg-ischia-sun p-5 text-ischia-navy shadow-soft">
             <h2 className="text-xl font-black">Contatto diretto</h2>
             <p className="mt-2 text-sm font-semibold">Telefono 081 90 54 81</p>

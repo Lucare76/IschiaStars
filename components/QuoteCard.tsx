@@ -14,20 +14,20 @@ export type QuoteStats = {
 
 export function RequestCard({ request }: { request: QuoteRequest }) {
   return (
-    <article className="rounded-2xl border border-white bg-white/86 p-5 shadow-soft">
+    <article className="min-w-0 rounded-2xl border border-white bg-white/86 p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-xl font-black text-ischia-navy">{request.firstName} {request.lastName}</h2>
-          <p className="text-sm text-ischia-ink/65">{request.email} - {request.phone}</p>
+          <p className="break-words text-sm text-ischia-ink/65">{request.email} - {request.phone}</p>
         </div>
         <QuoteStatusBadge status={request.status} />
       </div>
-      <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-6">
+      <dl className="mt-5 grid gap-x-4 gap-y-4 text-sm sm:grid-cols-2 xl:grid-cols-[0.75fr_1.15fr_1fr_1fr_0.55fr_1fr]">
         <Info label="Zona" value={request.destination} />
         <Info label="Hotel richiesto" value={request.requestedHotel ?? "Da definire"} />
-        <Info label="Date" value={`${formatDate(request.arrivalDate)} - ${formatDate(request.departureDate)}`} />
-        <Info label="Ospiti" value={`${request.adults} adulti, ${request.children.length} bambini`} />
-        <Info label="Camere" value={`${request.rooms}`} />
+        <Info label="Date" value={`${formatDate(request.arrivalDate)} - ${formatDate(request.departureDate)}`} numeric />
+        <Info label="Ospiti" value={`${request.adults} adulti, ${request.children.length} bambini`} numeric />
+        <Info label="Camere" value={`${request.rooms}`} numeric />
         <Info label="Trattamento" value={request.requestedTreatment ?? "Da definire"} />
       </dl>
       {request.children.length ? <p className="mt-3 text-sm text-ischia-ink/70">Bambini: {request.children.map((child) => `${child.firstName} (${formatDate(child.birthDate)})`).join(", ")}</p> : null}
@@ -46,19 +46,19 @@ export function QuoteCard({ quote, stats: providedStats }: { quote: Quote; stats
   const stats = providedStats ?? { openings: 0, whatsappClicks: 0, confirmClicked: false, confirmed: false };
   const effectiveStatus = stats.confirmed ? "confermato" : quote.status === "perso_non_disponibile" ? "perso_non_disponibile" : stats.openings > 0 ? "aperto" : quote.status;
   return (
-    <article className="rounded-2xl border border-white bg-white/90 p-5 shadow-soft">
+    <article className="min-w-0 rounded-2xl border border-white bg-white/90 p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-bold uppercase tracking-[0.14em] text-ischia-blue">{quote.code}</p>
           <h2 className="text-xl font-black text-ischia-navy">{quote.customerFirstName} {quote.customerLastName}</h2>
         </div>
         <QuoteStatusBadge status={effectiveStatus} />
       </div>
-      <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-        <Info label="Hotel" value={quote.proposedHotel.name} />
-        <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
-        <Info label="Totale" value={formatCurrency(quote.totalPrice)} />
-        <Info label="Aperture" value={`${stats.openings}`} />
+      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
+        <Info className="col-span-2 sm:col-span-1" label="Hotel" value={quote.proposedHotel.name} />
+        <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} numeric />
+        <Info label="Totale" value={formatCurrency(quote.totalPrice)} numeric />
+        <Info label="Aperture" value={`${stats.openings}`} numeric />
       </div>
       {quote.isAlternative ? <p className="mt-4 inline-flex rounded-full bg-ischia-sun/25 px-3 py-1 text-xs font-black text-amber-900">Alternativa proposta</p> : null}
       <div className="mt-5 flex flex-wrap gap-2">
@@ -70,16 +70,16 @@ export function QuoteCard({ quote, stats: providedStats }: { quote: Quote; stats
           Dettaglio / modifica
         </Link>
       </div>
-      <p className="mt-4 text-xs text-ischia-ink/58">Ultima apertura: {stats.lastOpening ? formatDateTime(stats.lastOpening) : "non ancora aperto"} - Click WhatsApp: {stats.whatsappClicks}</p>
+      <p className="mt-4 text-xs leading-relaxed text-ischia-ink/58">Ultima apertura: {stats.lastOpening ? formatDateTime(stats.lastOpening) : "non ancora aperto"} - Click WhatsApp: <span className="tabular-nums">{stats.whatsappClicks}</span></p>
     </article>
   );
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({ label, value, className = "", numeric = false }: { label: string; value: string; className?: string; numeric?: boolean }) {
   return (
-    <div>
+    <div className={`min-w-0 ${className}`}>
       <dt className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/75">{label}</dt>
-      <dd className="mt-1 font-semibold text-ischia-ink">{value}</dd>
+      <dd className={`mt-1 break-words font-semibold leading-snug text-ischia-ink ${numeric ? "tabular-nums" : ""}`}>{value}</dd>
     </div>
   );
 }

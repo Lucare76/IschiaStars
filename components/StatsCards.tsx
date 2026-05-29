@@ -12,11 +12,11 @@ export function StatsCards({ stats: providedStats }: { stats?: DashboardStats })
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
       {cards.map(([label, value]) => (
-        <div key={label} className="rounded-2xl bg-white/90 p-5 shadow-soft ring-1 ring-white">
-          <p className="text-sm font-bold uppercase tracking-[0.14em] text-ischia-blue">{label}</p>
-          <p className="mt-3 text-3xl font-black text-ischia-navy">{value}</p>
+        <div key={label} className="flex min-h-32 flex-col justify-between rounded-2xl bg-white/90 p-5 shadow-soft ring-1 ring-white">
+          <p className="max-w-32 text-sm font-bold uppercase tracking-[0.14em] text-ischia-blue">{label}</p>
+          <p className="mt-4 text-3xl font-black leading-none text-ischia-navy tabular-nums">{value}</p>
         </div>
       ))}
     </div>
