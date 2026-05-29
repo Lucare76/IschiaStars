@@ -3,8 +3,8 @@ const http = require('http');
 const url = require('url');
 
 const oauth2Client = new google.auth.OAuth2(
-  '928655809663-nhgcl73do2m89n0com701m7de6a51um6.apps.googleusercontent.com',
-  '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',
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
   'http://localhost:3001/callback'
 );
 
@@ -22,7 +22,7 @@ const server = http.createServer(async (req, res) => {
   
   console.log('\n✅ REFRESH TOKEN:\n');
   console.log(tokens.refresh_token);
-  console.log('\nCopialo in .env.local come GOOGLE_REFRESH_TOKEN\n');
+  console.log('\nCopialo in .env come GOOGLE_REFRESH_TOKEN\n');
   
   res.end('✅ Token ottenuto! Puoi chiudere questa finestra.');
   server.close();
