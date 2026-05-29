@@ -14,6 +14,7 @@ export type Hotel = {
   description: string;
   imageUrl?: string;
   sourceUrl?: string;
+  slug?: string;
   standardServices: string[];
   paymentPolicy: string;
   cancellationPolicy: string;

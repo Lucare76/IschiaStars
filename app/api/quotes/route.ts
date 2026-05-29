@@ -3,6 +3,7 @@ import { requireAdminApiKey } from "@/lib/admin-api-guard";
 import { createQuoteFromRequest, listQuotes } from "@/lib/repositories/quotes";
 import { updateQuoteRequestStatus } from "@/lib/repositories/quoteRequests";
 import { ADMIN_ACCESS_COOKIE } from "@/lib/server/auth-guard";
+import { sendQuoteEmailToClient } from "@/lib/server/brevo";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 
@@ -72,6 +73,9 @@ export async function POST(request: NextRequest) {
   }
 
   if (result.data) {
+    sendQuoteEmailToClient(result.data).catch((err) => {
+      console.warn("POST /api/quotes brevo error", { message: err instanceof Error ? err.message : String(err) });
+    });
     return NextResponse.json({ ok: true, source: result.source, data: result.data });
   }
 

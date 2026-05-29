@@ -17,6 +17,7 @@ type HotelForm = {
   cancellationPolicy: string;
   internalNotes: string;
   isActive: boolean;
+  slug: string;
 };
 
 const emptyForm: HotelForm = {
@@ -29,7 +30,8 @@ const emptyForm: HotelForm = {
   paymentPolicy: "",
   cancellationPolicy: "",
   internalNotes: "",
-  isActive: true
+  isActive: true,
+  slug: ""
 };
 
 export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
@@ -38,6 +40,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
   const editing = Boolean(form.id);
 
   const sortedHotels = useMemo(() => [...hotels].sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name)), [hotels]);
@@ -97,6 +100,32 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     setSyncLoading(false);
   }
 
+  async function importFromSite() {
+    setImportLoading(true);
+    setMessage(null);
+    const response = await fetch(`/api/scrape-hotel?slug=${encodeURIComponent(form.slug.trim())}`, {
+      headers: adminApiHeaders()
+    });
+    const result = (await response.json().catch(() => null)) as {
+      ok?: boolean;
+      data?: { descrizione: string; serviziInclusi: string[] };
+      error?: string;
+    } | null;
+    setImportLoading(false);
+    if (!response.ok || !result?.ok || !result.data) {
+      setMessage(result?.error ?? "Importazione non riuscita");
+      return;
+    }
+    const { descrizione, serviziInclusi } = result.data;
+    setForm((prev) => ({
+      ...prev,
+      shortDescription: descrizione || prev.shortDescription,
+      standardServices: serviziInclusi.length ? serviziInclusi.join("\n") : prev.standardServices
+    }));
+    const parts = [descrizione ? "descrizione" : null, serviziInclusi.length ? `${serviziInclusi.length} servizi` : null].filter(Boolean);
+    setMessage(parts.length ? `Importati: ${parts.join(" e ")}.` : "Nessun dato trovato per questo slug.");
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
@@ -110,6 +139,23 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
           </button>
         </div>
         {message ? <p className="mt-3 rounded-xl bg-ischia-mist p-3 text-sm font-semibold text-ischia-navy">{message}</p> : null}
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-0">
+            <Input
+              label="URL o slug IschiaStars (per importare descrizione e servizi)"
+              value={form.slug}
+              onChange={(value) => setForm({ ...form, slug: value })}
+            />
+          </div>
+          <button
+            className="shrink-0 rounded-full bg-ischia-aqua px-5 py-3 text-sm font-black text-white disabled:opacity-60"
+            disabled={importLoading || !form.slug.trim()}
+            onClick={() => void importFromSite()}
+            type="button"
+          >
+            {importLoading ? "Importazione..." : "Importa da IschiaStars"}
+          </button>
+        </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           <Input label="Nome hotel" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
           <Input label="Localita / zona" value={form.location} onChange={(value) => setForm({ ...form, location: value })} />
@@ -194,6 +240,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
 }
 
 function fromHotel(hotel: Hotel): HotelForm {
+  const derivedSlug = hotel.slug ?? hotel.sourceUrl?.match(/\/hotel\/([^/?#]+)/i)?.[1] ?? "";
   return {
     id: hotel.id,
     name: hotel.name,
@@ -205,7 +252,8 @@ function fromHotel(hotel: Hotel): HotelForm {
     paymentPolicy: hotel.paymentPolicy,
     cancellationPolicy: hotel.cancellationPolicy,
     internalNotes: hotel.internalNotes,
-    isActive: hotel.active
+    isActive: hotel.active,
+    slug: derivedSlug
   };
 }
 
@@ -220,7 +268,8 @@ function toPayload(form: HotelForm) {
     paymentPolicy: form.paymentPolicy,
     cancellationPolicy: form.cancellationPolicy,
     internalNotes: form.internalNotes,
-    isActive: form.isActive
+    isActive: form.isActive,
+    slug: form.slug.trim() || undefined
   };
 }
 

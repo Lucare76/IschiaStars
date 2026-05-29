@@ -30,6 +30,7 @@ export function mapHotel(row: Record<string, any>): Hotel {
     description: row.short_description ?? row.description ?? "",
     imageUrl: row.image_url ?? undefined,
     sourceUrl: row.source_url ?? undefined,
+    slug: row.slug ?? undefined,
     standardServices: Array.isArray(row.standard_services) ? row.standard_services : [],
     paymentPolicy: row.payment_policy ?? "",
     cancellationPolicy: row.cancellation_policy ?? "",

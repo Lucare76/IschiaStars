@@ -15,6 +15,7 @@ export type HotelInput = {
   cancellationPolicy?: string;
   internalNotes?: string;
   isActive?: boolean;
+  slug?: string;
 };
 
 export type HotelSyncReport = {
@@ -196,7 +197,8 @@ function toHotelRow(input: Partial<HotelInput>) {
     ...(input.paymentPolicy !== undefined ? { payment_policy: input.paymentPolicy } : {}),
     ...(input.cancellationPolicy !== undefined ? { cancellation_policy: input.cancellationPolicy } : {}),
     ...(input.internalNotes !== undefined ? { internal_notes: input.internalNotes } : {}),
-    ...(input.isActive !== undefined ? { is_active: input.isActive } : {})
+    ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
+    ...(input.slug !== undefined ? { slug: input.slug } : {})
   };
 }
 

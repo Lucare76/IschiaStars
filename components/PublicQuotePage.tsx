@@ -87,10 +87,10 @@ export function PublicQuotePage({ quote }: { quote: Quote }) {
           </div>
 
           <aside className="space-y-5">
-            <div className="print-card rounded-2xl bg-ischia-navy p-5 text-white shadow-soft">
+            <div className="print-card flex flex-col rounded-2xl bg-ischia-navy p-5 text-white shadow-soft">
               <p className="text-sm font-bold uppercase tracking-[0.16em] text-ischia-sand">Totale proposta</p>
-              <p className="mt-3 text-4xl font-black">{formatCurrency(quote.totalPrice)}</p>
-              <p className="mt-2 text-white/78">Acconto richiesto: <strong>{formatCurrency(quote.deposit)}</strong></p>
+              <p className="mt-3 text-4xl font-black tabular-nums">{formatCurrency(quote.totalPrice)}</p>
+              <p className="mt-2 text-white/78">Acconto richiesto: <strong className="tabular-nums">{formatCurrency(quote.deposit)}</strong></p>
             </div>
 
             <ContentBlock title="Note per te">
@@ -114,9 +114,9 @@ function InfoGrid({ items }: { items: [string, string][] }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {items.map(([label, value]) => (
-        <div key={label} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-ischia-blue/10">
+        <div key={label} className="flex flex-col gap-1 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-ischia-blue/10">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{label}</p>
-          <p className="mt-1 font-bold text-ischia-ink">{value}</p>
+          <p className="font-bold text-ischia-ink">{value}</p>
         </div>
       ))}
     </div>

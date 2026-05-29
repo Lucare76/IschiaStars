@@ -168,7 +168,7 @@ function cleanText(value: string) {
   return decodeHtml(value.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 }
 
-function decodeHtml(value: string) {
+export function decodeHtml(value: string) {
   const named: Record<string, string> = {
     amp: "&",
     nbsp: " ",

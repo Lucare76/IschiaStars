@@ -191,10 +191,47 @@ Rotte controllate:
 
 La stampa usa il browser con `window.print()`. Il CSS di stampa nasconde menu e bottoni, mantenendo visibili logo, codice preventivo, hotel, date, prezzo, servizi e policy.
 
+## Email Transazionali (Brevo)
+
+Il sistema invia due email automatiche tramite Brevo:
+
+1. **Email al cliente** — inviata quando l'admin crea un preventivo, contiene il link pubblico al preventivo.
+2. **Email interna** — inviata a `BREVO_INTERNAL_NOTIFY_EMAIL` quando il cliente conferma il preventivo online.
+
+### Requisiti Brevo
+
+- Crea un account su [brevo.com](https://www.brevo.com) e genera una API key transazionale.
+- Verifica il mittente `info@ischiastars.it` nella dashboard Brevo.
+- Autentica il dominio `ischiastars.it` (SPF, DKIM) dalle impostazioni mittenti Brevo.
+
+### Variabili Ambiente Brevo
+
+```env
+BREVO_ENABLED=true
+BREVO_API_KEY=xkeysib-...
+BREVO_FROM_EMAIL=info@ischiastars.it
+BREVO_FROM_NAME=IschiaStars
+BREVO_INTERNAL_NOTIFY_EMAIL=info@ischiastars.it
+```
+
+- `BREVO_ENABLED=true` abilita l'invio. Con `false` o variabile assente, nessuna email viene inviata e il sistema funziona normalmente.
+- `BREVO_API_KEY` è solo server-side: **non usare mai** `NEXT_PUBLIC_BREVO_API_KEY`.
+- In locale inserisci le variabili in `.env.local`; in produzione configura su Vercel → Settings → Environment Variables.
+- Se Brevo fallisce (API key errata, mittente non verificato, errore rete), il preventivo viene comunque salvato e la conferma funziona: l'errore compare solo nei log server.
+
+### Comportamento senza Brevo
+
+Con `BREVO_ENABLED=false` (default in `.env.example`):
+
+- La creazione preventivo funziona normalmente.
+- La conferma preventivo funziona normalmente.
+- Nessuna email viene inviata.
+- I log mostrano `[brevo] skipped: disabled`.
+
 ## Funzioni Fuori Scope
 
 - WhatsApp Business API.
-- Resend e invio email automatico.
+- Newsletter e campagne marketing.
 - PDF server-side o storage PDF.
 - Pagamenti online.
 - Firma digitale.

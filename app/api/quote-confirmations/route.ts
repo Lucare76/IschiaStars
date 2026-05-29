@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createQuoteConfirmation } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
+import { sendQuoteConfirmedInternalEmail } from "@/lib/server/brevo";
 
 type ConfirmationPayload = {
   quoteCode?: string;
@@ -51,6 +52,17 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.data) return NextResponse.json({ ok: false, error: result.error ?? "Conferma non salvata" }, { status: 500 });
+
+  sendQuoteConfirmedInternalEmail(quoteResult.data, {
+    firstName: body!.firstName!.trim(),
+    lastName: body!.lastName!.trim(),
+    phone: body!.phone!.trim(),
+    email: body!.email!.trim(),
+    confirmedAt: result.data.confirmedAt
+  }).catch((err) => {
+    console.warn("POST /api/quote-confirmations brevo error", { message: err instanceof Error ? err.message : String(err) });
+  });
+
   return NextResponse.json({ ok: true, source: result.source, confirmedAt: result.data.confirmedAt });
 }
 
