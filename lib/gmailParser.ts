@@ -13,6 +13,42 @@ oauth2Client.setCredentials({
 
 const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
+function decodeBody(data: string) {
+  return Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
+}
+
+function htmlToText(html: string) {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\r/g, '')
+    .trim();
+}
+
+function extractEmailText(payload: any): string {
+  if (!payload) return '';
+
+  if (payload.body?.data) {
+    const body = decodeBody(payload.body.data);
+    if (payload.mimeType === 'text/plain') return body;
+    if (payload.mimeType === 'text/html') return htmlToText(body);
+  }
+
+  for (const part of payload.parts ?? []) {
+    const text = extractEmailText(part);
+    if (text) return text;
+  }
+
+  return '';
+}
+
 function parseEmailText(text: string) {
   const get = (field: string) => {
     const match = text.match(new RegExp(`${field}:\\s*(.+)`));
@@ -23,10 +59,9 @@ function parseEmailText(text: string) {
   const utmSource = pageUrl.match(/utm_source=([^&]+)/)?.[1] ?? null;
   const utmCampaign = pageUrl.match(/utm_campaign=([^&]+)/)?.[1]?.replace(/\+/g, ' ') ?? null;
   const hotel = get('Hotel');
-  const etaBambini = get('Età Bambini');
+  const etaBambini = get('Età Bambini') ?? get('Eta Bambini') ?? get('EtÃ  Bambini');
   const bambini = parseInt(get('Bambini') ?? '0');
 
-  // Costruisci array bambini dalle età
   const children = etaBambini && bambini > 0
     ? etaBambini.split(',').map((eta: string) => ({
         birthDate: new Date(
@@ -77,35 +112,19 @@ export async function pollGmail() {
         format: 'full'
       });
 
-      const parts = msg.data.payload?.parts ?? [];
-      let emailText = '';
-
-      // Prova prima text/plain
-      for (const part of parts) {
-        if (part.mimeType === 'text/plain' && part.body?.data) {
-          emailText = Buffer.from(part.body.data, 'base64').toString('utf-8');
-          break;
-        }
-      }
-
-      // Se non trova parti, prova il body diretto
-      if (!emailText && msg.data.payload?.body?.data) {
-        emailText = Buffer.from(msg.data.payload.body.data, 'base64').toString('utf-8');
-      }
+      const emailText = extractEmailText(msg.data.payload);
 
       if (!emailText) continue;
 
-      // Verifica che sia una mail di IschiaStars
       if (!emailText.includes('Data di arrivo') || !emailText.includes('Hotel')) continue;
 
       const input = parseEmailText(emailText);
       const result = await createQuoteRequest(input);
 
       if (result.data) {
-        console.log(`✅ Preventivo creato: ${input.firstName} ${input.lastName} - ${input.metadata.requested_hotel}`);
+        console.log(`Preventivo creato: ${input.firstName} ${input.lastName} - ${input.metadata.requested_hotel}`);
       }
 
-      // Marca come letta
       await gmail.users.messages.modify({
         userId: 'me',
         id: message.id!,
