@@ -26,6 +26,12 @@ export function isBrevoEnabled(): boolean {
   return process.env.BREVO_ENABLED === "true";
 }
 
+function brevoMissingEnvReason() {
+  if (!isBrevoEnabled()) return "disabled";
+  if (!process.env.BREVO_API_KEY || !process.env.BREVO_FROM_EMAIL) return "missing_env";
+  return null;
+}
+
 export async function sendBrevoEmail(params: SendBrevoEmailParams): Promise<boolean> {
   const apiKey = process.env.BREVO_API_KEY;
   const fromEmail = process.env.BREVO_FROM_EMAIL;
@@ -80,18 +86,23 @@ function formatPrice(amount: number): string {
 }
 
 export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
-  if (!isBrevoEnabled()) {
-    console.info("[brevo] skipped: disabled");
+  const missingEnvReason = brevoMissingEnvReason();
+  if (missingEnvReason) {
+    console.info(`[brevo] skipped quote email code=${quote.code} reason=disabled_or_missing_env detail=${missingEnvReason}`);
     return;
   }
 
   const email = quote.customerEmail?.trim();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    console.warn(`[brevo] skipped quote email ${quote.code}: invalid or missing client email`);
+    console.warn(`[brevo] skipped quote email code=${quote.code} reason=missing_client_email`);
     return;
   }
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
+  if (!siteUrl) {
+    console.warn(`[brevo] skipped quote email code=${quote.code} reason=missing_site_url`);
+    return;
+  }
   const quoteUrl = `${siteUrl}/preventivi/${quote.code}?token=${quote.token}`;
   const firstName = quote.customerFirstName || "Cliente";
   const clientName = `${quote.customerFirstName} ${quote.customerLastName}`.trim();
@@ -242,9 +253,9 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
   });
 
   if (ok) {
-    console.info(`[brevo] sent quote email ${quote.code}`);
+    console.info(`[brevo] sent quote email code=${quote.code}`);
   } else {
-    console.warn(`[brevo] failed quote email ${quote.code} — check server logs`);
+    console.warn(`[brevo] failed quote email code=${quote.code}`);
   }
 }
 

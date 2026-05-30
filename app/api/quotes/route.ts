@@ -87,9 +87,11 @@ export async function POST(request: NextRequest) {
   }
 
   if (result.data) {
-    sendQuoteEmailToClient(result.data).catch((err) => {
-      console.warn("POST /api/quotes brevo error", { message: err instanceof Error ? err.message : String(err) });
-    });
+    try {
+      await sendQuoteEmailToClient(result.data);
+    } catch (err) {
+      console.warn("POST /api/quotes brevo error", { code: result.data.code, message: err instanceof Error ? err.message : String(err) });
+    }
     return NextResponse.json({ ok: true, source: result.source, data: result.data });
   }
 
