@@ -6,10 +6,31 @@ import { listQuotes } from "@/lib/repositories/quotes";
 
 export const dynamic = "force-dynamic";
 
-export default async function QuotesPage() {
+const quoteFilters = [
+  "attivi",
+  "tutti",
+  "cancellati",
+  "esclusi",
+  "preventivo_inviato",
+  "alternative",
+  "confermati",
+  "aperti",
+  "click_whatsapp",
+  "perso_non_disponibile"
+] as const;
+
+type QuoteFilter = (typeof quoteFilters)[number];
+
+function getInitialFilter(filter: string | string[] | undefined): QuoteFilter {
+  const value = Array.isArray(filter) ? filter[0] : filter;
+  return quoteFilters.includes(value as QuoteFilter) ? (value as QuoteFilter) : "attivi";
+}
+
+export default async function QuotesPage({ searchParams }: { searchParams?: { filter?: string | string[] } }) {
   const quoteResult = await listQuotes({ includeDeleted: true });
   const quotes = quoteResult.data;
   const statsByQuote: Record<string, Awaited<ReturnType<typeof getQuoteEventStats>>["data"]> = {};
+  const initialFilter = getInitialFilter(searchParams?.filter);
 
   await Promise.all(
     quotes.map(async (quote) => {
@@ -28,7 +49,7 @@ export default async function QuotesPage() {
       </div>
 
       <section>
-        <QuoteFilters quotes={quotes} statsByQuote={statsByQuote} />
+        <QuoteFilters quotes={quotes} statsByQuote={statsByQuote} initialFilter={initialFilter} />
       </section>
     </AdminShell>
   );

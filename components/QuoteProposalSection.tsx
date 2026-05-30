@@ -15,6 +15,14 @@ type SelectedOption = {
   price: number;
 };
 
+function hasDisplayablePrice(treatment: TreatmentOption) {
+  return Number.isFinite(treatment.price) && treatment.price > 0;
+}
+
+function visibleTreatments(option: QuoteHotelOption) {
+  return option.treatments.filter(hasDisplayablePrice);
+}
+
 export function QuoteProposalSection({ quote }: { quote: Quote }) {
   const [selected, setSelected] = useState<SelectedOption | null>(null);
   const confirmRef = useRef<HTMLDivElement>(null);
@@ -55,7 +63,7 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
       {/* Hotel cards raggruppate per struttura */}
       <div className="space-y-4">
         {groupedHotels.map(([groupId, groupOptions]) => {
-          const optionsWithTreatments = groupOptions.filter((o) => o.treatments.length > 0);
+          const optionsWithTreatments = groupOptions.filter((o) => visibleTreatments(o).length > 0);
           if (!optionsWithTreatments.length) return null;
           const firstOpt = optionsWithTreatments[0];
           return (
@@ -147,7 +155,7 @@ function HotelCard({
               )}
               {opt.treatments.length > 0 && (
                 <div className="space-y-2">
-                  {opt.treatments.map((treatment) => (
+                  {visibleTreatments(opt).map((treatment) => (
                     <div key={`${opt.id}-${treatment.key}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-ischia-mist p-4">
                       <div>
                         <p className="font-black text-ischia-navy">{treatment.label}</p>

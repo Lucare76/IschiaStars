@@ -6,7 +6,7 @@ import { QuoteProposalSection } from "@/components/QuoteProposalSection";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { PrintButton } from "@/components/PrintButton";
 import { Quote } from "@/lib/types";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 
 export function PublicQuotePage({ quote }: { quote: Quote }) {
@@ -80,19 +80,6 @@ export function PublicQuotePage({ quote }: { quote: Quote }) {
             </div>
           )}
 
-          {/* Stampa: riepilogo prezzi compatto */}
-          <div className="print-only mt-4 rounded-2xl bg-ischia-mist p-5">
-            <p className="font-black text-ischia-navy">Riepilogo proposte</p>
-            {options.map((opt) => (
-              <div key={opt.id} className="mt-3">
-                <p className="font-bold text-ischia-navy">{opt.hotelName}</p>
-                {opt.treatments.map((t) => (
-                  <p key={t.key} className="text-sm text-ischia-ink/80">{t.label}: {formatCurrency(t.price)}</p>
-                ))}
-              </div>
-            ))}
-          </div>
-
           {/* Azione stampa no-print */}
           <div className="no-print mt-5 flex justify-end">
             <PrintButton quoteCode={quote.code} token={quote.token} />
@@ -102,6 +89,12 @@ export function PublicQuotePage({ quote }: { quote: Quote }) {
 
       {/* Sezione interattiva: hotel cards + conferma */}
       <section className="mt-6">
+        <div className="mb-4">
+          <h2 className="text-3xl font-black text-ischia-navy">Le proposte selezionate per te</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-ischia-ink/70">
+            Confronta le soluzioni disponibili e conferma l&apos;opzione che preferisci.
+          </p>
+        </div>
         <QuoteProposalSection quote={quote} />
       </section>
 

@@ -5,10 +5,30 @@ import { adminApiHeaders } from "@/lib/admin-api-client";
 import { QuoteCard, QuoteCardActions, QuoteStats } from "@/components/QuoteCard";
 import { Quote } from "@/lib/types";
 
-export function QuoteFilters({ quotes: initialQuotes, statsByQuote }: { quotes: Quote[]; statsByQuote: Record<string, QuoteStats> }) {
+type QuoteFilter =
+  | "attivi"
+  | "tutti"
+  | "cancellati"
+  | "esclusi"
+  | "preventivo_inviato"
+  | "alternative"
+  | "confermati"
+  | "aperti"
+  | "click_whatsapp"
+  | "perso_non_disponibile";
+
+export function QuoteFilters({
+  quotes: initialQuotes,
+  statsByQuote,
+  initialFilter = "attivi"
+}: {
+  quotes: Quote[];
+  statsByQuote: Record<string, QuoteStats>;
+  initialFilter?: QuoteFilter;
+}) {
   const [quotes, setQuotes] = useState(initialQuotes);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("attivi");
+  const [filter, setFilter] = useState<QuoteFilter>(initialFilter);
   const [message, setMessage] = useState<string | null>(null);
 
   const filtered = useMemo(() => quotes.filter((quote) => {
@@ -26,6 +46,7 @@ export function QuoteFilters({ quotes: initialQuotes, statsByQuote }: { quotes: 
       (filter === "alternative" && !isDeleted && quote.isAlternative) ||
       (filter === "confermati" && !isDeleted && (quote.status === "confermato" || stats?.confirmed)) ||
       (filter === "aperti" && !isDeleted && Boolean(stats?.openings) && quote.status !== "confermato" && !stats?.confirmed) ||
+      (filter === "click_whatsapp" && !isDeleted && Boolean(stats?.whatsappClicks)) ||
       (filter === "perso_non_disponibile" && !isDeleted && quote.status === filter);
 
     return matchesSearch && matchesFilter;
@@ -107,7 +128,7 @@ export function QuoteFilters({ quotes: initialQuotes, statsByQuote }: { quotes: 
           <select
             className="rounded-xl border border-ischia-blue/20 px-4 py-3 text-sm font-semibold text-ischia-navy"
             value={filter}
-            onChange={(event) => setFilter(event.target.value)}
+            onChange={(event) => setFilter(event.target.value as QuoteFilter)}
           >
             <option value="attivi">Attivi</option>
             <option value="tutti">Tutti (non cancellati)</option>
@@ -115,6 +136,7 @@ export function QuoteFilters({ quotes: initialQuotes, statsByQuote }: { quotes: 
             <option value="alternative">Alternative</option>
             <option value="confermati">Confermati</option>
             <option value="aperti">Aperti</option>
+            <option value="click_whatsapp">Click WhatsApp</option>
             <option value="perso_non_disponibile">Persi</option>
             <option value="esclusi">Esclusi dalle statistiche</option>
             <option value="cancellati">Cancellati</option>
