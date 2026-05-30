@@ -1,6 +1,7 @@
 import { hotels } from "@/lib/mock-data";
 import { addDemoQuote, allDemoQuotes, excludeDemoQuoteFromStats, isQuoteConfirmedInDemo, markQuoteConfirmed as markDemoQuoteConfirmed, restoreDemoQuote, softDeleteDemoQuote, updateDemoQuote } from "@/lib/demo-store";
 import { listHotels } from "@/lib/repositories/hotels";
+import { QuoteHotelOptionInput, fetchHotelOptionsForQuotes, upsertHotelOptions } from "@/lib/repositories/quoteHotelOptions";
 import { createQuoteStatusEvent } from "@/lib/repositories/quoteStatusEvents";
 import { fallback, fromSupabase, mapQuote, RepositoryResult } from "@/lib/repositories/shared";
 import { createSupabaseAdminClient, createSupabaseAuthenticatedClient } from "@/lib/supabase/admin";
@@ -33,6 +34,7 @@ export type QuoteInput = {
   cancellationPolicy?: string;
   publicNotes?: string;
   internalNotes?: string;
+  hotelOptions?: QuoteHotelOptionInput[];
 };
 
 export async function listQuotes({ includeDeleted = false }: { includeDeleted?: boolean } = {}): Promise<RepositoryResult<Quote[]>> {
@@ -46,13 +48,25 @@ export async function listQuotes({ includeDeleted = false }: { includeDeleted?: 
   const { data, error } = await query;
   if (error) return fallback(demoQuotes, error);
 
-  const quoteIds = (data ?? []).map((row) => row.id);
-  const { data: childRows } = quoteIds.length ? await supabase.from("quote_children").select("*").in("quote_id", quoteIds) : { data: [] };
-  return fromSupabase((data ?? []).map((row) => withDemoStatus(mapQuote(row, hotelResult.data.length ? hotelResult.data : hotels, childRows ?? []))));
+  const quoteIds = (data ?? []).map((row) => row.id as string);
+  const [childRowsResult, hotelOptionsMap] = await Promise.all([
+    quoteIds.length ? supabase.from("quote_children").select("*").in("quote_id", quoteIds) : Promise.resolve({ data: [] }),
+    fetchHotelOptionsForQuotes(quoteIds)
+  ]);
+
+  const allHotels = hotelResult.data.length ? hotelResult.data : hotels;
+  const childRows = childRowsResult.data ?? [];
+
+  return fromSupabase(
+    (data ?? []).map((row) => {
+      const optionRows = (hotelOptionsMap[row.id as string] ?? []).map((o) => ({ ...o, quote_id: o.quoteId } as unknown as Record<string, unknown>));
+      return withDemoStatus(mapQuote(row as Record<string, unknown>, allHotels, childRows as Record<string, unknown>[], optionRows));
+    })
+  );
 }
 
 export async function getQuoteByCodeAndToken(code: string, token?: string): Promise<RepositoryResult<Quote | null>> {
-  const local = allDemoQuotes().find((quote) => quote.code === code && quote.token === token) ?? null;
+  const local = allDemoQuotes().find((q) => q.code === code && q.token === token) ?? null;
   const supabase = createSupabaseAdminClient();
   if (!supabase || !token) return fallback(local);
 
@@ -60,12 +74,19 @@ export async function getQuoteByCodeAndToken(code: string, token?: string): Prom
   if (error || !data) return error ? fallback(local, error) : fromSupabase(null);
 
   const hotelResult = await listHotels();
-  const { data: childRows } = await supabase.from("quote_children").select("*").eq("quote_id", data.id);
-  return fromSupabase(withDemoStatus(mapQuote(data, hotelResult.data.length ? hotelResult.data : hotels, childRows ?? [])));
+  const quoteId = (data as Record<string, unknown>).id as string;
+  const [childRowsResult, hotelOptionsMap] = await Promise.all([
+    supabase.from("quote_children").select("*").eq("quote_id", quoteId),
+    fetchHotelOptionsForQuotes([quoteId])
+  ]);
+
+  const optionRows = (hotelOptionsMap[quoteId] ?? []).map((o) => ({ ...o, quote_id: o.quoteId } as unknown as Record<string, unknown>));
+  const allHotels = hotelResult.data.length ? hotelResult.data : hotels;
+  return fromSupabase(withDemoStatus(mapQuote(data as Record<string, unknown>, allHotels, childRowsResult.data as Record<string, unknown>[] ?? [], optionRows)));
 }
 
 export async function getQuoteById(id: string): Promise<RepositoryResult<Quote | null>> {
-  const local = allDemoQuotes().find((quote) => quote.id === id) ?? null;
+  const local = allDemoQuotes().find((q) => q.id === id) ?? null;
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(local);
 
@@ -74,17 +95,28 @@ export async function getQuoteById(id: string): Promise<RepositoryResult<Quote |
   if (!data) return fromSupabase(null);
 
   const hotelResult = await listHotels();
-  const { data: childRows } = await supabase.from("quote_children").select("*").eq("quote_id", data.id);
-  return fromSupabase(withDemoStatus(mapQuote(data, hotelResult.data.length ? hotelResult.data : hotels, childRows ?? [])));
+  const [childRowsResult, hotelOptionsMap] = await Promise.all([
+    supabase.from("quote_children").select("*").eq("quote_id", id),
+    fetchHotelOptionsForQuotes([id])
+  ]);
+
+  const optionRows = (hotelOptionsMap[id] ?? []).map((o) => ({ ...o, quote_id: o.quoteId } as unknown as Record<string, unknown>));
+  const allHotels = hotelResult.data.length ? hotelResult.data : hotels;
+  return fromSupabase(withDemoStatus(mapQuote(data as Record<string, unknown>, allHotels, childRowsResult.data as Record<string, unknown>[] ?? [], optionRows)));
 }
 
 export async function createQuoteFromRequest(input: QuoteInput, options: { accessToken?: string } = {}): Promise<RepositoryResult<Quote | null>> {
   const supabase = createSupabaseAuthenticatedClient(options.accessToken) ?? createSupabaseAdminClient();
-  const normalizedInput = { ...input, code: input.code ?? await nextQuoteCode(supabase ?? undefined), publicToken: input.publicToken ?? secureToken() };
+  const normalizedInput = {
+    ...input,
+    code: input.code ?? await nextQuoteCode(supabase ?? undefined),
+    publicToken: input.publicToken ?? secureToken()
+  };
+
   if (!supabase) {
     const hotelResult = await listHotels();
-    const proposedHotel = hotelResult.data.find((hotel) => hotel.id === normalizedInput.hotelId) ?? hotelResult.data[0] ?? hotels[0];
-    const alternativeHotel = hotelResult.data.find((hotel) => hotel.id === normalizedInput.alternativeHotelId);
+    const proposedHotel = hotelResult.data.find((h) => h.id === normalizedInput.hotelId) ?? hotelResult.data[0] ?? hotels[0];
+    const alternativeHotel = hotelResult.data.find((h) => h.id === normalizedInput.alternativeHotelId);
     const quote: Quote = {
       id: `quote-local-${Date.now()}`,
       code: normalizedInput.code,
@@ -102,7 +134,11 @@ export async function createQuoteFromRequest(input: QuoteInput, options: { acces
       arrivalDate: normalizedInput.checkIn,
       departureDate: normalizedInput.checkOut,
       adults: normalizedInput.adults,
-      children: (normalizedInput.children ?? []).map((child, index) => ({ id: `child-local-${Date.now()}-${index}`, firstName: `Bambino ${index + 1}`, birthDate: child.birthDate })),
+      children: (normalizedInput.children ?? []).map((child, index) => ({
+        id: `child-local-${Date.now()}-${index}`,
+        firstName: `Bambino ${index + 1}`,
+        birthDate: child.birthDate
+      })),
       rooms: normalizedInput.rooms,
       treatment: normalizedInput.treatment ?? "",
       totalPrice: normalizedInput.totalPrice,
@@ -117,15 +153,11 @@ export async function createQuoteFromRequest(input: QuoteInput, options: { acces
       status: "preventivo_inviato",
       createdAt: new Date().toISOString(),
       sentAt: new Date().toISOString(),
-      excludedFromStats: false
+      excludedFromStats: false,
+      hotelOptions: []
     };
     addDemoQuote(quote);
-    await createQuoteStatusEvent({
-      quoteId: quote.id,
-      fromStatus: null,
-      toStatus: quote.status,
-      note: "Preventivo creato"
-    });
+    await createQuoteStatusEvent({ quoteId: quote.id, fromStatus: null, toStatus: quote.status, note: "Preventivo creato" });
     return fallback(quote);
   }
 
@@ -133,20 +165,19 @@ export async function createQuoteFromRequest(input: QuoteInput, options: { acces
   const { data, error } = await supabase.from("quotes").insert(row).select("*").single();
   if (error) return fallback(null, error);
 
-  await createQuoteStatusEvent({
-    quoteId: data.id,
-    fromStatus: null,
-    toStatus: "preventivo_inviato",
-    note: "Preventivo creato"
-  });
+  await createQuoteStatusEvent({ quoteId: (data as Record<string, unknown>).id as string, fromStatus: null, toStatus: "preventivo_inviato", note: "Preventivo creato" });
+
+  const quoteId = (data as Record<string, unknown>).id as string;
 
   if (normalizedInput.children?.length) {
-    await supabase.from("quote_children").insert(normalizedInput.children.map((child) => ({ quote_id: data.id, birth_date: child.birthDate })));
+    await supabase.from("quote_children").insert(normalizedInput.children.map((child) => ({ quote_id: quoteId, birth_date: child.birthDate })));
   }
 
-  const hotelResult = await listHotels();
-  const { data: childRows } = await supabase.from("quote_children").select("*").eq("quote_id", data.id);
-  return fromSupabase(withDemoStatus(mapQuote(data, hotelResult.data.length ? hotelResult.data : hotels, childRows ?? [])));
+  if (normalizedInput.hotelOptions?.length) {
+    await upsertHotelOptions(quoteId, normalizedInput.hotelOptions);
+  }
+
+  return getQuoteById(quoteId);
 }
 
 async function nextQuoteCode(supabase?: ReturnType<typeof createSupabaseAdminClient>): Promise<string> {
@@ -162,8 +193,8 @@ async function nextQuoteCode(supabase?: ReturnType<typeof createSupabaseAdminCli
     const match = (data as { code?: string } | null)?.code?.match(/^IS-\d{4}-(\d+)$/);
     return `IS-${year}-${String((match ? Number(match[1]) : 0) + 1).padStart(3, "0")}`;
   }
-  const max = allDemoQuotes().reduce((current, quote) => {
-    const match = quote.code.match(/^IS-\d{4}-(\d+)$/);
+  const max = allDemoQuotes().reduce((current, q) => {
+    const match = q.code.match(/^IS-\d{4}-(\d+)$/);
     return match ? Math.max(current, Number(match[1])) : current;
   }, 0);
   return `IS-${year}-${String(max + 1).padStart(3, "0")}`;
@@ -178,8 +209,8 @@ export async function updateQuote(id: string, input: Partial<QuoteInput>): Promi
   if (!supabase) {
     const hotelResult = await listHotels();
     const updated = updateDemoQuote(id, (quote) => {
-      const proposedHotel = input.hotelId ? hotelResult.data.find((hotel) => hotel.id === input.hotelId) ?? quote.proposedHotel : quote.proposedHotel;
-      const alternativeHotel = input.alternativeHotelId ? hotelResult.data.find((hotel) => hotel.id === input.alternativeHotelId) : quote.alternativeHotel;
+      const proposedHotel = input.hotelId ? hotelResult.data.find((h) => h.id === input.hotelId) ?? quote.proposedHotel : quote.proposedHotel;
+      const alternativeHotel = input.alternativeHotelId ? hotelResult.data.find((h) => h.id === input.alternativeHotelId) : quote.alternativeHotel;
       return {
         ...quote,
         customerFirstName: input.clientFirstName ?? quote.customerFirstName,
@@ -212,36 +243,31 @@ export async function updateQuote(id: string, input: Partial<QuoteInput>): Promi
 
   const { error } = await supabase.from("quotes").update({ ...toQuoteRow(input), updated_at: new Date().toISOString() }).eq("id", id);
   if (error) return fallback(null, error);
+
+  if (input.hotelOptions?.length) {
+    await upsertHotelOptions(id, input.hotelOptions);
+  }
+
   return getQuoteById(id);
 }
 
 export async function updateQuoteStatus(id: string, status: QuoteStatus): Promise<RepositoryResult<Quote | null>> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) {
-    const current = allDemoQuotes().find((quote) => quote.id === id);
-    const updated = updateDemoQuote(id, (quote) => ({ ...quote, status }));
+    const current = allDemoQuotes().find((q) => q.id === id);
+    const updated = updateDemoQuote(id, (q) => ({ ...q, status }));
     if (updated && current?.status !== status) {
-      await createQuoteStatusEvent({
-        quoteId: id,
-        fromStatus: current?.status,
-        toStatus: status,
-        note: "Cambio stato manuale backoffice"
-      });
+      await createQuoteStatusEvent({ quoteId: id, fromStatus: current?.status, toStatus: status, note: "Cambio stato manuale backoffice" });
     }
     return fallback(updated);
   }
 
   const previous = await supabase.from("quotes").select("status").eq("id", id).maybeSingle();
-  const dbStatus = status === "perso_non_disponibile" ? "perso_non_disponibile" : status;
+  const dbStatus = status;
   const { error } = await supabase.from("quotes").update({ status: dbStatus, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) return fallback(null, error);
   if (previous.data?.status !== dbStatus) {
-    await createQuoteStatusEvent({
-      quoteId: id,
-      fromStatus: previous.data?.status,
-      toStatus: dbStatus,
-      note: "Cambio stato manuale backoffice"
-    });
+    await createQuoteStatusEvent({ quoteId: id, fromStatus: previous.data?.status as string | undefined, toStatus: dbStatus, note: "Cambio stato manuale backoffice" });
   }
   return getQuoteById(id);
 }
@@ -249,15 +275,10 @@ export async function updateQuoteStatus(id: string, status: QuoteStatus): Promis
 export async function markQuoteConfirmed(id: string): Promise<RepositoryResult<Quote | null>> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) {
-    const current = allDemoQuotes().find((quote) => quote.id === id);
+    const current = allDemoQuotes().find((q) => q.id === id);
     markDemoQuoteConfirmed(id);
     if (current?.status !== "confermato") {
-      await createQuoteStatusEvent({
-        quoteId: id,
-        fromStatus: current?.status,
-        toStatus: "confermato",
-        note: "Preventivo confermato dal cliente"
-      });
+      await createQuoteStatusEvent({ quoteId: id, fromStatus: current?.status, toStatus: "confermato", note: "Preventivo confermato dal cliente" });
     }
     return getQuoteById(id);
   }
@@ -266,12 +287,7 @@ export async function markQuoteConfirmed(id: string): Promise<RepositoryResult<Q
   const { error } = await supabase.from("quotes").update({ status: "confermato", confirmed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
   if (error) return fallback(null, error);
   if (previous.data?.status !== "confermato") {
-    await createQuoteStatusEvent({
-      quoteId: id,
-      fromStatus: previous.data?.status,
-      toStatus: "confermato",
-      note: "Preventivo confermato dal cliente"
-    });
+    await createQuoteStatusEvent({ quoteId: id, fromStatus: previous.data?.status as string | undefined, toStatus: "confermato", note: "Preventivo confermato dal cliente" });
   }
   return getQuoteById(id);
 }
@@ -280,6 +296,28 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
   const source = await getQuoteById(id);
   if (!source.data) return fallback(null, source.error ?? "Preventivo non trovato");
   const quote = source.data;
+
+  const hotelOptions: QuoteHotelOptionInput[] = quote.hotelOptions
+    .filter((o) => !o.id.startsWith("virtual-"))
+    .map((o) => ({
+      hotelId: o.hotelId,
+      position: o.position,
+      hotelName: o.hotelName,
+      hotelLocation: o.hotelLocation,
+      hotelStars: o.hotelStars,
+      hotelImageUrl: o.hotelImageUrl,
+      sourceUrl: o.sourceUrl,
+      breakfastPrice: o.breakfastPrice,
+      halfBoardPrice: o.halfBoardPrice,
+      fullBoardPrice: o.fullBoardPrice,
+      breakfastLabel: o.breakfastLabel,
+      halfBoardLabel: o.halfBoardLabel,
+      fullBoardLabel: o.fullBoardLabel,
+      includedServices: o.includedServices,
+      paymentPolicy: o.paymentPolicy,
+      cancellationPolicy: o.cancellationPolicy,
+      notes: o.notes
+    }));
 
   return createQuoteFromRequest({
     quoteRequestId: quote.requestId || undefined,
@@ -294,7 +332,7 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
     checkIn: quote.arrivalDate,
     checkOut: quote.departureDate,
     adults: quote.adults,
-    children: quote.children.map((child) => ({ birthDate: child.birthDate })),
+    children: quote.children.map((c) => ({ birthDate: c.birthDate })),
     rooms: quote.rooms,
     treatment: quote.treatment,
     totalPrice: quote.totalPrice,
@@ -305,7 +343,8 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
     paymentPolicy: quote.paymentPolicy,
     cancellationPolicy: quote.cancellationPolicy,
     publicNotes: quote.customerNotes,
-    internalNotes: `Duplicato da ${quote.code}. ${quote.internalNotes}`.trim()
+    internalNotes: `Duplicato da ${quote.code}. ${quote.internalNotes}`.trim(),
+    hotelOptions: hotelOptions.length > 0 ? hotelOptions : undefined
   });
 }
 
@@ -384,5 +423,16 @@ function isUuid(value: unknown): value is string {
 
 function withDemoStatus(quote: Quote): Quote {
   if (!isQuoteConfirmedInDemo(quote.id)) return quote;
-  return { ...quote, status: "confermato", confirmation: quote.confirmation ?? { confirmedAt: new Date().toISOString(), fiscalCode: "", address: "", city: "", zip: "", province: "" } };
+  return {
+    ...quote,
+    status: "confermato",
+    confirmation: quote.confirmation ?? {
+      confirmedAt: new Date().toISOString(),
+      fiscalCode: "",
+      address: "",
+      city: "",
+      zip: "",
+      province: ""
+    }
+  };
 }

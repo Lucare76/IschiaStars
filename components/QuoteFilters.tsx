@@ -35,6 +35,7 @@ export function QuoteFilters({ quotes: initialQuotes, statsByQuote }: { quotes: 
     const next = !quote.excludedFromStats;
     const response = await fetch(`/api/quotes/${quote.id}`, {
       method: "PATCH",
+      credentials: "include",
       headers: adminApiHeaders(),
       body: JSON.stringify({ excludedFromStats: next })
     });
@@ -55,6 +56,7 @@ export function QuoteFilters({ quotes: initialQuotes, statsByQuote }: { quotes: 
 
     const response = await fetch(`/api/quotes/${quote.id}`, {
       method: "PATCH",
+      credentials: "include",
       headers: adminApiHeaders(),
       body: JSON.stringify({ softDelete: true })
     });
@@ -70,6 +72,7 @@ export function QuoteFilters({ quotes: initialQuotes, statsByQuote }: { quotes: 
   async function handleRestore(quote: Quote) {
     const response = await fetch(`/api/quotes/${quote.id}`, {
       method: "POST",
+      credentials: "include",
       headers: adminApiHeaders(),
       body: JSON.stringify({ action: "restore" })
     });

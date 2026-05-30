@@ -1,5 +1,5 @@
 import { hotels } from "@/lib/mock-data";
-import { Hotel, Quote, QuoteStatus, TransportOffer } from "@/lib/types";
+import { Hotel, Quote, QuoteHotelOption, QuoteStatus, TransportOffer, TreatmentOption } from "@/lib/types";
 
 export type DataSource = "supabase" | "mock";
 
@@ -21,80 +21,240 @@ export function fromSupabase<T>(data: T): RepositoryResult<T> {
   return { data, source: "supabase" };
 }
 
-export function mapHotel(row: Record<string, any>): Hotel {
+export function mapHotel(row: Record<string, unknown>): Hotel {
   return {
-    id: row.id,
-    name: row.name,
-    zone: row.location ?? row.zone ?? "",
-    stars: row.stars ?? 3,
-    description: row.short_description ?? row.description ?? "",
-    imageUrl: row.image_url ?? undefined,
-    sourceUrl: row.source_url ?? undefined,
-    slug: row.slug ?? undefined,
-    standardServices: Array.isArray(row.standard_services) ? row.standard_services : [],
-    paymentPolicy: row.payment_policy ?? "",
-    cancellationPolicy: row.cancellation_policy ?? "",
-    internalNotes: row.internal_notes ?? "",
-    active: row.is_active ?? row.active ?? true
+    id: String(row.id),
+    name: String(row.name),
+    zone: String(row.location ?? row.zone ?? ""),
+    stars: Number(row.stars ?? 3),
+    description: String(row.short_description ?? row.description ?? ""),
+    imageUrl: row.image_url ? String(row.image_url) : undefined,
+    sourceUrl: row.source_url ? String(row.source_url) : undefined,
+    slug: row.slug ? String(row.slug) : undefined,
+    standardServices: Array.isArray(row.standard_services) ? row.standard_services as string[] : [],
+    paymentPolicy: String(row.payment_policy ?? ""),
+    cancellationPolicy: String(row.cancellation_policy ?? ""),
+    internalNotes: String(row.internal_notes ?? ""),
+    active: Boolean(row.is_active ?? row.active ?? true)
   };
 }
 
-export function mapQuote(row: Record<string, any>, allHotels: Hotel[], childRows: Record<string, any>[] = []): Quote {
-  const proposedHotel = allHotels.find((hotel) => hotel.id === (row.hotel_id ?? row.proposed_hotel_id)) ?? hotels[0];
-  const alternativeHotel = allHotels.find((hotel) => hotel.id === row.alternative_hotel_id);
+export function mapQuote(
+  row: Record<string, unknown>,
+  allHotels: Hotel[],
+  childRows: Record<string, unknown>[] = [],
+  hotelOptionRows: Record<string, unknown>[] = []
+): Quote {
+  const proposedHotel = allHotels.find((h) => h.id === (row.hotel_id ?? row.proposed_hotel_id)) ?? hotels[0];
+  const alternativeHotel = allHotels.find((h) => h.id === row.alternative_hotel_id);
   const children = childRows
-    .filter((child) => child.quote_id === row.id)
-    .map((child, index) => ({
-      id: child.id ?? `${row.id}-child-${index}`,
-      firstName: child.first_name ?? `Bambino ${index + 1}`,
-      birthDate: child.birth_date
+    .filter((c) => c.quote_id === row.id)
+    .map((c, index) => ({
+      id: String(c.id ?? `${row.id}-child-${index}`),
+      firstName: String(c.first_name ?? `Bambino ${index + 1}`),
+      birthDate: String(c.birth_date)
     }));
 
+  // Filtra le righe di hotel options per questo preventivo
+  const optionRowsForThisQuote = hotelOptionRows.filter((o) => o.quote_id === row.id);
+
+  let hotelOptions: QuoteHotelOption[];
+  if (optionRowsForThisQuote.length > 0) {
+    hotelOptions = optionRowsForThisQuote.map(mapHotelOptionRowInline).sort((a, b) => a.position - b.position);
+  } else {
+    // Compatibilità con preventivi vecchi: crea opzione virtuale dai campi legacy
+    hotelOptions = buildVirtualHotelOptions(row, proposedHotel);
+  }
+
   return {
-    id: row.id,
-    code: row.code,
-    token: row.public_token,
-    requestId: row.quote_request_id ?? "",
-    customerFirstName: row.client_first_name ?? row.customer_first_name,
-    customerLastName: row.client_last_name ?? row.customer_last_name,
-    customerEmail: row.client_email ?? row.customer_email,
-    customerPhone: row.client_phone ?? row.customer_phone,
-    requestedHotel: row.hotel_requested ?? row.requested_hotel ?? "",
+    id: String(row.id),
+    code: String(row.code),
+    token: String(row.public_token),
+    requestId: String(row.quote_request_id ?? ""),
+    customerFirstName: String(row.client_first_name ?? row.customer_first_name ?? ""),
+    customerLastName: String(row.client_last_name ?? row.customer_last_name ?? ""),
+    customerEmail: String(row.client_email ?? row.customer_email ?? ""),
+    customerPhone: String(row.client_phone ?? row.customer_phone ?? ""),
+    requestedHotel: String(row.hotel_requested ?? row.requested_hotel ?? ""),
     proposedHotel,
     alternativeHotel,
-    isAlternative: row.is_alternative_offer ?? row.unavailable_requested_hotel ?? false,
-    unavailableRequestedHotel: row.is_alternative_offer ?? row.unavailable_requested_hotel ?? false,
-    arrivalDate: row.check_in ?? row.arrival_date,
-    departureDate: row.check_out ?? row.departure_date,
-    adults: row.adults ?? 2,
+    isAlternative: Boolean(row.is_alternative_offer ?? row.unavailable_requested_hotel ?? false),
+    unavailableRequestedHotel: Boolean(row.is_alternative_offer ?? row.unavailable_requested_hotel ?? false),
+    arrivalDate: String(row.check_in ?? row.arrival_date ?? ""),
+    departureDate: String(row.check_out ?? row.departure_date ?? ""),
+    adults: Number(row.adults ?? 2),
     children,
-    rooms: row.rooms ?? 1,
-    treatment: row.treatment ?? "",
+    rooms: Number(row.rooms ?? 1),
+    treatment: String(row.treatment ?? ""),
     totalPrice: Number(row.total_price ?? 0),
     deposit: Number(row.deposit_amount ?? row.deposit ?? 0),
-    offerExpiresAt: row.valid_until ?? row.offer_expires_at,
-    servicesIncluded: Array.isArray(row.included_services) ? row.included_services : Array.isArray(row.services_included) ? row.services_included : [],
-    transportOffers: parseTransportOffers(row.transport_offers ?? row.metadata?.transport_offers),
-    paymentPolicy: row.payment_policy ?? "",
-    cancellationPolicy: row.cancellation_policy ?? "",
-    internalNotes: row.internal_notes ?? "",
-    customerNotes: row.public_notes ?? row.customer_notes ?? "",
-    status: normalizeStatus(row.status),
-    createdAt: row.created_at,
-    sentAt: row.sent_at ?? undefined,
-    excludedFromStats: row.excluded_from_stats ?? false,
-    deletedAt: row.deleted_at ?? undefined,
+    offerExpiresAt: String(row.valid_until ?? row.offer_expires_at ?? ""),
+    servicesIncluded: Array.isArray(row.included_services)
+      ? row.included_services as string[]
+      : Array.isArray(row.services_included)
+        ? row.services_included as string[]
+        : [],
+    transportOffers: parseTransportOffers(row.transport_offers ?? (row.metadata as Record<string, unknown> | undefined)?.transport_offers),
+    paymentPolicy: String(row.payment_policy ?? ""),
+    cancellationPolicy: String(row.cancellation_policy ?? ""),
+    internalNotes: String(row.internal_notes ?? ""),
+    customerNotes: String(row.public_notes ?? row.customer_notes ?? ""),
+    status: normalizeStatus(String(row.status ?? "da_evadere")),
+    createdAt: String(row.created_at ?? ""),
+    sentAt: row.sent_at ? String(row.sent_at) : undefined,
+    excludedFromStats: Boolean(row.excluded_from_stats ?? false),
+    deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
     confirmation: row.confirmed_at
       ? {
-          confirmedAt: row.confirmed_at,
+          confirmedAt: String(row.confirmed_at),
           fiscalCode: "",
           address: "",
           city: "",
           zip: "",
           province: ""
         }
-      : undefined
+      : undefined,
+    hotelOptions
   };
+}
+
+function mapHotelOptionRowInline(row: Record<string, unknown>): QuoteHotelOption {
+  const breakfastPrice = row.breakfast_price != null ? Number(row.breakfast_price) : undefined;
+  const halfBoardPrice = row.half_board_price != null ? Number(row.half_board_price) : undefined;
+  const fullBoardPrice = row.full_board_price != null ? Number(row.full_board_price) : undefined;
+  const breakfastLabel = String(row.breakfast_label ?? "Camera e colazione");
+  const halfBoardLabel = String(row.half_board_label ?? "Mezza pensione");
+  const fullBoardLabel = String(row.full_board_label ?? "Pensione completa");
+
+  const treatments: TreatmentOption[] = [
+    breakfastPrice != null ? { key: "breakfast" as const, label: breakfastLabel, price: breakfastPrice } : null,
+    halfBoardPrice != null ? { key: "half_board" as const, label: halfBoardLabel, price: halfBoardPrice } : null,
+    fullBoardPrice != null ? { key: "full_board" as const, label: fullBoardLabel, price: fullBoardPrice } : null
+  ].filter(Boolean) as TreatmentOption[];
+
+  return {
+    id: String(row.id),
+    quoteId: String(row.quote_id),
+    hotelId: row.hotel_id ? String(row.hotel_id) : undefined,
+    position: Number(row.position),
+    hotelName: String(row.hotel_name),
+    hotelLocation: row.hotel_location ? String(row.hotel_location) : undefined,
+    hotelStars: row.hotel_stars != null ? Number(row.hotel_stars) : undefined,
+    hotelImageUrl: row.hotel_image_url ? String(row.hotel_image_url) : undefined,
+    sourceUrl: row.source_url ? String(row.source_url) : undefined,
+    breakfastPrice,
+    halfBoardPrice,
+    fullBoardPrice,
+    breakfastLabel,
+    halfBoardLabel,
+    fullBoardLabel,
+    includedServices: row.included_services ? String(row.included_services) : undefined,
+    paymentPolicy: row.payment_policy ? String(row.payment_policy) : undefined,
+    cancellationPolicy: row.cancellation_policy ? String(row.cancellation_policy) : undefined,
+    notes: row.notes ? String(row.notes) : undefined,
+    isSelected: Boolean(row.is_selected),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at ?? row.created_at),
+    treatments
+  };
+}
+
+// Crea un'opzione virtuale per preventivi vecchi (schema legacy)
+function buildVirtualHotelOptions(row: Record<string, unknown>, proposedHotel: Hotel): QuoteHotelOption[] {
+  const totalPrice = Number(row.total_price ?? 0);
+  const treatment = String(row.treatment ?? "").trim().toLowerCase();
+
+  const isHalf = ["mezza pensione", "half board"].includes(treatment);
+  const isFull = ["pensione completa", "full board"].includes(treatment);
+
+  const breakfastPrice = !isHalf && !isFull ? (totalPrice > 0 ? totalPrice : undefined) : undefined;
+  const halfBoardPrice = isHalf ? totalPrice : undefined;
+  const fullBoardPrice = isFull ? totalPrice : undefined;
+
+  const treatments: TreatmentOption[] = [
+    breakfastPrice != null ? { key: "breakfast" as const, label: "Camera e colazione", price: breakfastPrice } : null,
+    halfBoardPrice != null ? { key: "half_board" as const, label: "Mezza pensione", price: halfBoardPrice } : null,
+    fullBoardPrice != null ? { key: "full_board" as const, label: "Pensione completa", price: fullBoardPrice } : null
+  ].filter(Boolean) as TreatmentOption[];
+
+  const quoteId = String(row.id);
+  const createdAt = String(row.created_at ?? "");
+
+  return [
+    {
+      id: `virtual-${quoteId}-1`,
+      quoteId,
+      hotelId: undefined,
+      position: 1,
+      hotelName: proposedHotel.name,
+      hotelLocation: proposedHotel.zone,
+      hotelStars: proposedHotel.stars,
+      hotelImageUrl: proposedHotel.imageUrl,
+      sourceUrl: proposedHotel.sourceUrl,
+      breakfastPrice,
+      halfBoardPrice,
+      fullBoardPrice,
+      breakfastLabel: "Camera e colazione",
+      halfBoardLabel: "Mezza pensione",
+      fullBoardLabel: "Pensione completa",
+      includedServices: proposedHotel.standardServices.join("\n"),
+      paymentPolicy: proposedHotel.paymentPolicy,
+      cancellationPolicy: proposedHotel.cancellationPolicy,
+      notes: undefined,
+      isSelected: false,
+      createdAt,
+      updatedAt: createdAt,
+      treatments
+    }
+  ];
+}
+
+export function getEffectiveHotelOptions(quote: { hotelOptions: QuoteHotelOption[]; proposedHotel: Hotel; treatment: string; totalPrice: number; id: string; createdAt: string }): QuoteHotelOption[] {
+  if (quote.hotelOptions.length > 0) return quote.hotelOptions;
+
+  // Fallback per preventivi demo senza hotelOptions (es. mock-data.ts)
+  const treatment = quote.treatment.trim().toLowerCase();
+  const isHalf = ["mezza pensione", "half board"].includes(treatment);
+  const isFull = ["pensione completa", "full board"].includes(treatment);
+  const price = quote.totalPrice > 0 ? quote.totalPrice : undefined;
+
+  const breakfastPrice = !isHalf && !isFull ? price : undefined;
+  const halfBoardPrice = isHalf ? price : undefined;
+  const fullBoardPrice = isFull ? price : undefined;
+
+  const treatments: TreatmentOption[] = [
+    breakfastPrice != null ? { key: "breakfast" as const, label: "Camera e colazione", price: breakfastPrice } : null,
+    halfBoardPrice != null ? { key: "half_board" as const, label: "Mezza pensione", price: halfBoardPrice } : null,
+    fullBoardPrice != null ? { key: "full_board" as const, label: "Pensione completa", price: fullBoardPrice } : null
+  ].filter(Boolean) as TreatmentOption[];
+
+  return [
+    {
+      id: `virtual-${quote.id}-1`,
+      quoteId: quote.id,
+      hotelId: undefined,
+      position: 1,
+      hotelName: quote.proposedHotel.name,
+      hotelLocation: quote.proposedHotel.zone,
+      hotelStars: quote.proposedHotel.stars,
+      hotelImageUrl: quote.proposedHotel.imageUrl,
+      sourceUrl: quote.proposedHotel.sourceUrl,
+      breakfastPrice,
+      halfBoardPrice,
+      fullBoardPrice,
+      breakfastLabel: "Camera e colazione",
+      halfBoardLabel: "Mezza pensione",
+      fullBoardLabel: "Pensione completa",
+      includedServices: quote.proposedHotel.standardServices.join("\n"),
+      paymentPolicy: quote.proposedHotel.paymentPolicy,
+      cancellationPolicy: quote.proposedHotel.cancellationPolicy,
+      notes: undefined,
+      isSelected: false,
+      createdAt: quote.createdAt,
+      updatedAt: quote.createdAt,
+      treatments
+    }
+  ];
 }
 
 function parseTransportOffers(value: unknown): TransportOffer[] {

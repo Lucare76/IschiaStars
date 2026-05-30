@@ -1,4 +1,5 @@
 import type { Quote } from "@/lib/types";
+import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 
 type BrevoRecipient = { email: string; name?: string };
 
@@ -16,6 +17,9 @@ export type BrevoConfirmationDetails = {
   phone: string;
   email: string;
   confirmedAt: string;
+  selectedHotelName?: string;
+  selectedTreatmentLabel?: string;
+  selectedPrice?: number;
 };
 
 export function isBrevoEnabled(): boolean {
@@ -91,9 +95,34 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
   const quoteUrl = `${siteUrl}/preventivi/${quote.code}?token=${quote.token}`;
   const firstName = quote.customerFirstName || "Cliente";
   const clientName = `${quote.customerFirstName} ${quote.customerLastName}`.trim();
-  const hotelName = quote.proposedHotel?.name || "hotel selezionato";
   const replyEmail = process.env.BREVO_FROM_EMAIL || "info@ischiastars.it";
   const replyName = process.env.BREVO_FROM_NAME || "IschiaStars";
+
+  const options = getEffectiveHotelOptions(quote);
+  const hasMultiple = options.length > 1;
+
+  // Riepilogo opzioni per email
+  const optionsSummaryHtml = options
+    .filter((o) => o.treatments.length > 0)
+    .map((o) => {
+      const treatmentsHtml = o.treatments
+        .map((t) => `<tr><td style="padding:4px 0;font-size:13px;color:#555;">${t.label}</td><td style="padding:4px 0;font-size:13px;color:#1a3a5c;text-align:right;font-weight:600;">${formatPrice(t.price)}</td></tr>`)
+        .join("");
+      return `<tr><td colspan="2" style="padding:10px 0 4px;font-size:14px;font-weight:bold;color:#1a3a5c;">${o.hotelName}${o.hotelLocation ? ` — ${o.hotelLocation}` : ""}</td></tr>${treatmentsHtml}`;
+    })
+    .join("");
+
+  const optionsSummaryText = options
+    .filter((o) => o.treatments.length > 0)
+    .map((o) => {
+      const tr = o.treatments.map((t) => `  ${t.label}: ${formatPrice(t.price)}`).join("\n");
+      return `${o.hotelName}${o.hotelLocation ? ` — ${o.hotelLocation}` : ""}:\n${tr}`;
+    })
+    .join("\n\n");
+
+  const introText = hasMultiple
+    ? `Abbiamo preparato <strong>più proposte</strong> per il tuo soggiorno a Ischia. Confronta le opzioni e conferma quella che preferisci direttamente online.`
+    : `Abbiamo preparato la tua proposta personalizzata per il soggiorno a Ischia.`;
 
   const html = `<!DOCTYPE html>
 <html lang="it">
@@ -116,18 +145,12 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
         <tr>
           <td style="padding:32px 32px 24px;">
             <p style="margin:0 0 18px;font-size:16px;color:#1a1a1a;">Ciao ${firstName},</p>
-            <p style="margin:0 0 28px;font-size:15px;color:#444444;line-height:1.7;">
-              Abbiamo preparato la tua proposta personalizzata per il soggiorno a Ischia.
-            </p>
+            <p style="margin:0 0 28px;font-size:15px;color:#444444;line-height:1.7;">${introText}</p>
 
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f6ff;border-radius:6px;padding:20px 20px 12px;margin-bottom:28px;">
               <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong style="color:#1a3a5c;">Codice preventivo</strong></td>
                 <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;font-weight:600;">${quote.code}</td>
-              </tr>
-              <tr>
-                <td style="padding:6px 0;font-size:14px;color:#555;"><strong style="color:#1a3a5c;">Hotel proposto</strong></td>
-                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${hotelName}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong style="color:#1a3a5c;">Arrivo</strong></td>
@@ -137,24 +160,17 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong style="color:#1a3a5c;">Partenza</strong></td>
                 <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${formatDate(quote.departureDate)}</td>
               </tr>
-              <tr>
-                <td style="padding:6px 0;font-size:14px;color:#555;"><strong style="color:#1a3a5c;">Trattamento</strong></td>
-                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${quote.treatment || "—"}</td>
-              </tr>
-              <tr>
-                <td style="padding:12px 0 6px;font-size:16px;border-top:1px solid #cdd8e8;"><strong style="color:#1a3a5c;">Prezzo totale</strong></td>
-                <td style="padding:12px 0 6px;font-size:16px;font-weight:bold;color:#1a3a5c;text-align:right;border-top:1px solid #cdd8e8;">${formatPrice(quote.totalPrice)}</td>
-              </tr>
+              ${optionsSummaryHtml}
               ${quote.offerExpiresAt ? `<tr>
-                <td style="padding:6px 0;font-size:13px;color:#555;"><strong style="color:#c05000;">Offerta valida fino al</strong></td>
-                <td style="padding:6px 0;font-size:13px;color:#c05000;text-align:right;font-weight:600;">${formatDate(quote.offerExpiresAt)}</td>
+                <td style="padding:10px 0 6px;font-size:13px;color:#c05000;border-top:1px solid #cdd8e8;"><strong>Offerta valida fino al</strong></td>
+                <td style="padding:10px 0 6px;font-size:13px;color:#c05000;text-align:right;font-weight:600;border-top:1px solid #cdd8e8;">${formatDate(quote.offerExpiresAt)}</td>
               </tr>` : ""}
             </table>
 
             <div style="text-align:center;margin:28px 0 20px;">
               <a href="${quoteUrl}"
                  style="background:#1a3a5c;color:#ffffff;text-decoration:none;padding:15px 36px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;letter-spacing:0.5px;">
-                Apri il preventivo
+                ${hasMultiple ? "Vedi le proposte e conferma" : "Apri il preventivo"}
               </a>
             </div>
 
@@ -166,7 +182,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
             </p>
 
             <p style="margin:0 0 12px;font-size:14px;color:#444444;line-height:1.7;">
-              Dal preventivo potrai visualizzare i dettagli, le condizioni e confermare online.
+              Dal preventivo potrai visualizzare i dettagli, confrontare le proposte e confermare direttamente online.
             </p>
             <p style="margin:0;font-size:14px;color:#444444;line-height:1.7;">
               Per domande puoi rispondere a questa email oppure scriverci su WhatsApp.
@@ -192,20 +208,20 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
     "",
     `Ciao ${firstName},`,
     "",
-    "Abbiamo preparato la tua proposta personalizzata per il soggiorno a Ischia.",
+    hasMultiple
+      ? "Abbiamo preparato più proposte per il tuo soggiorno a Ischia."
+      : "Abbiamo preparato la tua proposta personalizzata per il soggiorno a Ischia.",
     "",
     `Codice preventivo: ${quote.code}`,
-    `Hotel proposto:    ${hotelName}`,
     `Arrivo:            ${formatDate(quote.arrivalDate)}`,
     `Partenza:          ${formatDate(quote.departureDate)}`,
-    `Trattamento:       ${quote.treatment || "—"}`,
-    `Prezzo totale:     ${formatPrice(quote.totalPrice)}`,
-    ...(quote.offerExpiresAt ? [`Offerta valida fino al: ${formatDate(quote.offerExpiresAt)}`] : []),
     "",
-    "Apri il preventivo:",
+    "Proposte:",
+    optionsSummaryText,
+    ...(quote.offerExpiresAt ? [`\nOfferta valida fino al: ${formatDate(quote.offerExpiresAt)}`] : []),
+    "",
+    hasMultiple ? "Vedi le proposte e conferma:" : "Apri il preventivo:",
     quoteUrl,
-    "",
-    "Dal preventivo potrai visualizzare i dettagli, le condizioni e confermare online.",
     "",
     "Per domande puoi rispondere a questa email oppure scriverci su WhatsApp.",
     "",
@@ -213,9 +229,13 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
     "info@ischiastars.it"
   ].join("\n");
 
+  const subject = hasMultiple
+    ? `Le tue proposte IschiaStars ${quote.code}`
+    : `La tua proposta IschiaStars ${quote.code}`;
+
   const ok = await sendBrevoEmail({
     to: [{ email, name: clientName }],
-    subject: `La tua proposta IschiaStars ${quote.code}`,
+    subject,
     html,
     text,
     replyTo: { email: replyEmail, name: replyName }
@@ -242,7 +262,6 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
   const backofficeUrl = `${siteUrl}/admin/preventivi`;
-  const hotelName = quote.proposedHotel?.name || "—";
 
   let confirmedAtFormatted = confirmation.confirmedAt;
   try {
@@ -253,9 +272,25 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
       hour: "2-digit",
       minute: "2-digit"
     });
-  } catch {
-    // keep raw value
-  }
+  } catch { /* keep raw value */ }
+
+  const hasSelection = Boolean(confirmation.selectedHotelName && confirmation.selectedTreatmentLabel);
+  const selectionHtml = hasSelection
+    ? `<tr>
+        <td style="padding:10px 0 6px;font-size:15px;border-top:1px solid #b8d8b8;"><strong>Hotel scelto</strong></td>
+        <td style="padding:10px 0 6px;font-size:15px;font-weight:bold;color:#1a4a2a;text-align:right;border-top:1px solid #b8d8b8;">${confirmation.selectedHotelName}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Trattamento scelto</strong></td>
+        <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${confirmation.selectedTreatmentLabel}</td>
+      </tr>
+      ${confirmation.selectedPrice != null ? `<tr>
+        <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Prezzo scelto</strong></td>
+        <td style="padding:6px 0;font-size:14px;font-weight:bold;color:#1a4a2a;text-align:right;">${formatPrice(confirmation.selectedPrice)}</td>
+      </tr>` : ""}`
+    : `<tr>
+        <td colspan="2" style="padding:10px 0 6px;font-size:13px;border-top:1px solid #b8d8b8;color:#888;">Il cliente non ha specificato l'opzione (conferma generica)</td>
+      </tr>`;
 
   const html = `<!DOCTYPE html>
 <html lang="it">
@@ -298,10 +333,6 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
                 <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${confirmation.email}</td>
               </tr>
               <tr>
-                <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Hotel</strong></td>
-                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${hotelName}</td>
-              </tr>
-              <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Arrivo</strong></td>
                 <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${formatDate(quote.arrivalDate)}</td>
               </tr>
@@ -309,10 +340,7 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Partenza</strong></td>
                 <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${formatDate(quote.departureDate)}</td>
               </tr>
-              <tr>
-                <td style="padding:12px 0 6px;font-size:15px;border-top:1px solid #b8d8b8;"><strong>Prezzo totale</strong></td>
-                <td style="padding:12px 0 6px;font-size:15px;font-weight:bold;color:#1a4a2a;text-align:right;border-top:1px solid #b8d8b8;">${formatPrice(quote.totalPrice)}</td>
-              </tr>
+              ${selectionHtml}
               <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Confermato il</strong></td>
                 <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${confirmedAtFormatted}</td>
@@ -349,10 +377,11 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
     `Cliente:           ${confirmation.firstName} ${confirmation.lastName}`,
     `Telefono:          ${confirmation.phone}`,
     `Email:             ${confirmation.email}`,
-    `Hotel:             ${hotelName}`,
     `Arrivo:            ${formatDate(quote.arrivalDate)}`,
     `Partenza:          ${formatDate(quote.departureDate)}`,
-    `Prezzo totale:     ${formatPrice(quote.totalPrice)}`,
+    ...(confirmation.selectedHotelName ? [`Hotel scelto:      ${confirmation.selectedHotelName}`] : []),
+    ...(confirmation.selectedTreatmentLabel ? [`Trattamento:       ${confirmation.selectedTreatmentLabel}`] : []),
+    ...(confirmation.selectedPrice != null ? [`Prezzo scelto:     ${formatPrice(confirmation.selectedPrice)}`] : []),
     `Confermato il:     ${confirmedAtFormatted}`,
     "",
     `Backoffice: ${backofficeUrl}`
@@ -360,7 +389,7 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
 
   const ok = await sendBrevoEmail({
     to: [{ email: internalEmail, name: "IschiaStars" }],
-    subject: `Preventivo confermato ${quote.code}`,
+    subject: `Preventivo confermato ${quote.code}${confirmation.selectedHotelName ? ` — ${confirmation.selectedHotelName}` : ""}`,
     html,
     text
   });

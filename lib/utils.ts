@@ -34,7 +34,18 @@ export function normalizeItalianPhone(phone: string) {
 }
 
 export function whatsappQuoteLink(quote: Quote) {
-  const message = `Ciao ${quote.customerFirstName},
+  const hasMultipleOptions = quote.hotelOptions.length > 1;
+  const message = hasMultipleOptions
+    ? `Ciao ${quote.customerFirstName},
+abbiamo preparato la tua proposta IschiaStars con più soluzioni hotel:
+
+${absolutePublicQuoteUrl(quote)}
+
+Puoi aprire il link, confrontare le opzioni disponibili e confermare online quella che preferisci.
+
+Grazie,
+IschiaStars`
+    : `Ciao ${quote.customerFirstName},
 abbiamo preparato la tua proposta personalizzata IschiaStars:
 
 ${absolutePublicQuoteUrl(quote)}

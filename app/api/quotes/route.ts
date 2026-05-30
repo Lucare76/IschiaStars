@@ -31,6 +31,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Dati preventivo incompleti" }, { status: 400 });
   }
 
+  // Validazione hotel options se presenti
+  if (body.hotelOptions?.length) {
+    if (body.hotelOptions.length > 3) {
+      return NextResponse.json({ ok: false, error: "Massimo 3 strutture per preventivo" }, { status: 400 });
+    }
+    const hasAtLeastOnePrice = body.hotelOptions.some(
+      (o: Record<string, unknown>) => o.breakfastPrice || o.halfBoardPrice || o.fullBoardPrice
+    );
+    if (!hasAtLeastOnePrice) {
+      return NextResponse.json({ ok: false, error: "Inserisci almeno un prezzo in almeno una struttura" }, { status: 400 });
+    }
+  }
+
   const accessToken = request.cookies.get(ADMIN_ACCESS_COOKIE)?.value;
   const result = await createQuoteFromRequest({
     quoteRequestId: body.quoteRequestId,
@@ -58,7 +71,8 @@ export async function POST(request: NextRequest) {
     paymentPolicy: body.paymentPolicy,
     cancellationPolicy: body.cancellationPolicy,
     publicNotes: body.publicNotes,
-    internalNotes: body.internalNotes
+    internalNotes: body.internalNotes,
+    hotelOptions: body.hotelOptions ?? undefined
   }, { accessToken });
 
   if (!result.data && result.error) {

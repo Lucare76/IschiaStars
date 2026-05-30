@@ -147,7 +147,8 @@ export const quotes: Quote[] = [
     status: "preventivo_inviato",
     createdAt: "2026-05-09T17:00:00+02:00",
     sentAt: "2026-05-09T17:20:00+02:00",
-    excludedFromStats: false
+    excludedFromStats: false,
+    hotelOptions: []
   },
   {
     id: "quote-002",
@@ -184,7 +185,8 @@ export const quotes: Quote[] = [
     status: "preventivo_inviato",
     createdAt: "2026-05-08T12:00:00+02:00",
     sentAt: "2026-05-08T12:20:00+02:00",
-    excludedFromStats: false
+    excludedFromStats: false,
+    hotelOptions: []
   },
   {
     id: "quote-003",
@@ -237,7 +239,8 @@ export const quotes: Quote[] = [
       city: "Napoli",
       zip: "80100",
       province: "NA"
-    }
+    },
+    hotelOptions: []
   }
 ];
 

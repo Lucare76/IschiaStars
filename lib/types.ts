@@ -68,6 +68,40 @@ export type TransportOffer = {
   notes?: string;
 };
 
+export type TreatmentKey = "breakfast" | "half_board" | "full_board";
+
+export type TreatmentOption = {
+  key: TreatmentKey;
+  label: string;
+  price: number;
+};
+
+export type QuoteHotelOption = {
+  id: string;
+  quoteId: string;
+  hotelId?: string;
+  position: number;
+  hotelName: string;
+  hotelLocation?: string;
+  hotelStars?: number;
+  hotelImageUrl?: string;
+  sourceUrl?: string;
+  breakfastPrice?: number;
+  halfBoardPrice?: number;
+  fullBoardPrice?: number;
+  breakfastLabel: string;
+  halfBoardLabel: string;
+  fullBoardLabel: string;
+  includedServices?: string;
+  paymentPolicy?: string;
+  cancellationPolicy?: string;
+  notes?: string;
+  isSelected: boolean;
+  createdAt: string;
+  updatedAt: string;
+  treatments: TreatmentOption[];
+};
+
 export type Quote = {
   id: string;
   code: string;
@@ -103,4 +137,5 @@ export type Quote = {
   confirmation?: QuoteConfirmation;
   excludedFromStats: boolean;
   deletedAt?: string;
+  hotelOptions: QuoteHotelOption[];
 };

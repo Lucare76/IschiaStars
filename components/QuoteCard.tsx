@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
+import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { formatCurrency, formatDate, formatDateTime, publicQuoteUrl } from "@/lib/utils";
 import { Quote, QuoteRequest } from "@/lib/types";
 
@@ -72,12 +73,23 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
         </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
-        <Info className="col-span-2 sm:col-span-1" label="Hotel" value={quote.proposedHotel.name} />
+        {(() => {
+          const options = getEffectiveHotelOptions(quote);
+          const selectedOption = options.find((o) => o.isSelected);
+          const hotelLabel = options.length > 1 ? `${options.length} strutture proposte` : (options[0]?.hotelName ?? quote.proposedHotel.name);
+          return (
+            <>
+              <Info className="col-span-2 sm:col-span-1" label="Hotel" value={hotelLabel} />
+              {selectedOption && quote.status === "confermato" && (
+                <Info className="col-span-2 sm:col-span-1" label="Scelta cliente" value={`${selectedOption.hotelName} — ${selectedOption.treatments.find(Boolean)?.label ?? "—"}`} />
+              )}
+            </>
+          );
+        })()}
         <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} numeric />
-        <Info label="Totale" value={formatCurrency(quote.totalPrice)} numeric />
+        <Info label="Totale" value={quote.totalPrice > 0 ? formatCurrency(quote.totalPrice) : "vedi proposte"} numeric />
         {!isDeleted ? <Info label="Aperture" value={`${stats.openings}`} numeric /> : null}
       </div>
-      {quote.isAlternative && !isDeleted ? <p className="mt-4 inline-flex rounded-full bg-ischia-sun/25 px-3 py-1 text-xs font-black text-amber-900">Alternativa proposta</p> : null}
       <div className="mt-5 flex flex-wrap gap-2">
         {!isDeleted ? (
           <>

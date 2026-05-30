@@ -28,6 +28,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ ok: Boolean(result.data), source: result.source, data: result.data, error: result.error }, { status: result.data ? 200 : 400 });
   }
 
+  // Validazione hotel options se presenti
+  if (body.hotelOptions?.length) {
+    if (body.hotelOptions.length > 3) {
+      return NextResponse.json({ ok: false, error: "Massimo 3 strutture per preventivo" }, { status: 400 });
+    }
+  }
+
   const result = await updateQuote(params.id, {
     clientFirstName: body.clientFirstName,
     clientLastName: body.clientLastName,
@@ -50,7 +57,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     paymentPolicy: body.paymentPolicy,
     cancellationPolicy: body.cancellationPolicy,
     publicNotes: body.publicNotes,
-    internalNotes: body.internalNotes
+    internalNotes: body.internalNotes,
+    hotelOptions: body.hotelOptions ?? undefined
   });
 
   return NextResponse.json({ ok: Boolean(result.data), source: result.source, data: result.data, error: result.error }, { status: result.data ? 200 : 400 });

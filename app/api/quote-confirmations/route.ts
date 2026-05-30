@@ -18,6 +18,11 @@ type ConfirmationPayload = {
   acceptedTerms?: boolean;
   acceptedPrivacy?: boolean;
   children?: { id?: string; birthDate?: string }[];
+  selectedHotelOptionId?: string;
+  selectedHotelName?: string;
+  selectedTreatmentKey?: string;
+  selectedTreatmentLabel?: string;
+  selectedPrice?: number;
 };
 
 export async function POST(request: NextRequest) {
@@ -30,7 +35,7 @@ export async function POST(request: NextRequest) {
   if (quoteResult.data.deletedAt) return NextResponse.json({ ok: false, error: "Preventivo non disponibile" }, { status: 410 });
 
   const expectedChildren = quoteResult.data.children.length;
-  if (expectedChildren > 0 && (body!.children?.filter((child) => Boolean(child.birthDate)).length ?? 0) < expectedChildren) {
+  if (expectedChildren > 0 && (body!.children?.filter((c) => Boolean(c.birthDate)).length ?? 0) < expectedChildren) {
     return NextResponse.json({ ok: false, error: "Inserisci la data di nascita per ogni bambino" }, { status: 400 });
   }
 
@@ -46,6 +51,11 @@ export async function POST(request: NextRequest) {
     province: body!.province!.trim(),
     acceptedTerms: Boolean(body!.acceptedTerms),
     acceptedPrivacy: Boolean(body!.acceptedPrivacy),
+    selectedHotelOptionId: body!.selectedHotelOptionId,
+    selectedHotelName: body!.selectedHotelName,
+    selectedTreatmentKey: body!.selectedTreatmentKey,
+    selectedTreatmentLabel: body!.selectedTreatmentLabel,
+    selectedPrice: body!.selectedPrice,
     metadata: {
       children: body!.children ?? [],
       source: "public_quote_page"
@@ -59,7 +69,10 @@ export async function POST(request: NextRequest) {
     lastName: body!.lastName!.trim(),
     phone: body!.phone!.trim(),
     email: body!.email!.trim(),
-    confirmedAt: result.data.confirmedAt
+    confirmedAt: result.data.confirmedAt,
+    selectedHotelName: body!.selectedHotelName,
+    selectedTreatmentLabel: body!.selectedTreatmentLabel,
+    selectedPrice: body!.selectedPrice
   }).catch((err) => {
     console.warn("POST /api/quote-confirmations brevo error", { message: err instanceof Error ? err.message : String(err) });
   });
@@ -70,7 +83,7 @@ export async function POST(request: NextRequest) {
 function validateConfirmation(body: ConfirmationPayload | null) {
   if (!body?.quoteCode || !body.token) return "Link preventivo non valido";
   const required = [body.firstName, body.lastName, body.fiscalCode, body.phone, body.email, body.address, body.city, body.postalCode, body.province];
-  if (required.some((value) => !value?.trim())) return "Compila tutti i campi obbligatori";
+  if (required.some((v) => !v?.trim())) return "Compila tutti i campi obbligatori";
   if (body.fiscalCode!.trim().length < 11) return "Codice fiscale troppo breve";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email!.trim())) return "Email non valida";
   if (!/^\d{5}$/.test(body.postalCode!.trim())) return "CAP non valido";

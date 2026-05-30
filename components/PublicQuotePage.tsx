@@ -1,74 +1,65 @@
 import type { ReactNode } from "react";
-import { ConfirmQuoteForm } from "@/components/ConfirmQuoteForm";
 import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
+import { MobileFloatingWhatsApp, PublicQuoteHeaderActions } from "@/components/PublicQuoteActions";
 import { PublicEventTracker } from "@/components/PublicEventTracker";
-import { MobileFloatingWhatsApp, PublicQuoteHeaderActions, PublicQuoteMainActions } from "@/components/PublicQuoteActions";
+import { QuoteProposalSection } from "@/components/QuoteProposalSection";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
+import { PrintButton } from "@/components/PrintButton";
 import { Quote } from "@/lib/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
+import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 
 export function PublicQuotePage({ quote }: { quote: Quote }) {
   const guests = `${quote.adults} adulti${quote.children.length ? `, ${quote.children.length} bambini` : ""}`;
+  const options = getEffectiveHotelOptions(quote);
+  const hasMultipleOptions = options.length > 1;
 
   return (
     <main className="print-page mx-auto max-w-5xl px-5 py-6">
       <PublicEventTracker quoteCode={quote.code} token={quote.token} />
+
       <header className="no-print mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/90 p-4 shadow-soft">
         <IschiaStarsLogo />
         <PublicQuoteHeaderActions quote={quote} />
       </header>
 
       <section className="print-card overflow-hidden rounded-[28px] bg-white shadow-soft">
+        {/* Intestazione brand */}
         <div className="brand-shell p-6 text-white sm:p-9">
           <IschiaStarsLogo light />
           <p className="mt-10 text-sm font-bold uppercase tracking-[0.16em] text-ischia-sand">Preventivo {quote.code}</p>
-          <h1 className="mt-2 max-w-2xl text-4xl font-black leading-tight sm:text-5xl">La tua proposta di vacanza a Ischia</h1>
-          <p className="mt-4 max-w-xl text-white/84">Ciao {quote.customerFirstName}, abbiamo preparato una proposta personalizzata per il tuo soggiorno.</p>
+          <h1 className="mt-2 max-w-2xl text-4xl font-black leading-tight sm:text-5xl">
+            {hasMultipleOptions ? "Le tue proposte di vacanza a Ischia" : "La tua proposta di vacanza a Ischia"}
+          </h1>
+          <p className="mt-4 max-w-xl text-white/84">
+            Ciao {quote.customerFirstName},{" "}
+            {hasMultipleOptions
+              ? "abbiamo preparato più proposte per il tuo soggiorno a Ischia. Confronta le opzioni e conferma quella che preferisci."
+              : "abbiamo preparato una proposta personalizzata per il tuo soggiorno."}
+          </p>
         </div>
 
-        <div className="grid gap-5 p-5 sm:p-8 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="space-y-5">
-            <div className="rounded-2xl bg-ischia-mist p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-bold uppercase tracking-[0.14em] text-ischia-blue">Hotel proposto</p>
-                  <h2 className="mt-1 text-3xl font-black text-ischia-navy">{quote.proposedHotel.name}</h2>
-                  <p className="mt-2 text-ischia-ink/70">{quote.proposedHotel.description}</p>
-                </div>
-                <QuoteStatusBadge status={quote.status} />
-              </div>
-              {quote.isAlternative ? (
-                <div className="mt-4 rounded-2xl bg-white p-4 text-sm ring-1 ring-ischia-sun/40">
-                  <p className="font-black text-ischia-navy">Struttura alternativa proposta</p>
-                  <p className="mt-2 font-semibold text-ischia-ink">La struttura richiesta non è disponibile per le date selezionate. Abbiamo selezionato per te una proposta alternativa con caratteristiche simili.</p>
-                  <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <div><dt className="text-xs font-bold uppercase text-ischia-blue">Hotel richiesto</dt><dd className="font-bold">{quote.requestedHotel}</dd></div>
-                    <div><dt className="text-xs font-bold uppercase text-ischia-blue">Alternativa</dt><dd className="font-bold">{quote.proposedHotel.name}</dd></div>
-                  </dl>
-                </div>
-              ) : null}
+        {/* Info soggiorno */}
+        <div className="p-5 sm:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.14em] text-ischia-blue">Dati soggiorno</p>
+              <QuoteStatusBadge status={quote.status} />
             </div>
+          </div>
 
-            <InfoGrid
-              items={[
-                ["Cliente", `${quote.customerFirstName} ${quote.customerLastName}`],
-                ["Date", `${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`],
-                ["Ospiti", guests],
-                ["Camere", `${quote.rooms}`],
-                ["Trattamento", quote.treatment],
-                ["Validita offerta", formatDate(quote.offerExpiresAt)]
-              ]}
-            />
+          <InfoGrid
+            items={[
+              ["Cliente", `${quote.customerFirstName} ${quote.customerLastName}`],
+              ["Date", `${formatDate(quote.arrivalDate)} — ${formatDate(quote.departureDate)}`],
+              ["Ospiti", guests],
+              ["Camere", `${quote.rooms}`],
+              ...(quote.offerExpiresAt ? [["Offerta valida fino al", formatDate(quote.offerExpiresAt)] as [string, string]] : [])
+            ]}
+          />
 
-            <ContentBlock title="Servizi inclusi">
-              <ul className="grid gap-2">
-                {quote.servicesIncluded.map((service) => (
-                  <li key={service} className="rounded-xl bg-white p-3 ring-1 ring-ischia-blue/10">{service}</li>
-                ))}
-              </ul>
-            </ContentBlock>
-
-            {quote.children.length ? (
+          {quote.children.length > 0 && (
+            <div className="mt-4">
               <ContentBlock title="Bambini">
                 <ul className="grid gap-2">
                   {quote.children.map((child, index) => (
@@ -78,33 +69,42 @@ export function PublicQuotePage({ quote }: { quote: Quote }) {
                   ))}
                 </ul>
               </ContentBlock>
-            ) : null}
+            </div>
+          )}
 
-            <ContentBlock title="Condizioni">
-              <p><strong>Pagamento:</strong> {quote.paymentPolicy}</p>
-              <p className="mt-3"><strong>Cancellazione:</strong> {quote.cancellationPolicy}</p>
-            </ContentBlock>
+          {quote.customerNotes && (
+            <div className="mt-4">
+              <ContentBlock title="Note per te">
+                <p>{quote.customerNotes}</p>
+              </ContentBlock>
+            </div>
+          )}
+
+          {/* Stampa: riepilogo prezzi compatto */}
+          <div className="print-only mt-4 rounded-2xl bg-ischia-mist p-5">
+            <p className="font-black text-ischia-navy">Riepilogo proposte</p>
+            {options.map((opt) => (
+              <div key={opt.id} className="mt-3">
+                <p className="font-bold text-ischia-navy">{opt.hotelName}</p>
+                {opt.treatments.map((t) => (
+                  <p key={t.key} className="text-sm text-ischia-ink/80">{t.label}: {formatCurrency(t.price)}</p>
+                ))}
+              </div>
+            ))}
           </div>
 
-          <aside className="space-y-5">
-            <div className="print-card flex flex-col rounded-2xl bg-ischia-navy p-5 text-white shadow-soft">
-              <p className="text-sm font-bold uppercase tracking-[0.16em] text-ischia-sand">Totale proposta</p>
-              <p className="mt-3 text-4xl font-black tabular-nums">{formatCurrency(quote.totalPrice)}</p>
-              <p className="mt-2 text-white/78">Acconto richiesto: <strong className="tabular-nums">{formatCurrency(quote.deposit)}</strong></p>
-            </div>
-
-            <ContentBlock title="Note per te">
-              <p>{quote.customerNotes}</p>
-            </ContentBlock>
-
-            <PublicQuoteMainActions quote={quote} />
-          </aside>
+          {/* Azione stampa no-print */}
+          <div className="no-print mt-5 flex justify-end">
+            <PrintButton quoteCode={quote.code} token={quote.token} />
+          </div>
         </div>
       </section>
 
-      <section id="conferma" className="no-print mt-6">
-        <ConfirmQuoteForm quote={quote} />
+      {/* Sezione interattiva: hotel cards + conferma */}
+      <section className="mt-6">
+        <QuoteProposalSection quote={quote} />
       </section>
+
       <MobileFloatingWhatsApp quote={quote} />
     </main>
   );
@@ -112,9 +112,9 @@ export function PublicQuotePage({ quote }: { quote: Quote }) {
 
 function InfoGrid({ items }: { items: [string, string][] }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {items.map(([label, value]) => (
-        <div key={label} className="flex flex-col gap-1 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-ischia-blue/10">
+        <div key={label} className="flex flex-col gap-1 rounded-2xl bg-ischia-mist p-4">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{label}</p>
           <p className="font-bold text-ischia-ink">{value}</p>
         </div>
