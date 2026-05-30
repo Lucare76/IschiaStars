@@ -1,6 +1,7 @@
 import { allDemoHotels, deleteDemoHotel, upsertDemoHotel } from "@/lib/demo-store";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ImportedIschiaStarsHotel, mapImportedHotelToDbHotel, normalizeHotelName } from "@/lib/server/ischiastars-hotel-importer";
+import { fetchLrHotelQuotesFeed, mapLrHotelToDbRow } from "@/lib/server/lr-hotel-feed";
 import { Hotel } from "@/lib/types";
 import { fallback, fromSupabase, mapHotel, RepositoryResult } from "@/lib/repositories/shared";
 
@@ -251,7 +252,7 @@ function toImportedUpdateRow(current: Record<string, any>, importedRow: Record<s
 }
 
 function isWordPressHotelRow(row: Record<string, any>) {
-  return row.external_source === "wordpress" || row.external_source === "ischiastars.it";
+  return row.external_source === "wordpress" || row.external_source === "ischiastars.it" || row.external_source === "lr_hotel_feed";
 }
 
 function isArrayEmpty(value: unknown): boolean {
@@ -263,4 +264,135 @@ function hasMeaningfulImportChanges(current: Record<string, any>, updateRow: Rec
     if (["last_synced_at", "last_seen_on_site_at", "updated_at", "sync_metadata"].includes(key)) return false;
     return JSON.stringify(current[key] ?? null) !== JSON.stringify(value ?? null);
   });
+}
+
+// ── LR Hotel Feed sync ───────────────────────────────────────────────────────
+
+export type LrHotelSyncReportItem = {
+  externalId: string;
+  name: string;
+  action: "imported" | "updated" | "skipped";
+  sourceUrl: string;
+  hasImage: boolean;
+  servicesCount: number;
+  hasListino: boolean;
+};
+
+export type LrHotelSyncReport = {
+  schemaVersion: string;
+  generatedAt: string;
+  cacheStatus: string | null;
+  hotelsCount: number;
+  imported: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+  warnings: string[];
+  items: LrHotelSyncReportItem[];
+};
+
+export async function syncLrHotelFeed(): Promise<RepositoryResult<LrHotelSyncReport>> {
+  const supabase = createSupabaseAdminClient();
+  const emptyReport: LrHotelSyncReport = {
+    schemaVersion: "", generatedAt: "", cacheStatus: null,
+    hotelsCount: 0, imported: 0, updated: 0, skipped: 0,
+    errors: [], warnings: [], items: [],
+  };
+
+  if (!supabase) {
+    return { data: emptyReport, source: "mock", error: "La sincronizzazione richiede il collegamento al database." };
+  }
+
+  // Fetch feed
+  let feed: Awaited<ReturnType<typeof fetchLrHotelQuotesFeed>>;
+  try {
+    feed = await fetchLrHotelQuotesFeed();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { data: emptyReport, source: "supabase", error: msg };
+  }
+
+  const { feed: feedData, cacheHeader } = feed;
+
+  // Load existing hotels
+  const { data: existingRows, error: fetchError } = await supabase.from("hotels").select("*");
+  if (fetchError) return { data: emptyReport, source: "supabase", error: fetchError.message };
+
+  const existing = existingRows ?? [];
+  const report: LrHotelSyncReport = {
+    schemaVersion: feedData.schema_version,
+    generatedAt: feedData.generated_at,
+    cacheStatus: cacheHeader,
+    hotelsCount: feedData.hotels_count,
+    imported: 0, updated: 0, skipped: 0,
+    errors: [], warnings: [], items: [],
+  };
+
+  for (const hotel of feedData.hotels) {
+    try {
+      const { dbRow, services } = mapLrHotelToDbRow(hotel, cacheHeader, feedData.generated_at, feedData.schema_version);
+      const externalId = String(hotel.hotel_id);
+      const item: LrHotelSyncReportItem = {
+        externalId,
+        name: dbRow.name as string,
+        action: "skipped",
+        sourceUrl: (dbRow.source_url as string) ?? "",
+        hasImage: Boolean(dbRow.external_image_url),
+        servicesCount: services.length,
+        hasListino: Boolean(hotel.listino),
+      };
+
+      // Dedup: 1) exact lr_hotel_feed match, 2) any external_id match, 3) slug, 4) normalized name
+      const match =
+        existing.find((r) => r.external_source === "lr_hotel_feed" && String(r.external_id) === externalId) ??
+        existing.find((r) => r.external_id && String(r.external_id) === externalId) ??
+        existing.find((r) => hotel.slug && r.slug === hotel.slug) ??
+        existing.find((r) => normalizeHotelName(r.name ?? "") === normalizeHotelName(dbRow.name as string));
+
+      if (match) {
+        // Safe update: preserve manually edited fields, always update external/sync fields
+        const safeUpdate: Record<string, unknown> = {
+          ...dbRow,
+          // Only update location if currently empty
+          location: match.location || dbRow.location,
+          // Only update stars if currently unset
+          stars: match.stars || dbRow.stars,
+          // Merge sync_metadata (feed data wins on existing keys)
+          sync_metadata: { ...(typeof match.sync_metadata === "object" ? match.sync_metadata : {}), ...(dbRow.sync_metadata as object) },
+          // Only fill services from feed if DB field is currently empty
+          ...(isArrayEmpty(match.standard_services) && services.length ? { standard_services: services } : {}),
+        };
+
+        const { data: updated, error: updateErr } = await supabase.from("hotels").update(safeUpdate).eq("id", match.id).select("*").single();
+        if (updateErr) throw updateErr;
+
+        const idx = existing.findIndex((r) => r.id === match.id);
+        if (idx >= 0) existing[idx] = updated;
+
+        item.action = "updated";
+        report.updated++;
+      } else {
+        // Insert new hotel
+        const insertRow: Record<string, unknown> = {
+          ...dbRow,
+          ...(services.length ? { standard_services: services } : {}),
+          is_active: true,
+        };
+
+        const { data: inserted, error: insertErr } = await supabase.from("hotels").insert(insertRow).select("*").single();
+        if (insertErr) throw insertErr;
+
+        existing.push(inserted);
+        item.action = "imported";
+        report.imported++;
+      }
+
+      report.items.push(item);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      report.errors.push(`Hotel ${hotel.hotel_id} (${hotel.title}): ${msg}`);
+    }
+  }
+
+  return fromSupabase(report);
 }

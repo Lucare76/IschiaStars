@@ -5,6 +5,29 @@ import { useMemo, useState } from "react";
 import { adminApiHeaders } from "@/lib/admin-api-client";
 import { Hotel } from "@/lib/types";
 
+type LrSyncItem = {
+  externalId: string;
+  name: string;
+  action: "imported" | "updated" | "skipped";
+  sourceUrl: string;
+  hasImage: boolean;
+  servicesCount: number;
+  hasListino: boolean;
+};
+
+type LrSyncReport = {
+  schemaVersion: string;
+  generatedAt: string;
+  cacheStatus: string | null;
+  hotelsCount: number;
+  imported: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+  warnings: string[];
+  items: LrSyncItem[];
+};
+
 type HotelForm = {
   id?: string;
   name: string;
@@ -40,6 +63,8 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
+  const [lrSyncLoading, setLrSyncLoading] = useState(false);
+  const [lrSyncReport, setLrSyncReport] = useState<LrSyncReport | null>(null);
   const [importLoading, setImportLoading] = useState(false);
   const editing = Boolean(form.id);
 
@@ -100,6 +125,29 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     setSyncLoading(false);
   }
 
+  async function syncFromLrFeed() {
+    setLrSyncLoading(true);
+    setLrSyncReport(null);
+    setMessage(null);
+    const response = await fetch("/api/hotels/sync-from-lr-feed", {
+      method: "POST",
+      headers: adminApiHeaders(),
+    });
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: LrSyncReport; error?: string } | null;
+    setLrSyncLoading(false);
+
+    if (!response.ok || !result?.ok || !result.data) {
+      setMessage(result?.error ?? "Sincronizzazione LR Hotel non riuscita");
+      return;
+    }
+
+    setLrSyncReport(result.data);
+
+    const refreshed = await fetch("/api/hotels", { headers: adminApiHeaders() });
+    const refreshedResult = (await refreshed.json().catch(() => null)) as { ok?: boolean; data?: Hotel[] } | null;
+    if (refreshed.ok && refreshedResult?.data) setHotels(refreshedResult.data);
+  }
+
   async function importFromSite() {
     setImportLoading(true);
     setMessage(null);
@@ -134,11 +182,48 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
             <h2 className="text-xl font-black text-ischia-navy">{editing ? "Modifica hotel" : "Nuovo hotel"}</h2>
             <p className="mt-1 text-sm text-ischia-ink/68">Servizi: una riga per ogni servizio incluso.</p>
           </div>
-          <button className="rounded-full bg-ischia-blue px-5 py-3 text-sm font-black text-white disabled:opacity-60" disabled={syncLoading} onClick={() => void syncFromSite()} type="button">
-            {syncLoading ? "Sincronizzazione..." : "Sincronizza hotel dal sito"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button className="rounded-full bg-ischia-navy px-5 py-3 text-sm font-black text-white disabled:opacity-60" disabled={lrSyncLoading} onClick={() => void syncFromLrFeed()} type="button">
+              {lrSyncLoading ? "Sincronizzazione..." : "Sincronizza da LR Hotel"}
+            </button>
+            <button className="rounded-full bg-ischia-blue/70 px-5 py-3 text-sm font-black text-white disabled:opacity-60" disabled={syncLoading} onClick={() => void syncFromSite()} type="button">
+              {syncLoading ? "Sincronizzazione..." : "Sincronizza dal sito"}
+            </button>
+          </div>
         </div>
-        {message ? <p className="mt-3 rounded-xl bg-ischia-mist p-3 text-sm font-semibold text-ischia-navy">{message}</p> : null}
+        {message ? <p className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700 ring-1 ring-rose-100">{message}</p> : null}
+        {lrSyncReport ? (
+          <div className="mt-3 rounded-xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
+            <p className="text-sm font-black text-emerald-800">
+              Sincronizzazione LR Hotel completata — {lrSyncReport.imported} importati, {lrSyncReport.updated} aggiornati
+              {lrSyncReport.errors.length > 0 ? `, ${lrSyncReport.errors.length} errori` : ""}
+            </p>
+            <p className="mt-1 text-xs text-emerald-700">
+              Feed: {lrSyncReport.hotelsCount} hotel · generato {lrSyncReport.generatedAt}
+              {lrSyncReport.cacheStatus ? ` · cache: ${lrSyncReport.cacheStatus}` : ""}
+            </p>
+            {lrSyncReport.items.length > 0 && (
+              <div className="mt-3 space-y-1">
+                {lrSyncReport.items.map((item) => (
+                  <div key={item.externalId} className="flex flex-wrap items-center gap-2 text-xs text-emerald-900">
+                    <span className={`rounded-full px-2 py-0.5 font-semibold ${item.action === "imported" ? "bg-emerald-200" : item.action === "updated" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600"}`}>
+                      {item.action === "imported" ? "Nuovo" : item.action === "updated" ? "Aggiornato" : "Saltato"}
+                    </span>
+                    <span className="font-semibold">{item.name}</span>
+                    {item.hasImage && <span className="text-emerald-600">📷</span>}
+                    {item.servicesCount > 0 && <span className="text-emerald-600">{item.servicesCount} servizi</span>}
+                    {item.hasListino && <span className="text-emerald-600">Listino</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {lrSyncReport.errors.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {lrSyncReport.errors.map((e, i) => <li key={i} className="text-xs text-rose-700">{e}</li>)}
+              </ul>
+            )}
+          </div>
+        ) : null}
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <div className="flex-1 min-w-0">
             <Input
