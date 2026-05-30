@@ -80,7 +80,9 @@ export type QuoteHotelOption = {
   id: string;
   quoteId: string;
   hotelId?: string;
+  hotelGroup: number;
   position: number;
+  roomTypeLabel?: string;
   hotelName: string;
   hotelLocation?: string;
   hotelStars?: number;

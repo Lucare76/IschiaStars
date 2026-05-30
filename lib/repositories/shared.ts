@@ -43,7 +43,7 @@ export function mapQuote(
   row: Record<string, unknown>,
   allHotels: Hotel[],
   childRows: Record<string, unknown>[] = [],
-  hotelOptionRows: Record<string, unknown>[] = []
+  hotelOptions: QuoteHotelOption[] = []
 ): Quote {
   const proposedHotel = allHotels.find((h) => h.id === (row.hotel_id ?? row.proposed_hotel_id)) ?? hotels[0];
   const alternativeHotel = allHotels.find((h) => h.id === row.alternative_hotel_id);
@@ -55,16 +55,10 @@ export function mapQuote(
       birthDate: String(c.birth_date)
     }));
 
-  // Filtra le righe di hotel options per questo preventivo
-  const optionRowsForThisQuote = hotelOptionRows.filter((o) => o.quote_id === row.id);
-
-  let hotelOptions: QuoteHotelOption[];
-  if (optionRowsForThisQuote.length > 0) {
-    hotelOptions = optionRowsForThisQuote.map(mapHotelOptionRowInline).sort((a, b) => a.position - b.position);
-  } else {
-    // Compatibilità con preventivi vecchi: crea opzione virtuale dai campi legacy
-    hotelOptions = buildVirtualHotelOptions(row, proposedHotel);
-  }
+  // hotelOptions già mappati da fetchHotelOptionsForQuotes; se vuoti, crea opzione virtuale legacy
+  const effectiveHotelOptions: QuoteHotelOption[] = hotelOptions.length > 0
+    ? [...hotelOptions].sort((a, b) => a.position - b.position)
+    : buildVirtualHotelOptions(row, proposedHotel);
 
   return {
     id: String(row.id),
@@ -114,7 +108,7 @@ export function mapQuote(
           province: ""
         }
       : undefined,
-    hotelOptions
+    hotelOptions: effectiveHotelOptions
   };
 }
 
@@ -136,7 +130,9 @@ function mapHotelOptionRowInline(row: Record<string, unknown>): QuoteHotelOption
     id: String(row.id),
     quoteId: String(row.quote_id),
     hotelId: row.hotel_id ? String(row.hotel_id) : undefined,
+    hotelGroup: row.hotel_group != null ? Number(row.hotel_group) : 1,
     position: Number(row.position),
+    roomTypeLabel: row.room_type_label ? String(row.room_type_label) : undefined,
     hotelName: String(row.hotel_name),
     hotelLocation: row.hotel_location ? String(row.hotel_location) : undefined,
     hotelStars: row.hotel_stars != null ? Number(row.hotel_stars) : undefined,
@@ -185,7 +181,9 @@ function buildVirtualHotelOptions(row: Record<string, unknown>, proposedHotel: H
       id: `virtual-${quoteId}-1`,
       quoteId,
       hotelId: undefined,
+      hotelGroup: 1,
       position: 1,
+      roomTypeLabel: undefined,
       hotelName: proposedHotel.name,
       hotelLocation: proposedHotel.zone,
       hotelStars: proposedHotel.stars,
@@ -233,7 +231,9 @@ export function getEffectiveHotelOptions(quote: { hotelOptions: QuoteHotelOption
       id: `virtual-${quote.id}-1`,
       quoteId: quote.id,
       hotelId: undefined,
+      hotelGroup: 1,
       position: 1,
+      roomTypeLabel: undefined,
       hotelName: quote.proposedHotel.name,
       hotelLocation: quote.proposedHotel.zone,
       hotelStars: quote.proposedHotel.stars,

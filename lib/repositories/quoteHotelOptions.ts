@@ -3,7 +3,9 @@ import { QuoteHotelOption, TreatmentOption } from "@/lib/types";
 
 export type QuoteHotelOptionInput = {
   hotelId?: string;
+  hotelGroup?: number;
   position: number;
+  roomTypeLabel?: string;
   hotelName: string;
   hotelLocation?: string;
   hotelStars?: number;
@@ -39,7 +41,9 @@ export function mapHotelOptionRow(row: Record<string, unknown>): QuoteHotelOptio
     id: String(row.id),
     quoteId: String(row.quote_id),
     hotelId: row.hotel_id ? String(row.hotel_id) : undefined,
+    hotelGroup: row.hotel_group != null ? Number(row.hotel_group) : 1,
     position: Number(row.position),
+    roomTypeLabel: row.room_type_label ? String(row.room_type_label) : undefined,
     hotelName: String(row.hotel_name),
     hotelLocation: row.hotel_location ? String(row.hotel_location) : undefined,
     hotelStars: row.hotel_stars != null ? Number(row.hotel_stars) : undefined,
@@ -71,7 +75,9 @@ export async function upsertHotelOptions(quoteId: string, options: QuoteHotelOpt
   const rows = options.slice(0, 3).map((opt, index) => ({
     quote_id: quoteId,
     hotel_id: isUuid(opt.hotelId) ? opt.hotelId : null,
+    hotel_group: opt.hotelGroup ?? index + 1,
     position: opt.position ?? index + 1,
+    room_type_label: opt.roomTypeLabel ?? null,
     hotel_name: opt.hotelName,
     hotel_location: opt.hotelLocation ?? null,
     hotel_stars: opt.hotelStars ?? null,

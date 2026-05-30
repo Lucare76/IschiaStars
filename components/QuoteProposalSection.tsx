@@ -19,13 +19,24 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
   const [selected, setSelected] = useState<SelectedOption | null>(null);
   const confirmRef = useRef<HTMLDivElement>(null);
 
-  const options = getEffectiveHotelOptions(quote);
+  const allOptions = getEffectiveHotelOptions(quote);
+
+  // Raggruppa per hotelGroup: ogni gruppo è una struttura con potenziali multiple tipologie camera
+  const groupedHotels = Array.from(
+    allOptions.reduce((map, opt) => {
+      const g = opt.hotelGroup ?? 1;
+      if (!map.has(g)) map.set(g, []);
+      map.get(g)!.push(opt);
+      return map;
+    }, new Map<number, QuoteHotelOption[]>())
+  ).sort(([a], [b]) => a - b);
+
   const isConfirmed = quote.status === "confermato";
 
   function handleSelectTreatment(option: QuoteHotelOption, treatment: TreatmentOption) {
     setSelected({
       optionId: option.id,
-      hotelName: option.hotelName,
+      hotelName: option.hotelName + (option.roomTypeLabel ? ` — ${option.roomTypeLabel}` : ""),
       treatmentKey: treatment.key,
       treatmentLabel: treatment.label,
       price: treatment.price
@@ -41,19 +52,23 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
 
   return (
     <div className="space-y-5">
-      {/* Hotel cards */}
+      {/* Hotel cards raggruppate per struttura */}
       <div className="space-y-4">
-        {options.map((option) => (
-          option.treatments.length > 0 && (
+        {groupedHotels.map(([groupId, groupOptions]) => {
+          const optionsWithTreatments = groupOptions.filter((o) => o.treatments.length > 0);
+          if (!optionsWithTreatments.length) return null;
+          const firstOpt = optionsWithTreatments[0];
+          return (
             <HotelCard
-              key={option.id}
-              option={option}
+              key={groupId}
+              mainOption={firstOpt}
+              allGroupOptions={optionsWithTreatments}
               isConfirmed={isConfirmed}
-              onSelectTreatment={(treatment) => handleSelectTreatment(option, treatment)}
+              onSelectTreatment={handleSelectTreatment}
               quote={quote}
             />
-          )
-        ))}
+          );
+        })}
       </div>
 
       {/* WhatsApp link */}
@@ -79,37 +94,37 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
 }
 
 function HotelCard({
-  option,
+  mainOption,
+  allGroupOptions,
   isConfirmed,
   onSelectTreatment,
   quote
 }: {
-  option: QuoteHotelOption;
+  mainOption: QuoteHotelOption;
+  allGroupOptions: QuoteHotelOption[];
   isConfirmed: boolean;
-  onSelectTreatment: (treatment: TreatmentOption) => void;
+  onSelectTreatment: (option: QuoteHotelOption, treatment: TreatmentOption) => void;
   quote: Quote;
 }) {
-  const services = option.includedServices ? option.includedServices.split("\n").filter(Boolean) : [];
-  const stars = option.hotelStars ? "★".repeat(option.hotelStars) : null;
+  const services = mainOption.includedServices ? mainOption.includedServices.split("\n").filter(Boolean) : [];
+  const stars = mainOption.hotelStars ? "★".repeat(mainOption.hotelStars) : null;
+  const isAnySelected = allGroupOptions.some((o) => o.isSelected);
+  const hasMultipleRoomTypes = allGroupOptions.length > 1;
 
   return (
-    <div className={`print-card overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ${option.isSelected ? "ring-emerald-400" : "ring-ischia-blue/10"}`}>
-      {option.hotelImageUrl && (
+    <div className={`print-card overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ${isAnySelected ? "ring-emerald-400" : "ring-ischia-blue/10"}`}>
+      {mainOption.hotelImageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt={option.hotelName}
-          className="h-44 w-full object-cover"
-          src={option.hotelImageUrl}
-        />
+        <img alt={mainOption.hotelName} className="h-44 w-full object-cover" src={mainOption.hotelImageUrl} />
       )}
       <div className="p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{option.hotelLocation}</p>
-            <h3 className="mt-1 text-2xl font-black text-ischia-navy">{option.hotelName}</h3>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{mainOption.hotelLocation}</p>
+            <h3 className="mt-1 text-2xl font-black text-ischia-navy">{mainOption.hotelName}</h3>
             {stars && <p className="mt-1 text-sm text-ischia-sun">{stars}</p>}
           </div>
-          {option.isSelected && (
+          {isAnySelected && (
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Scelta dal cliente</span>
           )}
         </div>
@@ -118,51 +133,56 @@ function HotelCard({
           <div className="mt-3">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/70">Servizi inclusi</p>
             <ul className="mt-1 grid gap-1 sm:grid-cols-2">
-              {services.map((s) => (
-                <li key={s} className="text-sm text-ischia-ink/78">{s}</li>
-              ))}
+              {services.map((s) => <li key={s} className="text-sm text-ischia-ink/78">{s}</li>)}
             </ul>
           </div>
         )}
 
-        {/* Trattamenti con CTA */}
-        <div className="mt-4 space-y-3">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/70">Trattamenti disponibili</p>
-          {option.treatments.map((treatment) => (
-            <div
-              key={treatment.key}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-ischia-mist p-4"
-            >
-              <div>
-                <p className="font-black text-ischia-navy">{treatment.label}</p>
-                <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
-              </div>
-              {!isConfirmed && (
-                <button
-                  className="no-print rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
-                  onClick={() => onSelectTreatment(treatment)}
-                  type="button"
-                >
-                  Conferma questa opzione
-                </button>
+        {/* Per ogni tipologia camera, mostra i trattamenti */}
+        <div className="mt-4 space-y-4">
+          {allGroupOptions.map((opt) => (
+            <div key={opt.id}>
+              {hasMultipleRoomTypes && opt.roomTypeLabel && (
+                <p className="mb-2 text-sm font-black text-ischia-navy">{opt.roomTypeLabel}</p>
               )}
-              {isConfirmed && option.isSelected && (
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Confermato</span>
+              {opt.treatments.length > 0 && (
+                <div className="space-y-2">
+                  {opt.treatments.map((treatment) => (
+                    <div key={`${opt.id}-${treatment.key}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-ischia-mist p-4">
+                      <div>
+                        <p className="font-black text-ischia-navy">{treatment.label}</p>
+                        <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
+                      </div>
+                      {!isConfirmed && (
+                        <button
+                          className="no-print rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
+                          onClick={() => onSelectTreatment(opt, treatment)}
+                          type="button"
+                        >
+                          Conferma questa opzione
+                        </button>
+                      )}
+                      {isConfirmed && opt.isSelected && (
+                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Confermato</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           ))}
         </div>
 
-        {/* Condizioni */}
-        {(option.paymentPolicy || option.cancellationPolicy) && (
+        {/* Condizioni dal primo option del gruppo */}
+        {(mainOption.paymentPolicy || mainOption.cancellationPolicy) && (
           <div className="mt-4 border-t border-ischia-blue/10 pt-4 text-sm text-ischia-ink/70">
-            {option.paymentPolicy && <p><strong>Pagamento:</strong> {option.paymentPolicy}</p>}
-            {option.cancellationPolicy && <p className="mt-1"><strong>Cancellazione:</strong> {option.cancellationPolicy}</p>}
+            {mainOption.paymentPolicy && <p><strong>Pagamento:</strong> {mainOption.paymentPolicy}</p>}
+            {mainOption.cancellationPolicy && <p className="mt-1"><strong>Cancellazione:</strong> {mainOption.cancellationPolicy}</p>}
           </div>
         )}
 
-        {option.notes && (
-          <p className="mt-3 rounded-xl bg-ischia-sun/10 px-3 py-2 text-sm text-ischia-ink/80">{option.notes}</p>
+        {mainOption.notes && (
+          <p className="mt-3 rounded-xl bg-ischia-sun/10 px-3 py-2 text-sm text-ischia-ink/80">{mainOption.notes}</p>
         )}
       </div>
     </div>

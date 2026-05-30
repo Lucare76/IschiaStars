@@ -12,61 +12,90 @@ import { formatCurrency, publicQuoteUrl } from "@/lib/utils";
 
 const statusOptions: QuoteStatus[] = ["preventivo_inviato", "confermato", "perso_non_disponibile"];
 
+type RoomTypeState = {
+  label: string;
+  breakfastPrice: string;
+  halfBoardPrice: string;
+  fullBoardPrice: string;
+};
+
 type HotelOptionState = {
-  id?: string;
+  hotelGroup: number;
   hotelId: string;
   hotelName: string;
   hotelLocation: string;
   hotelStars: string;
-  breakfastPrice: string;
-  halfBoardPrice: string;
-  fullBoardPrice: string;
   includedServices: string;
   paymentPolicy: string;
   cancellationPolicy: string;
   notes: string;
+  roomTypes: RoomTypeState[];
 };
 
-function quoteOptionToState(opt: QuoteHotelOption): HotelOptionState {
+function emptyRoomType(): RoomTypeState {
+  return { label: "", breakfastPrice: "", halfBoardPrice: "", fullBoardPrice: "" };
+}
+
+function quoteOptionToRoomType(opt: QuoteHotelOption): RoomTypeState {
   return {
-    id: opt.id.startsWith("virtual-") ? undefined : opt.id,
-    hotelId: opt.hotelId ?? "",
-    hotelName: opt.hotelName,
-    hotelLocation: opt.hotelLocation ?? "",
-    hotelStars: opt.hotelStars != null ? String(opt.hotelStars) : "",
+    label: opt.roomTypeLabel ?? "",
     breakfastPrice: opt.breakfastPrice != null ? String(opt.breakfastPrice) : "",
     halfBoardPrice: opt.halfBoardPrice != null ? String(opt.halfBoardPrice) : "",
-    fullBoardPrice: opt.fullBoardPrice != null ? String(opt.fullBoardPrice) : "",
-    includedServices: opt.includedServices ?? "",
-    paymentPolicy: opt.paymentPolicy ?? "",
-    cancellationPolicy: opt.cancellationPolicy ?? "",
-    notes: opt.notes ?? ""
+    fullBoardPrice: opt.fullBoardPrice != null ? String(opt.fullBoardPrice) : ""
   };
 }
 
-function emptyOption(hotel?: Hotel): HotelOptionState {
+// Raggruppa hotel options flat in HotelOptionState[] (una riga per hotel_group)
+function groupOptionsToState(opts: QuoteHotelOption[]): HotelOptionState[] {
+  const groups = new Map<number, QuoteHotelOption[]>();
+  for (const opt of opts) {
+    const g = opt.hotelGroup ?? 1;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g)!.push(opt);
+  }
+  return Array.from(groups.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([groupId, groupOpts]) => {
+      const first = groupOpts[0];
+      return {
+        hotelGroup: groupId,
+        hotelId: first.hotelId ?? "",
+        hotelName: first.hotelName,
+        hotelLocation: first.hotelLocation ?? "",
+        hotelStars: first.hotelStars != null ? String(first.hotelStars) : "",
+        includedServices: first.includedServices ?? "",
+        paymentPolicy: first.paymentPolicy ?? "",
+        cancellationPolicy: first.cancellationPolicy ?? "",
+        notes: first.notes ?? "",
+        roomTypes: groupOpts.map(quoteOptionToRoomType)
+      };
+    });
+}
+
+function emptyOption(hotel?: Hotel, groupId = 1): HotelOptionState {
   return {
+    hotelGroup: groupId,
     hotelId: hotel?.id ?? "",
     hotelName: hotel?.name ?? "",
     hotelLocation: hotel?.zone ?? "",
     hotelStars: hotel ? String(hotel.stars) : "",
-    breakfastPrice: "",
-    halfBoardPrice: "",
-    fullBoardPrice: "",
     includedServices: hotel?.standardServices.join("\n") ?? "",
     paymentPolicy: hotel?.paymentPolicy ?? "",
     cancellationPolicy: hotel?.cancellationPolicy ?? "",
-    notes: ""
+    notes: "",
+    roomTypes: [emptyRoomType()]
   };
 }
 
 export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hotel[] }) {
   const effective = getEffectiveHotelOptions(quote);
   const [currentQuote, setCurrentQuote] = useState(quote);
-  const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>(effective.map(quoteOptionToState));
+  const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>(groupOptionsToState(effective));
   const [transportOffers] = useState<TransportOffer[]>(withDefaultTransportOffers(quote.transportOffers));
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
 
   function updateOption(index: number, patch: Partial<HotelOptionState>) {
     setHotelOptions((prev) => prev.map((opt, i) => (i === index ? { ...opt, ...patch } : opt)));
@@ -89,7 +118,8 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
     if (hotelOptions.length >= 3) return;
     const usedIds = new Set(hotelOptions.map((o) => o.hotelId));
     const nextHotel = hotels.find((h) => h.active && !usedIds.has(h.id));
-    setHotelOptions((prev) => [...prev, emptyOption(nextHotel)]);
+    const nextGroup = Math.max(0, ...hotelOptions.map((o) => o.hotelGroup)) + 1;
+    setHotelOptions((prev) => [...prev, emptyOption(nextHotel, nextGroup)]);
   }
 
   function removeOption(index: number) {
@@ -97,8 +127,29 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
     setHotelOptions((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function updateRoomType(optIndex: number, roomIndex: number, patch: Partial<RoomTypeState>) {
+    setHotelOptions((prev) => prev.map((opt, i) => {
+      if (i !== optIndex) return opt;
+      return { ...opt, roomTypes: opt.roomTypes.map((rt, j) => j === roomIndex ? { ...rt, ...patch } : rt) };
+    }));
+  }
+
+  function addRoomType(optIndex: number) {
+    setHotelOptions((prev) => prev.map((opt, i) => {
+      if (i !== optIndex || opt.roomTypes.length >= 3) return opt;
+      return { ...opt, roomTypes: [...opt.roomTypes, emptyRoomType()] };
+    }));
+  }
+
+  function removeRoomType(optIndex: number, roomIndex: number) {
+    setHotelOptions((prev) => prev.map((opt, i) => {
+      if (i !== optIndex || opt.roomTypes.length <= 1) return opt;
+      return { ...opt, roomTypes: opt.roomTypes.filter((_, j) => j !== roomIndex) };
+    }));
+  }
+
   function optionHasPrice(opt: HotelOptionState) {
-    return Boolean(opt.breakfastPrice || opt.halfBoardPrice || opt.fullBoardPrice);
+    return opt.roomTypes.some((rt) => rt.breakfastPrice || rt.halfBoardPrice || rt.fullBoardPrice);
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -107,22 +158,31 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
     setMessage(null);
     const formData = new FormData(event.currentTarget);
 
-    const mappedOptions = hotelOptions
-      .filter(optionHasPrice)
-      .map((opt, index) => ({
-        hotelId: opt.hotelId || undefined,
-        position: index + 1,
-        hotelName: opt.hotelName,
-        hotelLocation: opt.hotelLocation || undefined,
-        hotelStars: opt.hotelStars ? Number(opt.hotelStars) : undefined,
-        breakfastPrice: opt.breakfastPrice ? Number(opt.breakfastPrice) : undefined,
-        halfBoardPrice: opt.halfBoardPrice ? Number(opt.halfBoardPrice) : undefined,
-        fullBoardPrice: opt.fullBoardPrice ? Number(opt.fullBoardPrice) : undefined,
-        includedServices: opt.includedServices || undefined,
-        paymentPolicy: opt.paymentPolicy || undefined,
-        cancellationPolicy: opt.cancellationPolicy || undefined,
-        notes: opt.notes || undefined
-      }));
+    const mappedOptions: object[] = [];
+    let globalPosition = 0;
+    hotelOptions.filter(optionHasPrice).forEach((opt) => {
+      opt.roomTypes
+        .filter((rt) => rt.breakfastPrice || rt.halfBoardPrice || rt.fullBoardPrice)
+        .forEach((rt) => {
+          globalPosition++;
+          mappedOptions.push({
+            hotelId: opt.hotelId || undefined,
+            hotelGroup: opt.hotelGroup,
+            position: globalPosition,
+            roomTypeLabel: rt.label || undefined,
+            hotelName: opt.hotelName,
+            hotelLocation: opt.hotelLocation || undefined,
+            hotelStars: opt.hotelStars ? Number(opt.hotelStars) : undefined,
+            breakfastPrice: rt.breakfastPrice ? Number(rt.breakfastPrice) : undefined,
+            halfBoardPrice: rt.halfBoardPrice ? Number(rt.halfBoardPrice) : undefined,
+            fullBoardPrice: rt.fullBoardPrice ? Number(rt.fullBoardPrice) : undefined,
+            includedServices: opt.includedServices || undefined,
+            paymentPolicy: opt.paymentPolicy || undefined,
+            cancellationPolicy: opt.cancellationPolicy || undefined,
+            notes: opt.notes || undefined
+          });
+        });
+    });
 
     const payload = {
       clientFirstName: formData.get("firstName"),
@@ -241,6 +301,25 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
     window.location.href = `/admin/preventivi/${result.data.code}`;
   }
 
+  async function sendQuote() {
+    setSending(true);
+    setMessage(null);
+    const response = await fetch(`/api/quotes/${currentQuote.id}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({ statusOnly: true, status: "preventivo_inviato" })
+    });
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    setSending(false);
+    if (response.ok && result?.data) {
+      setCurrentQuote(result.data);
+      setSent(true);
+    } else {
+      setMessage("Impossibile aggiornare lo stato. Riprova.");
+    }
+  }
+
   const activeHotels = hotels.filter((h) => h.active);
 
   // Struttura selezionata dal cliente (se confermata con opzione)
@@ -283,6 +362,9 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
                 onSelectHotel={(id) => selectHotel(index, id)}
                 onChange={(patch) => updateOption(index, patch)}
                 onRemove={() => removeOption(index)}
+                onUpdateRoomType={(roomIdx, patch) => updateRoomType(index, roomIdx, patch)}
+                onAddRoomType={() => addRoomType(index)}
+                onRemoveRoomType={(roomIdx) => removeRoomType(index, roomIdx)}
               />
             ))}
           </div>
@@ -313,14 +395,17 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
       </form>
 
       <aside className="space-y-4">
+        {/* Card principale: codice + stato + azioni chiave */}
         <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xl font-black text-ischia-navy">{currentQuote.code}</h2>
             <QuoteStatusBadge status={currentQuote.status} />
           </div>
-          {getEffectiveHotelOptions(currentQuote).length > 0 && (
+
+          {/* Riepilogo hotel options (dopo il fix undefined) */}
+          {getEffectiveHotelOptions(currentQuote).filter((o) => o.hotelName).length > 0 && (
             <div className="mt-3 space-y-1 text-sm text-ischia-ink/70">
-              {getEffectiveHotelOptions(currentQuote).map((opt) => (
+              {getEffectiveHotelOptions(currentQuote).filter((o) => o.hotelName).map((opt) => (
                 <p key={opt.id} className={opt.isSelected ? "font-bold text-emerald-700" : ""}>
                   {opt.isSelected ? "✓ " : ""}{opt.hotelName}
                   {opt.treatments.length > 0 && ` — ${opt.treatments.map((t) => formatCurrency(t.price)).join(" / ")}`}
@@ -328,26 +413,55 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
               ))}
             </div>
           )}
-          <div className="mt-5 grid gap-2">
-            <Link className="rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)}>Apri link cliente</Link>
-            <WhatsAppSendButton quote={currentQuote} />
-            <button className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy" onClick={() => void duplicateCurrentQuote()} type="button">
-              Duplica preventivo
-            </button>
-          </div>
-        </div>
 
-        <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
-          <h3 className="font-black text-ischia-navy">Cambia stato</h3>
-          <div className="mt-3 grid gap-2">
-            {statusOptions.map((status) => (
-              <button key={status} className="rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/20" onClick={() => void changeStatus(status)} type="button">
-                {statusLabel(status)}
+          {/* Stato "inviato": mostra solo WhatsApp */}
+          {sent ? (
+            <div className="mt-5 space-y-3">
+              <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                Preventivo segnato come inviato. Invia il link al cliente su WhatsApp.
+              </div>
+              <WhatsAppSendButton quote={currentQuote} label="Invia link su WhatsApp" />
+              <Link className="block rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)}>
+                Apri link cliente
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-5 grid gap-2">
+              {/* Pulsante principale: Invia preventivo */}
+              <button
+                className="rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white disabled:opacity-60"
+                disabled={sending}
+                onClick={() => void sendQuote()}
+                type="button"
+              >
+                {sending ? "Aggiornamento..." : "Invia preventivo"}
               </button>
-            ))}
-          </div>
+              <Link className="rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)}>
+                Apri link cliente
+              </Link>
+              <WhatsAppSendButton quote={currentQuote} />
+              <button className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy" onClick={() => void duplicateCurrentQuote()} type="button">
+                Duplica preventivo
+              </button>
+            </div>
+          )}
         </div>
 
+        {/* Cambia stato manuale */}
+        {!sent && (
+          <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
+            <h3 className="font-black text-ischia-navy">Cambia stato</h3>
+            <div className="mt-3 grid gap-2">
+              {statusOptions.map((status) => (
+                <button key={status} className="rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/20" onClick={() => void changeStatus(status)} type="button">
+                  {statusLabel(status)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Azioni preventivo */}
         <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
           <h3 className="font-black text-ischia-navy">Azioni preventivo</h3>
           {currentQuote.excludedFromStats && !currentQuote.deletedAt ? (
@@ -379,28 +493,20 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
 }
 
 function HotelOptionBlock({
-  index,
-  opt,
-  activeHotels,
-  total,
-  onSelectHotel,
-  onChange,
-  onRemove
+  index, opt, activeHotels, total, onSelectHotel, onChange, onRemove,
+  onUpdateRoomType, onAddRoomType, onRemoveRoomType
 }: {
-  index: number;
-  opt: HotelOptionState;
-  activeHotels: Hotel[];
-  total: number;
-  onSelectHotel: (id: string) => void;
-  onChange: (patch: Partial<HotelOptionState>) => void;
-  onRemove: () => void;
+  index: number; opt: HotelOptionState; activeHotels: Hotel[]; total: number;
+  onSelectHotel: (id: string) => void; onChange: (patch: Partial<HotelOptionState>) => void; onRemove: () => void;
+  onUpdateRoomType: (roomIndex: number, patch: Partial<RoomTypeState>) => void;
+  onAddRoomType: () => void; onRemoveRoomType: (roomIndex: number) => void;
 }) {
-  const hasPrice = Boolean(opt.breakfastPrice || opt.halfBoardPrice || opt.fullBoardPrice);
+  const hasPrice = opt.roomTypes.some((rt) => rt.breakfastPrice || rt.halfBoardPrice || rt.fullBoardPrice);
   return (
     <div className="rounded-2xl border border-ischia-blue/15 bg-ischia-mist/50 p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="font-black text-ischia-navy">Struttura {index + 1}</h3>
-        {total > 1 && <button className="text-sm font-semibold text-rose-600" onClick={onRemove} type="button">Rimuovi</button>}
+        {total > 1 && <button className="text-sm font-semibold text-rose-600" onClick={onRemove} type="button">Rimuovi struttura</button>}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {activeHotels.length > 0 && (
@@ -421,20 +527,37 @@ function HotelOptionBlock({
           <input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" value={opt.hotelLocation} onChange={(e) => onChange({ hotelLocation: e.target.value })} />
         </label>
       </div>
-      <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <label className="text-sm font-semibold text-ischia-ink">
-          Camera e colazione (€)
-          <input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" min="0" placeholder="vuoto = non mostrare" type="number" value={opt.breakfastPrice} onChange={(e) => onChange({ breakfastPrice: e.target.value })} />
-        </label>
-        <label className="text-sm font-semibold text-ischia-ink">
-          Mezza pensione (€)
-          <input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" min="0" placeholder="vuoto = non mostrare" type="number" value={opt.halfBoardPrice} onChange={(e) => onChange({ halfBoardPrice: e.target.value })} />
-        </label>
-        <label className="text-sm font-semibold text-ischia-ink">
-          Pensione completa (€)
-          <input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" min="0" placeholder="vuoto = non mostrare" type="number" value={opt.fullBoardPrice} onChange={(e) => onChange({ fullBoardPrice: e.target.value })} />
-        </label>
+
+      {/* Tipologie camera */}
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-wide text-ischia-blue/70">Tipologie camera e prezzi</p>
+          {opt.roomTypes.length < 3 && (
+            <button className="rounded-full bg-ischia-mist px-3 py-1 text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/15" onClick={onAddRoomType} type="button">
+              + Camera ({opt.roomTypes.length}/3)
+            </button>
+          )}
+        </div>
+        {opt.roomTypes.map((rt, roomIdx) => (
+          <div key={roomIdx} className="rounded-xl border border-ischia-blue/10 bg-white p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <label className="flex-1 text-sm font-semibold text-ischia-ink">
+                {opt.roomTypes.length > 1 ? `Tipologia ${roomIdx + 1}` : "Tipologia camera (opzionale)"}
+                <input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" placeholder="es. Camera Doppia, Camera Superior, Suite..." value={rt.label} onChange={(e) => onUpdateRoomType(roomIdx, { label: e.target.value })} />
+              </label>
+              {opt.roomTypes.length > 1 && (
+                <button className="mt-5 text-xs font-semibold text-rose-500" onClick={() => onRemoveRoomType(roomIdx)} type="button">Rimuovi</button>
+              )}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <label className="text-xs font-semibold text-ischia-ink">Cam. e col. (€)<input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-2 py-1.5 text-sm" min="0" placeholder="vuoto = no" type="number" value={rt.breakfastPrice} onChange={(e) => onUpdateRoomType(roomIdx, { breakfastPrice: e.target.value })} /></label>
+              <label className="text-xs font-semibold text-ischia-ink">Mezza pens. (€)<input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-2 py-1.5 text-sm" min="0" placeholder="vuoto = no" type="number" value={rt.halfBoardPrice} onChange={(e) => onUpdateRoomType(roomIdx, { halfBoardPrice: e.target.value })} /></label>
+              <label className="text-xs font-semibold text-ischia-ink">Pens. compl. (€)<input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-2 py-1.5 text-sm" min="0" placeholder="vuoto = no" type="number" value={rt.fullBoardPrice} onChange={(e) => onUpdateRoomType(roomIdx, { fullBoardPrice: e.target.value })} /></label>
+            </div>
+          </div>
+        ))}
       </div>
+
       {!hasPrice && (
         <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
           Inserisci almeno un prezzo per mostrare questa struttura nel preventivo.
