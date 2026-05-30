@@ -64,6 +64,7 @@ export async function createQuoteConfirmation(quoteId: string, input: QuoteConfi
   if (error) return fallback(null, error);
 
   await markStoredQuoteConfirmed(quoteId);
+  console.info(`[confirmation] status updated quote=${quoteId}`);
 
   if (input.selectedHotelOptionId) {
     await markHotelOptionSelected(input.selectedHotelOptionId, quoteId);
@@ -77,6 +78,7 @@ export async function createQuoteConfirmation(quoteId: string, input: QuoteConfi
     selectedTreatmentLabel: input.selectedTreatmentLabel,
     selectedPrice: input.selectedPrice
   });
+  console.info(`[confirmation] event saved quote=${quoteId}`);
 
   return fromSupabase({ confirmedAt: now });
 }

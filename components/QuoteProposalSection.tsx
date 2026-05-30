@@ -33,6 +33,11 @@ function splitLines(value?: string) {
   return value?.split("\n").map((item) => item.trim()).filter(Boolean) ?? [];
 }
 
+function sharperWordPressImageUrl(url?: string) {
+  if (!url) return undefined;
+  return url.replace(/-\d+x\d+(?=\.(?:jpe?g|png|webp|avif)(?:\?|$))/i, "");
+}
+
 export function QuoteProposalSection({ quote }: { quote: Quote }) {
   const [selected, setSelected] = useState<SelectedOption | null>(null);
   const confirmRef = useRef<HTMLDivElement>(null);
@@ -126,13 +131,17 @@ function HotelCard({
   const stars = mainOption.hotelStars ? "★".repeat(mainOption.hotelStars) : null;
   const isAnySelected = allGroupOptions.some((o) => o.isSelected);
   const hasMultipleRoomTypes = allGroupOptions.length > 1;
+  const imageUrl = sharperWordPressImageUrl(mainOption.hotelImageUrl);
 
   return (
     <div className={`print-card overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ${isAnySelected ? "ring-emerald-400" : "ring-ischia-blue/10"}`}>
-      {mainOption.hotelImageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img alt={mainOption.hotelName} className="h-44 w-full object-cover" src={mainOption.hotelImageUrl} />
-      )}
+      <div className={imageUrl ? "grid lg:grid-cols-[minmax(18rem,0.42fr)_1fr]" : ""}>
+        {imageUrl && (
+          <div className="bg-ischia-mist lg:min-h-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img alt={mainOption.hotelName} className="h-56 w-full object-cover sm:h-64 lg:h-full" decoding="async" src={imageUrl} />
+          </div>
+        )}
       <div className="p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
@@ -228,6 +237,7 @@ function HotelCard({
         {mainOption.notes && (
           <p className="mt-3 rounded-xl bg-ischia-sun/10 px-3 py-2 text-sm text-ischia-ink/80">{mainOption.notes}</p>
         )}
+      </div>
       </div>
     </div>
   );

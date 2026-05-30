@@ -199,13 +199,13 @@ function extractLocation(post: WpHotelPost): string | undefined {
 // URL immagine principale: embedded, Yoast og_image, media API.
 async function extractMainImage(post: WpHotelPost, headers: Record<string, string>): Promise<ExtractedImage> {
   const media = post._embedded?.["wp:featuredmedia"]?.[0];
-  const embeddedUrl = media ? media.source_url || media.media_details?.sizes?.large?.source_url || media.media_details?.sizes?.full?.source_url : undefined;
-  if (embeddedUrl) {
+  const embeddedImage = media ? bestMediaImage(media) : null;
+  if (embeddedImage?.url) {
     return {
-      url: embeddedUrl,
+      url: embeddedImage.url,
       altText: media?.alt_text,
-      width: media?.media_details?.width ?? media?.media_details?.sizes?.large?.width ?? media?.media_details?.sizes?.full?.width,
-      height: media?.media_details?.height ?? media?.media_details?.sizes?.large?.height ?? media?.media_details?.sizes?.full?.height,
+      width: embeddedImage.width,
+      height: embeddedImage.height,
       source: "embedded"
     };
   }
@@ -222,19 +222,32 @@ async function extractMainImage(post: WpHotelPost, headers: Record<string, strin
 
   if (post.featured_media) {
     const apiMedia = await fetchMediaById(post.featured_media, headers);
-    const apiUrl = apiMedia?.source_url || apiMedia?.media_details?.sizes?.large?.source_url || apiMedia?.media_details?.sizes?.full?.source_url;
-    if (apiUrl) {
+    const apiImage = apiMedia ? bestMediaImage(apiMedia) : null;
+    if (apiImage?.url) {
       return {
-        url: apiUrl,
+        url: apiImage.url,
         altText: apiMedia?.alt_text,
-        width: apiMedia?.media_details?.width ?? apiMedia?.media_details?.sizes?.large?.width ?? apiMedia?.media_details?.sizes?.full?.width,
-        height: apiMedia?.media_details?.height ?? apiMedia?.media_details?.sizes?.large?.height ?? apiMedia?.media_details?.sizes?.full?.height,
+        width: apiImage.width,
+        height: apiImage.height,
         source: "media_api"
       };
     }
   }
 
   return { source: "none" };
+}
+
+function bestMediaImage(media: WpMedia): { url?: string; width?: number; height?: number } | null {
+  const candidates = [
+    { url: media.source_url, width: media.media_details?.width, height: media.media_details?.height },
+    ...Object.values(media.media_details?.sizes ?? {}).map((size) => ({
+      url: size.source_url,
+      width: size.width,
+      height: size.height
+    }))
+  ].filter((image) => image.url);
+
+  return candidates.sort((a, b) => ((b.width ?? 0) * (b.height ?? 0)) - ((a.width ?? 0) * (a.height ?? 0)))[0] ?? null;
 }
 
 async function fetchMediaById(mediaId: number, headers: Record<string, string>): Promise<WpMedia | null> {

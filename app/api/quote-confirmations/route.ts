@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
   const validationError = validateConfirmation(body);
   if (validationError) return NextResponse.json({ ok: false, error: validationError }, { status: 400 });
 
+  console.info(`[confirmation] start code=${body!.quoteCode}`);
+
   const quoteResult = await getQuoteByCodeAndToken(body!.quoteCode!, body!.token!);
   if (!quoteResult.data) return NextResponse.json({ ok: false, error: "Preventivo non trovato o link non valido" }, { status: 404 });
   if (quoteResult.data.deletedAt) return NextResponse.json({ ok: false, error: "Preventivo non disponibile" }, { status: 410 });
@@ -63,6 +65,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.data) return NextResponse.json({ ok: false, error: result.error ?? "Conferma non salvata" }, { status: 500 });
+  console.info(`[confirmation] saved quote=${quoteResult.data.id} code=${quoteResult.data.code}`);
 
   sendQuoteConfirmedInternalEmail(quoteResult.data, {
     firstName: body!.firstName!.trim(),

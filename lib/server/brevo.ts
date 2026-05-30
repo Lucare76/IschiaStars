@@ -250,7 +250,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
 
 export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation: BrevoConfirmationDetails): Promise<void> {
   if (!isBrevoEnabled()) {
-    console.info("[brevo] skipped: disabled");
+    console.info(`[brevo] skipped disabled internal confirmation code=${quote.code}`);
     return;
   }
 
@@ -389,7 +389,7 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
 
   const ok = await sendBrevoEmail({
     to: [{ email: internalEmail, name: "IschiaStars" }],
-    subject: `Preventivo confermato ${quote.code}${confirmation.selectedHotelName ? ` — ${confirmation.selectedHotelName}` : ""}`,
+    subject: `Preventivo confermato ${quote.code}`,
     html,
     text
   });
