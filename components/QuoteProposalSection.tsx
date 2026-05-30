@@ -23,6 +23,16 @@ function visibleTreatments(option: QuoteHotelOption) {
   return option.treatments.filter(hasDisplayablePrice);
 }
 
+function treatmentDescription(treatment: TreatmentOption) {
+  if (treatment.key === "breakfast") return "Include pernottamento e prima colazione.";
+  if (treatment.key === "half_board") return "Include pernottamento, prima colazione e un pasto secondo le condizioni della struttura.";
+  return "Include pernottamento, prima colazione, pranzo e cena secondo le condizioni della struttura.";
+}
+
+function splitLines(value?: string) {
+  return value?.split("\n").map((item) => item.trim()).filter(Boolean) ?? [];
+}
+
 export function QuoteProposalSection({ quote }: { quote: Quote }) {
   const [selected, setSelected] = useState<SelectedOption | null>(null);
   const confirmRef = useRef<HTMLDivElement>(null);
@@ -73,7 +83,6 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
               allGroupOptions={optionsWithTreatments}
               isConfirmed={isConfirmed}
               onSelectTreatment={handleSelectTreatment}
-              quote={quote}
             />
           );
         })}
@@ -105,16 +114,15 @@ function HotelCard({
   mainOption,
   allGroupOptions,
   isConfirmed,
-  onSelectTreatment,
-  quote
+  onSelectTreatment
 }: {
   mainOption: QuoteHotelOption;
   allGroupOptions: QuoteHotelOption[];
   isConfirmed: boolean;
   onSelectTreatment: (option: QuoteHotelOption, treatment: TreatmentOption) => void;
-  quote: Quote;
 }) {
-  const services = mainOption.includedServices ? mainOption.includedServices.split("\n").filter(Boolean) : [];
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const services = splitLines(mainOption.includedServices);
   const stars = mainOption.hotelStars ? "★".repeat(mainOption.hotelStars) : null;
   const isAnySelected = allGroupOptions.some((o) => o.isSelected);
   const hasMultipleRoomTypes = allGroupOptions.length > 1;
@@ -129,7 +137,19 @@ function HotelCard({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{mainOption.hotelLocation}</p>
-            <h3 className="mt-1 text-2xl font-black text-ischia-navy">{mainOption.hotelName}</h3>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <h3 className="text-2xl font-black text-ischia-navy">{mainOption.hotelName}</h3>
+              {mainOption.sourceUrl ? (
+                <a
+                  className="no-print rounded-full bg-white px-3 py-1 text-xs font-black text-ischia-blue ring-1 ring-ischia-blue/20"
+                  href={mainOption.sourceUrl}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Vedi l&apos;hotel
+                </a>
+              ) : null}
+            </div>
             {stars && <p className="mt-1 text-sm text-ischia-sun">{stars}</p>}
           </div>
           {isAnySelected && (
@@ -155,26 +175,42 @@ function HotelCard({
               )}
               {opt.treatments.length > 0 && (
                 <div className="space-y-2">
-                  {visibleTreatments(opt).map((treatment) => (
-                    <div key={`${opt.id}-${treatment.key}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-ischia-mist p-4">
-                      <div>
-                        <p className="font-black text-ischia-navy">{treatment.label}</p>
-                        <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
+                  {visibleTreatments(opt).map((treatment) => {
+                    const detailKey = `${opt.id}-${treatment.key}`;
+                    const isExpanded = expanded === detailKey;
+                    return (
+                    <div key={detailKey} className="rounded-2xl bg-ischia-mist p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="font-black text-ischia-navy">{treatment.label}</p>
+                          <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            aria-expanded={isExpanded}
+                            className="no-print rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/15"
+                            onClick={() => setExpanded(isExpanded ? null : detailKey)}
+                            type="button"
+                          >
+                            Cosa include
+                          </button>
+                          {!isConfirmed && (
+                            <button
+                              className="no-print rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
+                              onClick={() => onSelectTreatment(opt, treatment)}
+                              type="button"
+                            >
+                              Conferma questa opzione
+                            </button>
+                          )}
+                          {isConfirmed && opt.isSelected && (
+                            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Confermato</span>
+                          )}
+                        </div>
                       </div>
-                      {!isConfirmed && (
-                        <button
-                          className="no-print rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
-                          onClick={() => onSelectTreatment(opt, treatment)}
-                          type="button"
-                        >
-                          Conferma questa opzione
-                        </button>
-                      )}
-                      {isConfirmed && opt.isSelected && (
-                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Confermato</span>
-                      )}
+                      <TreatmentDetails className={`${isExpanded ? "block" : "hidden"} print:block`} option={opt} treatment={treatment} />
                     </div>
-                  ))}
+                  );})}
                 </div>
               )}
             </div>
@@ -193,6 +229,41 @@ function HotelCard({
           <p className="mt-3 rounded-xl bg-ischia-sun/10 px-3 py-2 text-sm text-ischia-ink/80">{mainOption.notes}</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function TreatmentDetails({ option, treatment, className }: { option: QuoteHotelOption; treatment: TreatmentOption; className?: string }) {
+  const services = splitLines(option.includedServices);
+  const hasDetails = services.length > 0 || option.paymentPolicy || option.cancellationPolicy || option.notes;
+
+  return (
+    <div className={`mt-3 rounded-xl bg-white/85 p-4 text-sm leading-6 text-ischia-ink/78 ring-1 ring-ischia-blue/10 ${className ?? ""}`}>
+      <p className="font-black text-ischia-navy">Cosa include questa opzione</p>
+      <div className="mt-2 grid gap-1">
+        <p><strong>Hotel:</strong> {option.hotelName}</p>
+        <p><strong>Trattamento:</strong> {treatment.label}</p>
+        <p><strong>Prezzo:</strong> {formatCurrency(treatment.price)}</p>
+        <p>{treatmentDescription(treatment)}</p>
+      </div>
+
+      {services.length > 0 ? (
+        <div className="mt-3">
+          <p className="font-bold text-ischia-navy">Servizi inclusi</p>
+          <ul className="mt-1 grid gap-1 sm:grid-cols-2">
+            {services.map((service) => <li key={service}>{service}</li>)}
+          </ul>
+        </div>
+      ) : null}
+      {option.paymentPolicy ? <p className="mt-3"><strong>Condizioni di pagamento:</strong> {option.paymentPolicy}</p> : null}
+      {option.cancellationPolicy ? <p className="mt-2"><strong>Politiche di cancellazione:</strong> {option.cancellationPolicy}</p> : null}
+      {option.notes ? <p className="mt-2"><strong>Note:</strong> {option.notes}</p> : null}
+      {!hasDetails ? (
+        <p className="mt-3">I dettagli completi verranno confermati dal nostro staff in fase di prenotazione.</p>
+      ) : null}
+      <p className="mt-3 text-xs font-semibold text-ischia-ink/65">
+        La proposta e soggetta a disponibilita al momento della conferma definitiva.
+      </p>
     </div>
   );
 }

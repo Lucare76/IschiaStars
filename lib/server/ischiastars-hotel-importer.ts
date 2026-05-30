@@ -16,8 +16,9 @@ export type ImportedIschiaStarsHotel = {
   paymentPolicy?: string;
   cancellationPolicy?: string;
   imageUrl?: string;
+  externalImageUrl?: string;
   sourceUrl?: string;
-  externalSource: "ischiastars.it";
+  externalSource: "wordpress";
   externalId?: string;
   slug?: string;
   wpId?: number;
@@ -65,7 +66,8 @@ async function fetchHotelsFromRestApi(): Promise<ImportedIschiaStarsHotel[]> {
     if (!res.ok) return [];
     const posts = (await res.json()) as WpHotelPost[];
     if (!Array.isArray(posts) || !posts.length) return [];
-    return posts.map((post) => mapWpApiHotel(post, useAuth)).filter(Boolean) as ImportedIschiaStarsHotel[];
+    const mapped = await Promise.all(posts.map((post) => mapWpApiHotel(post, useAuth, headers)));
+    return mapped.filter(Boolean) as ImportedIschiaStarsHotel[];
   } catch {
     return [];
   }
@@ -81,15 +83,36 @@ type WpHotelPost = {
   content?: { rendered?: string };
   excerpt?: { rendered?: string };
   featured_media?: number;
+  yoast_head_json?: {
+    og_image?: Array<{ url?: string; width?: number; height?: number }>;
+  };
   acf?: Record<string, unknown>;
   meta?: Record<string, unknown>;
   _embedded?: {
-    "wp:featuredmedia"?: Array<{ source_url?: string; media_details?: { sizes?: Record<string, { source_url: string }> } }>;
+    "wp:featuredmedia"?: WpMedia[];
     "wp:term"?: Array<Array<{ id: number; name: string; slug: string; taxonomy: string }>>;
   };
 };
 
-function mapWpApiHotel(post: WpHotelPost, withAuth: boolean): ImportedIschiaStarsHotel | null {
+type WpMedia = {
+  source_url?: string;
+  alt_text?: string;
+  media_details?: {
+    width?: number;
+    height?: number;
+    sizes?: Record<string, { source_url?: string; width?: number; height?: number }>;
+  };
+};
+
+type ExtractedImage = {
+  url?: string;
+  altText?: string;
+  width?: number;
+  height?: number;
+  source: "embedded" | "yoast" | "media_api" | "none";
+};
+
+async function mapWpApiHotel(post: WpHotelPost, withAuth: boolean, headers: Record<string, string>): Promise<ImportedIschiaStarsHotel | null> {
   const rawTitle = decodeHtml(post.title?.rendered ?? "").replace(/<[^>]+>/g, " ").trim();
   if (!rawTitle) return null;
 
@@ -97,7 +120,7 @@ function mapWpApiHotel(post: WpHotelPost, withAuth: boolean): ImportedIschiaStar
   if (!name) return null;
 
   const location = extractLocation(post);
-  const imageUrl = extractImageUrl(post);
+  const image = await extractMainImage(post, headers);
   const sourceUrl = post.link || `${SITE_BASE_URL}/hotel/${post.slug}/`;
   const slug = post.slug || slugify(name);
 
@@ -105,16 +128,31 @@ function mapWpApiHotel(post: WpHotelPost, withAuth: boolean): ImportedIschiaStar
     name,
     location,
     stars: titleStars,
-    imageUrl,
+    imageUrl: image.url,
+    externalImageUrl: image.url,
     sourceUrl,
-    externalSource: "ischiastars.it",
-    externalId: slug,
+    externalSource: "wordpress",
+    externalId: String(post.id),
     slug,
     wpId: post.id,
     metadata: {
       importedFrom: `${WP_REST}/${HOTEL_POST_TYPE}`,
-      importedImageUrl: imageUrl,
+      importedImageUrl: image.url,
       nameNormalized: normalizeHotelName(name),
+      wordpress_featured_media_id: post.featured_media || null,
+      wordpress_image_url: image.url || null,
+      wordpress_image_alt_text: image.altText || null,
+      wordpress_image_width: image.width || null,
+      wordpress_image_height: image.height || null,
+      wordpress_image_source: image.source,
+      wordpress_image: {
+        url: image.url || null,
+        altText: image.altText || null,
+        width: image.width || null,
+        height: image.height || null,
+        source: image.source,
+        featuredMediaId: post.featured_media || null
+      },
       wpId: post.id,
       withAuth
     }
@@ -158,15 +196,55 @@ function extractLocation(post: WpHotelPost): string | undefined {
   return undefined;
 }
 
-// URL immagine principale dalla media embedded
-function extractImageUrl(post: WpHotelPost): string | undefined {
+// URL immagine principale: embedded, Yoast og_image, media API.
+async function extractMainImage(post: WpHotelPost, headers: Record<string, string>): Promise<ExtractedImage> {
   const media = post._embedded?.["wp:featuredmedia"]?.[0];
-  if (!media) return undefined;
-  return (
-    media.source_url ||
-    media.media_details?.sizes?.large?.source_url ||
-    media.media_details?.sizes?.full?.source_url
-  );
+  const embeddedUrl = media ? media.source_url || media.media_details?.sizes?.large?.source_url || media.media_details?.sizes?.full?.source_url : undefined;
+  if (embeddedUrl) {
+    return {
+      url: embeddedUrl,
+      altText: media?.alt_text,
+      width: media?.media_details?.width ?? media?.media_details?.sizes?.large?.width ?? media?.media_details?.sizes?.full?.width,
+      height: media?.media_details?.height ?? media?.media_details?.sizes?.large?.height ?? media?.media_details?.sizes?.full?.height,
+      source: "embedded"
+    };
+  }
+
+  const yoastImage = post.yoast_head_json?.og_image?.find((image) => image.url);
+  if (yoastImage?.url) {
+    return {
+      url: yoastImage.url,
+      width: yoastImage.width,
+      height: yoastImage.height,
+      source: "yoast"
+    };
+  }
+
+  if (post.featured_media) {
+    const apiMedia = await fetchMediaById(post.featured_media, headers);
+    const apiUrl = apiMedia?.source_url || apiMedia?.media_details?.sizes?.large?.source_url || apiMedia?.media_details?.sizes?.full?.source_url;
+    if (apiUrl) {
+      return {
+        url: apiUrl,
+        altText: apiMedia?.alt_text,
+        width: apiMedia?.media_details?.width ?? apiMedia?.media_details?.sizes?.large?.width ?? apiMedia?.media_details?.sizes?.full?.width,
+        height: apiMedia?.media_details?.height ?? apiMedia?.media_details?.sizes?.large?.height ?? apiMedia?.media_details?.sizes?.full?.height,
+        source: "media_api"
+      };
+    }
+  }
+
+  return { source: "none" };
+}
+
+async function fetchMediaById(mediaId: number, headers: Record<string, string>): Promise<WpMedia | null> {
+  try {
+    const res = await fetch(`${WP_REST}/media/${mediaId}`, { headers, next: { revalidate: 0 } });
+    if (!res.ok) return null;
+    return await res.json() as WpMedia;
+  } catch {
+    return null;
+  }
 }
 
 // Mapping ACF/meta con supporto per nomi di campo comuni
@@ -235,6 +313,7 @@ export function mapImportedHotelToDbHotel(hotel: ImportedIschiaStarsHotel) {
     stars: hotel.stars ?? 3,
     short_description: hotel.shortDescription ?? hotel.description ?? "",
     image_url: hotel.imageUrl,
+    external_image_url: hotel.externalImageUrl ?? hotel.imageUrl,
     source_url: hotel.sourceUrl,
     external_source: hotel.externalSource,
     external_id: hotel.externalId,
@@ -318,8 +397,9 @@ function parseHotelCard(cardHtml: string, pageUrl: string): ImportedIschiaStarsH
     location,
     stars: resolvedStars,
     imageUrl,
+    externalImageUrl: imageUrl,
     sourceUrl,
-    externalSource: "ischiastars.it",
+    externalSource: "wordpress",
     externalId: slug,
     slug,
     metadata: { importedFrom: pageUrl, importedImageUrl: imageUrl, nameNormalized: normalizeHotelName(name) }
@@ -338,7 +418,7 @@ function parseHotelLinks(html: string, pageUrl: string): ImportedIschiaStarsHote
         name,
         stars,
         sourceUrl,
-        externalSource: "ischiastars.it" as const,
+        externalSource: "wordpress" as const,
         externalId: slug,
         slug,
         metadata: { importedFrom: pageUrl, nameNormalized: normalizeHotelName(name) }

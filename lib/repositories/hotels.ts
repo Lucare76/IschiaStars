@@ -87,7 +87,7 @@ export async function syncImportedHotels(importedHotels: ImportedIschiaStarsHote
     }
   }
 
-  report.notDetected = existing.filter((row) => row.external_source === "ischiastars.it" && !seenIds.has(row.id)).length;
+  report.notDetected = existing.filter((row) => isWordPressHotelRow(row) && !seenIds.has(row.id)).length;
   report.hotels = importedResults;
   return fromSupabase(report);
 }
@@ -204,7 +204,7 @@ function toHotelRow(input: Partial<HotelInput>) {
 
 function findMatchingHotel(existingRows: Record<string, any>[], importedHotel: ImportedIschiaStarsHotel) {
   const normalizedImportedName = normalizeHotelName(importedHotel.name);
-  const externalMatch = existingRows.find((row) => row.external_source === importedHotel.externalSource && row.external_id && row.external_id === importedHotel.externalId);
+  const externalMatch = existingRows.find((row) => isWordPressHotelRow(row) && row.external_id && row.external_id === importedHotel.externalId);
   if (externalMatch) return { row: externalMatch, reason: "external_id" };
 
   const slugMatch = existingRows.find((row) => importedHotel.slug && row.slug === importedHotel.slug);
@@ -221,8 +221,8 @@ function toImportedUpdateRow(current: Record<string, any>, importedRow: Record<s
   const currentMetadata = typeof current.sync_metadata === "object" && current.sync_metadata ? current.sync_metadata : {};
   const importedMetadata = typeof importedRow.sync_metadata === "object" && importedRow.sync_metadata ? importedRow.sync_metadata : {};
   const importedImageUrl = typeof importedMetadata.importedImageUrl === "string" ? importedMetadata.importedImageUrl : undefined;
-  const previousImportedImageUrl = typeof currentMetadata.importedImageUrl === "string" ? currentMetadata.importedImageUrl : undefined;
-  const canUpdateImage = Boolean(importedRow.image_url && (!current.image_url || current.image_url === previousImportedImageUrl));
+  const importedExternalImageUrl = typeof importedRow.external_image_url === "string" ? importedRow.external_image_url : importedImageUrl;
+  const canSetManualImageSlot = Boolean(importedRow.image_url && !current.image_url);
 
   return {
     name: importedRow.name,
@@ -234,19 +234,24 @@ function toImportedUpdateRow(current: Record<string, any>, importedRow: Record<s
     slug: importedRow.slug ?? current.slug,
     last_synced_at: now,
     last_seen_on_site_at: now,
+    external_image_url: importedExternalImageUrl ?? current.external_image_url ?? null,
     sync_metadata: {
       ...currentMetadata,
       ...importedMetadata,
       ...(importedImageUrl ? { importedImageUrl } : {})
     },
     updated_at: now,
-    // Aggiorna solo se il campo è vuoto — non sovrascrivere dati inseriti manualmente
+    // Aggiorna solo se il campo e vuoto: non sovrascrivere immagini inserite manualmente.
     ...(!current.short_description && importedRow.short_description ? { short_description: importedRow.short_description } : {}),
-    ...(canUpdateImage ? { image_url: importedRow.image_url } : {}),
+    ...(canSetManualImageSlot ? { image_url: importedRow.image_url } : {}),
     ...(isArrayEmpty(current.standard_services) && importedRow.standard_services?.length ? { standard_services: importedRow.standard_services } : {}),
     ...(!current.payment_policy && importedRow.payment_policy ? { payment_policy: importedRow.payment_policy } : {}),
     ...(!current.cancellation_policy && importedRow.cancellation_policy ? { cancellation_policy: importedRow.cancellation_policy } : {})
   };
+}
+
+function isWordPressHotelRow(row: Record<string, any>) {
+  return row.external_source === "wordpress" || row.external_source === "ischiastars.it";
 }
 
 function isArrayEmpty(value: unknown): boolean {

@@ -25,6 +25,8 @@ type HotelOptionState = {
   hotelName: string;
   hotelLocation: string;
   hotelStars: string;
+  hotelImageUrl: string;
+  sourceUrl: string;
   includedServices: string;
   paymentPolicy: string;
   cancellationPolicy: string;
@@ -63,6 +65,8 @@ function groupOptionsToState(opts: QuoteHotelOption[]): HotelOptionState[] {
         hotelName: first.hotelName,
         hotelLocation: first.hotelLocation ?? "",
         hotelStars: first.hotelStars != null ? String(first.hotelStars) : "",
+        hotelImageUrl: first.hotelImageUrl ?? "",
+        sourceUrl: first.sourceUrl ?? "",
         includedServices: first.includedServices ?? "",
         paymentPolicy: first.paymentPolicy ?? "",
         cancellationPolicy: first.cancellationPolicy ?? "",
@@ -79,6 +83,8 @@ function emptyOption(hotel?: Hotel, groupId = 1): HotelOptionState {
     hotelName: hotel?.name ?? "",
     hotelLocation: hotel?.zone ?? "",
     hotelStars: hotel ? String(hotel.stars) : "",
+    hotelImageUrl: hotel?.imageUrl ?? hotel?.externalImageUrl ?? "",
+    sourceUrl: hotel?.sourceUrl ?? "",
     includedServices: hotel?.standardServices.join("\n") ?? "",
     paymentPolicy: hotel?.paymentPolicy ?? "",
     cancellationPolicy: hotel?.cancellationPolicy ?? "",
@@ -108,6 +114,8 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
       hotelName: hotel?.name ?? "",
       hotelLocation: hotel?.zone ?? "",
       hotelStars: hotel ? String(hotel.stars) : "",
+      hotelImageUrl: hotel?.imageUrl ?? hotel?.externalImageUrl ?? "",
+      sourceUrl: hotel?.sourceUrl ?? "",
       includedServices: hotel?.standardServices.join("\n") ?? "",
       paymentPolicy: hotel?.paymentPolicy ?? "",
       cancellationPolicy: hotel?.cancellationPolicy ?? ""
@@ -173,6 +181,8 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
             hotelName: opt.hotelName,
             hotelLocation: opt.hotelLocation || undefined,
             hotelStars: opt.hotelStars ? Number(opt.hotelStars) : undefined,
+            hotelImageUrl: opt.hotelImageUrl || undefined,
+            sourceUrl: opt.sourceUrl || undefined,
             breakfastPrice: rt.breakfastPrice ? Number(rt.breakfastPrice) : undefined,
             halfBoardPrice: rt.halfBoardPrice ? Number(rt.halfBoardPrice) : undefined,
             fullBoardPrice: rt.fullBoardPrice ? Number(rt.fullBoardPrice) : undefined,
@@ -527,6 +537,19 @@ function HotelOptionBlock({
           <input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" value={opt.hotelLocation} onChange={(e) => onChange({ hotelLocation: e.target.value })} />
         </label>
       </div>
+
+      {(opt.hotelImageUrl || opt.sourceUrl) && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-ischia-blue/10">
+          {opt.hotelImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img alt={opt.hotelName || "Anteprima hotel"} className="h-16 w-24 rounded-lg object-cover" src={opt.hotelImageUrl} />
+          ) : null}
+          <div className="text-sm font-semibold text-ischia-ink/70">
+            {opt.hotelImageUrl ? <p>Immagine hotel disponibile</p> : null}
+            {opt.sourceUrl ? <p>Scheda hotel disponibile</p> : null}
+          </div>
+        </div>
+      )}
 
       {/* Tipologie camera */}
       <div className="mt-4 space-y-3">

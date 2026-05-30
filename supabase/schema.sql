@@ -7,6 +7,7 @@ create table if not exists public.hotels (
   stars integer not null check (stars between 1 and 5),
   short_description text not null default '',
   image_url text,
+  external_image_url text,
   standard_services jsonb not null default '[]',
   payment_policy text not null default '',
   cancellation_policy text not null default '',
@@ -24,6 +25,7 @@ create table if not exists public.hotels (
 );
 
 alter table public.hotels add column if not exists source_url text;
+alter table public.hotels add column if not exists external_image_url text;
 alter table public.hotels add column if not exists external_source text;
 alter table public.hotels add column if not exists external_id text;
 alter table public.hotels add column if not exists slug text;

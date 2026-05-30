@@ -13,6 +13,7 @@ export type Hotel = {
   stars: number;
   description: string;
   imageUrl?: string;
+  externalImageUrl?: string;
   sourceUrl?: string;
   slug?: string;
   standardServices: string[];

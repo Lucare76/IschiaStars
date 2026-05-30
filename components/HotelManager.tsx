@@ -185,9 +185,9 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
         <div className="grid gap-5 lg:grid-cols-3">
           {sortedHotels.map((hotel) => (
             <article key={hotel.id} className="overflow-hidden rounded-2xl bg-white/90 shadow-soft">
-              {hotel.imageUrl ? (
+              {getHotelImageUrl(hotel) ? (
                 <div className="relative h-44 w-full">
-                  <Image className="object-cover" src={hotel.imageUrl} alt={hotel.name} fill sizes="(min-width: 1024px) 33vw, 100vw" />
+                  <Image className="object-cover" src={getHotelImageUrl(hotel)!} alt={hotel.name} fill sizes="(min-width: 1024px) 33vw, 100vw" />
                 </div>
               ) : (
                 <div className="flex h-44 items-center justify-center bg-ischia-mist px-5 text-center text-sm font-bold text-ischia-ink/55">Nessuna foto impostata</div>
@@ -201,6 +201,11 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
                 <span className={`rounded-full px-3 py-1 text-xs font-black ${hotel.active ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{hotel.active ? "Attivo" : "Non attivo"}</span>
               </div>
               <p className="mt-3 text-sm leading-6 text-ischia-ink/72">{hotel.description}</p>
+              {hotel.externalImageUrl ? (
+                <p className="mt-3 rounded-xl bg-ischia-mist px-3 py-2 text-xs font-bold text-ischia-navy">
+                  Immagine da WordPress {hotel.imageUrl ? "disponibile, immagine manuale prioritaria" : "in uso"}
+                </p>
+              ) : null}
               <ul className="mt-4 grid gap-2 text-sm">
                 {hotel.standardServices.map((service) => <li className="rounded-xl bg-ischia-mist p-2" key={service}>{service}</li>)}
               </ul>
@@ -271,6 +276,10 @@ function toPayload(form: HotelForm) {
     isActive: form.isActive,
     slug: form.slug.trim() || undefined
   };
+}
+
+function getHotelImageUrl(hotel: Hotel) {
+  return hotel.imageUrl ?? hotel.externalImageUrl;
 }
 
 function Input({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
