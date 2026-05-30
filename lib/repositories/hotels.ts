@@ -389,7 +389,9 @@ export async function syncLrHotelFeed(): Promise<RepositoryResult<LrHotelSyncRep
 
       report.items.push(item);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = err instanceof Error ? err.message
+        : (err !== null && typeof err === "object" && "message" in err) ? String((err as { message: unknown }).message)
+        : String(err);
       report.errors.push(`Hotel ${hotel.hotel_id} (${hotel.title}): ${msg}`);
     }
   }

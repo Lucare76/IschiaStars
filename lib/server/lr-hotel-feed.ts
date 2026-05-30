@@ -187,7 +187,7 @@ export function mapLrHotelToDbRow(
 ): LrHotelMapped {
   const now = new Date().toISOString();
   const name = decodeEntities(hotel.title);
-  const location = hotel.destinations?.find((d) => typeof d === "string" && d.trim()) ?? undefined;
+  const location = hotel.destinations?.find((d) => typeof d === "string" && d.trim()) ?? "Ischia";
   const services = (hotel.services ?? []).map((s) => decodeEntities(s.label)).filter(Boolean);
 
   const listinoCompact = hotel.listino
@@ -217,8 +217,8 @@ export function mapLrHotelToDbRow(
 
   const dbRow: Record<string, unknown> = {
     name,
-    location: location || null,
-    stars: hotel.stars || null,
+    location,
+    stars: hotel.stars || 3,
     source_url: hotel.permalink || null,
     external_source: "lr_hotel_feed",
     external_id: String(hotel.hotel_id),
