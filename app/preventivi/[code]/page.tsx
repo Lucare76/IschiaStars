@@ -5,6 +5,8 @@ import { PublicQuotePage } from "@/components/PublicQuotePage";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { ischiastarsWhatsappNumber } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   robots: {
     index: false,
