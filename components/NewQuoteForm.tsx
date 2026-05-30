@@ -220,7 +220,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
           </div>
           <div className="flex flex-wrap gap-2">
             <WhatsAppSendButton quote={savedQuote} />
-            <Link className="rounded-full bg-ischia-navy px-4 py-2 font-black text-white" href={publicQuoteUrl(savedQuote)}>
+            <Link className="rounded-full bg-ischia-navy px-4 py-2 font-black text-white" href={publicQuoteUrl(savedQuote)} rel="noopener noreferrer" target="_blank">
               Apri link cliente
             </Link>
             <Link className="rounded-full bg-white px-4 py-2 font-black text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/preventivi/${savedQuote.code}`}>

@@ -93,7 +93,7 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
       <div className="mt-5 flex flex-wrap gap-2">
         {!isDeleted ? (
           <>
-            <Link className="rounded-full bg-ischia-navy px-4 py-2 text-sm font-bold text-white" href={publicQuoteUrl(quote)}>
+            <Link className="rounded-full bg-ischia-navy px-4 py-2 text-sm font-bold text-white" href={publicQuoteUrl(quote)} rel="noopener noreferrer" target="_blank">
               Apri link cliente
             </Link>
             <WhatsAppSendButton quote={quote} />

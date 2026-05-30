@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
 import { QuoteDetailEditor } from "@/components/QuoteDetailEditor";
@@ -13,6 +14,14 @@ export default async function QuoteDetailPage({ params }: { params: { code: stri
 
   return (
     <AdminShell title={`Preventivo ${quote.code}`} subtitle="Modifica proposta, trasporti, condizioni e stato operativo.">
+      <div className="mb-5 flex flex-wrap gap-2">
+        <Link className="rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy shadow-sm ring-1 ring-ischia-blue/15" href="/admin">
+          ← Dashboard
+        </Link>
+        <Link className="rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy shadow-sm ring-1 ring-ischia-blue/15" href="/admin/preventivi">
+          Tutti i preventivi
+        </Link>
+      </div>
       <QuoteDetailEditor quote={quote} hotels={hotelResult.data} />
     </AdminShell>
   );

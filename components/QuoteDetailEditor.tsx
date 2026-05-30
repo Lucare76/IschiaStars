@@ -431,7 +431,7 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
                 Preventivo segnato come inviato. Invia il link al cliente su WhatsApp.
               </div>
               <WhatsAppSendButton quote={currentQuote} label="Invia link su WhatsApp" />
-              <Link className="block rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)}>
+              <Link className="block rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)} rel="noopener noreferrer" target="_blank">
                 Apri link cliente
               </Link>
             </div>
@@ -446,7 +446,7 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
               >
                 {sending ? "Aggiornamento..." : "Invia preventivo"}
               </button>
-              <Link className="rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)}>
+              <Link className="rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)} rel="noopener noreferrer" target="_blank">
                 Apri link cliente
               </Link>
               <WhatsAppSendButton quote={currentQuote} />
