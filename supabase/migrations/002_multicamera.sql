@@ -23,3 +23,9 @@ alter table public.quote_hotel_options
 
 alter table public.quote_hotel_options
   add constraint quote_hotel_options_hotel_group_check check (hotel_group between 1 and 3);
+
+-- Migrazione dati esistenti: assegna hotel_group corretto ai preventivi
+-- creati prima di questa migration (position 2 = hotel 2, position 3 = hotel 3)
+update public.quote_hotel_options
+  set hotel_group = position
+  where position in (2, 3);
