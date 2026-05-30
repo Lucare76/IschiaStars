@@ -67,18 +67,20 @@ export async function POST(request: NextRequest) {
   if (!result.data) return NextResponse.json({ ok: false, error: result.error ?? "Conferma non salvata" }, { status: 500 });
   console.info(`[confirmation] saved quote=${quoteResult.data.id} code=${quoteResult.data.code}`);
 
-  sendQuoteConfirmedInternalEmail(quoteResult.data, {
-    firstName: body!.firstName!.trim(),
-    lastName: body!.lastName!.trim(),
-    phone: body!.phone!.trim(),
-    email: body!.email!.trim(),
-    confirmedAt: result.data.confirmedAt,
-    selectedHotelName: body!.selectedHotelName,
-    selectedTreatmentLabel: body!.selectedTreatmentLabel,
-    selectedPrice: body!.selectedPrice
-  }).catch((err) => {
-    console.warn("POST /api/quote-confirmations brevo error", { message: err instanceof Error ? err.message : String(err) });
-  });
+  try {
+    await sendQuoteConfirmedInternalEmail(quoteResult.data, {
+      firstName: body!.firstName!.trim(),
+      lastName: body!.lastName!.trim(),
+      phone: body!.phone!.trim(),
+      email: body!.email!.trim(),
+      confirmedAt: result.data.confirmedAt,
+      selectedHotelName: body!.selectedHotelName,
+      selectedTreatmentLabel: body!.selectedTreatmentLabel,
+      selectedPrice: body!.selectedPrice
+    });
+  } catch (err) {
+    console.warn("POST /api/quote-confirmations brevo error", { code: quoteResult.data.code, message: err instanceof Error ? err.message : String(err) });
+  }
 
   return NextResponse.json({ ok: true, source: result.source, confirmedAt: result.data.confirmedAt });
 }
