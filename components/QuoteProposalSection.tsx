@@ -5,6 +5,7 @@ import { ConfirmQuoteForm } from "@/components/ConfirmQuoteForm";
 import { trackQuoteEvent } from "@/lib/client-tracking";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Quote, QuoteHotelOption, TreatmentOption } from "@/lib/types";
+import { extractHighlightedFeatures } from "@/lib/highlight-features";
 import { formatCurrency, publicWhatsappLink } from "@/lib/utils";
 
 type SelectedOption = {
@@ -132,6 +133,11 @@ function HotelCard({
   const isAnySelected = allGroupOptions.some((o) => o.isSelected);
   const hasMultipleRoomTypes = allGroupOptions.length > 1;
   const imageUrl = sharperWordPressImageUrl(mainOption.hotelImageUrl);
+  const features = extractHighlightedFeatures({
+    hotelName: mainOption.hotelName,
+    includedServices: mainOption.includedServices,
+    notes: mainOption.notes,
+  });
 
   return (
     <div className={`print-card overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ${isAnySelected ? "ring-emerald-400" : "ring-ischia-blue/10"}`}>
@@ -165,6 +171,24 @@ function HotelCard({
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Scelta dal cliente</span>
           )}
         </div>
+
+        {features.length > 0 && (
+          <div className="mt-3">
+            <div className="no-print">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">Plus inclusi</p>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {features.map((f) => (
+                  <span key={f} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200/60">
+                    ✓ {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <p className="hidden print:block text-sm text-ischia-ink/80">
+              <strong>Plus inclusi:</strong> {features.join(", ")}
+            </p>
+          </div>
+        )}
 
         {services.length > 0 && (
           <div className="mt-3">

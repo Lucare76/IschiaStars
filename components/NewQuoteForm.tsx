@@ -5,6 +5,7 @@ import type { FormEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes 
 import { useState } from "react";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { adminApiHeaders } from "@/lib/admin-api-client";
+import { extractHighlightedFeatures } from "@/lib/highlight-features";
 import { Hotel, Quote, QuoteRequest } from "@/lib/types";
 import { publicQuoteUrl } from "@/lib/utils";
 
@@ -354,6 +355,11 @@ function HotelOptionBlock({
   onRemoveRoomType: (roomIndex: number) => void;
 }) {
   const hasPrice = opt.roomTypes.some((rt) => rt.breakfastPrice || rt.halfBoardPrice || rt.fullBoardPrice);
+  const detectedPlus = extractHighlightedFeatures({
+    hotelName: opt.hotelName,
+    includedServices: opt.includedServices,
+    notes: opt.notes,
+  });
 
   return (
     <div className="rounded-2xl border border-ischia-blue/15 bg-ischia-mist/50 p-4">
@@ -467,6 +473,19 @@ function HotelOptionBlock({
         <Textarea label="Policy cancellazione" value={opt.cancellationPolicy} onChange={(v) => onChange({ cancellationPolicy: v })} />
         <Textarea label="Note per il cliente (opzionale)" value={opt.notes} onChange={(v) => onChange({ notes: v })} />
       </div>
+
+      {detectedPlus.length > 0 && (
+        <div className="mt-3 rounded-xl bg-emerald-50/60 p-3 ring-1 ring-emerald-200/50">
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Plus rilevati (anteprima preventivo)</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {detectedPlus.map((f) => (
+              <span key={f} className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                ✓ {f}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
