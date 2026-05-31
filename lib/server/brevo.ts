@@ -5,6 +5,7 @@ type BrevoRecipient = { email: string; name?: string };
 
 type SendBrevoEmailParams = {
   to: BrevoRecipient[];
+  cc?: BrevoRecipient[];
   subject: string;
   html: string;
   text?: string;
@@ -45,6 +46,7 @@ export async function sendBrevoEmail(params: SendBrevoEmailParams): Promise<bool
   const payload = {
     sender: { name: fromName, email: fromEmail },
     to: params.to,
+    ...(params.cc?.length ? { cc: params.cc } : {}),
     subject: params.subject,
     htmlContent: params.html,
     ...(params.text ? { textContent: params.text } : {}),
@@ -270,6 +272,7 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
     console.warn(`[brevo] skipped internal confirmation ${quote.code}: BREVO_INTERNAL_NOTIFY_EMAIL not set`);
     return;
   }
+  const internalCcEmail = process.env.BREVO_INTERNAL_CC_EMAIL?.trim();
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
   const backofficeUrl = `${siteUrl}/admin/preventivi`;
@@ -400,6 +403,7 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
 
   const ok = await sendBrevoEmail({
     to: [{ email: internalEmail, name: "IschiaStars" }],
+    cc: internalCcEmail ? [{ email: internalCcEmail, name: "IschiaStars Preventivi" }] : undefined,
     subject: `Preventivo confermato ${quote.code}`,
     html,
     text

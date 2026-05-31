@@ -67,18 +67,32 @@ La pagina preventivo cliente resta pubblica solo tramite link sicuro `code + tok
 Configura queste variabili su Vercel:
 
 ```env
-NEXT_PUBLIC_SITE_URL=https://ischiastarspreventivi.vercel.app
+NEXT_PUBLIC_SITE_URL=https://preventivi.ischiastars.it
 NEXT_PUBLIC_ISCHIASTARS_WHATSAPP=393717590017
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=xxxxx
 SUPABASE_SERVICE_ROLE_KEY=xxxxx
 ADMIN_API_KEY=chiave_lunga_segreta
+CRON_SECRET=chiave_lunga_segreta_cron
+BREVO_ENABLED=true
+BREVO_API_KEY=xxxxx
+BREVO_FROM_EMAIL=info@ischiastars.it
+BREVO_FROM_NAME=IschiaStars
+BREVO_INTERNAL_NOTIFY_EMAIL=info@ischiastars.it
+BREVO_INTERNAL_CC_EMAIL=ischiastarspreventivi@gmail.com
+WORDPRESS_BASE_URL=https://ischiastars.it
+WORDPRESS_USERNAME=xxxxx
+WORDPRESS_APP_PASSWORD=xxxxx
+GMAIL_CLIENT_ID=xxxxx
+GMAIL_CLIENT_SECRET=xxxxx
+GMAIL_REFRESH_TOKEN=xxxxx
+GMAIL_EMAIL=ischiastarspreventivi@gmail.com
 ```
 
 Dopo il deploy, esegui uno smoke test sull'URL pubblico:
 
 ```powershell
-$env:SMOKE_BASE_URL='https://ischiastarspreventivi.vercel.app'
+$env:SMOKE_BASE_URL='https://preventivi.ischiastars.it'
 pnpm smoke
 ```
 

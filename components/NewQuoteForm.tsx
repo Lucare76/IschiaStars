@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { FormEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
 import { useState } from "react";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
-import { adminApiHeaders } from "@/lib/admin-api-client";
+import { adminApiFetch } from "@/lib/admin-api-client";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
 import { Hotel, Quote, QuoteRequest } from "@/lib/types";
 import { publicQuoteUrl } from "@/lib/utils";
@@ -166,10 +166,8 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
         });
     });
 
-    const response = await fetch("/api/quotes", {
+    const response = await adminApiFetch("/api/quotes", {
       method: "POST",
-      credentials: "include",
-      headers: adminApiHeaders(),
       body: JSON.stringify({
         clientFirstName: formData.get("firstName"),
         clientLastName: formData.get("lastName"),
@@ -194,7 +192,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
     const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string } | null;
     setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
-      setError(result?.error ?? `Preventivo non salvato (${response.status}). Riprova o verifica la sessione operatore.`);
+      setError(response.status === 401 ? "Sessione scaduta, effettua di nuovo il login." : result?.error ?? `Preventivo non salvato (${response.status}). Riprova o verifica la sessione operatore.`);
       return;
     }
     setSavedQuote(result.data);

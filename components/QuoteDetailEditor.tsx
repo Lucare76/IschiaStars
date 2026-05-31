@@ -5,7 +5,7 @@ import type { FormEvent, InputHTMLAttributes, TextareaHTMLAttributes } from "rea
 import { useState } from "react";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
-import { adminApiHeaders } from "@/lib/admin-api-client";
+import { adminApiFetch } from "@/lib/admin-api-client";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Hotel, Quote, QuoteHotelOption, QuoteStatus, TransportOffer } from "@/lib/types";
 import { formatCurrency, publicQuoteUrl } from "@/lib/utils";
@@ -214,16 +214,14 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
       hotelOptions: mappedOptions.length > 0 ? mappedOptions : undefined
     };
 
-    const response = await fetch(`/api/quotes/${currentQuote.id}`, {
+    const response = await adminApiFetch(`/api/quotes/${currentQuote.id}`, {
       method: "PATCH",
-      credentials: "include",
-      headers: adminApiHeaders(),
       body: JSON.stringify(payload)
     });
     const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; source?: string; error?: string } | null;
     setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage(result?.error ?? "Salvataggio non riuscito");
+      setMessage(response.status === 401 ? "Sessione scaduta, effettua di nuovo il login." : result?.error ?? "Salvataggio non riuscito");
       return;
     }
     setCurrentQuote(result.data);
@@ -231,10 +229,8 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
   }
 
   async function changeStatus(status: QuoteStatus) {
-    const response = await fetch(`/api/quotes/${currentQuote.id}`, {
+    const response = await adminApiFetch(`/api/quotes/${currentQuote.id}`, {
       method: "PATCH",
-      credentials: "include",
-      headers: adminApiHeaders(),
       body: JSON.stringify({ statusOnly: true, status })
     });
     const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
@@ -244,10 +240,8 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
   async function toggleExcludeFromStats() {
     setMessage(null);
     const next = !currentQuote.excludedFromStats;
-    const response = await fetch(`/api/quotes/${currentQuote.id}`, {
+    const response = await adminApiFetch(`/api/quotes/${currentQuote.id}`, {
       method: "PATCH",
-      credentials: "include",
-      headers: adminApiHeaders(),
       body: JSON.stringify({ excludedFromStats: next })
     });
     const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
@@ -263,10 +257,8 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
     setMessage(null);
     const ok = window.confirm(`Vuoi cancellare il preventivo ${currentQuote.code}?\n\nVerrà nascosto dalle liste operative e dalle statistiche.`);
     if (!ok) return;
-    const response = await fetch(`/api/quotes/${currentQuote.id}`, {
+    const response = await adminApiFetch(`/api/quotes/${currentQuote.id}`, {
       method: "PATCH",
-      credentials: "include",
-      headers: adminApiHeaders(),
       body: JSON.stringify({ softDelete: true })
     });
     const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
@@ -280,10 +272,8 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
 
   async function restoreCurrentQuote() {
     setMessage(null);
-    const response = await fetch(`/api/quotes/${currentQuote.id}`, {
+    const response = await adminApiFetch(`/api/quotes/${currentQuote.id}`, {
       method: "POST",
-      credentials: "include",
-      headers: adminApiHeaders(),
       body: JSON.stringify({ action: "restore" })
     });
     const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
@@ -297,15 +287,13 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
 
   async function duplicateCurrentQuote() {
     setMessage(null);
-    const response = await fetch(`/api/quotes/${currentQuote.id}`, {
+    const response = await adminApiFetch(`/api/quotes/${currentQuote.id}`, {
       method: "POST",
-      credentials: "include",
-      headers: adminApiHeaders(),
       body: JSON.stringify({ action: "duplicate" })
     });
     const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string } | null;
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage(result?.error ?? "Duplicazione non riuscita");
+      setMessage(response.status === 401 ? "Sessione scaduta, effettua di nuovo il login." : result?.error ?? "Duplicazione non riuscita");
       return;
     }
     window.location.href = `/admin/preventivi/${result.data.code}`;
@@ -314,10 +302,8 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
   async function sendQuote() {
     setSending(true);
     setMessage(null);
-    const response = await fetch(`/api/quotes/${currentQuote.id}`, {
+    const response = await adminApiFetch(`/api/quotes/${currentQuote.id}`, {
       method: "PATCH",
-      credentials: "include",
-      headers: adminApiHeaders(),
       body: JSON.stringify({ statusOnly: true, status: "preventivo_inviato" })
     });
     const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
@@ -326,7 +312,7 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
       setCurrentQuote(result.data);
       setSent(true);
     } else {
-      setMessage("Impossibile aggiornare lo stato. Riprova.");
+      setMessage(response.status === 401 ? "Sessione scaduta, effettua di nuovo il login." : "Impossibile aggiornare lo stato. Riprova.");
     }
   }
 

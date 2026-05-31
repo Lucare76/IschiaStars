@@ -1,16 +1,16 @@
 import { google } from 'googleapis';
 import { createQuoteRequest, isDuplicateQuoteRequest } from '@/lib/repositories/quoteRequests';
 
-const GMAIL_ACCOUNT = 'ischiastarspreventivi@gmail.com';
+const GMAIL_ACCOUNT = process.env.GMAIL_EMAIL || 'ischiastarspreventivi@gmail.com';
 
 const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI
+  process.env.GMAIL_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID,
+  process.env.GMAIL_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GMAIL_REDIRECT_URI ?? process.env.GOOGLE_REDIRECT_URI
 );
 
 oauth2Client.setCredentials({
-  refresh_token: process.env.GOOGLE_REFRESH_TOKEN
+  refresh_token: process.env.GMAIL_REFRESH_TOKEN ?? process.env.GOOGLE_REFRESH_TOKEN
 });
 
 const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
