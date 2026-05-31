@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { ConfirmQuoteForm } from "@/components/ConfirmQuoteForm";
 import { trackQuoteEvent } from "@/lib/client-tracking";
+import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown } from "@/lib/hotel-policies";
+import { PaymentSettings } from "@/lib/payment-settings";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Quote, QuoteHotelOption, TreatmentOption } from "@/lib/types";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
@@ -14,6 +16,12 @@ type SelectedOption = {
   treatmentKey: string;
   treatmentLabel: string;
   price: number;
+  depositPercent?: number;
+  depositAmount?: number;
+  balanceAmount?: number;
+  balanceMethod?: string;
+  paymentPolicy?: string;
+  cancellationPolicy?: string;
 };
 
 function hasDisplayablePrice(treatment: TreatmentOption) {
@@ -39,7 +47,7 @@ function sharperWordPressImageUrl(url?: string) {
   return url.replace(/-\d+x\d+(?=\.(?:jpe?g|png|webp|avif)(?:\?|$))/i, "");
 }
 
-export function QuoteProposalSection({ quote }: { quote: Quote }) {
+export function QuoteProposalSection({ quote, paymentSettings }: { quote: Quote; paymentSettings?: PaymentSettings }) {
   const [selected, setSelected] = useState<SelectedOption | null>(null);
   const confirmRef = useRef<HTMLDivElement>(null);
 
@@ -58,12 +66,19 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
   const isConfirmed = quote.status === "confermato";
 
   function handleSelectTreatment(option: QuoteHotelOption, treatment: TreatmentOption) {
+    const breakdown = calculatePaymentBreakdown(treatment.price, option.depositPercent, option.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
     setSelected({
       optionId: option.id,
       hotelName: option.hotelName + (option.roomTypeLabel ? ` — ${option.roomTypeLabel}` : ""),
       treatmentKey: treatment.key,
       treatmentLabel: treatment.label,
-      price: treatment.price
+      price: treatment.price,
+      depositPercent: breakdown.depositPercent,
+      depositAmount: breakdown.depositAmount,
+      balanceAmount: breakdown.balanceAmount,
+      balanceMethod: breakdown.balanceMethod,
+      paymentPolicy: option.paymentPolicy,
+      cancellationPolicy: option.cancellationPolicy
     });
     trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "confirm_clicked", {
       optionId: option.id,
@@ -112,6 +127,7 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
         <ConfirmQuoteForm
           quote={quote}
           selectedOption={selected}
+          paymentSettings={paymentSettings}
         />
       </div>
     </div>
@@ -224,10 +240,18 @@ function HotelCard({
                     const isExpanded = expanded === detailKey;
                     return (
                     <div key={detailKey} className="rounded-2xl bg-ischia-mist p-4">
+                      {(() => {
+                        const breakdown = calculatePaymentBreakdown(treatment.price, opt.depositPercent, opt.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
+                        return (
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="font-black text-ischia-navy">{treatment.label}</p>
                           <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
+                          {breakdown.depositPercent > 0 ? (
+                            <p className="mt-1 text-sm font-semibold text-ischia-ink/72">
+                              Acconto {breakdown.depositPercent}%: {formatCurrency(breakdown.depositAmount)} · Saldo {formatCurrency(breakdown.balanceAmount)}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <button
@@ -263,6 +287,8 @@ function HotelCard({
                           )}
                         </div>
                       </div>
+                        );
+                      })()}
                       <TreatmentDetails className={`${isExpanded ? "block" : "hidden"} print:block`} option={opt} treatment={treatment} />
                     </div>
                   );})}
@@ -273,8 +299,10 @@ function HotelCard({
         </div>
 
         {/* Condizioni dal primo option del gruppo */}
-        {(mainOption.paymentPolicy || mainOption.cancellationPolicy) && (
+        {(mainOption.depositPercent != null || mainOption.balanceMethod || mainOption.paymentPolicy || mainOption.cancellationPolicy) && (
           <div className="mt-4 border-t border-ischia-blue/10 pt-4 text-sm text-ischia-ink/70">
+            {mainOption.depositPercent != null ? <p><strong>Acconto:</strong> {mainOption.depositPercent}%</p> : null}
+            {mainOption.balanceMethod ? <p className="mt-1"><strong>Saldo:</strong> {mainOption.balanceMethod}</p> : null}
             {mainOption.paymentPolicy && <p><strong>Pagamento:</strong> {mainOption.paymentPolicy}</p>}
             {mainOption.cancellationPolicy && <p className="mt-1"><strong>Cancellazione:</strong> {mainOption.cancellationPolicy}</p>}
           </div>
@@ -291,7 +319,8 @@ function HotelCard({
 
 function TreatmentDetails({ option, treatment, className }: { option: QuoteHotelOption; treatment: TreatmentOption; className?: string }) {
   const services = splitLines(option.includedServices);
-  const hasDetails = services.length > 0 || option.paymentPolicy || option.cancellationPolicy || option.notes;
+  const breakdown = calculatePaymentBreakdown(treatment.price, option.depositPercent, option.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
+  const hasDetails = services.length > 0 || option.paymentPolicy || option.cancellationPolicy || option.paymentNotes || option.notes || breakdown.depositPercent > 0;
 
   return (
     <div className={`mt-3 rounded-xl bg-white/85 p-4 text-sm leading-6 text-ischia-ink/78 ring-1 ring-ischia-blue/10 ${className ?? ""}`}>
@@ -300,6 +329,12 @@ function TreatmentDetails({ option, treatment, className }: { option: QuoteHotel
         <p><strong>Hotel:</strong> {option.hotelName}</p>
         <p><strong>Trattamento:</strong> {treatment.label}</p>
         <p><strong>Prezzo:</strong> {formatCurrency(treatment.price)}</p>
+        {breakdown.depositPercent > 0 ? (
+          <>
+            <p><strong>Acconto richiesto:</strong> {breakdown.depositPercent}% pari a {formatCurrency(breakdown.depositAmount)}</p>
+            <p><strong>Saldo restante:</strong> {formatCurrency(breakdown.balanceAmount)} {breakdown.balanceMethod.replace(/^Saldo restante\s*/i, "").replace(/\.$/, "")}.</p>
+          </>
+        ) : null}
         <p>{treatmentDescription(treatment)}</p>
       </div>
 
@@ -312,6 +347,7 @@ function TreatmentDetails({ option, treatment, className }: { option: QuoteHotel
         </div>
       ) : null}
       {option.paymentPolicy ? <p className="mt-3"><strong>Condizioni di pagamento:</strong> {option.paymentPolicy}</p> : null}
+      {option.paymentNotes ? <p className="mt-2"><strong>Note pagamento:</strong> {option.paymentNotes}</p> : null}
       {option.cancellationPolicy ? <p className="mt-2"><strong>Politiche di cancellazione:</strong> {option.cancellationPolicy}</p> : null}
       {option.notes ? <p className="mt-2"><strong>Note:</strong> {option.notes}</p> : null}
       {!hasDetails ? (

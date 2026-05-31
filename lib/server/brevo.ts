@@ -27,6 +27,13 @@ export type BrevoConfirmationDetails = {
   selectedHotelName?: string;
   selectedTreatmentLabel?: string;
   selectedPrice?: number;
+  selectedDepositPercent?: number;
+  selectedDepositAmount?: number;
+  selectedBalanceAmount?: number;
+  selectedBalanceMethod?: string;
+  selectedPaymentPolicy?: string;
+  selectedCancellationPolicy?: string;
+  paymentSettingsSnapshot?: Record<string, unknown>;
 };
 
 export function isBrevoEnabled(): boolean {
@@ -320,10 +327,53 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
       ${confirmation.selectedPrice != null ? `<tr>
         <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Prezzo scelto</strong></td>
         <td style="padding:6px 0;font-size:14px;font-weight:bold;color:#1a4a2a;text-align:right;">${formatPrice(confirmation.selectedPrice)}</td>
+      </tr>` : ""}
+      ${confirmation.selectedDepositPercent != null ? `<tr>
+        <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Acconto</strong></td>
+        <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${confirmation.selectedDepositPercent}% pari a ${formatPrice(confirmation.selectedDepositAmount ?? 0)}</td>
+      </tr>` : ""}
+      ${confirmation.selectedBalanceAmount != null ? `<tr>
+        <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Saldo restante</strong></td>
+        <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${formatPrice(confirmation.selectedBalanceAmount)}</td>
+      </tr>` : ""}
+      ${confirmation.selectedBalanceMethod ? `<tr>
+        <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Modalità saldo</strong></td>
+        <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${confirmation.selectedBalanceMethod}</td>
+      </tr>` : ""}
+      ${confirmation.selectedCancellationPolicy ? `<tr>
+        <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Policy cancellazione</strong></td>
+        <td style="padding:6px 0;font-size:13px;color:#1a4a2a;text-align:right;">${confirmation.selectedCancellationPolicy}</td>
       </tr>` : ""}`
     : `<tr>
         <td colspan="2" style="padding:10px 0 6px;font-size:13px;border-top:1px solid #b8d8b8;color:#888;">Il cliente non ha specificato l'opzione (conferma generica)</td>
       </tr>`;
+  const paymentSnapshot = confirmation.paymentSettingsSnapshot ?? {};
+  const paymentConfigured = paymentSnapshot.configured === true;
+  const paymentReason = typeof paymentSnapshot.payment_reason === "string" ? paymentSnapshot.payment_reason : "";
+  const paymentCoordinatesHtml = paymentConfigured
+    ? `<tr>
+        <td style="padding:10px 0 6px;font-size:14px;color:#555;border-top:1px solid #b8d8b8;"><strong>Coordinate comunicate</strong></td>
+        <td style="padding:10px 0 6px;font-size:13px;color:#1a4a2a;text-align:right;border-top:1px solid #b8d8b8;">
+          ${paymentSnapshot.bank_account_holder ? `Intestatario: ${paymentSnapshot.bank_account_holder}<br>` : ""}
+          ${paymentSnapshot.bank_name ? `Banca: ${paymentSnapshot.bank_name}<br>` : ""}
+          ${paymentSnapshot.iban ? `IBAN: ${paymentSnapshot.iban}<br>` : ""}
+          ${paymentSnapshot.bic_swift ? `BIC/SWIFT: ${paymentSnapshot.bic_swift}<br>` : ""}
+          ${paymentReason ? `Causale: ${paymentReason}` : ""}
+        </td>
+      </tr>`
+    : `<tr>
+        <td style="padding:10px 0 6px;font-size:14px;color:#555;border-top:1px solid #b8d8b8;"><strong>Coordinate comunicate</strong></td>
+        <td style="padding:10px 0 6px;font-size:13px;color:#888;text-align:right;border-top:1px solid #b8d8b8;">Non configurate: pagamento comunicato dallo staff.</td>
+      </tr>`;
+  const paymentCoordinatesText = paymentConfigured
+    ? [
+        paymentSnapshot.bank_account_holder ? `Intestatario:      ${paymentSnapshot.bank_account_holder}` : null,
+        paymentSnapshot.bank_name ? `Banca:             ${paymentSnapshot.bank_name}` : null,
+        paymentSnapshot.iban ? `IBAN:              ${paymentSnapshot.iban}` : null,
+        paymentSnapshot.bic_swift ? `BIC/SWIFT:         ${paymentSnapshot.bic_swift}` : null,
+        paymentReason ? `Causale:           ${paymentReason}` : null
+      ].filter(Boolean) as string[]
+    : ["Coordinate:        non configurate, pagamento comunicato dallo staff"];
 
   const html = `<!DOCTYPE html>
 <html lang="it">
@@ -386,6 +436,7 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
                 <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${formatDate(quote.departureDate)}</td>
               </tr>
               ${selectionHtml}
+              ${paymentCoordinatesHtml}
               <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Confermato il</strong></td>
                 <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${confirmedAtFormatted}</td>
@@ -430,6 +481,11 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
     ...(confirmation.selectedHotelName ? [`Hotel scelto:      ${confirmation.selectedHotelName}`] : []),
     ...(confirmation.selectedTreatmentLabel ? [`Trattamento:       ${confirmation.selectedTreatmentLabel}`] : []),
     ...(confirmation.selectedPrice != null ? [`Prezzo scelto:     ${formatPrice(confirmation.selectedPrice)}`] : []),
+    ...(confirmation.selectedDepositPercent != null ? [`Acconto:          ${confirmation.selectedDepositPercent}% pari a ${formatPrice(confirmation.selectedDepositAmount ?? 0)}`] : []),
+    ...(confirmation.selectedBalanceAmount != null ? [`Saldo restante:   ${formatPrice(confirmation.selectedBalanceAmount)}`] : []),
+    ...(confirmation.selectedBalanceMethod ? [`Modalità saldo:    ${confirmation.selectedBalanceMethod}`] : []),
+    ...(confirmation.selectedCancellationPolicy ? [`Policy canc.:      ${confirmation.selectedCancellationPolicy}`] : []),
+    ...paymentCoordinatesText,
     `Confermato il:     ${confirmedAtFormatted}`,
     "",
     `Backoffice: ${backofficeUrl}`

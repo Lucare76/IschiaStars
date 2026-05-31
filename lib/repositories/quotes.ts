@@ -115,7 +115,7 @@ async function fetchConfirmationsForQuotes(quoteIds: string[]): Promise<Record<s
 
   const { data } = await supabase
     .from("quote_confirmations")
-    .select("quote_id,created_at,fiscal_code,address,city,postal_code,province,selected_hotel_option_id,selected_hotel_name,selected_treatment_key,selected_treatment_label,selected_price")
+    .select("quote_id,created_at,fiscal_code,address,city,postal_code,province,selected_hotel_option_id,selected_hotel_name,selected_treatment_key,selected_treatment_label,selected_price,selected_deposit_percent,selected_deposit_amount,selected_balance_amount,selected_balance_method,selected_payment_policy,selected_cancellation_policy,payment_settings_snapshot")
     .in("quote_id", quoteIds);
 
   const result: Record<string, Record<string, unknown>> = {};
@@ -334,8 +334,11 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
       halfBoardLabel: o.halfBoardLabel,
       fullBoardLabel: o.fullBoardLabel,
       includedServices: o.includedServices,
+      depositPercent: o.depositPercent,
+      balanceMethod: o.balanceMethod,
       paymentPolicy: o.paymentPolicy,
       cancellationPolicy: o.cancellationPolicy,
+      paymentNotes: o.paymentNotes,
       notes: o.notes
     }));
 

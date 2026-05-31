@@ -1,8 +1,12 @@
 import { AdminShell } from "@/components/AdminShell";
+import { PaymentSettingsForm } from "@/components/PaymentSettingsForm";
+import { getPaymentSettings } from "@/lib/repositories/settings";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const paymentSettings = await getPaymentSettings();
+
   return (
-    <AdminShell title="Impostazioni" subtitle="Funzione futura non inclusa nel flusso operativo attuale.">
+    <AdminShell title="Impostazioni" subtitle="Gestisci i dati operativi mostrati nei preventivi e nelle conferme.">
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
           <h2 className="text-xl font-black text-ischia-navy">Contatti IschiaStars</h2>
@@ -13,9 +17,12 @@ export default function SettingsPage() {
         <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
           <h2 className="text-xl font-black text-ischia-navy">Da completare in produzione</h2>
           <p className="mt-2 text-sm leading-6 text-ischia-ink/72">
-            Questa sezione non fa parte del flusso operativo attuale: per ora i contatti sono gestiti nel codice e il menu principale usa solo le funzioni pronte.
+            I contatti restano gestiti nel codice; le coordinate pagamento qui sotto sono salvate nelle impostazioni operative.
           </p>
         </section>
+      </div>
+      <div className="mt-5">
+        <PaymentSettingsForm initialSettings={paymentSettings.data} />
       </div>
     </AdminShell>
   );

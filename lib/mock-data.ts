@@ -1,3 +1,4 @@
+import { BALANCE_METHOD_IN_STRUCTURE, CANCELLATION_POLICY_14_DAYS } from "@/lib/hotel-policies";
 import { Hotel, Quote, QuoteEvent, QuoteRequest, QuoteStatus } from "@/lib/types";
 
 export const hotels: Hotel[] = [
@@ -9,8 +10,10 @@ export const hotels: Hotel[] = [
     description: "Hotel centrale con piscine termali, ideale per una vacanza comoda tra porto, centro e relax.",
     imageUrl: "https://ischiastars.it/wp-content/uploads/2026/05/hotel-terme-felix-ischia.jpg",
     standardServices: ["Camera comfort", "Piscine termali", "Assistenza IschiaStars", "Wi-Fi nelle aree comuni"],
-    paymentPolicy: "Acconto alla conferma e saldo secondo condizioni della struttura.",
-    cancellationPolicy: "Cancellazione secondo policy comunicata nel preventivo prima della conferma.",
+    defaultDepositPercent: 20,
+    defaultBalanceMethod: BALANCE_METHOD_IN_STRUCTURE,
+    paymentPolicy: "Acconto 20% alla conferma. Saldo restante in struttura con carta o contanti.",
+    cancellationPolicy: CANCELLATION_POLICY_14_DAYS,
     internalNotes: "Buona proposta per coppie e famiglie che vogliono restare centrali.",
     active: true
   },
@@ -35,8 +38,10 @@ export const hotels: Hotel[] = [
     description: "Hotel termale con servizi completi, atmosfera classica e posizione pratica per muoversi sull'isola.",
     imageUrl: "https://ischiastars.it/wp-content/uploads/2026/05/hotel-president-terme-ischia.jpg",
     standardServices: ["Mezza pensione", "Piscina termale", "Centro benessere", "Assistenza IschiaStars"],
-    paymentPolicy: "Acconto richiesto alla conferma, saldo in struttura salvo condizioni diverse.",
-    cancellationPolicy: "Cancellazione gratuita entro la data indicata nel preventivo, salvo tariffe speciali.",
+    defaultDepositPercent: 15,
+    defaultBalanceMethod: BALANCE_METHOD_IN_STRUCTURE,
+    paymentPolicy: "Acconto 15% alla conferma. Saldo restante in struttura con carta o contanti.",
+    cancellationPolicy: CANCELLATION_POLICY_14_DAYS,
     internalNotes: "Ottima alternativa quando San Lorenzo non ha disponibilita.",
     active: true
   },

@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { QuoteHotelOption, TreatmentOption } from "@/lib/types";
 
 export type QuoteHotelOptionInput = {
@@ -18,8 +19,11 @@ export type QuoteHotelOptionInput = {
   halfBoardLabel?: string;
   fullBoardLabel?: string;
   includedServices?: string;
+  depositPercent?: number;
+  balanceMethod?: string;
   paymentPolicy?: string;
   cancellationPolicy?: string;
+  paymentNotes?: string;
   notes?: string;
 };
 
@@ -56,8 +60,11 @@ export function mapHotelOptionRow(row: Record<string, unknown>): QuoteHotelOptio
     halfBoardLabel,
     fullBoardLabel,
     includedServices: row.included_services ? String(row.included_services) : undefined,
+    depositPercent: row.deposit_percent != null ? Number(row.deposit_percent) : undefined,
+    balanceMethod: row.balance_method ? String(row.balance_method) : undefined,
     paymentPolicy: row.payment_policy ? String(row.payment_policy) : undefined,
     cancellationPolicy: row.cancellation_policy ? String(row.cancellation_policy) : undefined,
+    paymentNotes: row.payment_notes ? String(row.payment_notes) : undefined,
     notes: row.notes ? String(row.notes) : undefined,
     isSelected: Boolean(row.is_selected),
     createdAt: String(row.created_at),
@@ -72,29 +79,42 @@ export async function upsertHotelOptions(quoteId: string, options: QuoteHotelOpt
 
   await supabase.from("quote_hotel_options").delete().eq("quote_id", quoteId);
 
-  const rows = options.slice(0, 3).map((opt, index) => ({
-    quote_id: quoteId,
-    hotel_id: isUuid(opt.hotelId) ? opt.hotelId : null,
-    hotel_group: opt.hotelGroup ?? index + 1,
-    position: opt.position ?? index + 1,
-    room_type_label: opt.roomTypeLabel ?? null,
-    hotel_name: opt.hotelName,
-    hotel_location: opt.hotelLocation ?? null,
-    hotel_stars: opt.hotelStars ?? null,
-    hotel_image_url: opt.hotelImageUrl ?? null,
-    source_url: opt.sourceUrl ?? null,
-    breakfast_price: typeof opt.breakfastPrice === "number" ? opt.breakfastPrice : null,
-    half_board_price: typeof opt.halfBoardPrice === "number" ? opt.halfBoardPrice : null,
-    full_board_price: typeof opt.fullBoardPrice === "number" ? opt.fullBoardPrice : null,
-    breakfast_label: opt.breakfastLabel ?? "Camera e colazione",
-    half_board_label: opt.halfBoardLabel ?? "Mezza pensione",
-    full_board_label: opt.fullBoardLabel ?? "Pensione completa",
-    included_services: opt.includedServices ?? null,
-    payment_policy: opt.paymentPolicy ?? null,
-    cancellation_policy: opt.cancellationPolicy ?? null,
-    notes: opt.notes ?? null,
-    is_selected: false
-  }));
+  const rows = options.slice(0, 9).map((opt, index) => {
+    const policies = fillMissingHotelPolicies({
+      hotelName: opt.hotelName,
+      depositPercent: opt.depositPercent,
+      balanceMethod: opt.balanceMethod,
+      paymentPolicy: opt.paymentPolicy,
+      cancellationPolicy: opt.cancellationPolicy,
+      paymentNotes: opt.paymentNotes
+    });
+    return {
+      quote_id: quoteId,
+      hotel_id: isUuid(opt.hotelId) ? opt.hotelId : null,
+      hotel_group: opt.hotelGroup ?? index + 1,
+      position: opt.position ?? index + 1,
+      room_type_label: opt.roomTypeLabel ?? null,
+      hotel_name: opt.hotelName,
+      hotel_location: opt.hotelLocation ?? null,
+      hotel_stars: opt.hotelStars ?? null,
+      hotel_image_url: opt.hotelImageUrl ?? null,
+      source_url: opt.sourceUrl ?? null,
+      breakfast_price: typeof opt.breakfastPrice === "number" ? opt.breakfastPrice : null,
+      half_board_price: typeof opt.halfBoardPrice === "number" ? opt.halfBoardPrice : null,
+      full_board_price: typeof opt.fullBoardPrice === "number" ? opt.fullBoardPrice : null,
+      breakfast_label: opt.breakfastLabel ?? "Camera e colazione",
+      half_board_label: opt.halfBoardLabel ?? "Mezza pensione",
+      full_board_label: opt.fullBoardLabel ?? "Pensione completa",
+      included_services: opt.includedServices ?? null,
+      deposit_percent: policies.depositPercent ?? null,
+      balance_method: policies.balanceMethod || null,
+      payment_policy: policies.paymentPolicy || null,
+      cancellation_policy: policies.cancellationPolicy || null,
+      payment_notes: policies.paymentNotes || null,
+      notes: opt.notes ?? null,
+      is_selected: false
+    };
+  });
 
   await supabase.from("quote_hotel_options").insert(rows);
 }

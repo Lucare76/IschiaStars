@@ -6,6 +6,7 @@ import { useState } from "react";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { adminApiFetch } from "@/lib/admin-api-client";
+import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Hotel, Quote, QuoteHotelOption, QuoteStatus, TransportOffer } from "@/lib/types";
 import { formatCurrency, publicQuoteUrl } from "@/lib/utils";
@@ -28,8 +29,11 @@ type HotelOptionState = {
   hotelImageUrl: string;
   sourceUrl: string;
   includedServices: string;
+  depositPercent: string;
+  balanceMethod: string;
   paymentPolicy: string;
   cancellationPolicy: string;
+  paymentNotes: string;
   notes: string;
   roomTypes: RoomTypeState[];
 };
@@ -68,8 +72,11 @@ function groupOptionsToState(opts: QuoteHotelOption[]): HotelOptionState[] {
         hotelImageUrl: first.hotelImageUrl ?? "",
         sourceUrl: first.sourceUrl ?? "",
         includedServices: first.includedServices ?? "",
+        depositPercent: first.depositPercent != null ? String(first.depositPercent) : "",
+        balanceMethod: first.balanceMethod ?? "",
         paymentPolicy: first.paymentPolicy ?? "",
         cancellationPolicy: first.cancellationPolicy ?? "",
+        paymentNotes: first.paymentNotes ?? "",
         notes: first.notes ?? "",
         roomTypes: groupOpts.map(quoteOptionToRoomType)
       };
@@ -77,6 +84,7 @@ function groupOptionsToState(opts: QuoteHotelOption[]): HotelOptionState[] {
 }
 
 function emptyOption(hotel?: Hotel, groupId = 1): HotelOptionState {
+  const policies = hotelPolicies(hotel);
   return {
     hotelGroup: groupId,
     hotelId: hotel?.id ?? "",
@@ -86,8 +94,11 @@ function emptyOption(hotel?: Hotel, groupId = 1): HotelOptionState {
     hotelImageUrl: hotel?.imageUrl ?? hotel?.externalImageUrl ?? "",
     sourceUrl: hotel?.sourceUrl ?? "",
     includedServices: hotel?.standardServices.join("\n") ?? "",
-    paymentPolicy: hotel?.paymentPolicy ?? "",
-    cancellationPolicy: hotel?.cancellationPolicy ?? "",
+    depositPercent: policies.depositPercent != null ? String(policies.depositPercent) : "",
+    balanceMethod: policies.balanceMethod,
+    paymentPolicy: policies.paymentPolicy,
+    cancellationPolicy: policies.cancellationPolicy,
+    paymentNotes: policies.paymentNotes,
     notes: "",
     roomTypes: [emptyRoomType()]
   };
@@ -109,6 +120,7 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
 
   function selectHotel(index: number, hotelId: string) {
     const hotel = hotels.find((h) => h.id === hotelId);
+    const policies = hotelPolicies(hotel);
     updateOption(index, {
       hotelId,
       hotelName: hotel?.name ?? "",
@@ -117,8 +129,11 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
       hotelImageUrl: hotel?.imageUrl ?? hotel?.externalImageUrl ?? "",
       sourceUrl: hotel?.sourceUrl ?? "",
       includedServices: hotel?.standardServices.join("\n") ?? "",
-      paymentPolicy: hotel?.paymentPolicy ?? "",
-      cancellationPolicy: hotel?.cancellationPolicy ?? ""
+      depositPercent: policies.depositPercent != null ? String(policies.depositPercent) : "",
+      balanceMethod: policies.balanceMethod,
+      paymentPolicy: policies.paymentPolicy,
+      cancellationPolicy: policies.cancellationPolicy,
+      paymentNotes: policies.paymentNotes
     });
   }
 
@@ -187,8 +202,11 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
             halfBoardPrice: rt.halfBoardPrice ? Number(rt.halfBoardPrice) : undefined,
             fullBoardPrice: rt.fullBoardPrice ? Number(rt.fullBoardPrice) : undefined,
             includedServices: opt.includedServices || undefined,
+            depositPercent: opt.depositPercent ? Number(opt.depositPercent) : undefined,
+            balanceMethod: opt.balanceMethod || undefined,
             paymentPolicy: opt.paymentPolicy || undefined,
             cancellationPolicy: opt.cancellationPolicy || undefined,
+            paymentNotes: opt.paymentNotes || undefined,
             notes: opt.notes || undefined
           });
         });
@@ -583,8 +601,13 @@ function HotelOptionBlock({
       )}
       <div className="mt-3 space-y-2">
         <Textarea label="Servizi inclusi" value={opt.includedServices} onChange={(v) => onChange({ includedServices: v })} />
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input label="Acconto (%)" min="0" step="0.01" type="number" value={opt.depositPercent} onChange={(e) => onChange({ depositPercent: e.target.value })} />
+          <Input label="Modalita saldo" value={opt.balanceMethod} onChange={(e) => onChange({ balanceMethod: e.target.value })} />
+        </div>
         <Textarea label="Policy pagamento" value={opt.paymentPolicy} onChange={(v) => onChange({ paymentPolicy: v })} />
         <Textarea label="Policy cancellazione" value={opt.cancellationPolicy} onChange={(v) => onChange({ cancellationPolicy: v })} />
+        <Textarea label="Note pagamento" value={opt.paymentNotes} onChange={(v) => onChange({ paymentNotes: v })} />
         <Textarea label="Note per il cliente" value={opt.notes} onChange={(v) => onChange({ notes: v })} />
       </div>
     </div>
@@ -613,4 +636,15 @@ function statusLabel(status: QuoteStatus) {
   if (status === "perso_non_disponibile") return "Perso / non disponibile";
   if (status === "in_lavorazione") return "In lavorazione";
   return "Da evadere";
+}
+
+function hotelPolicies(hotel?: Hotel) {
+  return fillMissingHotelPolicies({
+    hotelName: hotel?.name ?? "",
+    depositPercent: hotel?.defaultDepositPercent,
+    balanceMethod: hotel?.defaultBalanceMethod,
+    paymentPolicy: hotel?.paymentPolicy,
+    cancellationPolicy: hotel?.cancellationPolicy,
+    paymentNotes: hotel?.defaultPaymentNotes
+  });
 }

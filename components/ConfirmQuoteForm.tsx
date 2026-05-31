@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
 import { Quote } from "@/lib/types";
 import { formatCurrency, publicWhatsappLink } from "@/lib/utils";
 
@@ -10,12 +11,22 @@ type SelectedOption = {
   treatmentKey: string;
   treatmentLabel: string;
   price: number;
+  depositPercent?: number;
+  depositAmount?: number;
+  balanceAmount?: number;
+  balanceMethod?: string;
+  paymentPolicy?: string;
+  cancellationPolicy?: string;
 };
 
-export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; selectedOption?: SelectedOption | null }) {
+export function ConfirmQuoteForm({ quote, selectedOption, paymentSettings }: { quote: Quote; selectedOption?: SelectedOption | null; paymentSettings?: PaymentSettings }) {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasPaymentSettings = paymentSettings ? isPaymentSettingsConfigured(paymentSettings) : false;
+  const paymentReason = paymentSettings
+    ? buildPaymentReason(paymentSettings, quote.code, quote.customerFirstName, quote.customerLastName)
+    : "";
 
   if (confirmed) {
     return (
@@ -88,8 +99,42 @@ export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; sele
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue">Stai confermando</p>
           <p className="mt-1 text-lg font-black text-ischia-navy">{selectedOption.hotelName}</p>
           <p className="text-sm font-semibold text-ischia-ink/80">{selectedOption.treatmentLabel} — {formatCurrency(selectedOption.price)}</p>
+          {selectedOption.depositPercent != null && selectedOption.depositPercent > 0 ? (
+            <p className="mt-1 text-sm font-semibold text-ischia-ink/72">
+              Acconto {selectedOption.depositPercent}%: {formatCurrency(selectedOption.depositAmount ?? 0)} · Saldo {formatCurrency(selectedOption.balanceAmount ?? 0)}
+            </p>
+          ) : null}
         </div>
       )}
+
+      {selectedOption ? (
+        <div className="rounded-xl bg-white p-4 text-sm leading-6 text-ischia-ink/78 ring-1 ring-ischia-blue/10">
+          <p className="font-black text-ischia-navy">Riepilogo pagamento</p>
+          <p><strong>Prezzo totale:</strong> {formatCurrency(selectedOption.price)}</p>
+          {selectedOption.depositPercent != null && selectedOption.depositPercent > 0 ? (
+            <>
+              <p><strong>Caparra richiesta:</strong> {selectedOption.depositPercent}% = {formatCurrency(selectedOption.depositAmount ?? 0)}</p>
+              <p><strong>Saldo restante:</strong> {formatCurrency(selectedOption.balanceAmount ?? 0)}</p>
+            </>
+          ) : null}
+          {selectedOption.balanceMethod ? <p><strong>Saldo:</strong> {selectedOption.balanceMethod}</p> : null}
+          {hasPaymentSettings && paymentSettings ? (
+            <div className="mt-3 border-t border-ischia-blue/10 pt-3">
+              <p className="font-bold text-ischia-navy">Coordinate per caparra</p>
+              <p><strong>Intestatario:</strong> {paymentSettings.bankAccountHolder}</p>
+              {paymentSettings.bankName ? <p><strong>Banca:</strong> {paymentSettings.bankName}</p> : null}
+              <p><strong>IBAN:</strong> {paymentSettings.iban}</p>
+              {paymentSettings.bicSwift ? <p><strong>BIC/SWIFT:</strong> {paymentSettings.bicSwift}</p> : null}
+              <p><strong>Causale:</strong> {paymentReason}</p>
+              {paymentSettings.paymentInstructions ? <p>{paymentSettings.paymentInstructions}</p> : null}
+            </div>
+          ) : (
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 font-semibold text-amber-900">
+              Le modalità di pagamento della caparra saranno comunicate dallo staff IschiaStars.
+            </p>
+          )}
+        </div>
+      ) : null}
 
       {!selectedOption && (
         <div className="rounded-xl bg-ischia-sun/15 px-4 py-3 text-sm font-semibold text-amber-900">

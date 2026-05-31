@@ -5,6 +5,7 @@ import type { FormEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes 
 import { useState } from "react";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { adminApiFetch } from "@/lib/admin-api-client";
+import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
 import { Hotel, Quote, QuoteRequest } from "@/lib/types";
 import { publicQuoteUrl } from "@/lib/utils";
@@ -26,8 +27,11 @@ type HotelOptionState = {
   hotelImageUrl: string;
   sourceUrl: string;
   includedServices: string;
+  depositPercent: string;
+  balanceMethod: string;
   paymentPolicy: string;
   cancellationPolicy: string;
+  paymentNotes: string;
   notes: string;
   roomTypes: RoomTypeState[];
 };
@@ -37,6 +41,7 @@ function emptyRoomType(): RoomTypeState {
 }
 
 function emptyOption(hotel?: Hotel): HotelOptionState {
+  const policies = hotelPolicies(hotel);
   return {
     hotelId: hotel?.id ?? "",
     hotelName: hotel?.name ?? "",
@@ -45,8 +50,11 @@ function emptyOption(hotel?: Hotel): HotelOptionState {
     hotelImageUrl: hotel?.imageUrl ?? hotel?.externalImageUrl ?? "",
     sourceUrl: hotel?.sourceUrl ?? "",
     includedServices: hotel?.standardServices.join("\n") ?? "",
-    paymentPolicy: hotel?.paymentPolicy ?? "",
-    cancellationPolicy: hotel?.cancellationPolicy ?? "",
+    depositPercent: policies.depositPercent != null ? String(policies.depositPercent) : "",
+    balanceMethod: policies.balanceMethod,
+    paymentPolicy: policies.paymentPolicy,
+    cancellationPolicy: policies.cancellationPolicy,
+    paymentNotes: policies.paymentNotes,
     notes: "",
     roomTypes: [emptyRoomType()]
   };
@@ -54,11 +62,25 @@ function emptyOption(hotel?: Hotel): HotelOptionState {
 
 export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { hotels: Hotel[]; initialRequest?: QuoteRequest | null; requestedRequestId?: string }) {
   const activeHotels = hotels.filter((h) => h.active);
+  const requestedHotelName = initialRequest?.requestedHotel?.trim() ?? "";
+  const requestedHotelMatch = requestedHotelName ? findRequestedHotelInDb(requestedHotelName, activeHotels) : undefined;
   const [childrenCount, setChildrenCount] = useState(initialRequest?.children.length ?? 0);
   const [savedQuote, setSavedQuote] = useState<SavedQuote>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>([emptyOption(activeHotels[0])]);
+  const [isAlternativeOffer, setIsAlternativeOffer] = useState(false);
+  const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>([emptyOption(requestedHotelMatch)]);
+
+  const requestedHotelMissing = Boolean(requestedHotelName && !requestedHotelMatch);
+  const firstProposedHotel = hotelOptions[0];
+  const isDifferentFromRequested = requestedHotelMatch
+    ? Boolean(firstProposedHotel?.hotelId && firstProposedHotel.hotelId !== requestedHotelMatch.id)
+    : Boolean(
+        requestedHotelName &&
+        firstProposedHotel?.hotelName &&
+        normalizeHotelMatchName(firstProposedHotel.hotelName) !== normalizeHotelMatchName(requestedHotelName)
+      );
+  const showAlternativeWarning = isDifferentFromRequested && !isAlternativeOffer;
 
   function updateOption(index: number, patch: Partial<HotelOptionState>) {
     setHotelOptions((prev) => prev.map((opt, i) => (i === index ? { ...opt, ...patch } : opt)));
@@ -66,6 +88,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
 
   function selectHotel(index: number, hotelId: string) {
     const hotel = activeHotels.find((h) => h.id === hotelId);
+    const policies = hotelPolicies(hotel);
     updateOption(index, {
       hotelId,
       hotelName: hotel?.name ?? "",
@@ -74,8 +97,11 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
       hotelImageUrl: hotel?.imageUrl ?? hotel?.externalImageUrl ?? "",
       sourceUrl: hotel?.sourceUrl ?? "",
       includedServices: hotel?.standardServices.join("\n") ?? "",
-      paymentPolicy: hotel?.paymentPolicy ?? "",
-      cancellationPolicy: hotel?.cancellationPolicy ?? ""
+      depositPercent: policies.depositPercent != null ? String(policies.depositPercent) : "",
+      balanceMethod: policies.balanceMethod,
+      paymentPolicy: policies.paymentPolicy,
+      cancellationPolicy: policies.cancellationPolicy,
+      paymentNotes: policies.paymentNotes
     });
   }
 
@@ -102,9 +128,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
 
   function addOption() {
     if (hotelOptions.length >= 3) return;
-    const usedIds = new Set(hotelOptions.map((o) => o.hotelId));
-    const nextHotel = activeHotels.find((h) => !usedIds.has(h.id));
-    setHotelOptions((prev) => [...prev, emptyOption(nextHotel)]);
+    setHotelOptions((prev) => [...prev, emptyOption()]);
   }
 
   function removeOption(index: number) {
@@ -159,8 +183,11 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
             halfBoardPrice: rt.halfBoardPrice ? Number(rt.halfBoardPrice) : undefined,
             fullBoardPrice: rt.fullBoardPrice ? Number(rt.fullBoardPrice) : undefined,
             includedServices: opt.includedServices || undefined,
+            depositPercent: opt.depositPercent ? Number(opt.depositPercent) : undefined,
+            balanceMethod: opt.balanceMethod || undefined,
             paymentPolicy: opt.paymentPolicy || undefined,
             cancellationPolicy: opt.cancellationPolicy || undefined,
+            paymentNotes: opt.paymentNotes || undefined,
             notes: opt.notes || undefined
           });
         });
@@ -181,6 +208,8 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
         quoteRequestId: initialRequest?.id,
         hotelRequested: formData.get("hotelRequested"),
         hotelId: hotelOptions[0]?.hotelId || undefined,
+        alternativeHotelId: isAlternativeOffer ? hotelOptions[0]?.hotelId || undefined : undefined,
+        isAlternativeOffer,
         totalPrice: 0,
         depositAmount: Number(formData.get("depositAmount") ?? 0),
         validUntil: formData.get("validUntil"),
@@ -247,6 +276,16 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
           </div>
         ) : null}
         {error ? <p className="rounded-2xl bg-rose-50 p-4 text-sm font-bold text-rose-700 ring-1 ring-rose-100">{error}</p> : null}
+        {requestedHotelMissing ? (
+          <p className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
+            Hotel richiesto non trovato nel database. Seleziona manualmente la struttura da proporre.
+          </p>
+        ) : null}
+        {showAlternativeWarning ? (
+          <p className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
+            Stai proponendo una struttura diversa da quella richiesta. Se è un&apos;alternativa, seleziona &quot;La struttura richiesta non è disponibile&quot;.
+          </p>
+        ) : null}
 
         <Section title="Cliente e soggiorno">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -268,6 +307,12 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
 
         <Section title="Proposte hotel">
           <p className="text-sm text-ischia-ink/65">Inserisci fino a 3 strutture. Ogni struttura può avere uno o più trattamenti con prezzo. Solo i trattamenti con prezzo vengono mostrati al cliente.</p>
+          {requestedHotelName ? (
+            <label className="flex gap-3 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-ischia-ink ring-1 ring-ischia-blue/10">
+              <input checked={isAlternativeOffer} className="mt-1 h-4 w-4" onChange={(event) => setIsAlternativeOffer(event.target.checked)} type="checkbox" />
+              La struttura richiesta non è disponibile
+            </label>
+          ) : null}
           <div className="space-y-4">
             {hotelOptions.map((opt, index) => (
               <HotelOptionBlock
@@ -298,7 +343,6 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
 
         <Section title="Condizioni preventivo">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input name="depositAmount" label="Acconto richiesto (€)" type="number" defaultValue="0" />
             <Input name="validUntil" label="Validita offerta" required type="date" />
           </div>
           <Textarea name="publicNotes" label="Note visibili al cliente" />
@@ -467,8 +511,13 @@ function HotelOptionBlock({
 
       <div className="mt-3 space-y-2">
         <Textarea label="Servizi inclusi" value={opt.includedServices} onChange={(v) => onChange({ includedServices: v })} />
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input label="Acconto (%)" min="0" step="0.01" type="number" value={opt.depositPercent} onChange={(e) => onChange({ depositPercent: e.target.value })} />
+          <Input label="Modalita saldo" value={opt.balanceMethod} onChange={(e) => onChange({ balanceMethod: e.target.value })} />
+        </div>
         <Textarea label="Policy pagamento" value={opt.paymentPolicy} onChange={(v) => onChange({ paymentPolicy: v })} />
         <Textarea label="Policy cancellazione" value={opt.cancellationPolicy} onChange={(v) => onChange({ cancellationPolicy: v })} />
+        <Textarea label="Note pagamento" value={opt.paymentNotes} onChange={(v) => onChange({ paymentNotes: v })} />
         <Textarea label="Note per il cliente (opzionale)" value={opt.notes} onChange={(v) => onChange({ notes: v })} />
       </div>
 
@@ -518,4 +567,76 @@ function Textarea({ label, value, onChange, ...props }: { label: string; value?:
       />
     </label>
   );
+}
+
+function hotelPolicies(hotel?: Hotel) {
+  return fillMissingHotelPolicies({
+    hotelName: hotel?.name ?? "",
+    depositPercent: hotel?.defaultDepositPercent,
+    balanceMethod: hotel?.defaultBalanceMethod,
+    paymentPolicy: hotel?.paymentPolicy,
+    cancellationPolicy: hotel?.cancellationPolicy,
+    paymentNotes: hotel?.defaultPaymentNotes
+  });
+}
+
+export function findRequestedHotelInDb(requestedHotelName: string, hotels: Hotel[]): Hotel | undefined {
+  const requested = normalizeHotelMatchName(requestedHotelName);
+  if (!requested) return undefined;
+
+  const exact = hotels.find((hotel) => normalizeHotelMatchName(hotel.name) === requested);
+  if (exact) return exact;
+
+  const slugExact = hotels.find((hotel) => hotel.slug && normalizeHotelMatchName(hotel.slug) === requested);
+  if (slugExact) return slugExact;
+
+  const requestedCore = normalizeHotelCoreName(requestedHotelName);
+  const coreExact = hotels.find((hotel) => normalizeHotelCoreName(hotel.name) === requestedCore);
+  if (coreExact) return coreExact;
+
+  const containsMatches = hotels.filter((hotel) => {
+    const hotelName = normalizeHotelMatchName(hotel.name);
+    const hotelCore = normalizeHotelCoreName(hotel.name);
+    return (
+      requested.length >= 5 &&
+      (hotelName.includes(requested) || requested.includes(hotelName) || hotelCore.includes(requestedCore) || requestedCore.includes(hotelCore))
+    );
+  });
+  if (containsMatches.length === 1) return containsMatches[0];
+
+  const requestedTokens = meaningfulHotelTokens(requestedHotelName);
+  if (requestedTokens.length) {
+    const tokenMatches = hotels.filter((hotel) => {
+      const hotelTokens = meaningfulHotelTokens(hotel.name);
+      return requestedTokens.some((token) => hotelTokens.includes(token));
+    });
+    if (tokenMatches.length === 1) return tokenMatches[0];
+  }
+
+  return undefined;
+}
+
+function normalizeHotelMatchName(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['’`]/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeHotelCoreName(value: string) {
+  return normalizeHotelMatchName(value)
+    .split(" ")
+    .filter((token) => !["hotel", "albergo", "terme", "spa", "resort", "club", "e"].includes(token))
+    .join(" ")
+    .trim();
+}
+
+function meaningfulHotelTokens(value: string) {
+  return normalizeHotelCoreName(value)
+    .split(" ")
+    .filter((token) => token.length >= 5);
 }

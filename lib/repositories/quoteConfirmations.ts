@@ -21,6 +21,13 @@ export type QuoteConfirmationInput = {
   selectedTreatmentKey?: string;
   selectedTreatmentLabel?: string;
   selectedPrice?: number;
+  selectedDepositPercent?: number;
+  selectedDepositAmount?: number;
+  selectedBalanceAmount?: number;
+  selectedBalanceMethod?: string;
+  selectedPaymentPolicy?: string;
+  selectedCancellationPolicy?: string;
+  paymentSettingsSnapshot?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 };
 
@@ -51,13 +58,27 @@ export async function createQuoteConfirmation(quoteId: string, input: QuoteConfi
     selected_treatment_key: input.selectedTreatmentKey ?? null,
     selected_treatment_label: input.selectedTreatmentLabel ?? null,
     selected_price: input.selectedPrice ?? null,
+    selected_deposit_percent: input.selectedDepositPercent ?? null,
+    selected_deposit_amount: input.selectedDepositAmount ?? null,
+    selected_balance_amount: input.selectedBalanceAmount ?? null,
+    selected_balance_method: input.selectedBalanceMethod ?? null,
+    selected_payment_policy: input.selectedPaymentPolicy ?? null,
+    selected_cancellation_policy: input.selectedCancellationPolicy ?? null,
+    payment_settings_snapshot: input.paymentSettingsSnapshot ?? null,
     metadata: {
       ...(input.metadata ?? {}),
       selectedHotelOptionId: input.selectedHotelOptionId,
       selectedHotelName: input.selectedHotelName,
       selectedTreatmentKey: input.selectedTreatmentKey,
       selectedTreatmentLabel: input.selectedTreatmentLabel,
-      selectedPrice: input.selectedPrice
+      selectedPrice: input.selectedPrice,
+      selectedDepositPercent: input.selectedDepositPercent,
+      selectedDepositAmount: input.selectedDepositAmount,
+      selectedBalanceAmount: input.selectedBalanceAmount,
+      selectedBalanceMethod: input.selectedBalanceMethod,
+      selectedPaymentPolicy: input.selectedPaymentPolicy,
+      selectedCancellationPolicy: input.selectedCancellationPolicy,
+      paymentSettingsSnapshot: input.paymentSettingsSnapshot
     }
   });
 
@@ -76,7 +97,14 @@ export async function createQuoteConfirmation(quoteId: string, input: QuoteConfi
     selectedHotelName: input.selectedHotelName,
     selectedTreatmentKey: input.selectedTreatmentKey,
     selectedTreatmentLabel: input.selectedTreatmentLabel,
-    selectedPrice: input.selectedPrice
+    selectedPrice: input.selectedPrice,
+    selectedDepositPercent: input.selectedDepositPercent,
+    selectedDepositAmount: input.selectedDepositAmount,
+    selectedBalanceAmount: input.selectedBalanceAmount,
+    selectedBalanceMethod: input.selectedBalanceMethod,
+    selectedPaymentPolicy: input.selectedPaymentPolicy,
+    selectedCancellationPolicy: input.selectedCancellationPolicy,
+    paymentSettingsSnapshot: input.paymentSettingsSnapshot
   });
   console.info(`[confirmation] event saved quote=${quoteId}`);
 

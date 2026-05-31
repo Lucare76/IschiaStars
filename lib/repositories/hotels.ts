@@ -2,6 +2,7 @@ import { allDemoHotels, deleteDemoHotel, upsertDemoHotel } from "@/lib/demo-stor
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ImportedIschiaStarsHotel, mapImportedHotelToDbHotel, normalizeHotelName } from "@/lib/server/ischiastars-hotel-importer";
 import { fetchLrHotelQuotesFeed, mapLrHotelToDbRow } from "@/lib/server/lr-hotel-feed";
+import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { Hotel } from "@/lib/types";
 import { fallback, fromSupabase, mapHotel, RepositoryResult } from "@/lib/repositories/shared";
 
@@ -12,6 +13,9 @@ export type HotelInput = {
   shortDescription?: string;
   imageUrl?: string;
   standardServices?: string[];
+  defaultDepositPercent?: number;
+  defaultBalanceMethod?: string;
+  defaultPaymentNotes?: string;
   paymentPolicy?: string;
   cancellationPolicy?: string;
   internalNotes?: string;
@@ -120,6 +124,9 @@ export async function createHotel(input: HotelInput): Promise<RepositoryResult<H
         description: input.shortDescription ?? "",
         imageUrl: input.imageUrl,
         standardServices: input.standardServices ?? [],
+        defaultDepositPercent: input.defaultDepositPercent,
+        defaultBalanceMethod: input.defaultBalanceMethod,
+        defaultPaymentNotes: input.defaultPaymentNotes,
         paymentPolicy: input.paymentPolicy ?? "",
         cancellationPolicy: input.cancellationPolicy ?? "",
         internalNotes: input.internalNotes ?? "",
@@ -152,6 +159,9 @@ export async function updateHotel(id: string, input: Partial<HotelInput>): Promi
         description: input.shortDescription ?? current.description,
         imageUrl: input.imageUrl ?? current.imageUrl,
         standardServices: input.standardServices ?? current.standardServices,
+        defaultDepositPercent: input.defaultDepositPercent ?? current.defaultDepositPercent,
+        defaultBalanceMethod: input.defaultBalanceMethod ?? current.defaultBalanceMethod,
+        defaultPaymentNotes: input.defaultPaymentNotes ?? current.defaultPaymentNotes,
         paymentPolicy: input.paymentPolicy ?? current.paymentPolicy,
         cancellationPolicy: input.cancellationPolicy ?? current.cancellationPolicy,
         internalNotes: input.internalNotes ?? current.internalNotes,
@@ -188,6 +198,14 @@ export async function deleteHotel(id: string): Promise<RepositoryResult<{ delete
 }
 
 function toHotelRow(input: Partial<HotelInput>) {
+  const policies = fillMissingHotelPolicies({
+    hotelName: input.name ?? "",
+    depositPercent: input.defaultDepositPercent,
+    balanceMethod: input.defaultBalanceMethod,
+    paymentPolicy: input.paymentPolicy,
+    cancellationPolicy: input.cancellationPolicy,
+    paymentNotes: input.defaultPaymentNotes
+  });
   return {
     ...(input.name !== undefined ? { name: input.name } : {}),
     ...(input.location !== undefined ? { location: input.location } : {}),
@@ -195,8 +213,11 @@ function toHotelRow(input: Partial<HotelInput>) {
     ...(input.shortDescription !== undefined ? { short_description: input.shortDescription } : {}),
     ...(input.imageUrl !== undefined ? { image_url: input.imageUrl } : {}),
     ...(input.standardServices !== undefined ? { standard_services: input.standardServices } : {}),
-    ...(input.paymentPolicy !== undefined ? { payment_policy: input.paymentPolicy } : {}),
-    ...(input.cancellationPolicy !== undefined ? { cancellation_policy: input.cancellationPolicy } : {}),
+    ...(input.defaultDepositPercent !== undefined || policies.depositPercent !== undefined ? { default_deposit_percent: policies.depositPercent ?? null } : {}),
+    ...(input.defaultBalanceMethod !== undefined || policies.balanceMethod ? { default_balance_method: policies.balanceMethod || null } : {}),
+    ...(input.defaultPaymentNotes !== undefined || policies.paymentNotes ? { default_payment_notes: policies.paymentNotes || null } : {}),
+    ...(input.paymentPolicy !== undefined || policies.paymentPolicy ? { payment_policy: policies.paymentPolicy } : {}),
+    ...(input.cancellationPolicy !== undefined || policies.cancellationPolicy ? { cancellation_policy: policies.cancellationPolicy } : {}),
     ...(input.internalNotes !== undefined ? { internal_notes: input.internalNotes } : {}),
     ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
     ...(input.slug !== undefined ? { slug: input.slug } : {})

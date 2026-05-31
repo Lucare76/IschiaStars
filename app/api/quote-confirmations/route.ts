@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown } from "@/lib/hotel-policies";
+import { buildPaymentReason, isPaymentSettingsConfigured, paymentSettingsToDbValue } from "@/lib/payment-settings";
 import { createQuoteConfirmation } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
+import { getPaymentSettings } from "@/lib/repositories/settings";
 import { sendQuoteConfirmedInternalEmail } from "@/lib/server/brevo";
 
 type ConfirmationPayload = {
@@ -41,6 +44,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Inserisci la data di nascita per ogni bambino" }, { status: 400 });
   }
 
+  const selection = resolveSelection(quoteResult.data, body!);
+  const paymentSettingsResult = await getPaymentSettings();
+  const paymentSettings = paymentSettingsResult.data;
+  const paymentReason = buildPaymentReason(paymentSettings, quoteResult.data.code, body!.firstName!.trim(), body!.lastName!.trim());
+  const paymentSettingsSnapshot = isPaymentSettingsConfigured(paymentSettings)
+    ? { ...paymentSettingsToDbValue(paymentSettings), payment_reason: paymentReason, configured: true }
+    : { configured: false, payment_reason: paymentReason, updated_at: paymentSettings.updatedAt };
+
   const result = await createQuoteConfirmation(quoteResult.data.id, {
     firstName: body!.firstName!.trim(),
     lastName: body!.lastName!.trim(),
@@ -53,14 +64,22 @@ export async function POST(request: NextRequest) {
     province: body!.province!.trim(),
     acceptedTerms: Boolean(body!.acceptedTerms),
     acceptedPrivacy: Boolean(body!.acceptedPrivacy),
-    selectedHotelOptionId: body!.selectedHotelOptionId,
-    selectedHotelName: body!.selectedHotelName,
-    selectedTreatmentKey: body!.selectedTreatmentKey,
-    selectedTreatmentLabel: body!.selectedTreatmentLabel,
-    selectedPrice: body!.selectedPrice,
+    selectedHotelOptionId: selection.selectedHotelOptionId,
+    selectedHotelName: selection.selectedHotelName,
+    selectedTreatmentKey: selection.selectedTreatmentKey,
+    selectedTreatmentLabel: selection.selectedTreatmentLabel,
+    selectedPrice: selection.selectedPrice,
+    selectedDepositPercent: selection.selectedDepositPercent,
+    selectedDepositAmount: selection.selectedDepositAmount,
+    selectedBalanceAmount: selection.selectedBalanceAmount,
+    selectedBalanceMethod: selection.selectedBalanceMethod,
+    selectedPaymentPolicy: selection.selectedPaymentPolicy,
+    selectedCancellationPolicy: selection.selectedCancellationPolicy,
+    paymentSettingsSnapshot,
     metadata: {
       children: body!.children ?? [],
-      source: "public_quote_page"
+      source: "public_quote_page",
+      paymentSettingsSnapshot
     }
   });
 
@@ -80,9 +99,16 @@ export async function POST(request: NextRequest) {
       province: body!.province!.trim(),
       confirmedAt: result.data.confirmedAt,
       children: body!.children ?? [],
-      selectedHotelName: body!.selectedHotelName,
-      selectedTreatmentLabel: body!.selectedTreatmentLabel,
-      selectedPrice: body!.selectedPrice
+      selectedHotelName: selection.selectedHotelName,
+      selectedTreatmentLabel: selection.selectedTreatmentLabel,
+      selectedPrice: selection.selectedPrice,
+      selectedDepositPercent: selection.selectedDepositPercent,
+      selectedDepositAmount: selection.selectedDepositAmount,
+      selectedBalanceAmount: selection.selectedBalanceAmount,
+      selectedBalanceMethod: selection.selectedBalanceMethod,
+      selectedPaymentPolicy: selection.selectedPaymentPolicy,
+      selectedCancellationPolicy: selection.selectedCancellationPolicy,
+      paymentSettingsSnapshot
     });
   } catch (err) {
     console.warn("POST /api/quote-confirmations brevo error", { code: quoteResult.data.code, message: err instanceof Error ? err.message : String(err) });
@@ -100,4 +126,29 @@ function validateConfirmation(body: ConfirmationPayload | null) {
   if (!/^\d{5}$/.test(body.postalCode!.trim())) return "CAP non valido";
   if (!body.acceptedTerms || !body.acceptedPrivacy) return "Accetta condizioni e privacy";
   return null;
+}
+
+function resolveSelection(quote: NonNullable<Awaited<ReturnType<typeof getQuoteByCodeAndToken>>["data"]>, body: ConfirmationPayload) {
+  const option = body.selectedHotelOptionId
+    ? quote.hotelOptions.find((item) => item.id === body.selectedHotelOptionId)
+    : undefined;
+  const treatment = option?.treatments.find((item) => item.key === body.selectedTreatmentKey);
+  const selectedPrice = treatment?.price ?? body.selectedPrice;
+  const breakdown = selectedPrice != null
+    ? calculatePaymentBreakdown(selectedPrice, option?.depositPercent, option?.balanceMethod || BALANCE_METHOD_IN_STRUCTURE)
+    : null;
+
+  return {
+    selectedHotelOptionId: option?.id ?? body.selectedHotelOptionId,
+    selectedHotelName: option ? option.hotelName + (option.roomTypeLabel ? ` — ${option.roomTypeLabel}` : "") : body.selectedHotelName,
+    selectedTreatmentKey: treatment?.key ?? body.selectedTreatmentKey,
+    selectedTreatmentLabel: treatment?.label ?? body.selectedTreatmentLabel,
+    selectedPrice,
+    selectedDepositPercent: breakdown?.depositPercent,
+    selectedDepositAmount: breakdown?.depositAmount,
+    selectedBalanceAmount: breakdown?.balanceAmount,
+    selectedBalanceMethod: breakdown?.balanceMethod,
+    selectedPaymentPolicy: option?.paymentPolicy,
+    selectedCancellationPolicy: option?.cancellationPolicy
+  };
 }

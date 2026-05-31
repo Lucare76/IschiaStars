@@ -9,8 +9,11 @@ create table if not exists public.hotels (
   image_url text,
   external_image_url text,
   standard_services jsonb not null default '[]',
+  default_deposit_percent numeric(5,2),
+  default_balance_method text,
   payment_policy text not null default '',
   cancellation_policy text not null default '',
+  default_payment_notes text,
   internal_notes text,
   source_url text,
   external_source text,
@@ -32,6 +35,9 @@ alter table public.hotels add column if not exists slug text;
 alter table public.hotels add column if not exists last_synced_at timestamptz;
 alter table public.hotels add column if not exists last_seen_on_site_at timestamptz;
 alter table public.hotels add column if not exists sync_metadata jsonb not null default '{}';
+alter table public.hotels add column if not exists default_deposit_percent numeric(5,2);
+alter table public.hotels add column if not exists default_balance_method text;
+alter table public.hotels add column if not exists default_payment_notes text;
 
 create table if not exists public.quote_requests (
   id uuid primary key default gen_random_uuid(),
@@ -104,7 +110,7 @@ create table if not exists public.quote_children (
 create table if not exists public.quote_events (
   id uuid primary key default gen_random_uuid(),
   quote_id uuid not null references public.quotes(id) on delete cascade,
-  event_type text not null check (event_type in ('quote_opened','whatsapp_clicked','confirm_clicked','quote_confirmed','print_clicked','hotel_link_clicked','details_opened')),
+  event_type text not null check (event_type in ('quote_opened','whatsapp_clicked','confirm_clicked','quote_confirmed','print_clicked','hotel_link_clicked','details_opened','follow_up_whatsapp_click')),
   user_agent text,
   ip_hash text,
   metadata jsonb not null default '{}',
@@ -233,8 +239,11 @@ create table if not exists public.quote_hotel_options (
   half_board_label text not null default 'Mezza pensione',
   full_board_label text not null default 'Pensione completa',
   included_services text,
+  deposit_percent numeric(5,2),
+  balance_method text,
   payment_policy text,
   cancellation_policy text,
+  payment_notes text,
   notes text,
   is_selected boolean not null default false,
   created_at timestamptz not null default now(),
@@ -254,3 +263,26 @@ alter table public.quote_confirmations add column if not exists selected_hotel_n
 alter table public.quote_confirmations add column if not exists selected_treatment_key text;
 alter table public.quote_confirmations add column if not exists selected_treatment_label text;
 alter table public.quote_confirmations add column if not exists selected_price numeric(10,2);
+alter table public.quote_confirmations add column if not exists selected_deposit_percent numeric(5,2);
+alter table public.quote_confirmations add column if not exists selected_deposit_amount numeric(10,2);
+alter table public.quote_confirmations add column if not exists selected_balance_amount numeric(10,2);
+alter table public.quote_confirmations add column if not exists selected_balance_method text;
+alter table public.quote_confirmations add column if not exists selected_payment_policy text;
+alter table public.quote_confirmations add column if not exists selected_cancellation_policy text;
+alter table public.quote_confirmations add column if not exists payment_settings_snapshot jsonb;
+
+insert into public.settings (key, value)
+values (
+  'payment_settings',
+  jsonb_build_object(
+    'bank_account_holder', '',
+    'bank_name', '',
+    'iban', '',
+    'bic_swift', '',
+    'payment_reason_prefix', 'Caparra soggiorno IschiaStars',
+    'payment_instructions', 'Inviare copia del pagamento tramite email o WhatsApp.',
+    'accepted_balance_methods', jsonb_build_array('Carta', 'Contanti'),
+    'updated_at', ''
+  )
+)
+on conflict (key) do nothing;

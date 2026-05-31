@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
 
   // Validazione hotel options se presenti
   if (body.hotelOptions?.length) {
-    if (body.hotelOptions.length > 3) {
+    const groupCount = new Set(body.hotelOptions.map((o: Record<string, unknown>) => Number(o.hotelGroup ?? o.position ?? 1))).size;
+    if (groupCount > 3 || body.hotelOptions.length > 9) {
       return NextResponse.json({ ok: false, error: "Massimo 3 strutture per preventivo" }, { status: 400 });
     }
     const hasAtLeastOnePrice = body.hotelOptions.some(

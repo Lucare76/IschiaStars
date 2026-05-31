@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { adminApiHeaders } from "@/lib/admin-api-client";
+import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { Hotel } from "@/lib/types";
 
 type LrSyncItem = {
@@ -36,8 +37,11 @@ type HotelForm = {
   shortDescription: string;
   imageUrl: string;
   standardServices: string;
+  defaultDepositPercent: string;
+  defaultBalanceMethod: string;
   paymentPolicy: string;
   cancellationPolicy: string;
+  defaultPaymentNotes: string;
   internalNotes: string;
   isActive: boolean;
   slug: string;
@@ -50,8 +54,11 @@ const emptyForm: HotelForm = {
   shortDescription: "",
   imageUrl: "",
   standardServices: "",
+  defaultDepositPercent: "",
+  defaultBalanceMethod: "",
   paymentPolicy: "",
   cancellationPolicy: "",
+  defaultPaymentNotes: "",
   internalNotes: "",
   isActive: true,
   slug: ""
@@ -88,6 +95,25 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     setHotels((current) => (form.id ? current.map((hotel) => (hotel.id === result.data!.id ? result.data! : hotel)) : [result.data!, ...current]));
     setForm(emptyForm);
     setMessage("Hotel salvato.");
+  }
+
+  function prefillPolicyDefaults() {
+    const policies = fillMissingHotelPolicies({
+      hotelName: form.name,
+      depositPercent: form.defaultDepositPercent ? Number(form.defaultDepositPercent) : undefined,
+      balanceMethod: form.defaultBalanceMethod,
+      paymentPolicy: form.paymentPolicy,
+      cancellationPolicy: form.cancellationPolicy,
+      paymentNotes: form.defaultPaymentNotes
+    });
+    setForm((prev) => ({
+      ...prev,
+      defaultDepositPercent: policies.depositPercent != null ? String(policies.depositPercent) : prev.defaultDepositPercent,
+      defaultBalanceMethod: policies.balanceMethod || prev.defaultBalanceMethod,
+      paymentPolicy: policies.paymentPolicy || prev.paymentPolicy,
+      cancellationPolicy: policies.cancellationPolicy || prev.cancellationPolicy,
+      defaultPaymentNotes: policies.paymentNotes || prev.defaultPaymentNotes
+    }));
   }
 
   async function removeHotel(id: string) {
@@ -250,8 +276,11 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
           <Textarea label="Descrizione breve" value={form.shortDescription} onChange={(value) => setForm({ ...form, shortDescription: value })} />
           <Textarea label="Immagine URL opzionale" value={form.imageUrl} onChange={(value) => setForm({ ...form, imageUrl: value })} />
           <Textarea label="Servizi inclusi standard" value={form.standardServices} onChange={(value) => setForm({ ...form, standardServices: value })} />
+          <Input label="Acconto standard (%)" type="number" value={form.defaultDepositPercent} onChange={(value) => setForm({ ...form, defaultDepositPercent: value })} />
+          <Textarea label="Modalita saldo standard" value={form.defaultBalanceMethod} onChange={(value) => setForm({ ...form, defaultBalanceMethod: value })} />
           <Textarea label="Policy pagamento standard" value={form.paymentPolicy} onChange={(value) => setForm({ ...form, paymentPolicy: value })} />
           <Textarea label="Policy cancellazione standard" value={form.cancellationPolicy} onChange={(value) => setForm({ ...form, cancellationPolicy: value })} />
+          <Textarea label="Note pagamento standard" value={form.defaultPaymentNotes} onChange={(value) => setForm({ ...form, defaultPaymentNotes: value })} />
           <Textarea label="Note operative interne" value={form.internalNotes} onChange={(value) => setForm({ ...form, internalNotes: value })} />
         </div>
         <label className="mt-4 flex items-center gap-3 text-sm font-semibold">
@@ -261,6 +290,9 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
         <div className="mt-4 flex flex-wrap gap-2">
           <button className="rounded-full bg-ischia-navy px-5 py-3 text-sm font-black text-white disabled:opacity-60" disabled={loading || !form.name || !form.location} onClick={saveHotel} type="button">
             {loading ? "Salvataggio..." : editing ? "Salva modifiche" : "Crea hotel"}
+          </button>
+          <button className="rounded-full bg-white px-5 py-3 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/20" disabled={!form.name.trim()} onClick={prefillPolicyDefaults} type="button">
+            Precompila condizioni
           </button>
           {editing ? <button className="rounded-full bg-white px-5 py-3 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/20" onClick={() => setForm(emptyForm)} type="button">Annulla</button> : null}
         </div>
@@ -339,8 +371,11 @@ function fromHotel(hotel: Hotel): HotelForm {
     shortDescription: hotel.description,
     imageUrl: hotel.imageUrl ?? "",
     standardServices: hotel.standardServices.join("\n"),
+    defaultDepositPercent: hotel.defaultDepositPercent != null ? String(hotel.defaultDepositPercent) : "",
+    defaultBalanceMethod: hotel.defaultBalanceMethod ?? "",
     paymentPolicy: hotel.paymentPolicy,
     cancellationPolicy: hotel.cancellationPolicy,
+    defaultPaymentNotes: hotel.defaultPaymentNotes ?? "",
     internalNotes: hotel.internalNotes,
     isActive: hotel.active,
     slug: derivedSlug
@@ -355,8 +390,11 @@ function toPayload(form: HotelForm) {
     shortDescription: form.shortDescription,
     imageUrl: form.imageUrl || undefined,
     standardServices: form.standardServices.split("\n").map((item) => item.trim()).filter(Boolean),
+    defaultDepositPercent: form.defaultDepositPercent ? Number(form.defaultDepositPercent) : undefined,
+    defaultBalanceMethod: form.defaultBalanceMethod,
     paymentPolicy: form.paymentPolicy,
     cancellationPolicy: form.cancellationPolicy,
+    defaultPaymentNotes: form.defaultPaymentNotes,
     internalNotes: form.internalNotes,
     isActive: form.isActive,
     slug: form.slug.trim() || undefined

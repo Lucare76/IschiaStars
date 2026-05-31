@@ -29,8 +29,11 @@ export function HotelCreateForm() {
             location: formData.get("location"),
             stars: Number(formData.get("stars") ?? 3),
             standardServices: services,
+            defaultDepositPercent: formData.get("defaultDepositPercent") ? Number(formData.get("defaultDepositPercent")) : undefined,
+            defaultBalanceMethod: formData.get("defaultBalanceMethod"),
             paymentPolicy: formData.get("paymentPolicy"),
             cancellationPolicy: formData.get("cancellationPolicy"),
+            defaultPaymentNotes: formData.get("defaultPaymentNotes"),
             shortDescription: formData.get("shortDescription")
           })
         })
@@ -54,8 +57,11 @@ export function HotelCreateForm() {
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <Textarea name="standardServices" label="Servizi inclusi standard" defaultValue={"Assistenza IschiaStars\nWi-Fi\nPiscina o area relax"} />
         <Textarea name="shortDescription" label="Descrizione breve" />
+        <Input name="defaultDepositPercent" label="Acconto standard (%)" type="number" />
+        <Textarea name="defaultBalanceMethod" label="Modalita saldo" />
         <Textarea name="paymentPolicy" label="Policy pagamento" />
         <Textarea name="cancellationPolicy" label="Policy cancellazione" />
+        <Textarea name="defaultPaymentNotes" label="Note pagamento" />
       </div>
       <button className="mt-4 rounded-full bg-ischia-navy px-5 py-3 text-sm font-black text-white disabled:opacity-60" disabled={loading} type="submit">
         {loading ? "Salvataggio..." : "Salva hotel"}

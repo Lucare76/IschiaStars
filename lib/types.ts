@@ -17,6 +17,9 @@ export type Hotel = {
   sourceUrl?: string;
   slug?: string;
   standardServices: string[];
+  defaultDepositPercent?: number;
+  defaultBalanceMethod?: string;
+  defaultPaymentNotes?: string;
   paymentPolicy: string;
   cancellationPolicy: string;
   internalNotes: string;
@@ -52,7 +55,8 @@ export type QuoteEvent = {
     | "quote_confirmed"
     | "print_clicked"
     | "hotel_link_clicked"
-    | "details_opened";
+    | "details_opened"
+    | "follow_up_whatsapp_click";
   createdAt: string;
   userAgent?: string;
   metadata?: Record<string, unknown>;
@@ -70,6 +74,13 @@ export type QuoteConfirmation = {
   selectedTreatmentKey?: TreatmentKey | string;
   selectedTreatmentLabel?: string;
   selectedPrice?: number;
+  selectedDepositPercent?: number;
+  selectedDepositAmount?: number;
+  selectedBalanceAmount?: number;
+  selectedBalanceMethod?: string;
+  selectedPaymentPolicy?: string;
+  selectedCancellationPolicy?: string;
+  paymentSettingsSnapshot?: Record<string, unknown>;
 };
 
 export type TransportOffer = {
@@ -108,8 +119,11 @@ export type QuoteHotelOption = {
   halfBoardLabel: string;
   fullBoardLabel: string;
   includedServices?: string;
+  depositPercent?: number;
+  balanceMethod?: string;
   paymentPolicy?: string;
   cancellationPolicy?: string;
+  paymentNotes?: string;
   notes?: string;
   isSelected: boolean;
   createdAt: string;
