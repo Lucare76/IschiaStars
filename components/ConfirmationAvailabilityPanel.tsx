@@ -56,7 +56,7 @@ export function ConfirmationAvailabilityPanel({ quote }: { quote: Quote }) {
   }
 
   return (
-    <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
+    <section id="verifica-disponibilita" className="rounded-2xl bg-white/90 p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-black text-ischia-navy">Verifica disponibilità struttura</h2>

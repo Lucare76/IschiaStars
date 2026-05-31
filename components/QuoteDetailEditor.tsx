@@ -350,7 +350,10 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
   ].filter(Boolean).join(" - ");
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_0.36fr]">
+    <div className="space-y-6">
+      {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} /> : null}
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_0.36fr]">
       <form className="space-y-5" onSubmit={save}>
         {message ? <p className="rounded-2xl bg-ischia-mist p-4 text-sm font-bold text-ischia-navy">{message}</p> : null}
 
@@ -403,8 +406,6 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
           )}
         </Section>
 
-        {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} /> : null}
-
         <Section title="Condizioni preventivo">
           <div className="grid gap-3 sm:grid-cols-3">
             <Input name="totalPrice" label="Prezzo totale (legacy)" defaultValue={String(currentQuote.totalPrice)} type="number" />
@@ -421,6 +422,18 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
       </form>
 
       <aside className="space-y-4">
+        {currentQuote.confirmation ? (
+          <div className="rounded-2xl bg-emerald-50/80 p-5 shadow-soft ring-1 ring-emerald-200">
+            <h3 className="font-black text-ischia-navy">Conferma cliente ricevuta</h3>
+            <p className="mt-2 text-sm font-semibold text-emerald-800">
+              Ora va verificata la disponibilità con la struttura.
+            </p>
+            <a className="mt-4 block rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white" href="#verifica-disponibilita">
+              Gestisci disponibilità
+            </a>
+          </div>
+        ) : null}
+
         {/* Card principale: codice + stato + azioni chiave */}
         <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
           <div className="flex items-center justify-between gap-3">
@@ -450,6 +463,16 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
               <Link className="block rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)} rel="noopener noreferrer" target="_blank">
                 Apri link cliente
               </Link>
+            </div>
+          ) : currentQuote.confirmation ? (
+            <div className="mt-5 grid gap-2">
+              <Link className="rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)} rel="noopener noreferrer" target="_blank">
+                Apri link cliente
+              </Link>
+              <WhatsAppSendButton quote={currentQuote} />
+              <button className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy" onClick={() => void duplicateCurrentQuote()} type="button">
+                Duplica preventivo
+              </button>
             </div>
           ) : (
             <div className="mt-5 grid gap-2">
@@ -514,6 +537,7 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
           </div>
         </div>
       </aside>
+    </div>
     </div>
   );
 }
@@ -612,7 +636,7 @@ function HotelOptionBlock({
         <Textarea label="Policy cancellazione" value={opt.cancellationPolicy} onChange={(v) => onChange({ cancellationPolicy: v })} />
         <Textarea label="Note pagamento" value={opt.paymentNotes} onChange={(v) => onChange({ paymentNotes: v })} />
         <Textarea label="Note per il cliente" value={opt.notes} onChange={(v) => onChange({ notes: v })} />
-      </div>
+        </div>
     </div>
   );
 }
