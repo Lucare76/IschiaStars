@@ -80,6 +80,16 @@ export async function createQuoteRequest(input: QuoteRequestInput): Promise<Repo
   return getQuoteRequestById(data.id);
 }
 
+export async function deleteQuoteRequest(id: string): Promise<RepositoryResult<{ deleted: boolean }>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback({ deleted: false }, "Database non configurato");
+
+  await supabase.from("quote_request_children").delete().eq("quote_request_id", id);
+  const { error } = await supabase.from("quote_requests").delete().eq("id", id);
+  if (error) return fallback({ deleted: false }, error);
+  return fromSupabase({ deleted: true });
+}
+
 /** Returns true if a quote_request with same email+checkIn was created in the last 7 days. Used to prevent duplicate imports from Gmail. */
 export async function isDuplicateQuoteRequest(email: string, checkIn: string): Promise<boolean> {
   const supabase = createSupabaseAdminClient();
