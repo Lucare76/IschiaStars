@@ -53,6 +53,7 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
   const stats = providedStats ?? { openings: 0, whatsappClicks: 0, confirmClicked: false, confirmed: false };
   const effectiveStatus = stats.confirmed ? "confermato" : quote.status === "perso_non_disponibile" ? "perso_non_disponibile" : stats.openings > 0 ? "aperto" : quote.status;
   const isDeleted = Boolean(quote.deletedAt);
+  const hasConfirmation = Boolean(quote.confirmation);
 
   return (
     <article className={`min-w-0 rounded-2xl border border-white p-5 shadow-soft ${isDeleted ? "bg-rose-50/60 opacity-75" : "bg-white/90"}`}>
@@ -101,15 +102,29 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
       </div>
       <div className="mt-5 flex flex-wrap gap-2">
         {!isDeleted ? (
-          <>
-            <Link className="rounded-full bg-ischia-navy px-4 py-2 text-sm font-bold text-white" href={publicQuoteUrl(quote)} rel="noopener noreferrer" target="_blank">
-              Apri link cliente
-            </Link>
-            <WhatsAppSendButton quote={quote} />
+          hasConfirmation ? (
+            <>
+              <Link className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-bold text-white" href={`/admin/preventivi/${quote.code}#verifica-disponibilita`}>
+                Gestisci conferma
+              </Link>
+              <Link className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/conferme?filter=${quote.confirmation?.availabilityStatus ?? "availability_to_check"}`}>
+                Vai a conferme
+              </Link>
+              <Link className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/preventivi/${quote.code}`}>
+                Dettaglio
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link className="rounded-full bg-ischia-navy px-4 py-2 text-sm font-bold text-white" href={publicQuoteUrl(quote)} rel="noopener noreferrer" target="_blank">
+                Apri link cliente
+              </Link>
+              <WhatsAppSendButton quote={quote} />
             <Link className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/preventivi/${quote.code}`}>
               Dettaglio / modifica
             </Link>
-          </>
+            </>
+          )
         ) : null}
         {actions?.onRestore && isDeleted ? (
           <button
