@@ -71,9 +71,15 @@ export async function POST(request: NextRequest) {
     await sendQuoteConfirmedInternalEmail(quoteResult.data, {
       firstName: body!.firstName!.trim(),
       lastName: body!.lastName!.trim(),
+      fiscalCode: body!.fiscalCode!.trim(),
       phone: body!.phone!.trim(),
       email: body!.email!.trim(),
+      address: body!.address!.trim(),
+      city: body!.city!.trim(),
+      postalCode: body!.postalCode!.trim(),
+      province: body!.province!.trim(),
       confirmedAt: result.data.confirmedAt,
+      children: body!.children ?? [],
       selectedHotelName: body!.selectedHotelName,
       selectedTreatmentLabel: body!.selectedTreatmentLabel,
       selectedPrice: body!.selectedPrice

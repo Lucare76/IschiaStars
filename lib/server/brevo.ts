@@ -15,9 +15,15 @@ type SendBrevoEmailParams = {
 export type BrevoConfirmationDetails = {
   firstName: string;
   lastName: string;
+  fiscalCode: string;
   phone: string;
   email: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  province: string;
   confirmedAt: string;
+  children?: { id?: string; birthDate?: string }[];
   selectedHotelName?: string;
   selectedTreatmentLabel?: string;
   selectedPrice?: number;
@@ -289,6 +295,19 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
   } catch { /* keep raw value */ }
 
   const hasSelection = Boolean(confirmation.selectedHotelName && confirmation.selectedTreatmentLabel);
+  const addressLine = [
+    confirmation.address,
+    confirmation.postalCode,
+    confirmation.city,
+    confirmation.province
+  ].filter(Boolean).join(" ");
+  const children = confirmation.children?.filter((child) => Boolean(child.birthDate)) ?? [];
+  const childrenHtml = children.length
+    ? children.map((child, index) => `<div>Bambino ${index + 1}: ${child.birthDate}</div>`).join("")
+    : "-";
+  const childrenText = children.length
+    ? children.map((child, index) => `Bambino ${index + 1}: ${child.birthDate}`).join("; ")
+    : "-";
   const selectionHtml = hasSelection
     ? `<tr>
         <td style="padding:10px 0 6px;font-size:15px;border-top:1px solid #b8d8b8;"><strong>Hotel scelto</strong></td>
@@ -347,6 +366,18 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
                 <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${confirmation.email}</td>
               </tr>
               <tr>
+                <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Codice fiscale</strong></td>
+                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${confirmation.fiscalCode}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Indirizzo</strong></td>
+                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${addressLine || "-"}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Bambini</strong></td>
+                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${childrenHtml}</td>
+              </tr>
+              <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Arrivo</strong></td>
                 <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${formatDate(quote.arrivalDate)}</td>
               </tr>
@@ -391,6 +422,9 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
     `Cliente:           ${confirmation.firstName} ${confirmation.lastName}`,
     `Telefono:          ${confirmation.phone}`,
     `Email:             ${confirmation.email}`,
+    `Codice fiscale:    ${confirmation.fiscalCode}`,
+    `Indirizzo:         ${addressLine || "-"}`,
+    `Bambini:           ${childrenText}`,
     `Arrivo:            ${formatDate(quote.arrivalDate)}`,
     `Partenza:          ${formatDate(quote.departureDate)}`,
     ...(confirmation.selectedHotelName ? [`Hotel scelto:      ${confirmation.selectedHotelName}`] : []),
