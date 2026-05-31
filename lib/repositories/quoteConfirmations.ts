@@ -3,6 +3,7 @@ import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
 import { markHotelOptionSelected } from "@/lib/repositories/quoteHotelOptions";
 import { markQuoteConfirmed as markStoredQuoteConfirmed } from "@/lib/repositories/quotes";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { ConfirmationAvailabilityStatus } from "@/lib/types";
 
 export type QuoteConfirmationInput = {
   firstName: string;
@@ -65,6 +66,8 @@ export async function createQuoteConfirmation(quoteId: string, input: QuoteConfi
     selected_payment_policy: input.selectedPaymentPolicy ?? null,
     selected_cancellation_policy: input.selectedCancellationPolicy ?? null,
     payment_settings_snapshot: input.paymentSettingsSnapshot ?? null,
+    availability_status: "availability_to_check",
+    availability_updated_at: now,
     metadata: {
       ...(input.metadata ?? {}),
       selectedHotelOptionId: input.selectedHotelOptionId,
@@ -118,4 +121,51 @@ export async function getQuoteConfirmation(quoteId: string): Promise<RepositoryR
   const { data, error } = await supabase.from("quote_confirmations").select("*").eq("quote_id", quoteId).maybeSingle();
   if (error) return fallback(null, error);
   return fromSupabase(data as Record<string, unknown> | null);
+}
+
+export async function getQuoteConfirmationById(id: string): Promise<RepositoryResult<Record<string, unknown> | null>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(null);
+
+  const { data, error } = await supabase.from("quote_confirmations").select("*").eq("id", id).maybeSingle();
+  if (error) return fallback(null, error);
+  return fromSupabase(data as Record<string, unknown> | null);
+}
+
+export async function updateQuoteConfirmationAvailability(
+  id: string,
+  input: {
+    status: ConfirmationAvailabilityStatus;
+    depositDueAt?: string | null;
+    finalConfirmationSentAt?: string | null;
+    finalConfirmationNotes?: string | null;
+    unavailableReason?: string | null;
+    unavailabilityEmailSentAt?: string | null;
+    paymentSettingsSnapshot?: Record<string, unknown> | null;
+  }
+): Promise<RepositoryResult<Record<string, unknown> | null>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(null);
+
+  const now = new Date().toISOString();
+  const update = {
+    availability_status: input.status,
+    availability_updated_at: now,
+    ...(input.depositDueAt !== undefined ? { deposit_due_at: input.depositDueAt } : {}),
+    ...(input.finalConfirmationSentAt !== undefined ? { final_confirmation_sent_at: input.finalConfirmationSentAt } : {}),
+    ...(input.finalConfirmationNotes !== undefined ? { final_confirmation_notes: input.finalConfirmationNotes } : {}),
+    ...(input.unavailableReason !== undefined ? { unavailable_reason: input.unavailableReason } : {}),
+    ...(input.unavailabilityEmailSentAt !== undefined ? { unavailability_email_sent_at: input.unavailabilityEmailSentAt } : {}),
+    ...(input.paymentSettingsSnapshot !== undefined ? { payment_settings_snapshot: input.paymentSettingsSnapshot } : {})
+  };
+
+  const { data, error } = await supabase
+    .from("quote_confirmations")
+    .update(update)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) return fallback(null, error);
+  return fromSupabase(data as Record<string, unknown>);
 }

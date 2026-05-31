@@ -56,6 +56,12 @@ export type QuoteEvent = {
     | "print_clicked"
     | "hotel_link_clicked"
     | "details_opened"
+    | "availability_confirmed"
+    | "final_confirmation_email_sent"
+    | "deposit_due_at_set"
+    | "availability_unavailable"
+    | "availability_unavailable_email_sent"
+    | "alternative_to_propose"
     | "follow_up_whatsapp_click";
   createdAt: string;
   userAgent?: string;
@@ -63,6 +69,7 @@ export type QuoteEvent = {
 };
 
 export type QuoteConfirmation = {
+  id?: string;
   confirmedAt: string;
   fiscalCode: string;
   address: string;
@@ -81,7 +88,22 @@ export type QuoteConfirmation = {
   selectedPaymentPolicy?: string;
   selectedCancellationPolicy?: string;
   paymentSettingsSnapshot?: Record<string, unknown>;
+  availabilityStatus?: ConfirmationAvailabilityStatus;
+  depositDueAt?: string;
+  finalConfirmationSentAt?: string;
+  finalConfirmationNotes?: string;
+  unavailableReason?: string;
+  unavailabilityEmailSentAt?: string;
+  availabilityUpdatedAt?: string;
 };
+
+export type ConfirmationAvailabilityStatus =
+  | "availability_to_check"
+  | "availability_confirmed"
+  | "final_confirmation_sent"
+  | "deposit_waiting"
+  | "availability_unavailable"
+  | "alternative_to_propose";
 
 export type TransportOffer = {
   id: string;

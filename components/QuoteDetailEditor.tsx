@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { FormEvent, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { useState } from "react";
+import { ConfirmationAvailabilityPanel } from "@/components/ConfirmationAvailabilityPanel";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { adminApiFetch } from "@/lib/admin-api-client";
@@ -401,6 +402,8 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
             </button>
           )}
         </Section>
+
+        {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} /> : null}
 
         <Section title="Condizioni preventivo">
           <div className="grid gap-3 sm:grid-cols-3">

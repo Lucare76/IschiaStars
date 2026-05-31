@@ -7,6 +7,7 @@ import { SystemModeBadge } from "@/components/SystemModeBadge";
 const nav = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/preventivi-da-evadere", label: "Preventivi da evadere" },
+  { href: "/admin/follow-up", label: "Da richiamare" },
   { href: "/admin/preventivi", label: "Preventivi" },
   { href: "/admin/preventivi/nuovo", label: "Nuovo preventivo" },
   { href: "/admin/hotel", label: "Hotel / strutture" },

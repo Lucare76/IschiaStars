@@ -105,6 +105,7 @@ export function mapQuote(
     deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
     confirmation: row.confirmed_at || confirmationRow
       ? {
+          id: confirmationRow?.id ? String(confirmationRow.id) : undefined,
           confirmedAt: String(confirmationRow?.created_at ?? row.confirmed_at ?? ""),
           fiscalCode: String(confirmationRow?.fiscal_code ?? ""),
           address: String(confirmationRow?.address ?? ""),
@@ -124,7 +125,14 @@ export function mapQuote(
           selectedCancellationPolicy: confirmationRow?.selected_cancellation_policy ? String(confirmationRow.selected_cancellation_policy) : undefined,
           paymentSettingsSnapshot: typeof confirmationRow?.payment_settings_snapshot === "object" && confirmationRow.payment_settings_snapshot
             ? confirmationRow.payment_settings_snapshot as Record<string, unknown>
-            : undefined
+            : undefined,
+          availabilityStatus: confirmationRow?.availability_status ? String(confirmationRow.availability_status) as any : undefined,
+          depositDueAt: confirmationRow?.deposit_due_at ? String(confirmationRow.deposit_due_at) : undefined,
+          finalConfirmationSentAt: confirmationRow?.final_confirmation_sent_at ? String(confirmationRow.final_confirmation_sent_at) : undefined,
+          finalConfirmationNotes: confirmationRow?.final_confirmation_notes ? String(confirmationRow.final_confirmation_notes) : undefined,
+          unavailableReason: confirmationRow?.unavailable_reason ? String(confirmationRow.unavailable_reason) : undefined,
+          unavailabilityEmailSentAt: confirmationRow?.unavailability_email_sent_at ? String(confirmationRow.unavailability_email_sent_at) : undefined,
+          availabilityUpdatedAt: confirmationRow?.availability_updated_at ? String(confirmationRow.availability_updated_at) : undefined
         }
       : undefined,
     hotelOptions: effectiveHotelOptions

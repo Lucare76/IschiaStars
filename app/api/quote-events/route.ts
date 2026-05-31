@@ -10,7 +10,8 @@ const allowedEvents: QuoteEvent["eventType"][] = [
   "quote_confirmed",
   "print_clicked",
   "hotel_link_clicked",
-  "details_opened"
+  "details_opened",
+  "follow_up_whatsapp_click"
 ];
 
 export async function POST(request: NextRequest) {

@@ -1,0 +1,201 @@
+import { getQuoteEvents } from "@/lib/repositories/quoteEvents";
+import { listQuotes } from "@/lib/repositories/quotes";
+import { fallback, fromSupabase, getEffectiveHotelOptions, RepositoryResult } from "@/lib/repositories/shared";
+import { absolutePublicQuoteUrl, formatCurrency, normalizeItalianPhone } from "@/lib/utils";
+import type { Quote, QuoteEvent } from "@/lib/types";
+
+export type FollowUpSegment = "mai_aperto" | "aperto_non_confermato" | "molto_interessato" | "da_sollecitare" | "recente";
+export type FollowUpPriority = "alta" | "media" | "bassa";
+
+export type FollowUpQuote = {
+  id: string;
+  code: string;
+  token: string;
+  clientName: string;
+  clientPhone: string;
+  clientEmail: string;
+  createdAt: string;
+  sentAt: string;
+  lastEventAt?: string;
+  lastEventLabel: string;
+  openedCount: number;
+  whatsappClickCount: number;
+  hotelLinkClickCount: number;
+  printClickCount: number;
+  segment: FollowUpSegment;
+  segmentLabel: string;
+  priority: FollowUpPriority;
+  expiresSoon: boolean;
+  hotelsSummary: string;
+  mainOffer: string;
+  publicUrl: string;
+  whatsappHref?: string;
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuote[]>> {
+  const quotesResult = await listQuotes({ includeDeleted: false });
+  const mapped = await Promise.all(quotesResult.data.map(toFollowUpQuote));
+  const data = mapped
+    .filter((quote): quote is FollowUpQuote => Boolean(quote))
+    .sort((a, b) => priorityWeight(b.priority) - priorityWeight(a.priority) || new Date(b.lastEventAt ?? b.sentAt).getTime() - new Date(a.lastEventAt ?? a.sentAt).getTime());
+
+  return quotesResult.source === "supabase" ? fromSupabase(data) : fallback(data, quotesResult.error);
+}
+
+async function toFollowUpQuote(quote: Quote): Promise<FollowUpQuote | null> {
+  if (quote.deletedAt || quote.excludedFromStats || quote.status === "confermato" || quote.confirmation) return null;
+
+  const eventsResult = await getQuoteEvents(quote.id);
+  const events = eventsResult.data;
+  if (events.some((event) => event.eventType === "quote_confirmed")) return null;
+
+  const opened = events.filter((event) => event.eventType === "quote_opened");
+  const whatsappClicks = events.filter((event) => event.eventType === "whatsapp_clicked");
+  const hotelLinkClicks = events.filter((event) => event.eventType === "hotel_link_clicked");
+  const printClicks = events.filter((event) => event.eventType === "print_clicked");
+  const lastEvent = latestEvent(events);
+  const sentAt = quote.sentAt ?? quote.createdAt;
+  const publicUrl = absolutePublicQuoteUrl(quote);
+  const segment = resolveSegment({
+    sentAt,
+    opened,
+    whatsappClicks,
+    hotelLinkClicks,
+    printClicks
+  });
+  const clientName = [quote.customerFirstName, quote.customerLastName].filter(Boolean).join(" ").trim() || "Cliente";
+  const clientPhone = quote.customerPhone.trim();
+
+  return {
+    id: quote.id,
+    code: quote.code,
+    token: quote.token,
+    clientName,
+    clientPhone,
+    clientEmail: quote.customerEmail,
+    createdAt: quote.createdAt,
+    sentAt,
+    lastEventAt: lastEvent?.createdAt,
+    lastEventLabel: lastEvent ? eventLabel(lastEvent.eventType) : "Nessuna apertura tracciata",
+    openedCount: opened.length,
+    whatsappClickCount: whatsappClicks.length,
+    hotelLinkClickCount: hotelLinkClicks.length,
+    printClickCount: printClicks.length,
+    segment,
+    segmentLabel: segmentLabel(segment),
+    priority: priorityFor(segment),
+    expiresSoon: isExpiresSoon(quote.offerExpiresAt),
+    hotelsSummary: summarizeHotels(quote),
+    mainOffer: summarizeMainOffer(quote),
+    publicUrl,
+    whatsappHref: clientPhone ? followUpWhatsappHref(clientPhone, followUpMessage(segment, clientName, publicUrl)) : undefined
+  };
+}
+
+function resolveSegment({
+  sentAt,
+  opened,
+  whatsappClicks,
+  hotelLinkClicks,
+  printClicks
+}: {
+  sentAt: string;
+  opened: QuoteEvent[];
+  whatsappClicks: QuoteEvent[];
+  hotelLinkClicks: QuoteEvent[];
+  printClicks: QuoteEvent[];
+}): FollowUpSegment {
+  const lastOpening = opened.at(-1)?.createdAt;
+  const isVeryInterested = opened.length > 1 || whatsappClicks.length > 0 || hotelLinkClicks.length > 0 || printClicks.length > 0;
+  if (isVeryInterested) return "molto_interessato";
+  if (lastOpening && hoursSince(lastOpening) >= 24) return "da_sollecitare";
+  if (opened.length > 0) return "aperto_non_confermato";
+  if (hoursSince(sentAt) >= 24) return "mai_aperto";
+  return "recente";
+}
+
+function followUpMessage(segment: FollowUpSegment, clientName: string, publicUrl: string) {
+  const firstName = clientName.split(" ")[0] || "ciao";
+  if (segment === "mai_aperto") {
+    return `Ciao ${firstName}, ti abbiamo inviato le proposte per il tuo soggiorno a Ischia. Ti lascio di nuovo il link: ${publicUrl}. Se vuoi ti aiuto a scegliere la soluzione più adatta.`;
+  }
+  if (segment === "molto_interessato") {
+    return `Ciao ${firstName}, ho visto che hai guardato più volte il preventivo. La soluzione che ti interessa potrebbe non restare disponibile a lungo: se vuoi la blocchiamo insieme. Ti lascio il link: ${publicUrl}.`;
+  }
+  return `Ciao ${firstName}, ho visto che hai consultato le proposte. Se hai dubbi posso aiutarti a scegliere la struttura più adatta. Ti lascio il link: ${publicUrl}.`;
+}
+
+function followUpWhatsappHref(phone: string, message: string) {
+  return `https://wa.me/${normalizeItalianPhone(phone)}?text=${encodeURIComponent(message)}`;
+}
+
+function latestEvent(events: QuoteEvent[]) {
+  return [...events].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).at(-1);
+}
+
+function hoursSince(value: string) {
+  return (Date.now() - new Date(value).getTime()) / (60 * 60 * 1000);
+}
+
+function isExpiresSoon(value: string) {
+  const expiresAt = new Date(value).getTime();
+  if (!Number.isFinite(expiresAt)) return false;
+  const diff = expiresAt - Date.now();
+  return diff >= 0 && diff <= 3 * DAY_MS;
+}
+
+function summarizeHotels(quote: Quote) {
+  const names = Array.from(new Set(getEffectiveHotelOptions(quote).map((option) => option.hotelName).filter(Boolean)));
+  return names.slice(0, 3).join(", ") + (names.length > 3 ? ` +${names.length - 3}` : "");
+}
+
+function summarizeMainOffer(quote: Quote) {
+  const option = getEffectiveHotelOptions(quote)[0];
+  const treatment = option?.treatments[0];
+  if (!option || !treatment) return quote.treatment ? `${quote.treatment} · ${formatCurrency(quote.totalPrice)}` : formatCurrency(quote.totalPrice);
+  const room = option.roomTypeLabel ? `${option.roomTypeLabel} · ` : "";
+  return `${room}${treatment.label} · ${formatCurrency(treatment.price)}`;
+}
+
+function eventLabel(eventType: QuoteEvent["eventType"]) {
+  const labels: Record<QuoteEvent["eventType"], string> = {
+    quote_opened: "Preventivo aperto",
+    whatsapp_clicked: "Click WhatsApp cliente",
+    confirm_clicked: "Click conferma",
+    quote_confirmed: "Confermato",
+    print_clicked: "Stampa/PDF",
+    hotel_link_clicked: "Click hotel",
+    details_opened: "Dettagli aperti",
+    availability_confirmed: "Disponibilità confermata",
+    final_confirmation_email_sent: "Conferma definitiva inviata",
+    deposit_due_at_set: "Scadenza caparra impostata",
+    availability_unavailable: "Disponibilità terminata",
+    availability_unavailable_email_sent: "Email disponibilità terminata",
+    alternative_to_propose: "Alternativa da proporre",
+    follow_up_whatsapp_click: "Follow-up WhatsApp"
+  };
+  return labels[eventType];
+}
+
+function segmentLabel(segment: FollowUpSegment) {
+  const labels: Record<FollowUpSegment, string> = {
+    mai_aperto: "Mai aperto",
+    aperto_non_confermato: "Aperto non confermato",
+    molto_interessato: "Molto interessato",
+    da_sollecitare: "Da sollecitare",
+    recente: "Inviato da poco"
+  };
+  return labels[segment];
+}
+
+function priorityFor(segment: FollowUpSegment): FollowUpPriority {
+  if (segment === "molto_interessato" || segment === "da_sollecitare") return "alta";
+  if (segment === "mai_aperto" || segment === "aperto_non_confermato") return "media";
+  return "bassa";
+}
+
+function priorityWeight(priority: FollowUpPriority) {
+  return priority === "alta" ? 3 : priority === "media" ? 2 : 1;
+}

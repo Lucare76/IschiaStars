@@ -505,3 +505,157 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
     console.warn(`[brevo] failed internal confirmation ${quote.code} — check server logs`);
   }
 }
+
+export type FinalConfirmationEmailDetails = {
+  depositDueAt: string;
+  notes?: string;
+  paymentSettingsSnapshot?: Record<string, unknown>;
+};
+
+export type AvailabilityUnavailableEmailDetails = {
+  reason?: string;
+  message: string;
+};
+
+export async function sendFinalConfirmationEmailToClient(quote: Quote, details: FinalConfirmationEmailDetails): Promise<boolean> {
+  const missingEnvReason = brevoMissingEnvReason();
+  if (missingEnvReason) {
+    console.info(`[brevo] skipped final confirmation code=${quote.code} reason=${missingEnvReason}`);
+    return false;
+  }
+
+  const email = quote.confirmation?.selectedHotelName ? quote.customerEmail?.trim() : quote.customerEmail?.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
+
+  const confirmation = quote.confirmation;
+  const snapshot = details.paymentSettingsSnapshot ?? confirmation?.paymentSettingsSnapshot ?? {};
+  const paymentReason = typeof snapshot.payment_reason === "string" ? snapshot.payment_reason : "";
+  const dueAt = formatDateTimeForEmail(details.depositDueAt);
+  const firstName = quote.customerFirstName || "Cliente";
+
+  const coordinatesHtml = snapshot.configured === true
+    ? `<p><strong>Coordinate caparra</strong><br>
+        ${snapshot.bank_account_holder ? `Intestatario: ${snapshot.bank_account_holder}<br>` : ""}
+        ${snapshot.bank_name ? `Banca: ${snapshot.bank_name}<br>` : ""}
+        ${snapshot.iban ? `IBAN: ${snapshot.iban}<br>` : ""}
+        ${snapshot.bic_swift ? `BIC/SWIFT: ${snapshot.bic_swift}<br>` : ""}
+        ${paymentReason ? `Causale: ${paymentReason}<br>` : ""}
+      </p>`
+    : `<p>Le modalità operative per il versamento della caparra saranno comunicate dallo staff IschiaStars.</p>`;
+
+  const html = `<!DOCTYPE html><html lang="it"><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:8px;overflow:hidden;">
+        <tr><td style="background:#1a4a2a;padding:22px 32px;color:#fff;font-weight:bold;font-size:18px;">Conferma definitiva IschiaStars</td></tr>
+        <tr><td style="padding:28px 32px;color:#333;font-size:15px;line-height:1.7;">
+          <p>Ciao ${firstName},</p>
+          <p>la struttura ha confermato la disponibilità per la proposta selezionata. Per bloccare definitivamente il soggiorno è necessario versare la caparra entro <strong>${dueAt}</strong>.</p>
+          <p><strong>Hotel:</strong> ${confirmation?.selectedHotelName ?? quote.proposedHotel.name}<br>
+          <strong>Trattamento:</strong> ${confirmation?.selectedTreatmentLabel ?? quote.treatment}<br>
+          <strong>Prezzo totale:</strong> ${confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice)}<br>
+          ${confirmation?.selectedDepositPercent != null ? `<strong>Caparra:</strong> ${confirmation.selectedDepositPercent}% pari a ${formatPrice(confirmation.selectedDepositAmount ?? 0)}<br>` : ""}
+          ${confirmation?.selectedBalanceAmount != null ? `<strong>Saldo restante:</strong> ${formatPrice(confirmation.selectedBalanceAmount)}<br>` : ""}
+          ${confirmation?.selectedBalanceMethod ? `<strong>Modalità saldo:</strong> ${confirmation.selectedBalanceMethod}` : ""}</p>
+          ${coordinatesHtml}
+          ${confirmation?.selectedCancellationPolicy ? `<p><strong>Policy cancellazione:</strong> ${confirmation.selectedCancellationPolicy}</p>` : ""}
+          ${details.notes ? `<p><strong>Note:</strong> ${details.notes}</p>` : ""}
+          <p>Per qualsiasi dubbio puoi rispondere a questa email o scriverci su WhatsApp.</p>
+          <p>IschiaStars</p>
+        </td></tr>
+      </table>
+    </td></tr></table>
+  </body></html>`;
+
+  const text = [
+    `Conferma definitiva IschiaStars ${quote.code}`,
+    "",
+    `Ciao ${firstName},`,
+    "",
+    `La struttura ha confermato la disponibilità. Versa la caparra entro ${dueAt}.`,
+    `Hotel: ${confirmation?.selectedHotelName ?? quote.proposedHotel.name}`,
+    `Trattamento: ${confirmation?.selectedTreatmentLabel ?? quote.treatment}`,
+    `Prezzo totale: ${confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice)}`,
+    ...(confirmation?.selectedDepositPercent != null ? [`Caparra: ${confirmation.selectedDepositPercent}% pari a ${formatPrice(confirmation.selectedDepositAmount ?? 0)}`] : []),
+    ...(confirmation?.selectedBalanceAmount != null ? [`Saldo restante: ${formatPrice(confirmation.selectedBalanceAmount)}`] : []),
+    ...(confirmation?.selectedBalanceMethod ? [`Modalità saldo: ${confirmation.selectedBalanceMethod}`] : []),
+    ...(snapshot.configured === true ? [
+      snapshot.bank_account_holder ? `Intestatario: ${snapshot.bank_account_holder}` : "",
+      snapshot.bank_name ? `Banca: ${snapshot.bank_name}` : "",
+      snapshot.iban ? `IBAN: ${snapshot.iban}` : "",
+      snapshot.bic_swift ? `BIC/SWIFT: ${snapshot.bic_swift}` : "",
+      paymentReason ? `Causale: ${paymentReason}` : ""
+    ].filter(Boolean) : ["Le modalità operative per il versamento della caparra saranno comunicate dallo staff IschiaStars."]),
+    ...(confirmation?.selectedCancellationPolicy ? [`Policy cancellazione: ${confirmation.selectedCancellationPolicy}`] : []),
+    ...(details.notes ? [`Note: ${details.notes}`] : []),
+    "",
+    "IschiaStars"
+  ].join("\n");
+
+  return sendBrevoEmail({
+    to: [{ email, name: `${quote.customerFirstName} ${quote.customerLastName}`.trim() }],
+    subject: `Conferma definitiva soggiorno - ${quote.code}`,
+    html,
+    text,
+    replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
+  });
+}
+
+export async function sendAvailabilityUnavailableEmailToClient(quote: Quote, details: AvailabilityUnavailableEmailDetails): Promise<boolean> {
+  const missingEnvReason = brevoMissingEnvReason();
+  if (missingEnvReason) {
+    console.info(`[brevo] skipped unavailable email code=${quote.code} reason=${missingEnvReason}`);
+    return false;
+  }
+
+  const email = quote.customerEmail?.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
+  const messageHtml = details.message.split("\n").map((line) => line.trim() ? `<p>${line}</p>` : "").join("");
+
+  const html = `<!DOCTYPE html><html lang="it"><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:8px;overflow:hidden;">
+        <tr><td style="background:#1a3a5c;padding:22px 32px;color:#fff;font-weight:bold;font-size:18px;">Aggiornamento disponibilità struttura</td></tr>
+        <tr><td style="padding:28px 32px;color:#333;font-size:15px;line-height:1.7;">
+          ${messageHtml}
+          <p><strong>Preventivo:</strong> ${quote.code}<br>
+          <strong>Hotel selezionato:</strong> ${quote.confirmation?.selectedHotelName ?? quote.proposedHotel.name}<br>
+          <strong>Date:</strong> ${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}<br>
+          <strong>Trattamento:</strong> ${quote.confirmation?.selectedTreatmentLabel ?? quote.treatment}</p>
+          ${details.reason ? `<p><strong>Nota:</strong> ${details.reason}</p>` : ""}
+        </td></tr>
+      </table>
+    </td></tr></table>
+  </body></html>`;
+
+  const text = [
+    details.message,
+    "",
+    `Preventivo: ${quote.code}`,
+    `Hotel selezionato: ${quote.confirmation?.selectedHotelName ?? quote.proposedHotel.name}`,
+    `Date: ${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`,
+    `Trattamento: ${quote.confirmation?.selectedTreatmentLabel ?? quote.treatment}`,
+    ...(details.reason ? [`Nota: ${details.reason}`] : [])
+  ].join("\n");
+
+  return sendBrevoEmail({
+    to: [{ email, name: `${quote.customerFirstName} ${quote.customerLastName}`.trim() }],
+    subject: `Aggiornamento disponibilità struttura - ${quote.code}`,
+    html,
+    text,
+    replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
+  });
+}
+
+function formatDateTimeForEmail(value: string) {
+  try {
+    return new Date(value).toLocaleString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  } catch {
+    return value;
+  }
+}

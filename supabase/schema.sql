@@ -110,7 +110,7 @@ create table if not exists public.quote_children (
 create table if not exists public.quote_events (
   id uuid primary key default gen_random_uuid(),
   quote_id uuid not null references public.quotes(id) on delete cascade,
-  event_type text not null check (event_type in ('quote_opened','whatsapp_clicked','confirm_clicked','quote_confirmed','print_clicked','hotel_link_clicked','details_opened','follow_up_whatsapp_click')),
+  event_type text not null check (event_type in ('quote_opened','whatsapp_clicked','confirm_clicked','quote_confirmed','print_clicked','hotel_link_clicked','details_opened','follow_up_whatsapp_click','availability_confirmed','final_confirmation_email_sent','deposit_due_at_set','availability_unavailable','availability_unavailable_email_sent','alternative_to_propose')),
   user_agent text,
   ip_hash text,
   metadata jsonb not null default '{}',
@@ -132,6 +132,13 @@ create table if not exists public.quote_confirmations (
   accepted_terms boolean not null default false,
   accepted_privacy boolean not null default false,
   metadata jsonb not null default '{}',
+  availability_status text not null default 'availability_to_check' check (availability_status in ('availability_to_check','availability_confirmed','final_confirmation_sent','deposit_waiting','availability_unavailable','alternative_to_propose')),
+  deposit_due_at timestamptz,
+  final_confirmation_sent_at timestamptz,
+  final_confirmation_notes text,
+  unavailable_reason text,
+  unavailability_email_sent_at timestamptz,
+  availability_updated_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -156,6 +163,7 @@ create index if not exists quotes_public_token_idx on public.quotes(public_token
 create index if not exists quote_events_quote_id_idx on public.quote_events(quote_id);
 create index if not exists quote_requests_status_idx on public.quote_requests(status);
 create index if not exists quotes_status_idx on public.quotes(status);
+create index if not exists quote_confirmations_availability_status_idx on public.quote_confirmations(availability_status);
 create unique index if not exists hotels_external_source_external_id_uidx on public.hotels(external_source, external_id) where external_source is not null and external_id is not null;
 create unique index if not exists hotels_slug_uidx on public.hotels(slug) where slug is not null;
 
@@ -270,6 +278,19 @@ alter table public.quote_confirmations add column if not exists selected_balance
 alter table public.quote_confirmations add column if not exists selected_payment_policy text;
 alter table public.quote_confirmations add column if not exists selected_cancellation_policy text;
 alter table public.quote_confirmations add column if not exists payment_settings_snapshot jsonb;
+alter table public.quote_confirmations add column if not exists availability_status text not null default 'availability_to_check';
+alter table public.quote_confirmations add column if not exists deposit_due_at timestamptz;
+alter table public.quote_confirmations add column if not exists final_confirmation_sent_at timestamptz;
+alter table public.quote_confirmations add column if not exists final_confirmation_notes text;
+alter table public.quote_confirmations add column if not exists unavailable_reason text;
+alter table public.quote_confirmations add column if not exists unavailability_email_sent_at timestamptz;
+alter table public.quote_confirmations add column if not exists availability_updated_at timestamptz;
+
+alter table public.quote_confirmations drop constraint if exists quote_confirmations_availability_status_check;
+alter table public.quote_confirmations add constraint quote_confirmations_availability_status_check check (availability_status in ('availability_to_check','availability_confirmed','final_confirmation_sent','deposit_waiting','availability_unavailable','alternative_to_propose'));
+
+alter table public.quote_events drop constraint if exists quote_events_event_type_check;
+alter table public.quote_events add constraint quote_events_event_type_check check (event_type in ('quote_opened','whatsapp_clicked','confirm_clicked','quote_confirmed','print_clicked','hotel_link_clicked','details_opened','follow_up_whatsapp_click','availability_confirmed','final_confirmation_email_sent','deposit_due_at_set','availability_unavailable','availability_unavailable_email_sent','alternative_to_propose'));
 
 insert into public.settings (key, value)
 values (
