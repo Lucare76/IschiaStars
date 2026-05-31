@@ -11,9 +11,20 @@ export async function GET(request: Request) {
   const providedSecret = bearerToken ?? queryToken;
 
   if (!configuredSecret || providedSecret !== configuredSecret) {
+    console.info('[cron-email] unauthorized');
     return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 
-  await pollGmail();
-  return Response.json({ ok: true });
+  console.info('[cron-email] start');
+
+  const result = await pollGmail();
+
+  console.info(`[cron-email] completed imported=${result.imported} skipped=${result.skipped} errors=${result.errors.length}`);
+
+  return Response.json({
+    ok: result.errors.length === 0,
+    imported: result.imported,
+    skipped: result.skipped,
+    errors: result.errors
+  });
 }
