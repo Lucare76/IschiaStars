@@ -45,7 +45,14 @@ export type QuoteRequest = {
 export type QuoteEvent = {
   id: string;
   quoteId: string;
-  eventType: "quote_opened" | "whatsapp_clicked" | "confirm_clicked" | "quote_confirmed" | "print_clicked";
+  eventType:
+    | "quote_opened"
+    | "whatsapp_clicked"
+    | "confirm_clicked"
+    | "quote_confirmed"
+    | "print_clicked"
+    | "hotel_link_clicked"
+    | "details_opened";
   createdAt: string;
   userAgent?: string;
   metadata?: Record<string, unknown>;

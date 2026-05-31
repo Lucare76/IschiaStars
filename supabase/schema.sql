@@ -104,7 +104,7 @@ create table if not exists public.quote_children (
 create table if not exists public.quote_events (
   id uuid primary key default gen_random_uuid(),
   quote_id uuid not null references public.quotes(id) on delete cascade,
-  event_type text not null check (event_type in ('quote_opened','whatsapp_clicked','confirm_clicked','quote_confirmed','print_clicked')),
+  event_type text not null check (event_type in ('quote_opened','whatsapp_clicked','confirm_clicked','quote_confirmed','print_clicked','hotel_link_clicked','details_opened')),
   user_agent text,
   ip_hash text,
   metadata jsonb not null default '{}',

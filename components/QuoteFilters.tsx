@@ -42,12 +42,12 @@ export function QuoteFilters({
       (filter === "tutti" && !isDeleted) ||
       (filter === "cancellati" && isDeleted) ||
       (filter === "esclusi" && quote.excludedFromStats && !isDeleted) ||
-      (filter === "preventivo_inviato" && !isDeleted && quote.status === filter) ||
-      (filter === "alternative" && !isDeleted && quote.isAlternative) ||
-      (filter === "confermati" && !isDeleted && (quote.status === "confermato" || stats?.confirmed)) ||
-      (filter === "aperti" && !isDeleted && Boolean(stats?.openings) && quote.status !== "confermato" && !stats?.confirmed) ||
-      (filter === "click_whatsapp" && !isDeleted && Boolean(stats?.whatsappClicks)) ||
-      (filter === "perso_non_disponibile" && !isDeleted && quote.status === filter);
+      (filter === "preventivo_inviato" && !isDeleted && !quote.excludedFromStats && quote.status === filter) ||
+      (filter === "alternative" && !isDeleted && !quote.excludedFromStats && quote.isAlternative) ||
+      (filter === "confermati" && !isDeleted && !quote.excludedFromStats && (quote.status === "confermato" || stats?.confirmed)) ||
+      (filter === "aperti" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.openings) && quote.status !== "confermato" && !stats?.confirmed) ||
+      (filter === "click_whatsapp" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.whatsappClicks)) ||
+      (filter === "perso_non_disponibile" && !isDeleted && !quote.excludedFromStats && quote.status === filter);
 
     return matchesSearch && matchesFilter;
   }), [filter, query, quotes, statsByQuote]);

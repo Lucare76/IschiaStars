@@ -88,6 +88,8 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
               mainOption={firstOpt}
               allGroupOptions={optionsWithTreatments}
               isConfirmed={isConfirmed}
+              quoteCode={quote.code}
+              token={quote.token}
               onSelectTreatment={handleSelectTreatment}
             />
           );
@@ -120,11 +122,15 @@ function HotelCard({
   mainOption,
   allGroupOptions,
   isConfirmed,
+  quoteCode,
+  token,
   onSelectTreatment
 }: {
   mainOption: QuoteHotelOption;
   allGroupOptions: QuoteHotelOption[];
   isConfirmed: boolean;
+  quoteCode: string;
+  token: string;
   onSelectTreatment: (option: QuoteHotelOption, treatment: TreatmentOption) => void;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -158,6 +164,11 @@ function HotelCard({
                 <a
                   className="no-print rounded-full bg-white px-3 py-1 text-xs font-black text-ischia-blue ring-1 ring-ischia-blue/20"
                   href={mainOption.sourceUrl}
+                  onClick={() => trackQuoteEvent({ quoteCode, token }, "hotel_link_clicked", {
+                    hotelOptionId: mainOption.id,
+                    hotelName: mainOption.hotelName,
+                    sourceUrl: mainOption.sourceUrl
+                  })}
                   rel="noopener noreferrer"
                   target="_blank"
                 >
@@ -222,7 +233,18 @@ function HotelCard({
                           <button
                             aria-expanded={isExpanded}
                             className="no-print rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/15"
-                            onClick={() => setExpanded(isExpanded ? null : detailKey)}
+                            onClick={() => {
+                              const nextExpanded = isExpanded ? null : detailKey;
+                              setExpanded(nextExpanded);
+                              if (nextExpanded) {
+                                trackQuoteEvent({ quoteCode, token }, "details_opened", {
+                                  hotelOptionId: opt.id,
+                                  hotelName: opt.hotelName,
+                                  treatmentKey: treatment.key,
+                                  treatmentLabel: treatment.label
+                                });
+                              }
+                            }}
                             type="button"
                           >
                             Cosa include
