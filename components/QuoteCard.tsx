@@ -76,12 +76,21 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
         {(() => {
           const options = getEffectiveHotelOptions(quote);
           const selectedOption = options.find((o) => o.isSelected);
+          const confirmedOption = quote.confirmation?.selectedHotelOptionId
+            ? options.find((o) => o.id === quote.confirmation?.selectedHotelOptionId)
+            : selectedOption;
           const hotelLabel = options.length > 1 ? `${options.length} strutture proposte` : (options[0]?.hotelName ?? quote.proposedHotel.name);
+          const confirmedDetails = [
+            quote.confirmation?.selectedHotelName ?? confirmedOption?.hotelName,
+            confirmedOption?.roomTypeLabel,
+            quote.confirmation?.selectedTreatmentLabel,
+            quote.confirmation?.selectedPrice != null ? formatCurrency(quote.confirmation.selectedPrice) : undefined
+          ].filter(Boolean).join(" - ");
           return (
             <>
               <Info className="col-span-2 sm:col-span-1" label="Hotel" value={hotelLabel} />
-              {selectedOption && quote.status === "confermato" && (
-                <Info className="col-span-2 sm:col-span-1" label="Scelta cliente" value={`${selectedOption.hotelName} — ${selectedOption.treatments.find(Boolean)?.label ?? "—"}`} />
+              {confirmedDetails && quote.status === "confermato" && (
+                <Info className="col-span-2 sm:col-span-1" label="Scelta confermata" value={confirmedDetails} />
               )}
             </>
           );

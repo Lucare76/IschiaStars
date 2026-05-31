@@ -58,6 +58,11 @@ export type QuoteConfirmation = {
   city: string;
   zip: string;
   province: string;
+  selectedHotelOptionId?: string;
+  selectedHotelName?: string;
+  selectedTreatmentKey?: TreatmentKey | string;
+  selectedTreatmentLabel?: string;
+  selectedPrice?: number;
 };
 
 export type TransportOffer = {

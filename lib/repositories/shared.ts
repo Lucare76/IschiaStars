@@ -44,7 +44,8 @@ export function mapQuote(
   row: Record<string, unknown>,
   allHotels: Hotel[],
   childRows: Record<string, unknown>[] = [],
-  hotelOptions: QuoteHotelOption[] = []
+  hotelOptions: QuoteHotelOption[] = [],
+  confirmationRow?: Record<string, unknown> | null
 ): Quote {
   const proposedHotel = allHotels.find((h) => h.id === (row.hotel_id ?? row.proposed_hotel_id)) ?? hotels[0];
   const alternativeHotel = allHotels.find((h) => h.id === row.alternative_hotel_id);
@@ -99,14 +100,19 @@ export function mapQuote(
     sentAt: row.sent_at ? String(row.sent_at) : undefined,
     excludedFromStats: Boolean(row.excluded_from_stats ?? false),
     deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
-    confirmation: row.confirmed_at
+    confirmation: row.confirmed_at || confirmationRow
       ? {
-          confirmedAt: String(row.confirmed_at),
-          fiscalCode: "",
-          address: "",
-          city: "",
-          zip: "",
-          province: ""
+          confirmedAt: String(confirmationRow?.created_at ?? row.confirmed_at ?? ""),
+          fiscalCode: String(confirmationRow?.fiscal_code ?? ""),
+          address: String(confirmationRow?.address ?? ""),
+          city: String(confirmationRow?.city ?? ""),
+          zip: String(confirmationRow?.postal_code ?? ""),
+          province: String(confirmationRow?.province ?? ""),
+          selectedHotelOptionId: confirmationRow?.selected_hotel_option_id ? String(confirmationRow.selected_hotel_option_id) : undefined,
+          selectedHotelName: confirmationRow?.selected_hotel_name ? String(confirmationRow.selected_hotel_name) : undefined,
+          selectedTreatmentKey: confirmationRow?.selected_treatment_key ? String(confirmationRow.selected_treatment_key) : undefined,
+          selectedTreatmentLabel: confirmationRow?.selected_treatment_label ? String(confirmationRow.selected_treatment_label) : undefined,
+          selectedPrice: confirmationRow?.selected_price != null ? Number(confirmationRow.selected_price) : undefined
         }
       : undefined,
     hotelOptions: effectiveHotelOptions

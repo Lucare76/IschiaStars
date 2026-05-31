@@ -49,9 +49,10 @@ export async function listQuotes({ includeDeleted = false }: { includeDeleted?: 
   if (error) return fallback(demoQuotes, error);
 
   const quoteIds = (data ?? []).map((row) => row.id as string);
-  const [childRowsResult, hotelOptionsMap] = await Promise.all([
+  const [childRowsResult, hotelOptionsMap, confirmationsMap] = await Promise.all([
     quoteIds.length ? supabase.from("quote_children").select("*").in("quote_id", quoteIds) : Promise.resolve({ data: [] }),
-    fetchHotelOptionsForQuotes(quoteIds)
+    fetchHotelOptionsForQuotes(quoteIds),
+    fetchConfirmationsForQuotes(quoteIds)
   ]);
 
   const allHotels = hotelResult.data.length ? hotelResult.data : hotels;
@@ -60,7 +61,7 @@ export async function listQuotes({ includeDeleted = false }: { includeDeleted?: 
   return fromSupabase(
     (data ?? []).map((row) => {
       const hotelOpts = hotelOptionsMap[row.id as string] ?? [];
-      return withDemoStatus(mapQuote(row as Record<string, unknown>, allHotels, childRows as Record<string, unknown>[], hotelOpts));
+      return withDemoStatus(mapQuote(row as Record<string, unknown>, allHotels, childRows as Record<string, unknown>[], hotelOpts, confirmationsMap[row.id as string]));
     })
   );
 }
@@ -75,14 +76,15 @@ export async function getQuoteByCodeAndToken(code: string, token?: string): Prom
 
   const hotelResult = await listHotels();
   const quoteId = (data as Record<string, unknown>).id as string;
-  const [childRowsResult, hotelOptionsMap] = await Promise.all([
+  const [childRowsResult, hotelOptionsMap, confirmationsMap] = await Promise.all([
     supabase.from("quote_children").select("*").eq("quote_id", quoteId),
-    fetchHotelOptionsForQuotes([quoteId])
+    fetchHotelOptionsForQuotes([quoteId]),
+    fetchConfirmationsForQuotes([quoteId])
   ]);
 
   const hotelOpts = hotelOptionsMap[quoteId] ?? [];
   const allHotels = hotelResult.data.length ? hotelResult.data : hotels;
-  return fromSupabase(withDemoStatus(mapQuote(data as Record<string, unknown>, allHotels, childRowsResult.data as Record<string, unknown>[] ?? [], hotelOpts)));
+  return fromSupabase(withDemoStatus(mapQuote(data as Record<string, unknown>, allHotels, childRowsResult.data as Record<string, unknown>[] ?? [], hotelOpts, confirmationsMap[quoteId])));
 }
 
 export async function getQuoteById(id: string): Promise<RepositoryResult<Quote | null>> {
@@ -95,14 +97,32 @@ export async function getQuoteById(id: string): Promise<RepositoryResult<Quote |
   if (!data) return fromSupabase(null);
 
   const hotelResult = await listHotels();
-  const [childRowsResult, hotelOptionsMap] = await Promise.all([
+  const [childRowsResult, hotelOptionsMap, confirmationsMap] = await Promise.all([
     supabase.from("quote_children").select("*").eq("quote_id", id),
-    fetchHotelOptionsForQuotes([id])
+    fetchHotelOptionsForQuotes([id]),
+    fetchConfirmationsForQuotes([id])
   ]);
 
   const hotelOpts = hotelOptionsMap[id] ?? [];
   const allHotels = hotelResult.data.length ? hotelResult.data : hotels;
-  return fromSupabase(withDemoStatus(mapQuote(data as Record<string, unknown>, allHotels, childRowsResult.data as Record<string, unknown>[] ?? [], hotelOpts)));
+  return fromSupabase(withDemoStatus(mapQuote(data as Record<string, unknown>, allHotels, childRowsResult.data as Record<string, unknown>[] ?? [], hotelOpts, confirmationsMap[id])));
+}
+
+async function fetchConfirmationsForQuotes(quoteIds: string[]): Promise<Record<string, Record<string, unknown>>> {
+  if (!quoteIds.length) return {};
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return {};
+
+  const { data } = await supabase
+    .from("quote_confirmations")
+    .select("quote_id,created_at,fiscal_code,address,city,postal_code,province,selected_hotel_option_id,selected_hotel_name,selected_treatment_key,selected_treatment_label,selected_price")
+    .in("quote_id", quoteIds);
+
+  const result: Record<string, Record<string, unknown>> = {};
+  for (const row of data ?? []) {
+    result[String(row.quote_id)] = row as Record<string, unknown>;
+  }
+  return result;
 }
 
 export async function createQuoteFromRequest(input: QuoteInput, options: { accessToken?: string } = {}): Promise<RepositoryResult<Quote | null>> {

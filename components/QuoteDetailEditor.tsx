@@ -319,7 +319,16 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
   const activeHotels = hotels.filter((h) => h.active);
 
   // Struttura selezionata dal cliente (se confermata con opzione)
-  const selectedOption = getEffectiveHotelOptions(currentQuote).find((o) => o.isSelected);
+  const effectiveOptions = getEffectiveHotelOptions(currentQuote);
+  const selectedOption = currentQuote.confirmation?.selectedHotelOptionId
+    ? effectiveOptions.find((o) => o.id === currentQuote.confirmation?.selectedHotelOptionId)
+    : effectiveOptions.find((o) => o.isSelected);
+  const confirmedSelection = [
+    currentQuote.confirmation?.selectedHotelName ?? selectedOption?.hotelName,
+    selectedOption?.roomTypeLabel,
+    currentQuote.confirmation?.selectedTreatmentLabel,
+    currentQuote.confirmation?.selectedPrice != null ? formatCurrency(currentQuote.confirmation.selectedPrice) : undefined
+  ].filter(Boolean).join(" - ");
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_0.36fr]">
@@ -341,9 +350,9 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
         </Section>
 
         <Section title="Proposte hotel">
-          {selectedOption && (
+          {confirmedSelection && (
             <div className="rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
-              Scelta cliente: <strong>{selectedOption.hotelName}</strong> — {selectedOption.treatments.find((t) => t.key === selectedOption.treatments[0].key)?.label ?? "—"} — {selectedOption.isSelected ? "confermata" : ""}
+              Scelta confermata: <strong>{confirmedSelection}</strong>
             </div>
           )}
           <p className="text-sm text-ischia-ink/65">Inserisci fino a 3 strutture. Lascia vuoto il prezzo di un trattamento per non mostrarlo.</p>
