@@ -80,6 +80,22 @@ export async function createQuoteRequest(input: QuoteRequestInput): Promise<Repo
   return getQuoteRequestById(data.id);
 }
 
+/** Returns true if a quote_request with same email+checkIn was created in the last 7 days. Used to prevent duplicate imports from Gmail. */
+export async function isDuplicateQuoteRequest(email: string, checkIn: string): Promise<boolean> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase || !email || !checkIn) return false;
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from("quote_requests")
+    .select("id")
+    .eq("email", email)
+    .eq("check_in", checkIn)
+    .gte("created_at", since)
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 export async function updateQuoteRequestStatus(id: string, status: QuoteStatus, options: { accessToken?: string } = {}): Promise<RepositoryResult<QuoteRequest | null>> {
   const supabase = createSupabaseAuthenticatedClient(options.accessToken) ?? createSupabaseAdminClient();
   if (!supabase) return fallback(updateDemoQuoteRequestStatus(id, status));

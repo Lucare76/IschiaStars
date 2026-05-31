@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { createQuoteRequest } from '@/lib/repositories/quoteRequests';
+import { createQuoteRequest, isDuplicateQuoteRequest } from '@/lib/repositories/quoteRequests';
 
 const GMAIL_ACCOUNT = 'ischiastarspreventivi@gmail.com';
 
@@ -162,6 +162,16 @@ export async function pollGmail(): Promise<PollGmailResult> {
         console.info(`[email-import] message accepted to/cc match subject="${subject}" msgId=${message.id}`);
 
         const input = parseEmailText(emailText);
+
+        // Prevent duplicate imports: skip if same email+checkIn already exists within 7 days
+        const duplicate = await isDuplicateQuoteRequest(input.email, input.checkIn);
+        if (duplicate) {
+          console.info(`[email-import] skipped duplicate msgId=${message.id}`);
+          result.skipped++;
+          await markRead(message.id!);
+          continue;
+        }
+
         const createResult = await createQuoteRequest(input);
 
         if (createResult.data) {
