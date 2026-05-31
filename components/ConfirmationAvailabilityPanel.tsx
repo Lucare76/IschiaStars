@@ -26,6 +26,9 @@ export function ConfirmationAvailabilityPanel({ quote }: { quote: Quote }) {
   const paymentSnapshot = confirmation?.paymentSettingsSnapshot ?? {};
   const paymentReason = typeof paymentSnapshot.payment_reason === "string" ? paymentSnapshot.payment_reason : "";
   const hasCoordinates = paymentSnapshot.configured === true;
+  const confirmationChildren = getConfirmationChildren(confirmation?.metadata, quote.children);
+  const confirmationName = `${confirmation?.firstName ?? quote.customerFirstName} ${confirmation?.lastName ?? quote.customerLastName}`.trim();
+  const addressLine = [confirmation?.address, confirmation?.zip, confirmation?.city, confirmation?.province].filter(Boolean).join(" ");
 
   const depositDueIso = useMemo(() => {
     const parsed = new Date(depositDueAt);
@@ -67,12 +70,38 @@ export function ConfirmationAvailabilityPanel({ quote }: { quote: Quote }) {
       {message ? <p className="mt-3 rounded-xl bg-ischia-mist p-3 text-sm font-bold text-ischia-navy">{message}</p> : null}
 
       <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        <Info label="Nome cliente" value={confirmationName || "-"} />
+        <Info label="Telefono" value={confirmation.phone ?? quote.customerPhone ?? "-"} />
+        <Info label="Email" value={confirmation.email ?? quote.customerEmail ?? "-"} />
+        <Info label="Codice fiscale" value={confirmation.fiscalCode || "-"} />
+        <Info label="Indirizzo" value={addressLine || "-"} />
+        <Info label="Bambini / età" value={confirmationChildren} />
         <Info label="Hotel scelto" value={confirmation.selectedHotelName ?? quote.proposedHotel.name} />
         <Info label="Trattamento" value={confirmation.selectedTreatmentLabel ?? (quote.treatment || "-")} />
         <Info label="Prezzo" value={selectedPrice > 0 ? formatCurrency(selectedPrice) : "-"} />
         <Info label="Caparra" value={depositAmount != null ? `${confirmation.selectedDepositPercent ?? 0}% = ${formatCurrency(depositAmount)}` : "-"} />
         <Info label="Saldo" value={balanceAmount != null ? formatCurrency(balanceAmount) : "-"} />
+        <Info label="Coordinate" value={hasCoordinates ? "Snapshot pagamento salvato" : "Non configurate"} />
+        <Info label="Causale" value={paymentReason || "-"} />
+        <Info label="Policy cancellazione" value={confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy ?? "-"} />
+        <Info label="Confermata il" value={formatDate(confirmation.confirmedAt)} />
         <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
+      </div>
+
+      <div className="mt-4 rounded-2xl bg-ischia-mist p-4 text-sm text-ischia-ink">
+        <h3 className="font-black text-ischia-navy">Coordinate / snapshot pagamento</h3>
+        {hasCoordinates ? (
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <Info label="Intestatario" value={String(paymentSnapshot.bank_account_holder ?? "-")} />
+            <Info label="Banca" value={String(paymentSnapshot.bank_name ?? "-")} />
+            <Info label="IBAN" value={String(paymentSnapshot.iban ?? "-")} />
+            <Info label="BIC/SWIFT" value={String(paymentSnapshot.bic_swift ?? "-")} />
+            <Info label="Causale" value={paymentReason || "-"} />
+            <Info label="Aggiornato" value={String(paymentSnapshot.updated_at ?? "-")} />
+          </div>
+        ) : (
+          <p className="mt-2 font-semibold text-amber-800">Coordinate pagamento non configurate nello snapshot della conferma.</p>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -162,4 +191,18 @@ function Info({ label, value }: { label: string; value: string }) {
       <p className="mt-1 font-semibold text-ischia-ink">{value}</p>
     </div>
   );
+}
+
+function getConfirmationChildren(metadata: Record<string, unknown> | undefined, fallbackChildren: { birthDate?: string }[]) {
+  const metadataChildren = Array.isArray(metadata?.children) ? metadata.children : [];
+  const children = metadataChildren.length ? metadataChildren : fallbackChildren;
+  const labels = children
+    .map((child, index) => {
+      if (!child || typeof child !== "object") return null;
+      const birthDate = "birthDate" in child && typeof child.birthDate === "string" ? child.birthDate : "";
+      if (!birthDate) return null;
+      return `Bambino ${index + 1}: ${birthDate}`;
+    })
+    .filter(Boolean);
+  return labels.length ? labels.join(" · ") : "-";
 }

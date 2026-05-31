@@ -47,9 +47,13 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
                 </span>
               </div>
               <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                <Info label="Telefono" value={confirmation.phone ?? quote.customerPhone ?? "-"} />
+                <Info label="Email" value={confirmation.email ?? quote.customerEmail ?? "-"} />
                 <Info label="Hotel scelto" value={confirmation.selectedHotelName ?? quote.proposedHotel.name} />
                 <Info label="Trattamento" value={confirmation.selectedTreatmentLabel ?? (quote.treatment || "-")} />
                 <Info label="Prezzo" value={confirmation.selectedPrice != null ? formatCurrency(confirmation.selectedPrice) : "vedi preventivo"} />
+                <Info label="Caparra" value={confirmation.selectedDepositAmount != null ? formatCurrency(confirmation.selectedDepositAmount) : "-"} />
+                <Info label="Confermata il" value={formatDate(confirmation.confirmedAt)} />
                 <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
               </div>
               <div className="mt-4 flex flex-wrap gap-2">

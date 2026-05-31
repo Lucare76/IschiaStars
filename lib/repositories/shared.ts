@@ -107,11 +107,17 @@ export function mapQuote(
       ? {
           id: confirmationRow?.id ? String(confirmationRow.id) : undefined,
           confirmedAt: String(confirmationRow?.created_at ?? row.confirmed_at ?? ""),
+          firstName: confirmationRow?.first_name ? String(confirmationRow.first_name) : undefined,
+          lastName: confirmationRow?.last_name ? String(confirmationRow.last_name) : undefined,
+          phone: confirmationRow?.phone ? String(confirmationRow.phone) : undefined,
+          email: confirmationRow?.email ? String(confirmationRow.email) : undefined,
           fiscalCode: String(confirmationRow?.fiscal_code ?? ""),
           address: String(confirmationRow?.address ?? ""),
           city: String(confirmationRow?.city ?? ""),
           zip: String(confirmationRow?.postal_code ?? ""),
           province: String(confirmationRow?.province ?? ""),
+          acceptedTerms: confirmationRow?.accepted_terms != null ? Boolean(confirmationRow.accepted_terms) : undefined,
+          acceptedPrivacy: confirmationRow?.accepted_privacy != null ? Boolean(confirmationRow.accepted_privacy) : undefined,
           selectedHotelOptionId: confirmationRow?.selected_hotel_option_id ? String(confirmationRow.selected_hotel_option_id) : undefined,
           selectedHotelName: confirmationRow?.selected_hotel_name ? String(confirmationRow.selected_hotel_name) : undefined,
           selectedTreatmentKey: confirmationRow?.selected_treatment_key ? String(confirmationRow.selected_treatment_key) : undefined,
@@ -125,6 +131,9 @@ export function mapQuote(
           selectedCancellationPolicy: confirmationRow?.selected_cancellation_policy ? String(confirmationRow.selected_cancellation_policy) : undefined,
           paymentSettingsSnapshot: typeof confirmationRow?.payment_settings_snapshot === "object" && confirmationRow.payment_settings_snapshot
             ? confirmationRow.payment_settings_snapshot as Record<string, unknown>
+            : undefined,
+          metadata: typeof confirmationRow?.metadata === "object" && confirmationRow.metadata
+            ? confirmationRow.metadata as Record<string, unknown>
             : undefined,
           availabilityStatus: confirmationRow?.availability_status ? String(confirmationRow.availability_status) as any : undefined,
           depositDueAt: confirmationRow?.deposit_due_at ? String(confirmationRow.deposit_due_at) : undefined,

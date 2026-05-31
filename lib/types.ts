@@ -71,11 +71,17 @@ export type QuoteEvent = {
 export type QuoteConfirmation = {
   id?: string;
   confirmedAt: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
   fiscalCode: string;
   address: string;
   city: string;
   zip: string;
   province: string;
+  acceptedTerms?: boolean;
+  acceptedPrivacy?: boolean;
   selectedHotelOptionId?: string;
   selectedHotelName?: string;
   selectedTreatmentKey?: TreatmentKey | string;
@@ -88,6 +94,7 @@ export type QuoteConfirmation = {
   selectedPaymentPolicy?: string;
   selectedCancellationPolicy?: string;
   paymentSettingsSnapshot?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   availabilityStatus?: ConfirmationAvailabilityStatus;
   depositDueAt?: string;
   finalConfirmationSentAt?: string;

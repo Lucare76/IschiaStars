@@ -25,6 +25,7 @@ export async function GET(request: Request) {
     ok: result.errors.length === 0,
     imported: result.imported,
     skipped: result.skipped,
-    errors: result.errors
+    errors: result.errors,
+    details: result.details
   });
 }

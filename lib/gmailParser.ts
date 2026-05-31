@@ -1,7 +1,9 @@
 import { google } from 'googleapis';
-import { createQuoteRequest, isDuplicateQuoteRequest } from '@/lib/repositories/quoteRequests';
+import { createQuoteRequest } from '@/lib/repositories/quoteRequests';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 const GMAIL_ACCOUNT = process.env.GMAIL_EMAIL || 'ischiastarspreventivi@gmail.com';
+const ACCEPTED_RECIPIENTS = buildAcceptedRecipients();
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GMAIL_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID,
@@ -19,6 +21,7 @@ export type PollGmailResult = {
   imported: number;
   skipped: number;
   errors: string[];
+  details: string[];
 };
 
 function decodeBody(data: string) {
@@ -61,16 +64,36 @@ function getHeader(headers: Array<{ name: string; value: string }>, name: string
   return headers?.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ?? '';
 }
 
+function buildAcceptedRecipients(): string[] {
+  const configured = (process.env.GMAIL_ACCEPTED_RECIPIENTS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return Array.from(new Set([
+    GMAIL_ACCOUNT,
+    process.env.BREVO_FROM_EMAIL,
+    "info@ischiastars.it",
+    ...configured
+  ].filter(Boolean).map((value) => value!.toLowerCase())));
+}
+
 function isAddressedToAccount(headers: Array<{ name: string; value: string }>): boolean {
   const to = getHeader(headers, 'To');
   const cc = getHeader(headers, 'Cc');
   const combined = `${to} ${cc}`.toLowerCase();
-  return combined.includes(GMAIL_ACCOUNT.toLowerCase());
+  return ACCEPTED_RECIPIENTS.some((recipient) => combined.includes(recipient));
 }
 
-function parseEmailText(text: string) {
+function buildGmailQuery(): string {
+  const recipientQuery = ACCEPTED_RECIPIENTS
+    .flatMap((recipient) => [`to:${recipient}`, `cc:${recipient}`])
+    .join(' OR ');
+  return `newer_than:14d (${recipientQuery})`;
+}
+
+function parseEmailText(text: string, metadata: Record<string, unknown>) {
   const get = (field: string) => {
-    const match = text.match(new RegExp(`${field}:\\s*(.+)`));
+    const match = text.match(new RegExp(`${field}:\\s*([^\\n\\r]+)`, 'i'));
     return match ? match[1].trim() : null;
   };
 
@@ -109,26 +132,27 @@ function parseEmailText(text: string) {
       utm_campaign: utmCampaign,
       source_url: pageUrl,
       orario_chiamata: get('Orario di preferenza chiamata'),
-      fonte: 'email_automatica'
+      fonte: 'email_automatica',
+      ...metadata
     }
   };
 }
 
 export async function pollGmail(): Promise<PollGmailResult> {
-  const result: PollGmailResult = { imported: 0, skipped: 0, errors: [] };
+  const result: PollGmailResult = { imported: 0, skipped: 0, errors: [], details: [] };
 
   console.info('[email-import] gmail connected');
 
   try {
-    // Include both TO and CC emails addressed to the account
+    const query = buildGmailQuery();
     const res = await gmail.users.messages.list({
       userId: 'me',
-      q: `is:unread (to:${GMAIL_ACCOUNT} OR cc:${GMAIL_ACCOUNT})`,
-      maxResults: 20
+      q: query,
+      maxResults: 50
     });
 
     const messages = res.data.messages ?? [];
-    console.info(`[email-import] messages found count=${messages.length}`);
+    console.info(`[email-import] messages found count=${messages.length} query="${query}"`);
 
     for (const message of messages) {
       try {
@@ -140,34 +164,79 @@ export async function pollGmail(): Promise<PollGmailResult> {
 
         const headers: Array<{ name: string; value: string }> = msg.data.payload?.headers as any ?? [];
         const subject = getHeader(headers, 'Subject');
+        const date = getHeader(headers, 'Date');
+        const rfcMessageId = getHeader(headers, 'Message-ID');
+        console.info(`[email-import] candidate date=${date || "-"} subject="${subject}" msgId=${message.id}`);
 
         // Verify the account is in To or Cc (belt-and-suspenders beyond the query)
         if (!isAddressedToAccount(headers)) {
-          console.info(`[email-import] skipped not addressed to account msgId=${message.id}`);
+          const detail = `msg ${message.id}: skipped not_addressed`;
+          console.info(`[email-import] skipped not_addressed msgId=${message.id}`);
           result.skipped++;
-          await markRead(message.id!);
+          result.details.push(detail);
           continue;
         }
+
+        console.info(`[email-import] accepted to/cc match msgId=${message.id}`);
 
         const emailText = extractEmailText(msg.data.payload);
 
         // Must contain form markers to be a quote request
         if (!emailText || !emailText.includes('Data di arrivo') || !emailText.includes('Hotel')) {
-          console.info(`[email-import] skipped not a form submission subject="${subject}" msgId=${message.id}`);
+          const detail = `msg ${message.id}: skipped parse_failed reason=missing_form_markers`;
+          console.info(`[email-import] skipped parse_failed reason=missing_form_markers subject="${subject}" msgId=${message.id}`);
+          await saveInboundNeedsReview({
+            gmailMessageId: message.id!,
+            rfcMessageId,
+            subject,
+            date,
+            reason: 'missing_form_markers',
+            headers,
+            body: emailText
+          });
           result.skipped++;
-          await markRead(message.id!);
+          result.details.push(detail);
           continue;
         }
 
-        console.info(`[email-import] message accepted to/cc match subject="${subject}" msgId=${message.id}`);
+        const input = parseEmailText(emailText, {
+          gmail_message_id: message.id,
+          gmail_rfc_message_id: rfcMessageId,
+          email_subject: subject,
+          email_date: date
+        });
 
-        const input = parseEmailText(emailText);
-
-        // Prevent duplicate imports: skip if same email+checkIn already exists within 7 days
-        const duplicate = await isDuplicateQuoteRequest(input.email, input.checkIn);
-        if (duplicate) {
-          console.info(`[email-import] skipped duplicate msgId=${message.id}`);
+        if (!input.firstName || !input.lastName || !input.email || !input.phone || !input.checkIn || !input.checkOut) {
+          const missingFields = [
+            !input.firstName ? "firstName" : null,
+            !input.lastName ? "lastName" : null,
+            !input.email ? "email" : null,
+            !input.phone ? "phone" : null,
+            !input.checkIn ? "checkIn" : null,
+            !input.checkOut ? "checkOut" : null
+          ].filter(Boolean).join(",");
+          const detail = `msg ${message.id}: skipped parse_failed reason=missing_fields fields=${missingFields}`;
+          console.info(`[email-import] skipped parse_failed reason=missing_fields fields=${missingFields} msgId=${message.id}`);
+          await saveInboundNeedsReview({
+            gmailMessageId: message.id!,
+            rfcMessageId,
+            subject,
+            date,
+            reason: `missing_fields:${missingFields}`,
+            headers,
+            body: emailText
+          });
           result.skipped++;
+          result.details.push(detail);
+          continue;
+        }
+
+        const duplicate = await isDuplicateGmailMessage(message.id!, rfcMessageId);
+        if (duplicate) {
+          const detail = `msg ${message.id}: skipped duplicate reason=gmail_message_id`;
+          console.info(`[email-import] skipped duplicate reason=gmail_message_id msgId=${message.id}`);
+          result.skipped++;
+          result.details.push(detail);
           await markRead(message.id!);
           continue;
         }
@@ -197,6 +266,59 @@ export async function pollGmail(): Promise<PollGmailResult> {
   }
 
   return result;
+}
+
+async function saveInboundNeedsReview(input: {
+  gmailMessageId: string;
+  rfcMessageId: string;
+  subject: string;
+  date: string;
+  reason: string;
+  headers: Array<{ name: string; value: string }>;
+  body: string;
+}) {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return;
+  const { error } = await supabase
+    .from("inbound_emails")
+    .upsert({
+      gmail_message_id: input.gmailMessageId,
+      rfc_message_id: input.rfcMessageId || null,
+      subject: input.subject || null,
+      received_at: input.date ? new Date(input.date).toISOString() : null,
+      status: "needs_review",
+      skipped_reason: input.reason,
+      headers: input.headers,
+      body_text: input.body
+    }, { onConflict: "gmail_message_id" });
+  if (error) console.warn(`[email-import] inbound needs_review save failed reason=${error.message}`);
+}
+
+async function isDuplicateGmailMessage(gmailMessageId: string, rfcMessageId: string): Promise<boolean> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return false;
+  const byGmailId = await supabase
+    .from("quote_requests")
+    .select("id")
+    .contains("metadata", { gmail_message_id: gmailMessageId })
+    .limit(1);
+  if (byGmailId.error) {
+    console.warn(`[email-import] duplicate check failed reason=${byGmailId.error.message}`);
+    return false;
+  }
+  if (byGmailId.data?.length) return true;
+  if (!rfcMessageId) return false;
+
+  const byRfcId = await supabase
+    .from("quote_requests")
+    .select("id")
+    .contains("metadata", { gmail_rfc_message_id: rfcMessageId })
+    .limit(1);
+  if (byRfcId.error) {
+    console.warn(`[email-import] duplicate check failed reason=${byRfcId.error.message}`);
+    return false;
+  }
+  return Boolean(byRfcId.data?.length);
 }
 
 async function markRead(messageId: string) {

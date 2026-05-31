@@ -36,6 +36,12 @@ export type BrevoConfirmationDetails = {
   paymentSettingsSnapshot?: Record<string, unknown>;
 };
 
+type BrevoSendResult = {
+  ok: boolean;
+  status?: number;
+  error?: string;
+};
+
 export function isBrevoEnabled(): boolean {
   return process.env.BREVO_ENABLED === "true";
 }
@@ -46,14 +52,14 @@ function brevoMissingEnvReason() {
   return null;
 }
 
-export async function sendBrevoEmail(params: SendBrevoEmailParams): Promise<boolean> {
+async function sendBrevoEmailWithResult(params: SendBrevoEmailParams): Promise<BrevoSendResult> {
   const apiKey = process.env.BREVO_API_KEY;
   const fromEmail = process.env.BREVO_FROM_EMAIL;
   const fromName = process.env.BREVO_FROM_NAME || "IschiaStars";
 
   if (!apiKey || !fromEmail) {
     console.error("[brevo] missing API key or sender email — check BREVO_API_KEY and BREVO_FROM_EMAIL");
-    return false;
+    return { ok: false, error: "missing_env" };
   }
 
   const payload = {
@@ -77,15 +83,20 @@ export async function sendBrevoEmail(params: SendBrevoEmailParams): Promise<bool
       body: JSON.stringify(payload)
     });
 
-    if (response.ok) return true;
+    if (response.ok) return { ok: true, status: response.status };
 
     const body = await response.text().catch(() => "(unreadable)");
     console.error(`[brevo] API error status=${response.status} message=${body.slice(0, 300)}`);
-    return false;
+    return { ok: false, status: response.status, error: body.slice(0, 300) };
   } catch (err) {
-    console.error("[brevo] fetch error:", err instanceof Error ? err.message : String(err));
-    return false;
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[brevo] fetch error:", message);
+    return { ok: false, error: message };
   }
+}
+
+export async function sendBrevoEmail(params: SendBrevoEmailParams): Promise<boolean> {
+  return (await sendBrevoEmailWithResult(params)).ok;
 }
 
 function formatDate(iso: string): string {
@@ -98,6 +109,13 @@ function formatDate(iso: string): string {
 
 function formatPrice(amount: number): string {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(amount);
+}
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return "invalid";
+  const visible = local.slice(0, 2);
+  return `${visible}${"*".repeat(Math.max(1, local.length - visible.length))}@${domain}`;
 }
 
 export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
@@ -259,7 +277,8 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
     ? `Le tue proposte IschiaStars ${quote.code}`
     : `La tua proposta IschiaStars ${quote.code}`;
 
-  const ok = await sendBrevoEmail({
+  console.info(`[brevo] sending quote email code=${quote.code} to=${maskEmail(email)}`);
+  const sendResult = await sendBrevoEmailWithResult({
     to: [{ email, name: clientName }],
     subject,
     html,
@@ -267,10 +286,10 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
     replyTo: { email: replyEmail, name: replyName }
   });
 
-  if (ok) {
+  if (sendResult.ok) {
     console.info(`[brevo] sent quote email code=${quote.code}`);
   } else {
-    console.warn(`[brevo] failed quote email code=${quote.code}`);
+    console.warn(`[brevo] failed quote email code=${quote.code} status=${sendResult.status ?? "fetch_error"}`);
   }
 }
 
