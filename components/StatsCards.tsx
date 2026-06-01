@@ -5,11 +5,11 @@ import { dashboardStats } from "@/lib/utils";
 export function StatsCards({ stats: providedStats }: { stats?: DashboardStats }) {
   const stats = providedStats ?? dashboardStats();
   const cards = [
-    { label: "Preventivi creati", value: stats.createdQuotes, href: "/admin/preventivi?filter=attivi" },
-    { label: "Aperti", value: stats.openedQuotes, href: "/admin/preventivi?filter=aperti" },
+    { label: "Da evadere", value: stats.pendingRequests, href: "/admin/preventivi-da-evadere" },
+    { label: "Evasi", value: stats.sentQuotes, href: "/admin/preventivi?filter=evasi" },
     { label: "Confermati", value: stats.confirmedQuotes, href: "/admin/preventivi?filter=confermati" },
+    { label: "Aperti", value: stats.openedQuotes, href: "/admin/preventivi?filter=aperti" },
     { label: "Click WhatsApp", value: stats.whatsappClicks, href: "/admin/preventivi?filter=click_whatsapp" },
-    { label: "Conversione", value: `${stats.conversionRate ?? 0}%`, href: "/admin/preventivi?filter=confermati" }
   ];
 
   return (

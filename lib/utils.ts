@@ -83,13 +83,14 @@ export function dashboardStats() {
   const quoteRequests = allDemoQuoteRequests();
   const events = allQuoteEvents();
   const localConfirmedIds = new Set(events.filter((event) => event.eventType === "quote_confirmed").map((event) => event.quoteId));
-  const sent = quotes.filter((quote) => quote.status === "preventivo_inviato").length;
   const confirmed = quotes.filter((quote) => quote.status === "confermato" || Boolean(quote.confirmation) || localConfirmedIds.has(quote.id));
+  const confirmedIds = new Set(confirmed.map((quote) => quote.id));
+  const evaded = quotes.filter((quote) => !confirmedIds.has(quote.id) && quote.status !== "perso_non_disponibile");
   const openedQuoteIds = new Set(events.filter((event) => event.eventType === "quote_opened").map((event) => event.quoteId));
   return {
     createdQuotes: quotes.length,
     pendingRequests: quoteRequests.filter((request) => request.status === "da_evadere").length,
-    sentQuotes: sent,
+    sentQuotes: evaded.length,
     openedQuotes: openedQuoteIds.size,
     confirmedQuotes: confirmed.length,
     lostQuotes: quotes.filter((quote) => quote.status === "perso_non_disponibile").length,

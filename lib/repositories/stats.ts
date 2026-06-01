@@ -34,11 +34,13 @@ export async function getDashboardStats(): Promise<RepositoryResult<DashboardSta
   const activeWhatsappClicks = events.whatsappClickQuoteIds.filter((id) => activeIds.has(id)).length;
 
   const confirmed = activeQuotes.filter((quote) => quote.status === "confermato" || Boolean(quote.confirmation) || activeConfirmedIds.has(quote.id));
+  const confirmedIds = new Set(confirmed.map((quote) => quote.id));
+  const evaded = activeQuotes.filter((quote) => !confirmedIds.has(quote.id) && quote.status !== "perso_non_disponibile");
 
   const stats = {
     createdQuotes: activeQuotes.length,
     pendingRequests: requestsResult.data.filter((request) => request.status === "da_evadere").length,
-    sentQuotes: activeQuotes.filter((quote) => quote.status === "preventivo_inviato").length,
+    sentQuotes: evaded.length,
     openedQuotes: activeOpenedIds.size,
     confirmedQuotes: confirmed.length,
     lostQuotes: activeQuotes.filter((quote) => quote.status === "perso_non_disponibile").length,

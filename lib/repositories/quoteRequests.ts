@@ -36,7 +36,19 @@ export async function listQuoteRequests(status?: QuoteStatus): Promise<Repositor
 }
 
 export async function listPendingQuoteRequests() {
-  return listQuoteRequests("da_evadere");
+  const demoRequests = allDemoQuoteRequests().filter((request) => request.status === "da_evadere");
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(demoRequests);
+
+  const { data, error } = await supabase
+    .from("quote_requests")
+    .select("*, quote_request_children(*)")
+    .is("deleted_at", null)
+    .in("status", ["da_evadere", "pending"])
+    .order("created_at", { ascending: false });
+  if (error) return fallback(demoRequests, error);
+
+  return fromSupabase((data ?? []).map(mapQuoteRequest).filter((request) => !request.processedAt && !request.processedQuoteId));
 }
 
 export async function getQuoteRequestById(id: string): Promise<RepositoryResult<QuoteRequest | null>> {
@@ -177,6 +189,31 @@ export async function updateQuoteRequestStatus(id: string, status: QuoteStatus, 
   return getQuoteRequestById(id);
 }
 
+export async function markQuoteRequestProcessed(id: string, quoteId: string, options: { accessToken?: string } = {}): Promise<RepositoryResult<QuoteRequest | null>> {
+  const supabase = createSupabaseAuthenticatedClient(options.accessToken) ?? createSupabaseAdminClient();
+  if (!supabase) return fallback(updateDemoQuoteRequestStatus(id, "preventivo_inviato"));
+
+  const now = new Date().toISOString();
+  const processedUpdate = {
+    status: "preventivo_inviato",
+    processed_at: now,
+    processed_quote_id: quoteId,
+    updated_at: now
+  };
+
+  const { error } = await supabase.from("quote_requests").update(processedUpdate).eq("id", id);
+  if (error && isMissingProcessedColumnError(error)) {
+    const fallbackUpdate = await supabase
+      .from("quote_requests")
+      .update({ status: "preventivo_inviato", updated_at: now })
+      .eq("id", id);
+    if (fallbackUpdate.error) return fallback(null, fallbackUpdate.error);
+    return getQuoteRequestById(id);
+  }
+  if (error) return fallback(null, error);
+  return getQuoteRequestById(id);
+}
+
 function mapQuoteRequest(row: Record<string, any>): QuoteRequest {
   const childRows = Array.isArray(row.quote_request_children) ? row.quote_request_children : [];
   const children: ChildGuest[] = childRows.map((child: Record<string, any>, index: number) => ({
@@ -203,6 +240,12 @@ function mapQuoteRequest(row: Record<string, any>): QuoteRequest {
     receivedAt: row.received_at ?? row.created_at,
     importedAt: row.created_at,
     status: normalizeStatus(row.status),
-    requestedHotel: typeof row.metadata?.requested_hotel === "string" ? row.metadata.requested_hotel : undefined
+    requestedHotel: typeof row.metadata?.requested_hotel === "string" ? row.metadata.requested_hotel : undefined,
+    processedAt: row.processed_at ? String(row.processed_at) : undefined,
+    processedQuoteId: row.processed_quote_id ? String(row.processed_quote_id) : undefined
   };
+}
+
+function isMissingProcessedColumnError(error: { message?: string; code?: string }) {
+  return error.code === "PGRST204" || Boolean(error.message?.includes("processed_at") || error.message?.includes("processed_quote_id"));
 }

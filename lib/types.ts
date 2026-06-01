@@ -45,6 +45,8 @@ export type QuoteRequest = {
   importedAt?: string;
   status: QuoteStatus;
   requestedHotel?: string;
+  processedAt?: string;
+  processedQuoteId?: string;
 };
 
 export type QuoteEvent = {

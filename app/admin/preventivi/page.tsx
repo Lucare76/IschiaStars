@@ -7,6 +7,7 @@ import { listQuotes } from "@/lib/repositories/quotes";
 export const dynamic = "force-dynamic";
 
 const quoteFilters = [
+  "evasi",
   "attivi",
   "tutti",
   "cancellati",
@@ -23,7 +24,7 @@ type QuoteFilter = (typeof quoteFilters)[number];
 
 function getInitialFilter(filter: string | string[] | undefined): QuoteFilter {
   const value = Array.isArray(filter) ? filter[0] : filter;
-  return quoteFilters.includes(value as QuoteFilter) ? (value as QuoteFilter) : "attivi";
+  return quoteFilters.includes(value as QuoteFilter) ? (value as QuoteFilter) : "evasi";
 }
 
 export default async function QuotesPage({ searchParams }: { searchParams?: { filter?: string | string[] } }) {
@@ -40,9 +41,9 @@ export default async function QuotesPage({ searchParams }: { searchParams?: { fi
   );
 
   return (
-    <AdminShell title="Tutti i preventivi" subtitle="Il link cliente puo essere aperto o inviato manualmente su WhatsApp senza integrazioni esterne.">
+    <AdminShell title="Preventivi evasi" subtitle="Preventivi gia elaborati, non cancellati e non ancora confermati dal cliente.">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-ischia-ink/70">Crea preventivi manuali, filtra per stato e invia il link cliente su WhatsApp.</p>
+        <p className="text-sm font-semibold text-ischia-ink/70">Crea preventivi manuali, cerca per codice o cliente e invia il link cliente su WhatsApp.</p>
         <Link className="rounded-full bg-ischia-sun px-5 py-3 text-sm font-black text-ischia-navy shadow-sm" href="/admin/preventivi/nuovo">
           Nuovo preventivo
         </Link>

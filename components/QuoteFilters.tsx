@@ -6,6 +6,7 @@ import { QuoteCard, QuoteCardActions, QuoteStats } from "@/components/QuoteCard"
 import { Quote } from "@/lib/types";
 
 type QuoteFilter =
+  | "evasi"
   | "attivi"
   | "tutti"
   | "cancellati"
@@ -20,7 +21,7 @@ type QuoteFilter =
 export function QuoteFilters({
   quotes: initialQuotes,
   statsByQuote,
-  initialFilter = "attivi"
+  initialFilter = "evasi"
 }: {
   quotes: Quote[];
   statsByQuote: Record<string, QuoteStats>;
@@ -33,24 +34,46 @@ export function QuoteFilters({
 
   const filtered = useMemo(() => quotes.filter((quote) => {
     const stats = statsByQuote[quote.id];
-    const haystack = `${quote.customerFirstName} ${quote.customerLastName} ${quote.code} ${quote.proposedHotel.name}`.toLowerCase();
-    const matchesSearch = haystack.includes(query.toLowerCase());
+    const isConfirmed = quote.status === "confermato" || Boolean(quote.confirmation) || Boolean(stats?.confirmed);
+    const haystack = [
+      quote.code,
+      quote.customerFirstName,
+      quote.customerLastName,
+      quote.customerEmail,
+      quote.customerPhone,
+      quote.requestedHotel,
+      quote.proposedHotel.name,
+      quote.alternativeHotel?.name,
+      quote.treatment,
+      ...quote.hotelOptions.flatMap((option) => [
+        option.hotelName,
+        option.hotelLocation,
+        option.breakfastLabel,
+        option.halfBoardLabel,
+        option.fullBoardLabel,
+        option.treatments.map((treatment) => treatment.label).join(" ")
+      ])
+    ].filter(Boolean).join(" ").toLowerCase();
+    const normalizedQuery = query.trim().toLowerCase();
+    const matchesSearch = !normalizedQuery || haystack.includes(normalizedQuery);
     const isDeleted = Boolean(quote.deletedAt);
 
     const matchesFilter =
-      (filter === "attivi" && !isDeleted && !quote.excludedFromStats) ||
+      ((filter === "evasi" || filter === "attivi") && !isDeleted && !quote.excludedFromStats && !isConfirmed && quote.status !== "perso_non_disponibile") ||
       (filter === "tutti" && !isDeleted) ||
       (filter === "cancellati" && isDeleted) ||
       (filter === "esclusi" && quote.excludedFromStats && !isDeleted) ||
       (filter === "preventivo_inviato" && !isDeleted && !quote.excludedFromStats && quote.status === filter) ||
       (filter === "alternative" && !isDeleted && !quote.excludedFromStats && quote.isAlternative) ||
-      (filter === "confermati" && !isDeleted && !quote.excludedFromStats && (quote.status === "confermato" || Boolean(quote.confirmation) || stats?.confirmed)) ||
-      (filter === "aperti" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.openings) && quote.status !== "confermato" && !stats?.confirmed) ||
+      (filter === "confermati" && !isDeleted && !quote.excludedFromStats && isConfirmed) ||
+      (filter === "aperti" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.openings) && !isConfirmed) ||
       (filter === "click_whatsapp" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.whatsappClicks)) ||
       (filter === "perso_non_disponibile" && !isDeleted && !quote.excludedFromStats && quote.status === filter);
 
     return matchesSearch && matchesFilter;
   }), [filter, query, quotes, statsByQuote]);
+
+  const exactCodeSearch = /^is-\d{4}-\d+$/i.test(query.trim()) ? query.trim().toUpperCase() : null;
 
   async function handleExcludeToggle(quote: Quote) {
     const next = !quote.excludedFromStats;
@@ -121,7 +144,7 @@ export function QuoteFilters({
         <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
           <input
             className="w-full rounded-xl border border-ischia-blue/20 px-4 py-3 text-sm"
-            placeholder="Cerca cliente, codice o hotel"
+            placeholder="Cerca per cliente, email, telefono, codice o hotel..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -130,7 +153,7 @@ export function QuoteFilters({
             value={filter}
             onChange={(event) => setFilter(event.target.value as QuoteFilter)}
           >
-            <option value="attivi">Attivi</option>
+            <option value="evasi">Evasi</option>
             <option value="tutti">Tutti (non cancellati)</option>
             <option value="preventivo_inviato">Inviati</option>
             <option value="alternative">Alternative</option>
@@ -150,7 +173,7 @@ export function QuoteFilters({
           ))
         : (
             <div className="rounded-2xl bg-white/90 p-6 text-sm font-semibold text-ischia-ink/65 shadow-soft">
-              Nessun preventivo corrisponde ai filtri selezionati.
+              {exactCodeSearch ? `Nessun preventivo trovato con codice ${exactCodeSearch}.` : "Nessun preventivo corrisponde ai filtri selezionati."}
             </div>
           )}
     </div>

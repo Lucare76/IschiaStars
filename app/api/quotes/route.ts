@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApiKey } from "@/lib/admin-api-guard";
 import { createQuoteFromRequest, listQuotes } from "@/lib/repositories/quotes";
-import { updateQuoteRequestStatus } from "@/lib/repositories/quoteRequests";
+import { markQuoteRequestProcessed } from "@/lib/repositories/quoteRequests";
 import { ADMIN_ACCESS_COOKIE } from "@/lib/server/auth-guard";
 import { sendQuoteEmailToClient } from "@/lib/server/brevo";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/admin";
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (result.data && isUuid(body.quoteRequestId)) {
-    const statusResult = await updateQuoteRequestStatus(body.quoteRequestId, "preventivo_inviato", { accessToken });
+    const statusResult = await markQuoteRequestProcessed(body.quoteRequestId, result.data.id, { accessToken });
     if (!statusResult.data && statusResult.error) {
       console.error("POST /api/quotes request status error", { error: statusResult.error });
     }

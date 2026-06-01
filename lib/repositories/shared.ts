@@ -346,6 +346,8 @@ function parseTransportOffers(value: unknown): TransportOffer[] {
 }
 
 export function normalizeStatus(status: string): QuoteStatus {
+  if (status === "pending") return "da_evadere";
+  if (status === "processed" || status === "evasa") return "preventivo_inviato";
   if (status === "perso" || status === "non_disponibile") return "perso_non_disponibile";
   if (status === "aperto") return "preventivo_inviato";
   if (["da_evadere", "in_lavorazione", "preventivo_inviato", "confermato", "perso_non_disponibile"].includes(status)) return status as QuoteStatus;
