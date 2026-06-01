@@ -277,7 +277,10 @@ function isWordPressHotelRow(row: Record<string, any>) {
 }
 
 function isArrayEmpty(value: unknown): boolean {
-  return !value || (Array.isArray(value) && value.length === 0);
+  if (!value) return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === "string") return value.trim() === "";
+  return false;
 }
 
 function hasMeaningfulImportChanges(current: Record<string, any>, updateRow: Record<string, any>) {

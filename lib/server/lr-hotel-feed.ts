@@ -189,6 +189,7 @@ export function mapLrHotelToDbRow(
   const name = decodeEntities(hotel.title);
   const location = hotel.destinations?.find((d) => typeof d === "string" && d.trim()) ?? "Ischia";
   const services = (hotel.services ?? []).map((s) => decodeEntities(s.label)).filter(Boolean);
+  const externalImageUrl = firstValidImageUrl([hotel.image, ...(hotel.gallery ?? [])]);
 
   const listinoCompact = hotel.listino
     ? {
@@ -223,7 +224,7 @@ export function mapLrHotelToDbRow(
     external_source: "lr_hotel_feed",
     external_id: String(hotel.hotel_id),
     slug: hotel.slug || null,
-    external_image_url: hotel.image?.url || null,
+    external_image_url: externalImageUrl,
     last_synced_at: now,
     last_seen_on_site_at: now,
     updated_at: now,
@@ -249,4 +250,12 @@ export function mapLrHotelToDbRow(
   };
 
   return { dbRow, services };
+}
+
+function firstValidImageUrl(images: Array<LrHotelImage | null | undefined>): string | null {
+  for (const image of images) {
+    const url = typeof image?.url === "string" ? image.url.trim() : "";
+    if (url) return url;
+  }
+  return null;
 }

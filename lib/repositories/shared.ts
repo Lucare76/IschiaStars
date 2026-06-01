@@ -22,6 +22,29 @@ export function fromSupabase<T>(data: T): RepositoryResult<T> {
 }
 
 export function mapHotel(row: Record<string, unknown>): Hotel {
+  const metadata = typeof row.sync_metadata === "object" && row.sync_metadata
+    ? row.sync_metadata as Record<string, unknown>
+    : {};
+  const metadataServices = Array.isArray(metadata.services)
+    ? metadata.services
+        .map((service) => {
+          if (typeof service === "string") return service;
+          if (service && typeof service === "object" && "label" in service) return String((service as { label?: unknown }).label ?? "");
+          return "";
+        })
+        .map((service) => service.trim())
+        .filter(Boolean)
+    : [];
+  const metadataGallery = Array.isArray(metadata.gallery) ? metadata.gallery : [];
+  const metadataImageUrl = typeof (metadata.image as { url?: unknown } | undefined)?.url === "string"
+    ? String((metadata.image as { url?: unknown }).url)
+    : metadataGallery
+        .map((image) => image && typeof image === "object" && "url" in image ? String((image as { url?: unknown }).url ?? "") : "")
+        .find(Boolean);
+  const standardServices = Array.isArray(row.standard_services) && row.standard_services.length
+    ? row.standard_services as string[]
+    : metadataServices;
+
   return {
     id: String(row.id),
     name: String(row.name),
@@ -29,10 +52,10 @@ export function mapHotel(row: Record<string, unknown>): Hotel {
     stars: Number(row.stars ?? 3),
     description: String(row.short_description ?? row.description ?? ""),
     imageUrl: row.image_url ? String(row.image_url) : undefined,
-    externalImageUrl: row.external_image_url ? String(row.external_image_url) : undefined,
+    externalImageUrl: row.external_image_url ? String(row.external_image_url) : metadataImageUrl,
     sourceUrl: row.source_url ? String(row.source_url) : undefined,
     slug: row.slug ? String(row.slug) : undefined,
-    standardServices: Array.isArray(row.standard_services) ? row.standard_services as string[] : [],
+    standardServices,
     defaultDepositPercent: row.default_deposit_percent != null ? Number(row.default_deposit_percent) : undefined,
     defaultBalanceMethod: row.default_balance_method ? String(row.default_balance_method) : undefined,
     defaultPaymentNotes: row.default_payment_notes ? String(row.default_payment_notes) : undefined,
