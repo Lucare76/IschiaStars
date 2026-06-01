@@ -23,6 +23,7 @@ export type PollGmailResult = {
   duplicates: number;
   ignored: number;
   needsReview: number;
+  deletedKnown: number;
   errors: string[];
   details: string[];
 };
@@ -143,6 +144,7 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     children,
     rooms: parseInt(get('Numero di Camere') ?? '1'),
     message: get('Messaggio') ?? undefined,
+    receivedAt: typeof metadata.email_date === "string" ? metadata.email_date : undefined,
     metadata: {
       requested_hotel: hotel,
       utm_source: utmSource,
@@ -180,7 +182,7 @@ function isDuplicateError(errMsg: string): boolean {
 }
 
 export async function pollGmail(): Promise<PollGmailResult> {
-  const result: PollGmailResult = { imported: 0, skipped: 0, duplicates: 0, ignored: 0, needsReview: 0, errors: [], details: [] };
+  const result: PollGmailResult = { imported: 0, skipped: 0, duplicates: 0, ignored: 0, needsReview: 0, deletedKnown: 0, errors: [], details: [] };
 
   console.info('[email-import] gmail connected');
 
@@ -206,13 +208,48 @@ export async function pollGmail(): Promise<PollGmailResult> {
         const headers: Array<{ name: string; value: string }> = msg.data.payload?.headers as any ?? [];
         const subject = getHeader(headers, 'Subject');
         const date = getHeader(headers, 'Date');
+        const receivedAt = gmailInternalDateToIso(msg.data.internalDate) ?? parseHeaderDate(date);
         const rfcMessageId = getHeader(headers, 'Message-ID');
+        const fromEmail = getHeader(headers, 'From');
+        const toEmails = splitAddressHeader(getHeader(headers, 'To'));
+        const ccEmails = splitAddressHeader(getHeader(headers, 'Cc'));
         console.info(`[email-import] candidate date=${date || "-"} subject="${subject}" msgId=${message.id}`);
+
+        const ledger = await reserveLedgerMessage({
+          gmailMessageId: message.id!,
+          gmailThreadId: msg.data.threadId ?? null,
+          rfcMessageId,
+          subject,
+          fromEmail,
+          toEmails,
+          ccEmails,
+          receivedAt,
+          metadata: { source: "gmail_poll" }
+        });
+        if (ledger.exists) {
+          const status = ledger.status ?? "unknown";
+          const detail = `msg ${message.id}: skipped already_processed status=${status}`;
+          console.info(`[email-import] skipped already_processed status=${status} msgId=${message.id}`);
+          result.duplicates++;
+          result.skipped++;
+          if (status === "deleted_by_admin") result.deletedKnown++;
+          result.details.push(detail);
+          await markRead(message.id!);
+          continue;
+        }
+        if (ledger.error) {
+          console.warn(`[email-import] ledger reserve failed msgId=${message.id} reason=${ledger.error} — continuing with DB constraint safety net`);
+        }
 
         if (!isAddressedToAccount(headers)) {
           const detail = `msg ${message.id}: skipped not_addressed`;
           console.info(`[email-import] skipped not_addressed msgId=${message.id}`);
+          await updateLedgerMessage(message.id!, {
+            status: "ignored_non_quote",
+            metadata: { reason: "not_addressed" }
+          });
           result.skipped++;
+          result.ignored++;
           result.details.push(detail);
           continue;
         }
@@ -220,8 +257,12 @@ export async function pollGmail(): Promise<PollGmailResult> {
         // Check duplicate before body extraction to save work
         const dupCheck = await isDuplicateGmailMessage(message.id!, rfcMessageId);
         if (dupCheck.isDuplicate) {
-          const detail = `msg ${message.id}: skipped duplicate reason=gmail_message_id`;
+          const detail = `msg ${message.id}: skipped already_processed status=duplicate`;
           console.info(`[email-import] skipped duplicate reason=gmail_message_id msgId=${message.id}`);
+          await updateLedgerMessage(message.id!, {
+            status: "duplicate",
+            metadata: { reason: "quote_requests_metadata_match" }
+          });
           result.duplicates++;
           result.skipped++;
           result.details.push(detail);
@@ -247,10 +288,14 @@ export async function pollGmail(): Promise<PollGmailResult> {
               gmailMessageId: message.id!,
               rfcMessageId,
               subject,
-              date,
+              date: receivedAt,
               reason: 'parse_failed_quote_candidate',
               headers,
               body: emailText
+            });
+            await updateLedgerMessage(message.id!, {
+              status: "needs_review",
+              metadata: { reason: "parse_failed_quote_candidate", body_len: bodyLen }
             });
             result.needsReview++;
             result.skipped++;
@@ -258,6 +303,10 @@ export async function pollGmail(): Promise<PollGmailResult> {
           } else {
             const detail = `msg ${message.id}: ignored reason=non_quote_email body_len=${bodyLen}`;
             console.info(`[email-import] ignored reason=non_quote_email subject="${subject}" body_len=${bodyLen} msgId=${message.id}`);
+            await updateLedgerMessage(message.id!, {
+              status: "ignored_non_quote",
+              metadata: { reason: "non_quote_email", body_len: bodyLen }
+            });
             result.ignored++;
             result.skipped++;
             result.details.push(detail);
@@ -269,7 +318,8 @@ export async function pollGmail(): Promise<PollGmailResult> {
           gmail_message_id: message.id,
           gmail_rfc_message_id: rfcMessageId,
           email_subject: subject,
-          email_date: date
+          email_date: receivedAt,
+          gmail_internal_date: msg.data.internalDate ?? null
         });
 
         if (!input.firstName || !input.lastName || !input.email || !input.phone || !input.checkIn || !input.checkOut) {
@@ -287,10 +337,14 @@ export async function pollGmail(): Promise<PollGmailResult> {
             gmailMessageId: message.id!,
             rfcMessageId,
             subject,
-            date,
+            date: receivedAt,
             reason: `missing_fields:${missingFields}`,
             headers,
             body: emailText
+          });
+          await updateLedgerMessage(message.id!, {
+            status: "needs_review",
+            metadata: { reason: "missing_fields", fields: missingFields.split(",") }
           });
           result.needsReview++;
           result.skipped++;
@@ -302,6 +356,11 @@ export async function pollGmail(): Promise<PollGmailResult> {
 
         if (createResult.data) {
           console.info(`[email-import] inserted quote_request id=${createResult.data.id} client="${input.firstName} ${input.lastName}"`);
+          await updateLedgerMessage(message.id!, {
+            status: "imported",
+            quoteRequestId: createResult.data.id,
+            metadata: { client: `${input.firstName} ${input.lastName}`.trim() }
+          });
           result.imported++;
           await markRead(message.id!);
         } else {
@@ -310,18 +369,32 @@ export async function pollGmail(): Promise<PollGmailResult> {
             // DB unique constraint caught a race-condition duplicate — not an error
             const detail = `msg ${message.id}: skipped duplicate reason=db_unique_conflict`;
             console.info(`[email-import] skipped duplicate reason=db_unique_conflict msgId=${message.id}`);
+            await updateLedgerMessage(message.id!, {
+              status: "duplicate",
+              metadata: { reason: "db_unique_conflict" }
+            });
             result.duplicates++;
             result.skipped++;
             result.details.push(detail);
             await markRead(message.id!);
           } else {
             console.error(`[email-import] failed to insert quote_request: ${errMsg} msgId=${message.id}`);
+            await updateLedgerMessage(message.id!, {
+              status: "parse_failed",
+              metadata: { error: errMsg.slice(0, 500) }
+            });
             result.errors.push(`Msg ${message.id}: ${errMsg}`);
           }
         }
       } catch (msgErr) {
         const errMsg = msgErr instanceof Error ? msgErr.message : String(msgErr);
         console.error(`[email-import] error processing message ${message.id}: ${errMsg}`);
+        if (message.id) {
+          await updateLedgerMessage(message.id, {
+            status: "parse_failed",
+            metadata: { error: errMsg.slice(0, 500) }
+          });
+        }
         result.errors.push(`Msg ${message.id}: ${errMsg}`);
       }
     }
@@ -334,11 +407,104 @@ export async function pollGmail(): Promise<PollGmailResult> {
   return result;
 }
 
+function splitAddressHeader(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseHeaderDate(value: string): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function gmailInternalDateToIso(value?: string | null): string | null {
+  if (!value) return null;
+  const timestamp = Number(value);
+  if (!Number.isFinite(timestamp)) return null;
+  return new Date(timestamp).toISOString();
+}
+
+async function reserveLedgerMessage(input: {
+  gmailMessageId: string;
+  gmailThreadId?: string | null;
+  rfcMessageId: string;
+  subject: string;
+  fromEmail: string;
+  toEmails: string[];
+  ccEmails: string[];
+  receivedAt: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<{ exists: boolean; status?: string; error?: string }> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return { exists: false };
+
+  const existing = await supabase
+    .from("email_import_ledger")
+    .select("status")
+    .eq("gmail_message_id", input.gmailMessageId)
+    .maybeSingle();
+  if (existing.error) return { exists: false, error: existing.error.message };
+  if (existing.data) return { exists: true, status: String(existing.data.status ?? "") };
+
+  const inserted = await supabase
+    .from("email_import_ledger")
+    .insert({
+      gmail_message_id: input.gmailMessageId,
+      gmail_thread_id: input.gmailThreadId ?? null,
+      rfc_message_id: input.rfcMessageId || null,
+      subject: input.subject || null,
+      from_email: input.fromEmail || null,
+      to_emails: input.toEmails,
+      cc_emails: input.ccEmails,
+      received_at: input.receivedAt,
+      status: "needs_review",
+      metadata: {
+        ...(input.metadata ?? {}),
+        reserved_at: new Date().toISOString()
+      }
+    });
+
+  if (!inserted.error) return { exists: false };
+  if (inserted.error.code === "23505") {
+    const raced = await supabase
+      .from("email_import_ledger")
+      .select("status")
+      .eq("gmail_message_id", input.gmailMessageId)
+      .maybeSingle();
+    return { exists: true, status: String(raced.data?.status ?? "unknown") };
+  }
+  return { exists: false, error: inserted.error.message };
+}
+
+async function updateLedgerMessage(gmailMessageId: string, input: {
+  status: "imported" | "duplicate" | "ignored_non_quote" | "needs_review" | "parse_failed" | "deleted_by_admin" | "archived_by_admin";
+  quoteRequestId?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return;
+
+  const { error } = await supabase
+    .from("email_import_ledger")
+    .update({
+      status: input.status,
+      ...(input.quoteRequestId ? { quote_request_id: input.quoteRequestId } : {}),
+      ...(input.metadata ? { metadata: input.metadata } : {}),
+      processed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq("gmail_message_id", gmailMessageId);
+  if (error) console.warn(`[email-import] ledger update failed msgId=${gmailMessageId} reason=${error.message}`);
+}
+
 async function saveInboundNeedsReview(input: {
   gmailMessageId: string;
   rfcMessageId: string;
   subject: string;
-  date: string;
+  date: string | null;
   reason: string;
   headers: Array<{ name: string; value: string }>;
   body: string;
@@ -351,7 +517,7 @@ async function saveInboundNeedsReview(input: {
       gmail_message_id: input.gmailMessageId,
       rfc_message_id: input.rfcMessageId || null,
       subject: input.subject || null,
-      received_at: input.date ? new Date(input.date).toISOString() : null,
+      received_at: input.date,
       status: "needs_review",
       skipped_reason: input.reason,
       headers: input.headers,

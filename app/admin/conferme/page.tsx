@@ -3,7 +3,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { availabilityStatusLabel, availabilityStatusLabels } from "@/lib/confirmation-availability";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { ConfirmationAvailabilityStatus } from "@/lib/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
 type AgeComparison = {
   childIndex: number;
@@ -63,7 +63,7 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
                 <Info label="Trattamento" value={confirmation.selectedTreatmentLabel ?? (quote.treatment || "-")} />
                 <Info label="Prezzo" value={confirmation.selectedPrice != null ? formatCurrency(confirmation.selectedPrice) : "vedi preventivo"} />
                 <Info label="Caparra" value={confirmation.selectedDepositAmount != null ? formatCurrency(confirmation.selectedDepositAmount) : "-"} />
-                <Info label="Confermata il" value={formatDate(confirmation.confirmedAt)} />
+                <Info label="Confermata il" value={formatDateTime(confirmation.confirmedAt)} />
                 <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
               </div>
               {(() => {

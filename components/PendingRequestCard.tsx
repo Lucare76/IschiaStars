@@ -31,6 +31,7 @@ export function PendingRequestCard({ request }: { request: QuoteRequest }) {
   }
 
   if (deleted) return null;
+  const showImportedAt = request.importedAt && request.importedAt !== request.receivedAt;
 
   return (
     <article className="min-w-0 rounded-2xl border border-white bg-white/86 p-5 shadow-soft">
@@ -72,19 +73,22 @@ export function PendingRequestCard({ request }: { request: QuoteRequest }) {
       ) : null}
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-ischia-blue/10 pt-4 text-sm">
-        <span className="text-ischia-ink/60">Ricevuta: {formatDateTime(request.receivedAt)}</span>
+        <span className="text-ischia-ink/60">
+          Ricevuta: {formatDateTime(request.receivedAt)}
+          {showImportedAt ? ` - Importata: ${formatDateTime(request.importedAt!)}` : ""}
+        </span>
 
         <div className="flex flex-wrap items-center gap-2">
           {confirmDelete ? (
             <>
-              <span className="text-sm font-semibold text-rose-700">Eliminare definitivamente?</span>
+              <span className="text-sm font-semibold text-rose-700">Archiviare la richiesta?</span>
               <button
                 className="rounded-full bg-rose-600 px-4 py-2 text-sm font-black text-white disabled:opacity-60"
                 disabled={deleting}
                 onClick={handleDelete}
                 type="button"
               >
-                {deleting ? "Eliminazione..." : "Sì, elimina"}
+                {deleting ? "Archiviazione..." : "Sì, archivia"}
               </button>
               <button
                 className="rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/20"

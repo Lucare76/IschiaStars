@@ -1,4 +1,5 @@
 import { allQuoteEvents } from "@/lib/demo-store";
+import { formatDateRome, formatDateTimeRome } from "@/lib/date-format";
 import { quoteRequests, quotes } from "@/lib/mock-data";
 import { Quote } from "@/lib/types";
 
@@ -7,11 +8,11 @@ export function formatCurrency(value: number) {
 }
 
 export function formatDate(value: string) {
-  return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(value));
+  return formatDateRome(value);
 }
 
 export function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+  return formatDateTimeRome(value);
 }
 
 export function publicQuoteUrl(quote: Quote) {

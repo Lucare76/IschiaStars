@@ -53,8 +53,13 @@ create table if not exists public.quote_requests (
   rooms integer not null default 1 check (rooms > 0),
   treatment text,
   message text,
+  received_at timestamptz,
   status text not null default 'da_evadere' check (status in ('da_evadere','in_lavorazione','preventivo_inviato','confermato','perso','non_disponibile','perso_non_disponibile')),
   metadata jsonb not null default '{}',
+  deleted_at timestamptz,
+  deleted_by text,
+  delete_reason text,
+  excluded_from_stats boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -162,6 +167,12 @@ create index if not exists quotes_code_idx on public.quotes(code);
 create index if not exists quotes_public_token_idx on public.quotes(public_token);
 create index if not exists quote_events_quote_id_idx on public.quote_events(quote_id);
 create index if not exists quote_requests_status_idx on public.quote_requests(status);
+create index if not exists quote_requests_received_at_idx on public.quote_requests(received_at desc);
+create index if not exists quote_requests_deleted_at_idx on public.quote_requests(deleted_at) where deleted_at is not null;
+create index if not exists quote_requests_active_status_idx on public.quote_requests(status, created_at desc) where deleted_at is null;
+create unique index if not exists quote_requests_gmail_message_id_uidx
+  on public.quote_requests ((metadata->>'gmail_message_id'))
+  where metadata->>'gmail_message_id' is not null and deleted_at is null;
 create index if not exists quotes_status_idx on public.quotes(status);
 create index if not exists quote_confirmations_availability_status_idx on public.quote_confirmations(availability_status);
 create unique index if not exists hotels_external_source_external_id_uidx on public.hotels(external_source, external_id) where external_source is not null and external_id is not null;
@@ -323,13 +334,47 @@ create table if not exists public.inbound_emails (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.email_import_ledger (
+  id uuid primary key default gen_random_uuid(),
+  gmail_message_id text not null unique,
+  gmail_thread_id text,
+  rfc_message_id text,
+  subject text,
+  from_email text,
+  to_emails text[],
+  cc_emails text[],
+  received_at timestamptz,
+  processed_at timestamptz not null default now(),
+  status text not null,
+  quote_request_id uuid references public.quote_requests(id) on delete set null,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.inbound_emails drop constraint if exists inbound_emails_status_check;
 alter table public.inbound_emails add constraint inbound_emails_status_check check (status in ('needs_review','imported','skipped'));
 
+alter table public.email_import_ledger drop constraint if exists email_import_ledger_status_check;
+alter table public.email_import_ledger add constraint email_import_ledger_status_check
+  check (status in ('imported','duplicate','ignored_non_quote','needs_review','parse_failed','deleted_by_admin','archived_by_admin'));
+
 create index if not exists inbound_emails_status_idx on public.inbound_emails(status);
 create index if not exists inbound_emails_received_at_idx on public.inbound_emails(received_at desc);
+create index if not exists email_import_ledger_status_idx on public.email_import_ledger(status);
+create index if not exists email_import_ledger_received_at_idx on public.email_import_ledger(received_at desc);
+create index if not exists email_import_ledger_quote_request_id_idx on public.email_import_ledger(quote_request_id);
 
 alter table public.inbound_emails enable row level security;
+alter table public.email_import_ledger enable row level security;
 drop policy if exists "operators manage inbound emails" on public.inbound_emails;
+drop policy if exists "operators manage email import ledger" on public.email_import_ledger;
+drop policy if exists "operators read email import ledger" on public.email_import_ledger;
+drop policy if exists "operators insert email import ledger" on public.email_import_ledger;
+drop policy if exists "operators update email import ledger" on public.email_import_ledger;
 create policy "operators manage inbound emails" on public.inbound_emails for all to authenticated using (true) with check (true);
+create policy "operators read email import ledger" on public.email_import_ledger for select to authenticated using (true);
+create policy "operators insert email import ledger" on public.email_import_ledger for insert to authenticated with check (true);
+create policy "operators update email import ledger" on public.email_import_ledger for update to authenticated using (true) with check (true);
 grant select, insert, update, delete on public.inbound_emails to authenticated, service_role;
+grant select, insert, update on public.email_import_ledger to authenticated, service_role;

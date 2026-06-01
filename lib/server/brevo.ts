@@ -101,7 +101,7 @@ export async function sendBrevoEmail(params: SendBrevoEmailParams): Promise<bool
 
 function formatDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return new Date(iso).toLocaleDateString("it-IT", { timeZone: "Europe/Rome", day: "2-digit", month: "2-digit", year: "numeric" });
   } catch {
     return iso;
   }
@@ -312,6 +312,7 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
   let confirmedAtFormatted = confirmation.confirmedAt;
   try {
     confirmedAtFormatted = new Date(confirmation.confirmedAt).toLocaleString("it-IT", {
+      timeZone: "Europe/Rome",
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -682,6 +683,7 @@ export async function sendAvailabilityUnavailableEmailToClient(quote: Quote, det
 function formatDateTimeForEmail(value: string) {
   try {
     return new Date(value).toLocaleString("it-IT", {
+      timeZone: "Europe/Rome",
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

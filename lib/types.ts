@@ -42,6 +42,7 @@ export type QuoteRequest = {
   requestedTreatment?: string;
   message?: string;
   receivedAt: string;
+  importedAt?: string;
   status: QuoteStatus;
   requestedHotel?: string;
 };

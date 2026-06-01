@@ -16,6 +16,7 @@ export type QuoteRequestInput = {
   rooms: number;
   treatment?: string;
   message?: string;
+  receivedAt?: string;
   metadata?: Record<string, unknown>;
 };
 
@@ -26,6 +27,7 @@ export async function listQuoteRequests(status?: QuoteStatus): Promise<Repositor
   if (!supabase) return fallback(local);
 
   let query = supabase.from("quote_requests").select("*, quote_request_children(*)").order("created_at", { ascending: false });
+  query = query.is("deleted_at", null);
   if (status) query = query.eq("status", status);
 
   const { data, error } = await query;
@@ -42,7 +44,7 @@ export async function getQuoteRequestById(id: string): Promise<RepositoryResult<
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(local);
 
-  const { data, error } = await supabase.from("quote_requests").select("*, quote_request_children(*)").eq("id", id).maybeSingle();
+  const { data, error } = await supabase.from("quote_requests").select("*, quote_request_children(*)").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error) return fallback(local, error);
   return fromSupabase(data ? mapQuoteRequest(data) : null);
 }
@@ -66,6 +68,7 @@ export async function createQuoteRequest(input: QuoteRequestInput): Promise<Repo
       rooms: input.rooms,
       treatment: input.treatment,
       message: input.message,
+      received_at: input.receivedAt ?? null,
       metadata: input.metadata ?? {}
     })
     .select("*")
@@ -90,9 +93,40 @@ export async function deleteQuoteRequest(id: string): Promise<RepositoryResult<{
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback({ deleted: false }, "Database non configurato");
 
-  await supabase.from("quote_request_children").delete().eq("quote_request_id", id);
-  const { error } = await supabase.from("quote_requests").delete().eq("id", id);
+  const existing = await supabase
+    .from("quote_requests")
+    .select("id, metadata")
+    .eq("id", id)
+    .maybeSingle();
+  if (existing.error) return fallback({ deleted: false }, existing.error);
+  if (!existing.data) return fromSupabase({ deleted: true });
+
+  const now = new Date().toISOString();
+  const { error } = await supabase.from("quote_requests").update({
+    deleted_at: now,
+    deleted_by: "admin",
+    delete_reason: "deleted_from_backoffice",
+    updated_at: now
+  }).eq("id", id);
   if (error) return fallback({ deleted: false }, error);
+
+  const metadata = (existing.data as { metadata?: Record<string, unknown> | null }).metadata ?? {};
+  const gmailMessageId = typeof metadata.gmail_message_id === "string" ? metadata.gmail_message_id : null;
+  if (gmailMessageId) {
+    await supabase
+      .from("email_import_ledger")
+      .update({
+        status: "deleted_by_admin",
+        quote_request_id: id,
+        metadata: {
+          deleted_by_admin: true,
+          deleted_at: now
+        },
+        updated_at: now
+      })
+      .eq("gmail_message_id", gmailMessageId);
+  }
+
   return fromSupabase({ deleted: true });
 }
 
@@ -106,6 +140,7 @@ export async function isDuplicateQuoteRequest(email: string, checkIn: string): P
     .select("id")
     .eq("email", email)
     .eq("check_in", checkIn)
+    .is("deleted_at", null)
     .gte("created_at", since)
     .limit(1)
     .maybeSingle();
@@ -144,7 +179,8 @@ function mapQuoteRequest(row: Record<string, any>): QuoteRequest {
     rooms: row.rooms,
     requestedTreatment: row.treatment ?? undefined,
     message: row.message ?? undefined,
-    receivedAt: row.created_at,
+    receivedAt: row.received_at ?? row.created_at,
+    importedAt: row.created_at,
     status: normalizeStatus(row.status),
     requestedHotel: typeof row.metadata?.requested_hotel === "string" ? row.metadata.requested_hotel : undefined
   };

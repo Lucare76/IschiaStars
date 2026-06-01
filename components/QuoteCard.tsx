@@ -20,6 +20,8 @@ export type QuoteCardActions = {
 };
 
 export function RequestCard({ request }: { request: QuoteRequest }) {
+  const showImportedAt = request.importedAt && request.importedAt !== request.receivedAt;
+
   return (
     <article className="min-w-0 rounded-2xl border border-white bg-white/86 p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -40,7 +42,10 @@ export function RequestCard({ request }: { request: QuoteRequest }) {
       {request.children.length ? <p className="mt-3 text-sm text-ischia-ink/70">Bambini: {request.children.map((child) => `${child.firstName} (${formatDate(child.birthDate)})`).join(", ")}</p> : null}
       {request.message ? <p className="mt-4 rounded-xl bg-ischia-mist p-4 text-sm text-ischia-ink/80">{request.message}</p> : null}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-ischia-blue/10 pt-4 text-sm">
-        <span>Ricevuta: {formatDateTime(request.receivedAt)}</span>
+        <span>
+          Ricevuta: {formatDateTime(request.receivedAt)}
+          {showImportedAt ? ` - Importata: ${formatDateTime(request.importedAt!)}` : ""}
+        </span>
         <Link className="rounded-full bg-ischia-sun px-4 py-2 font-bold text-ischia-navy" href={`/admin/preventivi/nuovo?requestId=${request.id}`}>
           Crea preventivo
         </Link>

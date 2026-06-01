@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { adminApiHeaders } from "@/lib/admin-api-client";
 import { availabilityStatusLabel, defaultUnavailabilityMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
 import { Quote } from "@/lib/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
 export function ConfirmationAvailabilityPanel({ quote }: { quote: Quote }) {
   const confirmation = quote.confirmation;
@@ -84,7 +84,7 @@ export function ConfirmationAvailabilityPanel({ quote }: { quote: Quote }) {
         <Info label="Coordinate" value={hasCoordinates ? "Snapshot pagamento salvato" : "Non configurate"} />
         <Info label="Causale" value={paymentReason || "-"} />
         <Info label="Policy cancellazione" value={confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy ?? "-"} />
-        <Info label="Confermata il" value={formatDate(confirmation.confirmedAt)} />
+        <Info label="Confermata il" value={formatDateTime(confirmation.confirmedAt)} />
         <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
       </div>
 
