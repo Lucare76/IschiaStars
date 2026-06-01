@@ -20,6 +20,8 @@ const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 export type PollGmailResult = {
   imported: number;
   skipped: number;
+  duplicates: number;
+  needsReview: number;
   errors: string[];
   details: string[];
 };
@@ -32,6 +34,9 @@ function htmlToText(html: string) {
   return html
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<\/td>/gi, ' ')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -40,24 +45,38 @@ function htmlToText(html: string) {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/\r/g, '')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
-function extractEmailText(payload: any): string {
+// Prefer text/plain; only fall back to text/html if no plain part exists.
+// This avoids misparse when multipart/alternative lists html before plain.
+function extractPlainText(payload: any): string {
   if (!payload) return '';
-
-  if (payload.body?.data) {
-    const body = decodeBody(payload.body.data);
-    if (payload.mimeType === 'text/plain') return body;
-    if (payload.mimeType === 'text/html') return htmlToText(body);
+  if (payload.mimeType === 'text/plain' && payload.body?.data) {
+    return decodeBody(payload.body.data);
   }
-
   for (const part of payload.parts ?? []) {
-    const text = extractEmailText(part);
+    const text = extractPlainText(part);
     if (text) return text;
   }
-
   return '';
+}
+
+function extractHtmlText(payload: any): string {
+  if (!payload) return '';
+  if (payload.mimeType === 'text/html' && payload.body?.data) {
+    return htmlToText(decodeBody(payload.body.data));
+  }
+  for (const part of payload.parts ?? []) {
+    const text = extractHtmlText(part);
+    if (text) return text;
+  }
+  return '';
+}
+
+function extractEmailText(payload: any): string {
+  return extractPlainText(payload) || extractHtmlText(payload);
 }
 
 function getHeader(headers: Array<{ name: string; value: string }>, name: string): string {
@@ -138,8 +157,16 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
   };
 }
 
+function isDuplicateError(errMsg: string): boolean {
+  return (
+    errMsg.includes('quote_requests_gmail_message_id_uidx') ||
+    errMsg.includes('duplicate key value violates unique constraint') ||
+    errMsg.includes('23505')
+  );
+}
+
 export async function pollGmail(): Promise<PollGmailResult> {
-  const result: PollGmailResult = { imported: 0, skipped: 0, errors: [], details: [] };
+  const result: PollGmailResult = { imported: 0, skipped: 0, duplicates: 0, needsReview: 0, errors: [], details: [] };
 
   console.info('[email-import] gmail connected');
 
@@ -168,7 +195,6 @@ export async function pollGmail(): Promise<PollGmailResult> {
         const rfcMessageId = getHeader(headers, 'Message-ID');
         console.info(`[email-import] candidate date=${date || "-"} subject="${subject}" msgId=${message.id}`);
 
-        // Verify the account is in To or Cc (belt-and-suspenders beyond the query)
         if (!isAddressedToAccount(headers)) {
           const detail = `msg ${message.id}: skipped not_addressed`;
           console.info(`[email-import] skipped not_addressed msgId=${message.id}`);
@@ -177,14 +203,31 @@ export async function pollGmail(): Promise<PollGmailResult> {
           continue;
         }
 
+        // Check duplicate before body extraction to save work
+        const dupCheck = await isDuplicateGmailMessage(message.id!, rfcMessageId);
+        if (dupCheck.isDuplicate) {
+          const detail = `msg ${message.id}: skipped duplicate reason=gmail_message_id`;
+          console.info(`[email-import] skipped duplicate reason=gmail_message_id msgId=${message.id}`);
+          result.duplicates++;
+          result.skipped++;
+          result.details.push(detail);
+          await markRead(message.id!);
+          continue;
+        }
+        // If duplicate check failed due to a DB error, log but continue (DB constraint is the safety net)
+        if (dupCheck.error) {
+          console.warn(`[email-import] duplicate check query failed msgId=${message.id} reason=${dupCheck.error} — will attempt insert, DB constraint will catch duplicates`);
+        }
+
         console.info(`[email-import] accepted to/cc match msgId=${message.id}`);
 
         const emailText = extractEmailText(msg.data.payload);
+        const bodyLen = emailText.length;
+        const snippet = emailText.slice(0, 120).replace(/\n/g, ' ');
 
-        // Must contain form markers to be a quote request
         if (!emailText || !emailText.includes('Data di arrivo') || !emailText.includes('Hotel')) {
-          const detail = `msg ${message.id}: skipped parse_failed reason=missing_form_markers`;
-          console.info(`[email-import] skipped parse_failed reason=missing_form_markers subject="${subject}" msgId=${message.id}`);
+          const detail = `msg ${message.id}: skipped parse_failed reason=missing_form_markers body_len=${bodyLen}`;
+          console.info(`[email-import] skipped parse_failed reason=missing_form_markers subject="${subject}" body_len=${bodyLen} snippet="${snippet}" msgId=${message.id}`);
           await saveInboundNeedsReview({
             gmailMessageId: message.id!,
             rfcMessageId,
@@ -194,6 +237,7 @@ export async function pollGmail(): Promise<PollGmailResult> {
             headers,
             body: emailText
           });
+          result.needsReview++;
           result.skipped++;
           result.details.push(detail);
           continue;
@@ -216,7 +260,7 @@ export async function pollGmail(): Promise<PollGmailResult> {
             !input.checkOut ? "checkOut" : null
           ].filter(Boolean).join(",");
           const detail = `msg ${message.id}: skipped parse_failed reason=missing_fields fields=${missingFields}`;
-          console.info(`[email-import] skipped parse_failed reason=missing_fields fields=${missingFields} msgId=${message.id}`);
+          console.info(`[email-import] skipped parse_failed reason=missing_fields fields=${missingFields} body_len=${bodyLen} snippet="${snippet}" msgId=${message.id}`);
           await saveInboundNeedsReview({
             gmailMessageId: message.id!,
             rfcMessageId,
@@ -226,18 +270,9 @@ export async function pollGmail(): Promise<PollGmailResult> {
             headers,
             body: emailText
           });
+          result.needsReview++;
           result.skipped++;
           result.details.push(detail);
-          continue;
-        }
-
-        const duplicate = await isDuplicateGmailMessage(message.id!, rfcMessageId);
-        if (duplicate) {
-          const detail = `msg ${message.id}: skipped duplicate reason=gmail_message_id`;
-          console.info(`[email-import] skipped duplicate reason=gmail_message_id msgId=${message.id}`);
-          result.skipped++;
-          result.details.push(detail);
-          await markRead(message.id!);
           continue;
         }
 
@@ -246,13 +281,22 @@ export async function pollGmail(): Promise<PollGmailResult> {
         if (createResult.data) {
           console.info(`[email-import] inserted quote_request id=${createResult.data.id} client="${input.firstName} ${input.lastName}"`);
           result.imported++;
+          await markRead(message.id!);
         } else {
-          const errMsg = createResult.error ?? 'createQuoteRequest returned no data';
-          console.error(`[email-import] failed to insert quote_request: ${errMsg}`);
-          result.errors.push(`Msg ${message.id}: ${errMsg}`);
+          const errMsg = String(createResult.error ?? 'createQuoteRequest returned no data');
+          if (isDuplicateError(errMsg)) {
+            // DB unique constraint caught a race-condition duplicate — not an error
+            const detail = `msg ${message.id}: skipped duplicate reason=db_unique_conflict`;
+            console.info(`[email-import] skipped duplicate reason=db_unique_conflict msgId=${message.id}`);
+            result.duplicates++;
+            result.skipped++;
+            result.details.push(detail);
+            await markRead(message.id!);
+          } else {
+            console.error(`[email-import] failed to insert quote_request: ${errMsg} msgId=${message.id}`);
+            result.errors.push(`Msg ${message.id}: ${errMsg}`);
+          }
         }
-
-        await markRead(message.id!);
       } catch (msgErr) {
         const errMsg = msgErr instanceof Error ? msgErr.message : String(msgErr);
         console.error(`[email-import] error processing message ${message.id}: ${errMsg}`);
@@ -294,20 +338,20 @@ async function saveInboundNeedsReview(input: {
   if (error) console.warn(`[email-import] inbound needs_review save failed reason=${error.message}`);
 }
 
-async function isDuplicateGmailMessage(gmailMessageId: string, rfcMessageId: string): Promise<boolean> {
+async function isDuplicateGmailMessage(gmailMessageId: string, rfcMessageId: string): Promise<{ isDuplicate: boolean; error?: string }> {
   const supabase = createSupabaseAdminClient();
-  if (!supabase) return false;
+  if (!supabase) return { isDuplicate: false };
+
   const byGmailId = await supabase
     .from("quote_requests")
     .select("id")
     .contains("metadata", { gmail_message_id: gmailMessageId })
     .limit(1);
   if (byGmailId.error) {
-    console.warn(`[email-import] duplicate check failed reason=${byGmailId.error.message}`);
-    return false;
+    return { isDuplicate: false, error: byGmailId.error.message };
   }
-  if (byGmailId.data?.length) return true;
-  if (!rfcMessageId) return false;
+  if (byGmailId.data?.length) return { isDuplicate: true };
+  if (!rfcMessageId) return { isDuplicate: false };
 
   const byRfcId = await supabase
     .from("quote_requests")
@@ -315,10 +359,9 @@ async function isDuplicateGmailMessage(gmailMessageId: string, rfcMessageId: str
     .contains("metadata", { gmail_rfc_message_id: rfcMessageId })
     .limit(1);
   if (byRfcId.error) {
-    console.warn(`[email-import] duplicate check failed reason=${byRfcId.error.message}`);
-    return false;
+    return { isDuplicate: false, error: byRfcId.error.message };
   }
-  return Boolean(byRfcId.data?.length);
+  return { isDuplicate: Boolean(byRfcId.data?.length) };
 }
 
 async function markRead(messageId: string) {
