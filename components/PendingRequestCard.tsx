@@ -18,6 +18,7 @@ export function PendingRequestCard({ request }: { request: QuoteRequest }) {
     setError(null);
     const res = await fetch(`/api/quote-requests/${request.id}`, {
       method: "DELETE",
+      credentials: "include",
       headers: adminApiHeaders(),
     });
     const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;

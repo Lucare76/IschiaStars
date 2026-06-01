@@ -39,7 +39,15 @@ export function RequestCard({ request }: { request: QuoteRequest }) {
         <Info label="Camere" value={`${request.rooms}`} numeric />
         <Info label="Trattamento" value={request.requestedTreatment ?? "Da definire"} />
       </dl>
-      {request.children.length ? <p className="mt-3 text-sm text-ischia-ink/70">Bambini: {request.children.map((child) => `${child.firstName} (${formatDate(child.birthDate)})`).join(", ")}</p> : null}
+      {request.children.length ? (
+        <p className="mt-3 text-sm text-ischia-ink/70">
+          Bambini: {request.children.map((child, index) => {
+            if (child.age != null) return `Bambino ${index + 1}: ${child.age} ${child.age === 1 ? "anno" : "anni"}`;
+            if (child.birthDate) return `${child.firstName} (${formatDate(child.birthDate)})`;
+            return `Bambino ${index + 1}`;
+          }).join(", ")}
+        </p>
+      ) : null}
       {request.message ? <p className="mt-4 rounded-xl bg-ischia-mist p-4 text-sm text-ischia-ink/80">{request.message}</p> : null}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-ischia-blue/10 pt-4 text-sm">
         <span>

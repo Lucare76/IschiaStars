@@ -125,7 +125,28 @@ export async function deleteQuoteRequest(id: string): Promise<RepositoryResult<{
         updated_at: now
       })
       .eq("gmail_message_id", gmailMessageId);
+
+    await supabase
+      .from("inbound_emails")
+      .update({
+        status: "skipped",
+        skipped_reason: "deleted_by_admin",
+        updated_at: now
+      })
+      .eq("gmail_message_id", gmailMessageId);
   }
+
+  await supabase
+    .from("email_import_ledger")
+    .update({
+      status: "deleted_by_admin",
+      metadata: {
+        deleted_by_admin: true,
+        deleted_at: now
+      },
+      updated_at: now
+    })
+    .eq("quote_request_id", id);
 
   return fromSupabase({ deleted: true });
 }

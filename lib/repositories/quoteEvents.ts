@@ -43,9 +43,6 @@ async function markQuoteOpenedInSupabase(quoteId: string) {
   const { data } = await supabase.from("quotes").select("status").eq("id", quoteId).maybeSingle();
   if (data?.status !== "preventivo_inviato") return;
 
-  const { error } = await supabase.from("quotes").update({ status: "aperto", updated_at: new Date().toISOString() }).eq("id", quoteId);
-  if (error) return;
-
   await createQuoteStatusEvent({
     quoteId,
     fromStatus: "preventivo_inviato",

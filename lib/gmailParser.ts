@@ -124,6 +124,10 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
   const hotel = get('Hotel');
   const etaBambini = get('Età Bambini') ?? get('Eta Bambini') ?? get('EtÃ  Bambini');
   const bambini = parseInt(get('Bambini') ?? '0');
+  const rawCheckIn = get('Data di arrivo') ?? '';
+  const rawCheckOut = get('Data di partenza') ?? '';
+  const checkOut = normalizeFormDate(rawCheckOut);
+  const checkIn = normalizeFormDate(rawCheckIn, yearFromDate(checkOut));
 
   const children = etaBambini && bambini > 0
     ? etaBambini.split(',').map((eta: string) => ({
@@ -138,8 +142,8 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     email: get('Email') ?? '',
     phone: get('Telefono') ?? '',
     destination: 'Ischia',
-    checkIn: get('Data di arrivo') ?? '',
-    checkOut: get('Data di partenza') ?? '',
+    checkIn,
+    checkOut,
     adults: parseInt(get('Adulti') ?? '2'),
     children,
     rooms: parseInt(get('Numero di Camere') ?? '1'),
@@ -155,6 +159,32 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
       ...metadata
     }
   };
+}
+
+function normalizeFormDate(value: string, fallbackYear?: number | null) {
+  const trimmed = value.trim();
+  const italian = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (italian) {
+    const year = Number(italian[3]);
+    const safeYear = year >= 2000 ? year : fallbackYear;
+    return safeYear ? `${safeYear}-${italian[2].padStart(2, "0")}-${italian[1].padStart(2, "0")}` : trimmed;
+  }
+
+  const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) {
+    const year = Number(iso[1]);
+    const safeYear = year >= 2000 ? year : fallbackYear;
+    return safeYear ? `${safeYear}-${iso[2]}-${iso[3]}` : trimmed;
+  }
+
+  return trimmed;
+}
+
+function yearFromDate(value: string) {
+  const match = value.match(/^(\d{4})-/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  return year >= 2000 ? year : null;
 }
 
 // Returns true if the email body/subject has enough signals to suggest it's a
@@ -280,7 +310,7 @@ export async function pollGmail(): Promise<PollGmailResult> {
         const bodyLen = emailText.length;
         const snippet = emailText.slice(0, 120).replace(/\n/g, ' ');
 
-        if (!emailText || !emailText.includes('Data di arrivo') || !emailText.includes('Hotel')) {
+        if (!emailText || !emailText.includes('Data di arrivo')) {
           if (looksLikeQuoteRequest(emailText, subject)) {
             const detail = `msg ${message.id}: needs_review reason=parse_failed_quote_candidate body_len=${bodyLen}`;
             console.info(`[email-import] needs_review reason=parse_failed_quote_candidate subject="${subject}" body_len=${bodyLen} snippet="${snippet}" msgId=${message.id}`);
