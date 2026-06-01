@@ -5,6 +5,16 @@ import { listQuotes } from "@/lib/repositories/quotes";
 import { ConfirmationAvailabilityStatus } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
+type AgeComparison = {
+  childIndex: number;
+  declaredAge?: number;
+  calculatedAge?: number;
+  birthDate?: string;
+  ageMismatch: boolean;
+  difference?: number;
+  noData: boolean;
+};
+
 export const dynamic = "force-dynamic";
 
 const filters = ["tutte", "availability_to_check", "availability_confirmed", "deposit_waiting", "availability_unavailable", "alternative_to_propose"] as const;
@@ -56,6 +66,23 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
                 <Info label="Confermata il" value={formatDate(confirmation.confirmedAt)} />
                 <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
               </div>
+              {(() => {
+                const meta = confirmation.metadata as Record<string, unknown> | undefined;
+                const comparisons = (meta?.children_age_comparison ?? []) as AgeComparison[];
+                const mismatches = comparisons.filter((c) => c.ageMismatch);
+                if (!mismatches.length) return null;
+                return (
+                  <div className="mt-4 rounded-xl bg-amber-50 p-4 ring-1 ring-amber-200">
+                    <p className="text-sm font-black text-amber-900">Attenzione: età bambini da verificare</p>
+                    {mismatches.map((m) => (
+                      <p key={m.childIndex} className="mt-1 text-sm text-amber-800">
+                        Bambino {m.childIndex}: preventivo {m.declaredAge} anni, data nascita {m.birthDate ? formatDate(m.birthDate) : "—"} → {m.calculatedAge} anni al check-in.{" "}
+                        Verificare eventuali differenze tariffarie o condizioni della struttura.
+                      </p>
+                    ))}
+                  </div>
+                );
+              })()}
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link className="rounded-full bg-ischia-navy px-4 py-2 text-sm font-black text-white" href={`/admin/preventivi/${quote.code}`}>
                   Apri dettaglio

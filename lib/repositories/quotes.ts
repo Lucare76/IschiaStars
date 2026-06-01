@@ -22,7 +22,7 @@ export type QuoteInput = {
   checkIn: string;
   checkOut: string;
   adults: number;
-  children?: { birthDate: string }[];
+  children?: { birthDate?: string; age?: number }[];
   rooms: number;
   treatment?: string;
   totalPrice: number;
@@ -157,7 +157,8 @@ export async function createQuoteFromRequest(input: QuoteInput, options: { acces
       children: (normalizedInput.children ?? []).map((child, index) => ({
         id: `child-local-${Date.now()}-${index}`,
         firstName: `Bambino ${index + 1}`,
-        birthDate: child.birthDate
+        birthDate: child.birthDate ?? "",
+        age: child.age
       })),
       rooms: normalizedInput.rooms,
       treatment: normalizedInput.treatment ?? "",
@@ -190,7 +191,13 @@ export async function createQuoteFromRequest(input: QuoteInput, options: { acces
   const quoteId = (data as Record<string, unknown>).id as string;
 
   if (normalizedInput.children?.length) {
-    await supabase.from("quote_children").insert(normalizedInput.children.map((child) => ({ quote_id: quoteId, birth_date: child.birthDate })));
+    await supabase.from("quote_children").insert(
+      normalizedInput.children.map((child) => ({
+        quote_id: quoteId,
+        birth_date: child.birthDate || null,
+        age: child.age ?? null
+      }))
+    );
   }
 
   if (normalizedInput.hotelOptions?.length) {

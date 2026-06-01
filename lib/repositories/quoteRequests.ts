@@ -12,7 +12,7 @@ export type QuoteRequestInput = {
   checkIn: string;
   checkOut: string;
   adults: number;
-  children?: { birthDate: string; firstName?: string }[];
+  children?: { birthDate?: string; age?: number; firstName?: string }[];
   rooms: number;
   treatment?: string;
   message?: string;
@@ -74,7 +74,13 @@ export async function createQuoteRequest(input: QuoteRequestInput): Promise<Repo
   if (error) return fallback(null, error);
 
   if (input.children?.length) {
-    await supabase.from("quote_request_children").insert(input.children.map((child) => ({ quote_request_id: data.id, birth_date: child.birthDate })));
+    await supabase.from("quote_request_children").insert(
+      input.children.map((child) => ({
+        quote_request_id: data.id,
+        birth_date: child.birthDate || null,
+        age: child.age ?? null
+      }))
+    );
   }
 
   return getQuoteRequestById(data.id);
@@ -120,7 +126,8 @@ function mapQuoteRequest(row: Record<string, any>): QuoteRequest {
   const children: ChildGuest[] = childRows.map((child: Record<string, any>, index: number) => ({
     id: child.id,
     firstName: child.first_name ?? `Bambino ${index + 1}`,
-    birthDate: child.birth_date
+    birthDate: child.birth_date ?? "",
+    age: child.age != null ? Number(child.age) : undefined
   }));
 
   return {

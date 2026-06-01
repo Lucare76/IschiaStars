@@ -19,13 +19,13 @@ export async function GET(request: Request) {
 
   const result = await pollGmail();
 
-  console.info(`[cron-email] completed imported=${result.imported} skipped=${result.skipped} duplicates=${result.duplicates} needsReview=${result.needsReview} errors=${result.errors.length}`);
+  console.info(`[cron-email] completed imported=${result.imported} duplicates=${result.duplicates} ignored=${result.ignored} needsReview=${result.needsReview} errors=${result.errors.length}`);
 
   return Response.json({
     ok: result.errors.length === 0,
     imported: result.imported,
-    skipped: result.skipped,
     duplicates: result.duplicates,
+    ignored: result.ignored,
     needsReview: result.needsReview,
     errors: result.errors,
     details: result.details

@@ -72,7 +72,12 @@ export function PublicQuotePage({ quote, paymentSettings }: { quote: Quote; paym
                 <ul className="grid gap-2">
                   {quote.children.map((child, index) => (
                     <li key={child.id} className="rounded-xl bg-white p-3 ring-1 ring-ischia-blue/10">
-                      Bambino {index + 1}: nato il {formatDate(child.birthDate)}
+                      Bambino {index + 1}:{" "}
+                      {child.age != null
+                        ? `${child.age} ${child.age === 1 ? "anno" : "anni"}`
+                        : child.birthDate
+                          ? `nato il ${formatDate(child.birthDate)}`
+                          : "—"}
                     </li>
                   ))}
                 </ul>

@@ -3,7 +3,8 @@ export type QuoteStatus = "da_evadere" | "in_lavorazione" | "preventivo_inviato"
 export type ChildGuest = {
   id: string;
   firstName: string;
-  birthDate: string;
+  birthDate: string;   // empty in quote phase; filled at confirmation
+  age?: number;        // declared age at quote/request time
 };
 
 export type Hotel = {

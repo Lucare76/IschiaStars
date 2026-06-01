@@ -156,9 +156,24 @@ export function ConfirmQuoteForm({ quote, selectedOption, paymentSettings }: { q
         <Input required name="province" label="Provincia" />
       </div>
 
-      {quote.children.map((child, index) => (
-        <Input key={child.id} required name={`child-${child.id}`} label={`Data di nascita bambino ${index + 1}`} type="date" defaultValue={child.birthDate} />
-      ))}
+      {quote.children.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-sm font-black text-ischia-navy">Dati bambini</p>
+          {quote.children.map((child, index) => (
+            <div key={child.id} className="rounded-xl bg-ischia-mist p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue">Bambino {index + 1}</p>
+              {child.age != null && (
+                <p className="mt-1 text-sm text-ischia-ink/70">
+                  Età indicata nel preventivo: <strong>{child.age} {child.age === 1 ? "anno" : "anni"}</strong>
+                </p>
+              )}
+              <div className="mt-2">
+                <Input required name={`child-${child.id}`} label="Data di nascita *" type="date" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <label className="flex gap-3 text-sm text-ischia-ink/78">
         <input required name="acceptedTerms" type="checkbox" className="mt-1 h-4 w-4" />

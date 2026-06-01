@@ -21,6 +21,7 @@ export type PollGmailResult = {
   imported: number;
   skipped: number;
   duplicates: number;
+  ignored: number;
   needsReview: number;
   errors: string[];
   details: string[];
@@ -125,10 +126,7 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
 
   const children = etaBambini && bambini > 0
     ? etaBambini.split(',').map((eta: string) => ({
-        birthDate: new Date(
-          new Date().getFullYear() - parseInt(eta.trim()),
-          0, 1
-        ).toISOString().split('T')[0],
+        age: parseInt(eta.trim()),
         firstName: undefined
       }))
     : [];
@@ -157,6 +155,22 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
   };
 }
 
+// Returns true if the email body/subject has enough signals to suggest it's a
+// quote request from the IschiaStars form (or similar). Only these emails go to
+// needsReview when the full parser fails — everything else is ignored.
+function looksLikeQuoteRequest(text: string, subject: string): boolean {
+  const haystack = `${subject} ${text}`.toLowerCase();
+  const signals = [
+    'data di arrivo', 'data di partenza', 'check-in', 'check-out',
+    'arrivo', 'partenza', 'preventivo', 'richiesta',
+    'adulti', 'bambini', 'camere', 'numero di camere',
+    'hotel', 'nome:', 'cognome:', 'telefono:', 'email:',
+    'soggiorno', 'ischia',
+  ];
+  const hits = signals.filter((s) => haystack.includes(s)).length;
+  return hits >= 3;
+}
+
 function isDuplicateError(errMsg: string): boolean {
   return (
     errMsg.includes('quote_requests_gmail_message_id_uidx') ||
@@ -166,7 +180,7 @@ function isDuplicateError(errMsg: string): boolean {
 }
 
 export async function pollGmail(): Promise<PollGmailResult> {
-  const result: PollGmailResult = { imported: 0, skipped: 0, duplicates: 0, needsReview: 0, errors: [], details: [] };
+  const result: PollGmailResult = { imported: 0, skipped: 0, duplicates: 0, ignored: 0, needsReview: 0, errors: [], details: [] };
 
   console.info('[email-import] gmail connected');
 
@@ -226,20 +240,28 @@ export async function pollGmail(): Promise<PollGmailResult> {
         const snippet = emailText.slice(0, 120).replace(/\n/g, ' ');
 
         if (!emailText || !emailText.includes('Data di arrivo') || !emailText.includes('Hotel')) {
-          const detail = `msg ${message.id}: skipped parse_failed reason=missing_form_markers body_len=${bodyLen}`;
-          console.info(`[email-import] skipped parse_failed reason=missing_form_markers subject="${subject}" body_len=${bodyLen} snippet="${snippet}" msgId=${message.id}`);
-          await saveInboundNeedsReview({
-            gmailMessageId: message.id!,
-            rfcMessageId,
-            subject,
-            date,
-            reason: 'missing_form_markers',
-            headers,
-            body: emailText
-          });
-          result.needsReview++;
-          result.skipped++;
-          result.details.push(detail);
+          if (looksLikeQuoteRequest(emailText, subject)) {
+            const detail = `msg ${message.id}: needs_review reason=parse_failed_quote_candidate body_len=${bodyLen}`;
+            console.info(`[email-import] needs_review reason=parse_failed_quote_candidate subject="${subject}" body_len=${bodyLen} snippet="${snippet}" msgId=${message.id}`);
+            await saveInboundNeedsReview({
+              gmailMessageId: message.id!,
+              rfcMessageId,
+              subject,
+              date,
+              reason: 'parse_failed_quote_candidate',
+              headers,
+              body: emailText
+            });
+            result.needsReview++;
+            result.skipped++;
+            result.details.push(detail);
+          } else {
+            const detail = `msg ${message.id}: ignored reason=non_quote_email body_len=${bodyLen}`;
+            console.info(`[email-import] ignored reason=non_quote_email subject="${subject}" body_len=${bodyLen} msgId=${message.id}`);
+            result.ignored++;
+            result.skipped++;
+            result.details.push(detail);
+          }
           continue;
         }
 

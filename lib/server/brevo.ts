@@ -23,7 +23,7 @@ export type BrevoConfirmationDetails = {
   postalCode: string;
   province: string;
   confirmedAt: string;
-  children?: { id?: string; birthDate?: string }[];
+  children?: { id?: string; birthDate?: string; declaredAge?: number; calculatedAge?: number; ageMismatch?: boolean }[];
   selectedHotelName?: string;
   selectedTreatmentLabel?: string;
   selectedPrice?: number;
@@ -327,12 +327,26 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
     confirmation.city,
     confirmation.province
   ].filter(Boolean).join(" ");
-  const children = confirmation.children?.filter((child) => Boolean(child.birthDate)) ?? [];
+  const children = confirmation.children ?? [];
   const childrenHtml = children.length
-    ? children.map((child, index) => `<div>Bambino ${index + 1}: ${child.birthDate}</div>`).join("")
+    ? children.map((child, index) => {
+        const parts: string[] = [`Bambino ${index + 1}:`];
+        if (child.declaredAge != null) parts.push(`età preventivo ${child.declaredAge} anni`);
+        if (child.birthDate) parts.push(`nato il ${child.birthDate}`);
+        if (child.calculatedAge != null) parts.push(`→ ${child.calculatedAge} anni al check-in`);
+        const line = `<div>${parts.join(" — ")}${child.ageMismatch ? " <strong style='color:#b45309'>⚠ età non coerente</strong>" : ""}</div>`;
+        return line;
+      }).join("")
     : "-";
   const childrenText = children.length
-    ? children.map((child, index) => `Bambino ${index + 1}: ${child.birthDate}`).join("; ")
+    ? children.map((child, index) => {
+        const parts: string[] = [`Bambino ${index + 1}:`];
+        if (child.declaredAge != null) parts.push(`età preventivo ${child.declaredAge} anni`);
+        if (child.birthDate) parts.push(`nato il ${child.birthDate}`);
+        if (child.calculatedAge != null) parts.push(`→ ${child.calculatedAge} anni al check-in`);
+        if (child.ageMismatch) parts.push("ATTENZIONE: età non coerente con il preventivo");
+        return parts.join(" — ");
+      }).join("; ")
     : "-";
   const selectionHtml = hasSelection
     ? `<tr>

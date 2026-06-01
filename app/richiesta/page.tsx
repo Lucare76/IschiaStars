@@ -6,7 +6,7 @@ import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 const TRATTAMENTI = ["B&B", "Mezza pensione", "Pensione completa", "All inclusive", "Solo alloggio"];
 const ZONE = ["Ischia", "Ischia Porto", "Ischia Ponte", "Forio", "Lacco Ameno", "Casamicciola", "Barano", "Sant'Angelo"];
 
-type Child = { birthDate: string };
+type Child = { age: string };
 
 type Form = {
   firstName: string;
@@ -47,20 +47,20 @@ export default function RichiestaPreventivo() {
   function setChildCount(n: number) {
     const current = form.children;
     const updated = n > current.length
-      ? [...current, ...Array.from({ length: n - current.length }, () => ({ birthDate: "" }))]
+      ? [...current, ...Array.from({ length: n - current.length }, () => ({ age: "" }))]
       : current.slice(0, n);
     setForm((prev) => ({ ...prev, numChildren: String(n), children: updated }));
   }
 
-  function setChildBirthDate(index: number, value: string) {
+  function setChildAge(index: number, value: string) {
     setForm((prev) => ({
       ...prev,
-      children: prev.children.map((c, i) => i === index ? { birthDate: value } : c)
+      children: prev.children.map((c, i) => i === index ? { age: value } : c)
     }));
   }
 
   const canSubmit = form.firstName && form.lastName && form.email && form.phone && form.checkIn && form.checkOut
-    && (form.children.length === 0 || form.children.every((c) => c.birthDate));
+    && (form.children.length === 0 || form.children.every((c) => c.age !== ""));
 
   async function submit() {
     setLoading(true);
@@ -78,7 +78,7 @@ export default function RichiestaPreventivo() {
         checkOut: form.checkOut,
         adults: Number(form.adults),
         rooms: Number(form.rooms),
-        children: form.children,
+        children: form.children.map((c) => ({ age: Number(c.age) })),
         requestedHotel: form.requestedHotel || undefined,
         treatment: form.treatment || undefined,
         destination: form.destination,
@@ -164,14 +164,16 @@ export default function RichiestaPreventivo() {
 
               {form.children.length > 0 && (
                 <div className="mt-3 space-y-2 rounded-xl bg-ischia-mist p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue">Data di nascita bambini</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue">Età bambini</p>
                   {form.children.map((child, i) => (
                     <Field
                       key={i}
-                      label={`Bambino ${i + 1} *`}
-                      type="date"
-                      value={child.birthDate}
-                      onChange={(v) => setChildBirthDate(i, v)}
+                      label={`Bambino ${i + 1} — Età *`}
+                      type="number"
+                      value={child.age}
+                      onChange={(v) => setChildAge(i, v)}
+                      min={0}
+                      max={17}
                     />
                   ))}
                 </div>

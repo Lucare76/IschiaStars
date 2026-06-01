@@ -53,7 +53,13 @@ export function PendingRequestCard({ request }: { request: QuoteRequest }) {
 
       {request.children.length ? (
         <p className="mt-3 text-sm text-ischia-ink/70">
-          Bambini: {request.children.map((child) => `${child.firstName} (${formatDate(child.birthDate)})`).join(", ")}
+          Bambini: {request.children.map((child, i) =>
+            child.age != null
+              ? `Bambino ${i + 1}: ${child.age} ${child.age === 1 ? "anno" : "anni"}`
+              : child.birthDate
+                ? `${child.firstName} (${formatDate(child.birthDate)})`
+                : `Bambino ${i + 1}`
+          ).join(", ")}
         </p>
       ) : null}
 

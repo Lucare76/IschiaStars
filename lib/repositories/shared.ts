@@ -57,7 +57,8 @@ export function mapQuote(
     .map((c, index) => ({
       id: String(c.id ?? `${row.id}-child-${index}`),
       firstName: String(c.first_name ?? `Bambino ${index + 1}`),
-      birthDate: String(c.birth_date)
+      birthDate: c.birth_date ? String(c.birth_date) : "",
+      age: c.age != null ? Number(c.age) : undefined
     }));
 
   // hotelOptions già mappati da fetchHotelOptionsForQuotes; se vuoti, crea opzione virtuale legacy

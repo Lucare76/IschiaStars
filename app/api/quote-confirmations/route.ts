@@ -5,6 +5,8 @@ import { createQuoteConfirmation } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { getPaymentSettings } from "@/lib/repositories/settings";
 import { sendQuoteConfirmedInternalEmail } from "@/lib/server/brevo";
+import { compareDeclaredAge } from "@/lib/age-utils";
+import type { ChildGuest } from "@/lib/types";
 
 type ConfirmationPayload = {
   quoteCode?: string;
@@ -52,6 +54,9 @@ export async function POST(request: NextRequest) {
     ? { ...paymentSettingsToDbValue(paymentSettings), payment_reason: paymentReason, configured: true }
     : { configured: false, payment_reason: paymentReason, updated_at: paymentSettings.updatedAt };
 
+  const ageComparison = buildChildrenAgeComparison(quoteResult.data.children, body!.children ?? [], quoteResult.data.arrivalDate);
+  const hasAgeMismatch = ageComparison.some((c) => c.ageMismatch);
+
   const result = await createQuoteConfirmation(quoteResult.data.id, {
     firstName: body!.firstName!.trim(),
     lastName: body!.lastName!.trim(),
@@ -78,6 +83,8 @@ export async function POST(request: NextRequest) {
     paymentSettingsSnapshot,
     metadata: {
       children: body!.children ?? [],
+      children_age_comparison: ageComparison,
+      has_age_mismatch: hasAgeMismatch,
       source: "public_quote_page",
       paymentSettingsSnapshot
     }
@@ -98,7 +105,13 @@ export async function POST(request: NextRequest) {
       postalCode: body!.postalCode!.trim(),
       province: body!.province!.trim(),
       confirmedAt: result.data.confirmedAt,
-      children: body!.children ?? [],
+      children: ageComparison.map((c) => ({
+        id: (body!.children ?? [])[c.childIndex - 1]?.id,
+        birthDate: c.birthDate,
+        declaredAge: c.declaredAge,
+        calculatedAge: c.calculatedAge,
+        ageMismatch: c.ageMismatch
+      })),
       selectedHotelName: selection.selectedHotelName,
       selectedTreatmentLabel: selection.selectedTreatmentLabel,
       selectedPrice: selection.selectedPrice,
@@ -126,6 +139,31 @@ function validateConfirmation(body: ConfirmationPayload | null) {
   if (!/^\d{5}$/.test(body.postalCode!.trim())) return "CAP non valido";
   if (!body.acceptedTerms || !body.acceptedPrivacy) return "Accetta condizioni e privacy";
   return null;
+}
+
+function buildChildrenAgeComparison(
+  quoteChildren: ChildGuest[],
+  bodyChildren: { id?: string; birthDate?: string }[],
+  checkInDate: string
+) {
+  return bodyChildren.map((bodyChild, index) => {
+    const quoteChild = quoteChildren.find((c) => c.id === bodyChild.id) ?? quoteChildren[index];
+    const declaredAge = quoteChild?.age;
+    const birthDate = bodyChild.birthDate ?? "";
+    if (declaredAge == null || !birthDate) {
+      return { childIndex: index + 1, noData: true, ageMismatch: false };
+    }
+    const result = compareDeclaredAge({ declaredAge, birthDate, checkInDate });
+    return {
+      childIndex: index + 1,
+      declaredAge: result.declaredAge,
+      birthDate,
+      calculatedAge: result.calculatedAge,
+      ageMismatch: !result.matches,
+      difference: result.difference,
+      noData: false
+    };
+  });
 }
 
 function resolveSelection(quote: NonNullable<Awaited<ReturnType<typeof getQuoteByCodeAndToken>>["data"]>, body: ConfirmationPayload) {

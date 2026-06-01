@@ -153,9 +153,9 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
     }
 
     const formData = new FormData(event.currentTarget);
-    const children = Array.from({ length: childrenCount }, (_, index) => ({ birthDate: String(formData.get(`child-${index}`) ?? "") }));
-    if (children.some((c) => !c.birthDate)) {
-      setError("Inserisci la data di nascita per ogni bambino.");
+    const children = Array.from({ length: childrenCount }, (_, index) => ({ age: Number(formData.get(`child-${index}`) ?? "") }));
+    if (children.some((c) => isNaN(c.age) || c.age < 0 || c.age > 17)) {
+      setError("Inserisci l'età (0–17 anni) per ogni bambino.");
       setLoading(false);
       return;
     }
@@ -298,7 +298,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
             <Input name="adults" label="Adulti" required type="number" defaultValue={String(initialRequest?.adults ?? 2)} />
             <Input label="Numero bambini" type="number" value={String(childrenCount)} onChange={(e) => setChildrenCount(Number(e.target.value))} min="0" />
             {Array.from({ length: childrenCount }, (_, index) => (
-              <Input key={index} name={`child-${index}`} label={`Data nascita bambino ${index + 1}`} required type="date" defaultValue={initialRequest?.children[index]?.birthDate} />
+              <Input key={index} name={`child-${index}`} label={`Età bambino ${index + 1}`} required type="number" min="0" max="17" defaultValue={initialRequest?.children[index]?.age != null ? String(initialRequest.children[index].age) : ""} />
             ))}
             <Input name="rooms" label="Camere" required type="number" defaultValue={String(initialRequest?.rooms ?? 1)} />
             <Input name="hotelRequested" label="Hotel richiesto dal cliente" placeholder="Es. Hotel Terme Felix" defaultValue={initialRequest?.requestedHotel} />

@@ -24,9 +24,11 @@ export async function POST(request: NextRequest) {
   }
 
   const children = Array.isArray(body.children)
-    ? body.children
-        .map((c: Record<string, string>) => ({ birthDate: c.birthDate ?? c.birth_date ?? "", firstName: c.firstName }))
-        .filter((c: { birthDate: string }) => c.birthDate)
+    ? body.children.map((c: Record<string, unknown>) => ({
+        age: c.age != null ? Number(c.age) : undefined,
+        birthDate: typeof c.birthDate === "string" ? c.birthDate : typeof c.birth_date === "string" ? c.birth_date : undefined,
+        firstName: typeof c.firstName === "string" ? c.firstName : undefined
+      }))
     : [];
 
   const result = await createQuoteRequest({
