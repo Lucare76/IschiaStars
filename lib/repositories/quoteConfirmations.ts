@@ -81,7 +81,7 @@ export async function createQuoteConfirmation(quoteId: string, input: QuoteConfi
       selectedBalanceMethod: input.selectedBalanceMethod,
       selectedPaymentPolicy: input.selectedPaymentPolicy,
       selectedCancellationPolicy: input.selectedCancellationPolicy,
-      paymentSettingsSnapshot: input.paymentSettingsSnapshot
+      ...(input.paymentSettingsSnapshot ? { paymentSettingsSnapshot: input.paymentSettingsSnapshot } : {})
     }
   });
 
@@ -107,7 +107,7 @@ export async function createQuoteConfirmation(quoteId: string, input: QuoteConfi
     selectedBalanceMethod: input.selectedBalanceMethod,
     selectedPaymentPolicy: input.selectedPaymentPolicy,
     selectedCancellationPolicy: input.selectedCancellationPolicy,
-    paymentSettingsSnapshot: input.paymentSettingsSnapshot
+    ...(input.paymentSettingsSnapshot ? { paymentSettingsSnapshot: input.paymentSettingsSnapshot } : {})
   });
   console.info(`[confirmation] event saved quote=${quoteId}`);
 

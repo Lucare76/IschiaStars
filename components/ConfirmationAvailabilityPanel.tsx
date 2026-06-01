@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import { adminApiHeaders } from "@/lib/admin-api-client";
 import { availabilityStatusLabel, defaultUnavailabilityMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
+import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
 import { Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
-export function ConfirmationAvailabilityPanel({ quote }: { quote: Quote }) {
+export function ConfirmationAvailabilityPanel({ quote, paymentSettings }: { quote: Quote; paymentSettings: PaymentSettings }) {
   const confirmation = quote.confirmation;
   const [message, setMessage] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -23,12 +24,19 @@ export function ConfirmationAvailabilityPanel({ quote }: { quote: Quote }) {
   const depositAmount = confirmation?.selectedDepositAmount;
   const balanceAmount = confirmation?.selectedBalanceAmount;
 
-  const paymentSnapshot = confirmation?.paymentSettingsSnapshot ?? {};
-  const paymentReason = typeof paymentSnapshot.payment_reason === "string" ? paymentSnapshot.payment_reason : "";
-  const hasCoordinates = paymentSnapshot.configured === true;
+  const finalPaymentSnapshot = confirmation?.finalConfirmationSentAt ? confirmation?.paymentSettingsSnapshot ?? {} : {};
+  const finalPaymentReason = typeof finalPaymentSnapshot.payment_reason === "string" ? finalPaymentSnapshot.payment_reason : "";
+  const hasFinalCoordinates = finalPaymentSnapshot.configured === true;
+  const hasCurrentCoordinates = isPaymentSettingsConfigured(paymentSettings);
   const confirmationChildren = getConfirmationChildren(confirmation?.metadata, quote.children);
   const confirmationName = `${confirmation?.firstName ?? quote.customerFirstName} ${confirmation?.lastName ?? quote.customerLastName}`.trim();
   const addressLine = [confirmation?.address, confirmation?.zip, confirmation?.city, confirmation?.province].filter(Boolean).join(" ");
+  const currentPaymentReason = buildPaymentReason(
+    paymentSettings,
+    quote.code,
+    confirmation?.firstName ?? quote.customerFirstName,
+    confirmation?.lastName ?? quote.customerLastName
+  );
 
   const depositDueIso = useMemo(() => {
     const parsed = new Date(depositDueAt);
@@ -81,26 +89,35 @@ export function ConfirmationAvailabilityPanel({ quote }: { quote: Quote }) {
         <Info label="Prezzo" value={selectedPrice > 0 ? formatCurrency(selectedPrice) : "-"} />
         <Info label="Caparra" value={depositAmount != null ? `${confirmation.selectedDepositPercent ?? 0}% = ${formatCurrency(depositAmount)}` : "-"} />
         <Info label="Saldo" value={balanceAmount != null ? formatCurrency(balanceAmount) : "-"} />
-        <Info label="Coordinate" value={hasCoordinates ? "Snapshot pagamento salvato" : "Non configurate"} />
-        <Info label="Causale" value={paymentReason || "-"} />
+        <Info label="Coordinate" value={hasCurrentCoordinates ? "Configurate per invio definitivo" : "Non configurate"} />
+        <Info label="Causale" value={currentPaymentReason || "-"} />
         <Info label="Policy cancellazione" value={confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy ?? "-"} />
         <Info label="Confermata il" value={formatDateTime(confirmation.confirmedAt)} />
         <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
       </div>
 
       <div className="mt-4 rounded-2xl bg-ischia-mist p-4 text-sm text-ischia-ink">
-        <h3 className="font-black text-ischia-navy">Coordinate / snapshot pagamento</h3>
-        {hasCoordinates ? (
+        <h3 className="font-black text-ischia-navy">Coordinate pagamento</h3>
+        {hasFinalCoordinates ? (
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <Info label="Intestatario" value={String(paymentSnapshot.bank_account_holder ?? "-")} />
-            <Info label="Banca" value={String(paymentSnapshot.bank_name ?? "-")} />
-            <Info label="IBAN" value={String(paymentSnapshot.iban ?? "-")} />
-            <Info label="BIC/SWIFT" value={String(paymentSnapshot.bic_swift ?? "-")} />
-            <Info label="Causale" value={paymentReason || "-"} />
-            <Info label="Aggiornato" value={String(paymentSnapshot.updated_at ?? "-")} />
+            <Info label="Snapshot inviato" value="Coordinate salvate nella conferma definitiva" />
+            <Info label="Intestatario" value={String(finalPaymentSnapshot.bank_account_holder ?? "-")} />
+            <Info label="Banca" value={String(finalPaymentSnapshot.bank_name ?? "-")} />
+            <Info label="IBAN" value={String(finalPaymentSnapshot.iban ?? "-")} />
+            <Info label="BIC/SWIFT" value={String(finalPaymentSnapshot.bic_swift ?? "-")} />
+            <Info label="Causale" value={finalPaymentReason || "-"} />
+          </div>
+        ) : hasCurrentCoordinates ? (
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <Info label="Intestatario" value={paymentSettings.bankAccountHolder || "-"} />
+            <Info label="Banca" value={paymentSettings.bankName || "-"} />
+            <Info label="IBAN" value={paymentSettings.iban || "-"} />
+            <Info label="BIC/SWIFT" value={paymentSettings.bicSwift || "-"} />
+            <Info label="Causale" value={currentPaymentReason || "-"} />
+            <Info label="Istruzioni" value={paymentSettings.paymentInstructions || "-"} />
           </div>
         ) : (
-          <p className="mt-2 font-semibold text-amber-800">Coordinate pagamento non configurate nello snapshot della conferma.</p>
+          <p className="mt-2 font-semibold text-amber-800">Coordinate pagamento non configurate. Vai in Impostazioni.</p>
         )}
       </div>
 
@@ -126,6 +143,11 @@ export function ConfirmationAvailabilityPanel({ quote }: { quote: Quote }) {
       {canSendFinal ? (
         <div className="mt-5 rounded-2xl bg-emerald-50/60 p-4 ring-1 ring-emerald-200/70">
           <h3 className="font-black text-ischia-navy">Invia conferma definitiva al cliente</h3>
+          {!hasCurrentCoordinates ? (
+            <p className="mt-2 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
+              Coordinate pagamento non configurate. Vai in Impostazioni.
+            </p>
+          ) : null}
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="text-sm font-semibold text-ischia-ink">
               Scadenza caparra
@@ -137,18 +159,21 @@ export function ConfirmationAvailabilityPanel({ quote }: { quote: Quote }) {
             </label>
           </div>
           <div className="mt-3 rounded-xl bg-white p-3 text-sm text-ischia-ink/75 ring-1 ring-emerald-200/60">
-            {hasCoordinates ? (
+            {hasCurrentCoordinates ? (
               <>
-                <p><strong>Coordinate snapshot:</strong> {String(paymentSnapshot.bank_account_holder ?? "-")} · {String(paymentSnapshot.iban ?? "-")}</p>
-                {paymentReason ? <p><strong>Causale:</strong> {paymentReason}</p> : null}
+                <p><strong>Coordinate che verranno inviate:</strong> {paymentSettings.bankAccountHolder} · {paymentSettings.iban}</p>
+                {paymentSettings.bankName ? <p><strong>Banca:</strong> {paymentSettings.bankName}</p> : null}
+                {paymentSettings.bicSwift ? <p><strong>BIC/SWIFT:</strong> {paymentSettings.bicSwift}</p> : null}
+                <p><strong>Causale:</strong> {currentPaymentReason}</p>
+                {paymentSettings.paymentInstructions ? <p><strong>Istruzioni:</strong> {paymentSettings.paymentInstructions}</p> : null}
               </>
             ) : (
-              <p className="font-semibold text-amber-800">Coordinate pagamento non configurate: la mail avviserà che verranno comunicate dallo staff.</p>
+              <p className="font-semibold text-amber-800">Coordinate pagamento non configurate. Completa le impostazioni prima di inviare la conferma definitiva.</p>
             )}
           </div>
           <button
             className="mt-3 rounded-full bg-ischia-navy px-4 py-2 text-sm font-black text-white disabled:opacity-60"
-            disabled={Boolean(loadingAction) || !depositDueIso}
+            disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
             onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes }, "Conferma definitiva inviata al cliente.")}
             type="button"
           >

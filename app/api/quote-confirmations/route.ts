@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown } from "@/lib/hotel-policies";
-import { buildPaymentReason, isPaymentSettingsConfigured, paymentSettingsToDbValue } from "@/lib/payment-settings";
 import { createQuoteConfirmation } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
-import { getPaymentSettings } from "@/lib/repositories/settings";
 import { sendQuoteConfirmedInternalEmail } from "@/lib/server/brevo";
 import { compareDeclaredAge } from "@/lib/age-utils";
 import type { ChildGuest } from "@/lib/types";
@@ -47,13 +45,6 @@ export async function POST(request: NextRequest) {
   }
 
   const selection = resolveSelection(quoteResult.data, body!);
-  const paymentSettingsResult = await getPaymentSettings();
-  const paymentSettings = paymentSettingsResult.data;
-  const paymentReason = buildPaymentReason(paymentSettings, quoteResult.data.code, body!.firstName!.trim(), body!.lastName!.trim());
-  const paymentSettingsSnapshot = isPaymentSettingsConfigured(paymentSettings)
-    ? { ...paymentSettingsToDbValue(paymentSettings), payment_reason: paymentReason, configured: true }
-    : { configured: false, payment_reason: paymentReason, updated_at: paymentSettings.updatedAt };
-
   const ageComparison = buildChildrenAgeComparison(quoteResult.data.children, body!.children ?? [], quoteResult.data.arrivalDate);
   const hasAgeMismatch = ageComparison.some((c) => c.ageMismatch);
 
@@ -80,13 +71,11 @@ export async function POST(request: NextRequest) {
     selectedBalanceMethod: selection.selectedBalanceMethod,
     selectedPaymentPolicy: selection.selectedPaymentPolicy,
     selectedCancellationPolicy: selection.selectedCancellationPolicy,
-    paymentSettingsSnapshot,
     metadata: {
       children: body!.children ?? [],
       children_age_comparison: ageComparison,
       has_age_mismatch: hasAgeMismatch,
-      source: "public_quote_page",
-      paymentSettingsSnapshot
+      source: "public_quote_page"
     }
   });
 
@@ -120,8 +109,7 @@ export async function POST(request: NextRequest) {
       selectedBalanceAmount: selection.selectedBalanceAmount,
       selectedBalanceMethod: selection.selectedBalanceMethod,
       selectedPaymentPolicy: selection.selectedPaymentPolicy,
-      selectedCancellationPolicy: selection.selectedCancellationPolicy,
-      paymentSettingsSnapshot
+      selectedCancellationPolicy: selection.selectedCancellationPolicy
     });
   } catch (err) {
     console.warn("POST /api/quote-confirmations brevo error", { code: quoteResult.data.code, message: err instanceof Error ? err.message : String(err) });

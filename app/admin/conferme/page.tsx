@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
 import { availabilityStatusLabel, availabilityStatusLabels } from "@/lib/confirmation-availability";
+import { isPaymentSettingsConfigured } from "@/lib/payment-settings";
 import { listQuotes } from "@/lib/repositories/quotes";
+import { getPaymentSettings } from "@/lib/repositories/settings";
 import { ConfirmationAvailabilityStatus } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
@@ -22,7 +24,8 @@ type Filter = (typeof filters)[number];
 
 export default async function ConfirmationsPage({ searchParams }: { searchParams?: { filter?: string } }) {
   const selectedFilter = filters.includes(searchParams?.filter as Filter) ? searchParams?.filter as Filter : "tutte";
-  const result = await listQuotes();
+  const [result, paymentSettings] = await Promise.all([listQuotes(), getPaymentSettings()]);
+  const missingPaymentSettings = !isPaymentSettingsConfigured(paymentSettings.data);
   const confirmations = result.data
     .filter((quote) => quote.confirmation && !quote.deletedAt)
     .filter((quote) => selectedFilter === "tutte" || (quote.confirmation?.availabilityStatus ?? "availability_to_check") === selectedFilter);
@@ -40,6 +43,12 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
           </Link>
         ))}
       </div>
+
+      {missingPaymentSettings ? (
+        <div className="mb-5 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
+          Coordinate pagamento non configurate. Vai in Impostazioni.
+        </div>
+      ) : null}
 
       <div className="grid gap-4">
         {confirmations.map((quote) => {

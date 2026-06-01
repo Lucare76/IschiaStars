@@ -23,7 +23,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const quoteResult = await getQuoteById(String(confirmationResult.data.quote_id));
   if (!quoteResult.data?.confirmation) return NextResponse.json({ ok: false, error: "Preventivo non trovato" }, { status: 404 });
 
-  const snapshot = await resolvePaymentSnapshot(quoteResult.data);
+  const now = new Date().toISOString();
+  const snapshot = await resolvePaymentSnapshot(quoteResult.data, body.depositDueAt, now);
+  if (snapshot.configured !== true) {
+    return NextResponse.json({ ok: false, error: "Coordinate pagamento non configurate. Completa le impostazioni prima di inviare la conferma definitiva." }, { status: 400 });
+  }
+
   const sent = await sendFinalConfirmationEmailToClient(quoteResult.data, {
     depositDueAt: body.depositDueAt,
     notes: body.notes,
@@ -31,7 +36,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   });
   if (!sent) return NextResponse.json({ ok: false, error: "Email conferma definitiva non inviata" }, { status: 502 });
 
-  const now = new Date().toISOString();
   const update = await updateQuoteConfirmationAvailability(params.id, {
     status: "deposit_waiting",
     depositDueAt: body.depositDueAt,
@@ -57,11 +61,20 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   return NextResponse.json({ ok: true, source: update.source, data: update.data });
 }
 
-async function resolvePaymentSnapshot(quote: NonNullable<Awaited<ReturnType<typeof getQuoteById>>["data"]>) {
-  if (quote.confirmation?.paymentSettingsSnapshot?.configured === true) return quote.confirmation.paymentSettingsSnapshot;
+async function resolvePaymentSnapshot(quote: NonNullable<Awaited<ReturnType<typeof getQuoteById>>["data"]>, depositDueAt: string, emailSentAt: string) {
   const settings = (await getPaymentSettings()).data;
-  const reason = buildPaymentReason(settings, quote.code, quote.customerFirstName, quote.customerLastName);
+  const firstName = quote.confirmation?.firstName ?? quote.customerFirstName;
+  const lastName = quote.confirmation?.lastName ?? quote.customerLastName;
+  const reason = buildPaymentReason(settings, quote.code, firstName, lastName);
+  const base = {
+    payment_reason: reason,
+    deposit_amount: quote.confirmation?.selectedDepositAmount ?? quote.deposit,
+    balance_amount: quote.confirmation?.selectedBalanceAmount,
+    deposit_due_at: depositDueAt,
+    email_sent_at: emailSentAt
+  };
+
   return isPaymentSettingsConfigured(settings)
-    ? { ...paymentSettingsToDbValue(settings), payment_reason: reason, configured: true }
-    : { configured: false, payment_reason: reason, updated_at: settings.updatedAt };
+    ? { ...paymentSettingsToDbValue(settings), ...base, configured: true }
+    : { ...base, configured: false, updated_at: settings.updatedAt };
 }

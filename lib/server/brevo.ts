@@ -558,7 +558,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     return false;
   }
 
-  const email = quote.confirmation?.selectedHotelName ? quote.customerEmail?.trim() : quote.customerEmail?.trim();
+  const email = quote.confirmation?.email?.trim() || quote.customerEmail?.trim();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
 
   const confirmation = quote.confirmation;
@@ -574,6 +574,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
         ${snapshot.iban ? `IBAN: ${snapshot.iban}<br>` : ""}
         ${snapshot.bic_swift ? `BIC/SWIFT: ${snapshot.bic_swift}<br>` : ""}
         ${paymentReason ? `Causale: ${paymentReason}<br>` : ""}
+        ${snapshot.payment_instructions ? `${snapshot.payment_instructions}<br>` : ""}
       </p>`
     : `<p>Le modalità operative per il versamento della caparra saranno comunicate dallo staff IschiaStars.</p>`;
 
@@ -617,7 +618,8 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
       snapshot.bank_name ? `Banca: ${snapshot.bank_name}` : "",
       snapshot.iban ? `IBAN: ${snapshot.iban}` : "",
       snapshot.bic_swift ? `BIC/SWIFT: ${snapshot.bic_swift}` : "",
-      paymentReason ? `Causale: ${paymentReason}` : ""
+      paymentReason ? `Causale: ${paymentReason}` : "",
+      snapshot.payment_instructions ? `Istruzioni: ${snapshot.payment_instructions}` : ""
     ].filter(Boolean) : ["Le modalità operative per il versamento della caparra saranno comunicate dallo staff IschiaStars."]),
     ...(confirmation?.selectedCancellationPolicy ? [`Policy cancellazione: ${confirmation.selectedCancellationPolicy}`] : []),
     ...(details.notes ? [`Note: ${details.notes}`] : []),

@@ -4,11 +4,12 @@ import { AdminShell } from "@/components/AdminShell";
 import { QuoteDetailEditor } from "@/components/QuoteDetailEditor";
 import { listHotels } from "@/lib/repositories/hotels";
 import { listQuotes } from "@/lib/repositories/quotes";
+import { getPaymentSettings } from "@/lib/repositories/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function QuoteDetailPage({ params }: { params: { code: string } }) {
-  const [quoteResult, hotelResult] = await Promise.all([listQuotes(), listHotels()]);
+  const [quoteResult, hotelResult, paymentSettings] = await Promise.all([listQuotes(), listHotels(), getPaymentSettings()]);
   const quote = quoteResult.data.find((item) => item.code === params.code);
   if (!quote) notFound();
 
@@ -22,7 +23,7 @@ export default async function QuoteDetailPage({ params }: { params: { code: stri
           Tutti i preventivi
         </Link>
       </div>
-      <QuoteDetailEditor quote={quote} hotels={hotelResult.data} />
+      <QuoteDetailEditor quote={quote} hotels={hotelResult.data} paymentSettings={paymentSettings.data} />
     </AdminShell>
   );
 }

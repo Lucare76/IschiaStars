@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 import { ConfirmQuoteForm } from "@/components/ConfirmQuoteForm";
 import { trackQuoteEvent } from "@/lib/client-tracking";
 import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown } from "@/lib/hotel-policies";
-import { PaymentSettings } from "@/lib/payment-settings";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Quote, QuoteHotelOption, TreatmentOption } from "@/lib/types";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
@@ -47,7 +46,7 @@ function sharperWordPressImageUrl(url?: string) {
   return url.replace(/-\d+x\d+(?=\.(?:jpe?g|png|webp|avif)(?:\?|$))/i, "");
 }
 
-export function QuoteProposalSection({ quote, paymentSettings }: { quote: Quote; paymentSettings?: PaymentSettings }) {
+export function QuoteProposalSection({ quote }: { quote: Quote }) {
   const [selected, setSelected] = useState<SelectedOption | null>(null);
   const confirmRef = useRef<HTMLDivElement>(null);
 
@@ -127,7 +126,6 @@ export function QuoteProposalSection({ quote, paymentSettings }: { quote: Quote;
         <ConfirmQuoteForm
           quote={quote}
           selectedOption={selected}
-          paymentSettings={paymentSettings}
         />
       </div>
     </div>

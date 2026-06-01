@@ -8,6 +8,7 @@ import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { adminApiFetch } from "@/lib/admin-api-client";
 import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
+import { PaymentSettings } from "@/lib/payment-settings";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Hotel, Quote, QuoteHotelOption, QuoteStatus, TransportOffer } from "@/lib/types";
 import { formatCurrency, publicQuoteUrl } from "@/lib/utils";
@@ -105,7 +106,7 @@ function emptyOption(hotel?: Hotel, groupId = 1): HotelOptionState {
   };
 }
 
-export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hotel[] }) {
+export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings }) {
   const effective = getEffectiveHotelOptions(quote);
   const [currentQuote, setCurrentQuote] = useState(quote);
   const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>(groupOptionsToState(effective));
@@ -351,7 +352,7 @@ export function QuoteDetailEditor({ quote, hotels }: { quote: Quote; hotels: Hot
 
   return (
     <div className="space-y-6">
-      {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} /> : null}
+      {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} paymentSettings={paymentSettings} /> : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_0.36fr]">
       <form className="space-y-5" onSubmit={save}>

@@ -5,12 +5,11 @@ import { PublicEventTracker } from "@/components/PublicEventTracker";
 import { QuoteProposalSection } from "@/components/QuoteProposalSection";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { PrintButton } from "@/components/PrintButton";
-import { PaymentSettings } from "@/lib/payment-settings";
 import { Quote } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 
-export function PublicQuotePage({ quote, paymentSettings }: { quote: Quote; paymentSettings?: PaymentSettings }) {
+export function PublicQuotePage({ quote }: { quote: Quote }) {
   const guests = `${quote.adults} adulti${quote.children.length ? `, ${quote.children.length} bambini` : ""}`;
   const options = getEffectiveHotelOptions(quote);
   const hasMultipleOptions = options.length > 1;
@@ -108,7 +107,7 @@ export function PublicQuotePage({ quote, paymentSettings }: { quote: Quote; paym
             Confronta le soluzioni disponibili e conferma l&apos;opzione che preferisci.
           </p>
         </div>
-        <QuoteProposalSection quote={quote} paymentSettings={paymentSettings} />
+        <QuoteProposalSection quote={quote} />
       </section>
 
       <MobileFloatingWhatsApp quote={quote} />
