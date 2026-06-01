@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { adminApiHeaders } from "@/lib/admin-api-client";
+import { useEffect, useMemo, useState } from "react";
+import { adminApiFetch, adminApiHeaders } from "@/lib/admin-api-client";
 import { QuoteCard, QuoteCardActions, QuoteStats } from "@/components/QuoteCard";
 import { Quote } from "@/lib/types";
 
@@ -31,6 +31,33 @@ export function QuoteFilters({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<QuoteFilter>(initialFilter);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setQuotes(initialQuotes);
+  }, [initialQuotes]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshQuotes() {
+      const response = await adminApiFetch("/api/quotes");
+      const result = (await response.json().catch(() => null)) as { ok?: boolean; source?: string; data?: Quote[]; error?: string } | null;
+      if (cancelled || !response.ok || !result?.ok || !Array.isArray(result.data)) return;
+      setQuotes(result.data);
+      if (result.source !== "supabase") {
+        setMessage(result.error ?? "Database non collegato: stai visualizzando dati demo/locali.");
+      }
+    }
+
+    void refreshQuotes();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setFilter(initialFilter);
+  }, [initialFilter]);
 
   const filtered = useMemo(() => quotes.filter((quote) => {
     const stats = statsByQuote[quote.id];
