@@ -15,17 +15,17 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (body.statusOnly) {
     if (!statuses.includes(body.status)) return NextResponse.json({ ok: false, error: "Stato non valido" }, { status: 400 });
     const result = await updateQuoteStatus(params.id, body.status);
-    return NextResponse.json({ ok: Boolean(result.data), source: result.source, data: result.data, error: result.error }, { status: result.data ? 200 : 400 });
+    return quoteMutationResponse(result);
   }
 
   if (body.excludedFromStats !== undefined) {
     const result = await excludeQuoteFromStats(params.id, Boolean(body.excludedFromStats));
-    return NextResponse.json({ ok: Boolean(result.data), source: result.source, data: result.data, error: result.error }, { status: result.data ? 200 : 400 });
+    return quoteMutationResponse(result);
   }
 
   if (body.softDelete) {
     const result = await softDeleteQuote(params.id, body.deletedReason);
-    return NextResponse.json({ ok: Boolean(result.data), source: result.source, data: result.data, error: result.error }, { status: result.data ? 200 : 400 });
+    return quoteMutationResponse(result);
   }
 
   // Validazione hotel options se presenti
@@ -62,7 +62,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     hotelOptions: body.hotelOptions ?? undefined
   });
 
-  return NextResponse.json({ ok: Boolean(result.data), source: result.source, data: result.data, error: result.error }, { status: result.data ? 200 : 400 });
+  return quoteMutationResponse(result);
 }
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -73,13 +73,31 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   if (body?.action === "duplicate") {
     const result = await duplicateQuote(params.id);
-    return NextResponse.json({ ok: Boolean(result.data), source: result.source, data: result.data, error: result.error }, { status: result.data ? 200 : 400 });
+    return quoteMutationResponse(result);
   }
 
   if (body?.action === "restore") {
     const result = await restoreQuote(params.id);
-    return NextResponse.json({ ok: Boolean(result.data), source: result.source, data: result.data, error: result.error }, { status: result.data ? 200 : 400 });
+    return quoteMutationResponse(result);
   }
 
   return NextResponse.json({ ok: false, error: "Azione non valida" }, { status: 400 });
+}
+
+function quoteMutationResponse<T extends { id?: string }>(result: { data: T | null; source: "supabase" | "mock"; error?: string }) {
+  if (result.source !== "supabase") {
+    return NextResponse.json({
+      ok: false,
+      source: result.source,
+      data: null,
+      error: result.error ?? "Database non collegato: modifica non salvata."
+    }, { status: 503 });
+  }
+
+  return NextResponse.json({
+    ok: Boolean(result.data),
+    source: result.source,
+    data: result.data,
+    error: result.error
+  }, { status: result.data ? 200 : 400 });
 }

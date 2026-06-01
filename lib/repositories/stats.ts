@@ -33,7 +33,7 @@ export async function getDashboardStats(): Promise<RepositoryResult<DashboardSta
   const activeConfirmedIds = new Set(Array.from(events.confirmedEventIds).filter((id) => activeIds.has(id)));
   const activeWhatsappClicks = events.whatsappClickQuoteIds.filter((id) => activeIds.has(id)).length;
 
-  const confirmed = activeQuotes.filter((quote) => quote.status === "confermato" || activeConfirmedIds.has(quote.id));
+  const confirmed = activeQuotes.filter((quote) => quote.status === "confermato" || Boolean(quote.confirmation) || activeConfirmedIds.has(quote.id));
 
   const stats = {
     createdQuotes: activeQuotes.length,

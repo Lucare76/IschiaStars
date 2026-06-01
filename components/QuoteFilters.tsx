@@ -44,7 +44,7 @@ export function QuoteFilters({
       (filter === "esclusi" && quote.excludedFromStats && !isDeleted) ||
       (filter === "preventivo_inviato" && !isDeleted && !quote.excludedFromStats && quote.status === filter) ||
       (filter === "alternative" && !isDeleted && !quote.excludedFromStats && quote.isAlternative) ||
-      (filter === "confermati" && !isDeleted && !quote.excludedFromStats && (quote.status === "confermato" || stats?.confirmed)) ||
+      (filter === "confermati" && !isDeleted && !quote.excludedFromStats && (quote.status === "confermato" || Boolean(quote.confirmation) || stats?.confirmed)) ||
       (filter === "aperti" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.openings) && quote.status !== "confermato" && !stats?.confirmed) ||
       (filter === "click_whatsapp" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.whatsappClicks)) ||
       (filter === "perso_non_disponibile" && !isDeleted && !quote.excludedFromStats && quote.status === filter);
@@ -60,12 +60,12 @@ export function QuoteFilters({
       headers: adminApiHeaders(),
       body: JSON.stringify({ excludedFromStats: next })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string } | null;
     if (response.ok && result?.data) {
       setQuotes((current) => current.map((q) => (q.id === quote.id ? result.data! : q)));
       setMessage(next ? `${quote.code} escluso dalle statistiche.` : `${quote.code} reinclueso nelle statistiche.`);
     } else {
-      setMessage("Operazione non riuscita.");
+      setMessage(result?.error ?? "Operazione non riuscita.");
     }
   }
 
@@ -81,12 +81,12 @@ export function QuoteFilters({
       headers: adminApiHeaders(),
       body: JSON.stringify({ softDelete: true })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string } | null;
     if (response.ok && result?.data) {
       setQuotes((current) => current.map((q) => (q.id === quote.id ? result.data! : q)));
       setMessage(`Preventivo ${quote.code} cancellato.`);
     } else {
-      setMessage("Cancellazione non riuscita.");
+      setMessage(result?.error ?? "Cancellazione non riuscita.");
     }
   }
 
@@ -97,12 +97,12 @@ export function QuoteFilters({
       headers: adminApiHeaders(),
       body: JSON.stringify({ action: "restore" })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string } | null;
     if (response.ok && result?.data) {
       setQuotes((current) => current.map((q) => (q.id === quote.id ? result.data! : q)));
       setMessage(`Preventivo ${quote.code} ripristinato.`);
     } else {
-      setMessage("Ripristino non riuscito.");
+      setMessage(result?.error ?? "Ripristino non riuscito.");
     }
   }
 

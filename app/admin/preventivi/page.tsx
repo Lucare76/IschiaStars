@@ -49,6 +49,11 @@ export default async function QuotesPage({ searchParams }: { searchParams?: { fi
       </div>
 
       <section>
+        {quoteResult.source !== "supabase" ? (
+          <div className="mb-5 rounded-2xl bg-red-50 px-5 py-4 text-sm font-bold text-red-700 ring-1 ring-red-200">
+            Database non collegato: stai visualizzando dati demo/locali. Le modifiche non vengono salvate nel database reale.
+          </div>
+        ) : null}
         <QuoteFilters quotes={quotes} statsByQuote={statsByQuote} initialFilter={initialFilter} />
       </section>
     </AdminShell>

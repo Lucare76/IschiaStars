@@ -1,6 +1,5 @@
-import { allQuoteEvents } from "@/lib/demo-store";
+import { allDemoQuoteRequests, allDemoQuotes, allQuoteEvents } from "@/lib/demo-store";
 import { formatDateRome, formatDateTimeRome } from "@/lib/date-format";
-import { quoteRequests, quotes } from "@/lib/mock-data";
 import { Quote } from "@/lib/types";
 
 export function formatCurrency(value: number) {
@@ -80,10 +79,12 @@ export function quoteEventStats(quoteId: string) {
 }
 
 export function dashboardStats() {
+  const quotes = allDemoQuotes().filter((quote) => !quote.deletedAt && !quote.excludedFromStats);
+  const quoteRequests = allDemoQuoteRequests();
   const events = allQuoteEvents();
   const localConfirmedIds = new Set(events.filter((event) => event.eventType === "quote_confirmed").map((event) => event.quoteId));
   const sent = quotes.filter((quote) => quote.status === "preventivo_inviato").length;
-  const confirmed = quotes.filter((quote) => quote.status === "confermato" || localConfirmedIds.has(quote.id));
+  const confirmed = quotes.filter((quote) => quote.status === "confermato" || Boolean(quote.confirmation) || localConfirmedIds.has(quote.id));
   const openedQuoteIds = new Set(events.filter((event) => event.eventType === "quote_opened").map((event) => event.quoteId));
   return {
     createdQuotes: quotes.length,
