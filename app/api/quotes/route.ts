@@ -88,12 +88,17 @@ export async function POST(request: NextRequest) {
   }
 
   if (result.data) {
+    let emailSent = false;
+    let emailSkipReason: string | undefined;
     try {
-      await sendQuoteEmailToClient(result.data);
+      const emailResult = await sendQuoteEmailToClient(result.data);
+      emailSent = emailResult.sent;
+      emailSkipReason = emailResult.skipReason;
     } catch (err) {
       console.warn("POST /api/quotes brevo error", { code: result.data.code, message: err instanceof Error ? err.message : String(err) });
+      emailSkipReason = "exception";
     }
-    return NextResponse.json({ ok: true, source: result.source, data: result.data });
+    return NextResponse.json({ ok: true, source: result.source, data: result.data, emailSent, emailSkipReason });
   }
 
   const error = result.error ?? "Sistema non configurato per il salvataggio. Verifica le variabili ambiente.";

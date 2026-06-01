@@ -11,6 +11,7 @@ import { Hotel, Quote, QuoteRequest } from "@/lib/types";
 import { publicQuoteUrl } from "@/lib/utils";
 
 type SavedQuote = Quote | null;
+type EmailStatus = { sent: boolean; skipReason?: string } | null;
 
 type RoomTypeState = {
   label: string;
@@ -66,6 +67,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
   const requestedHotelMatch = requestedHotelName ? findRequestedHotelInDb(requestedHotelName, activeHotels) : undefined;
   const [childrenCount, setChildrenCount] = useState(initialRequest?.children.length ?? 0);
   const [savedQuote, setSavedQuote] = useState<SavedQuote>(null);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isAlternativeOffer, setIsAlternativeOffer] = useState(false);
@@ -218,12 +220,13 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
         hotelOptions: mappedOptions
       })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string } | null;
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string; emailSent?: boolean; emailSkipReason?: string } | null;
     setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
       setError(response.status === 401 ? "Sessione scaduta, effettua di nuovo il login." : result?.error ?? `Preventivo non salvato (${response.status}). Riprova o verifica la sessione operatore.`);
       return;
     }
+    setEmailStatus({ sent: result.emailSent ?? false, skipReason: result.emailSkipReason });
     setSavedQuote(result.data);
   }
 
@@ -237,6 +240,13 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
         <p className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800 ring-1 ring-emerald-100">
           Preventivo generato. La richiesta non compare piu tra i preventivi da evadere.
         </p>
+        {emailStatus !== null && (
+          emailStatus.sent
+            ? <p className="mt-3 rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">Email inviata al cliente.</p>
+            : <p className="mt-3 rounded-xl bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800">
+                Email cliente NON inviata ({emailStatus.skipReason ?? "motivo sconosciuto"}). Usa il link WhatsApp per condividere il preventivo.
+              </p>
+        )}
         <div className="mt-5 grid gap-4 text-sm">
           <div>
             <p className="font-black text-ischia-navy">Codice preventivo</p>

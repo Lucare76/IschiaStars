@@ -118,23 +118,25 @@ function maskEmail(email: string): string {
   return `${visible}${"*".repeat(Math.max(1, local.length - visible.length))}@${domain}`;
 }
 
-export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
+export type SendQuoteEmailResult = { sent: boolean; skipReason?: string };
+
+export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEmailResult> {
   const missingEnvReason = brevoMissingEnvReason();
   if (missingEnvReason) {
     console.info(`[brevo] skipped quote email code=${quote.code} reason=disabled_or_missing_env detail=${missingEnvReason}`);
-    return;
+    return { sent: false, skipReason: missingEnvReason };
   }
 
   const email = quote.customerEmail?.trim();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     console.warn(`[brevo] skipped quote email code=${quote.code} reason=missing_client_email`);
-    return;
+    return { sent: false, skipReason: "missing_client_email" };
   }
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
   if (!siteUrl) {
     console.warn(`[brevo] skipped quote email code=${quote.code} reason=missing_site_url`);
-    return;
+    return { sent: false, skipReason: "missing_site_url" };
   }
   const quoteUrl = `${siteUrl}/preventivi/${quote.code}?token=${quote.token}`;
   const firstName = quote.customerFirstName || "Cliente";
@@ -288,8 +290,10 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<void> {
 
   if (sendResult.ok) {
     console.info(`[brevo] sent quote email code=${quote.code}`);
+    return { sent: true };
   } else {
-    console.warn(`[brevo] failed quote email code=${quote.code} status=${sendResult.status ?? "fetch_error"}`);
+    console.warn(`[brevo] failed quote email code=${quote.code} status=${sendResult.status ?? "fetch_error"} error=${sendResult.error ?? "-"}`);
+    return { sent: false, skipReason: `brevo_error_${sendResult.status ?? "fetch"}` };
   }
 }
 

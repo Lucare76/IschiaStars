@@ -23,6 +23,10 @@ export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; sele
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Se il preventivo ha opzioni hotel esplicite (sistema multi-proposta), la selezione è obbligatoria.
+  const requiresSelection = quote.hotelOptions.length > 0;
+  const canSubmit = !requiresSelection || Boolean(selectedOption);
+
   if (confirmed) {
     return (
       <div className="rounded-2xl bg-emerald-50 p-5 text-emerald-900 ring-1 ring-emerald-200">
@@ -120,9 +124,14 @@ export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; sele
         </div>
       ) : null}
 
-      {!selectedOption && (
+      {!selectedOption && requiresSelection && (
+        <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 ring-1 ring-rose-200">
+          Scorri su e clicca <strong>&quot;Conferma questa opzione&quot;</strong> sulla proposta che preferisci prima di procedere.
+        </div>
+      )}
+      {!selectedOption && !requiresSelection && (
         <div className="rounded-xl bg-ischia-sun/15 px-4 py-3 text-sm font-semibold text-amber-900">
-          Scegli un trattamento dalle proposte qui sopra cliccando su &quot;Conferma questa opzione&quot;, oppure conferma il preventivo in modo generico.
+          Scegli un trattamento dalle proposte qui sopra, oppure conferma il preventivo in modo generico.
         </div>
       )}
 
@@ -170,10 +179,16 @@ export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; sele
 
       <button
         className="focus-ring rounded-full bg-ischia-sun px-5 py-3 font-black text-ischia-navy disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={loading}
+        disabled={loading || !canSubmit}
         type="submit"
       >
-        {loading ? "Conferma in corso..." : selectedOption ? `Conferma — ${selectedOption.hotelName}` : "Conferma il preventivo"}
+        {loading
+          ? "Conferma in corso..."
+          : selectedOption
+            ? `Conferma — ${selectedOption.hotelName}`
+            : requiresSelection
+              ? "Seleziona prima una proposta"
+              : "Conferma il preventivo"}
       </button>
     </form>
   );
