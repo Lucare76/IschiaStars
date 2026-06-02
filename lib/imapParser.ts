@@ -340,14 +340,20 @@ export async function pollImapInbox(): Promise<PollImapResult> {
     secure: config.secure,
     auth: { user: config.user, pass: config.password },
     logger: false,
+    tls: { rejectUnauthorized: false },
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 30000,
   });
 
   try {
     await client.connect();
   } catch (connErr) {
     const errMsg = connErr instanceof Error ? connErr.message : String(connErr);
-    console.error(`[mail-inbox] connection failed host=${config.host} err=${errMsg}`);
-    result.errors.push(`Connessione IMAP fallita: ${errMsg}`);
+    const errCode = (connErr as any)?.responseCode ?? (connErr as any)?.code ?? '';
+    const detail = errCode ? `${errMsg} [${errCode}]` : errMsg;
+    console.error(`[mail-inbox] connection failed host=${config.host} err=${detail}`);
+    result.errors.push(`Connessione IMAP fallita: ${detail}`);
     return result;
   }
 
