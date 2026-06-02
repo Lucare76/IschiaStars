@@ -1,7 +1,8 @@
-import { pollGmail } from '@/lib/gmailParser';
+import { getImapConfig, pollImapInbox } from '@/lib/imapParser';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 function normalizeSecret(value?: string | null) {
   return value?.trim() || null;
@@ -44,20 +45,31 @@ export async function GET(request: Request) {
   }
 
   console.info('[cron-email] authorized');
-  console.info('[cron-email] start');
 
-  const result = await pollGmail();
+  if (!getImapConfig()) {
+    return Response.json(
+      { ok: false, error: 'Casella email non configurata. Verifica MAIL_INBOX_*.' },
+      { status: 503 }
+    );
+  }
 
-  console.info(`[cron-email] completed imported=${result.imported} skipped=${result.skipped} duplicates=${result.duplicates} ignored=${result.ignored} needsReview=${result.needsReview} deletedKnown=${result.deletedKnown} errors=${result.errors.length}`);
+  console.info('[cron-email] start provider=imap');
+
+  const result = await pollImapInbox();
+
+  console.info(
+    `[cron-email] completed imported=${result.imported} skipped=${result.skipped} duplicates=${result.duplicates} ignored=${result.ignored} needsReview=${result.needsReview} errors=${result.errors.length}`
+  );
 
   return Response.json({
     ok: result.errors.length === 0,
+    provider: result.provider,
+    mailbox: result.mailbox,
     imported: result.imported,
     skipped: result.skipped,
     duplicates: result.duplicates,
     ignored: result.ignored,
     needsReview: result.needsReview,
-    deletedKnown: result.deletedKnown,
     errors: result.errors,
     details: result.details
   });

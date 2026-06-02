@@ -173,6 +173,10 @@ create index if not exists quote_requests_active_status_idx on public.quote_requ
 create unique index if not exists quote_requests_gmail_message_id_uidx
   on public.quote_requests ((metadata->>'gmail_message_id'))
   where metadata->>'gmail_message_id' is not null and deleted_at is null;
+-- IMAP import: unique safety-net index (mirrors Gmail index above)
+create unique index if not exists quote_requests_imap_message_id_uidx
+  on public.quote_requests ((metadata->>'imap_message_id'))
+  where metadata->>'imap_message_id' is not null and deleted_at is null;
 create index if not exists quotes_status_idx on public.quotes(status);
 create index if not exists quote_confirmations_availability_status_idx on public.quote_confirmations(availability_status);
 create unique index if not exists hotels_external_source_external_id_uidx on public.hotels(external_source, external_id) where external_source is not null and external_id is not null;

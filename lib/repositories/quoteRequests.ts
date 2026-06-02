@@ -123,8 +123,12 @@ export async function deleteQuoteRequest(id: string): Promise<RepositoryResult<{
   if (error) return fallback({ deleted: false }, error);
 
   const metadata = (existing.data as { metadata?: Record<string, unknown> | null }).metadata ?? {};
-  const gmailMessageId = typeof metadata.gmail_message_id === "string" ? metadata.gmail_message_id : null;
-  if (gmailMessageId) {
+  // Support both Gmail (legacy) and IMAP message IDs — both are stored in the
+  // email_import_ledger.gmail_message_id column (repurposed as provider-agnostic key)
+  const sourceMessageId =
+    (typeof metadata.gmail_message_id === "string" ? metadata.gmail_message_id : null) ||
+    (typeof metadata.imap_message_id === "string" ? metadata.imap_message_id : null);
+  if (sourceMessageId) {
     await supabase
       .from("email_import_ledger")
       .update({
@@ -136,7 +140,7 @@ export async function deleteQuoteRequest(id: string): Promise<RepositoryResult<{
         },
         updated_at: now
       })
-      .eq("gmail_message_id", gmailMessageId);
+      .eq("gmail_message_id", sourceMessageId);
 
     await supabase
       .from("inbound_emails")
@@ -145,7 +149,7 @@ export async function deleteQuoteRequest(id: string): Promise<RepositoryResult<{
         skipped_reason: "deleted_by_admin",
         updated_at: now
       })
-      .eq("gmail_message_id", gmailMessageId);
+      .eq("gmail_message_id", sourceMessageId);
   }
 
   await supabase
