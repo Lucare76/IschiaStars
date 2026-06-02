@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { adminApiHeaders } from "@/lib/admin-api-client";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { QuoteRequest } from "@/lib/types";
 
 export function PendingRequestCard({ request }: { request: QuoteRequest }) {
+  const router = useRouter();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
@@ -29,6 +31,7 @@ export function PendingRequestCard({ request }: { request: QuoteRequest }) {
       return;
     }
     setDeleted(true);
+    router.refresh();
   }
 
   if (deleted) return null;

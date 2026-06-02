@@ -7,6 +7,10 @@ const nextConfig = {
         hostname: "ischiastars.it"
       }
     ]
+  },
+  experimental: {
+    // Dynamic admin pages must never show stale data from the router cache.
+    staleTimes: { dynamic: 0, static: 180 }
   }
 };
 

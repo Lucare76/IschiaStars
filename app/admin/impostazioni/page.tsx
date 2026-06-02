@@ -2,6 +2,8 @@ import { AdminShell } from "@/components/AdminShell";
 import { PaymentSettingsForm } from "@/components/PaymentSettingsForm";
 import { getPaymentSettings } from "@/lib/repositories/settings";
 
+export const dynamic = "force-dynamic";
+
 export default async function SettingsPage() {
   const paymentSettings = await getPaymentSettings();
 

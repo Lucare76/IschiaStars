@@ -12,7 +12,10 @@ export async function GET(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   const result = await listQuotes();
-  return NextResponse.json({ ok: true, source: result.source, data: result.data, error: result.error });
+  return NextResponse.json(
+    { ok: true, source: result.source, data: result.data, error: result.error },
+    { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+  );
 }
 
 export async function POST(request: NextRequest) {

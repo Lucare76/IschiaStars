@@ -7,6 +7,7 @@ export function adminApiHeaders(headers: HeadersInit = {}) {
 export async function adminApiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   const requestInit: RequestInit = {
     ...init,
+    cache: init.cache ?? "no-store",
     credentials: init.credentials ?? "include",
     headers: adminApiHeaders(init.headers)
   };

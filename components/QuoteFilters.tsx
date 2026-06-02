@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { adminApiFetch, adminApiHeaders } from "@/lib/admin-api-client";
 import { QuoteCard, QuoteCardActions, QuoteStats } from "@/components/QuoteCard";
 import { Quote } from "@/lib/types";
@@ -27,33 +28,52 @@ export function QuoteFilters({
   statsByQuote: Record<string, QuoteStats>;
   initialFilter?: QuoteFilter;
 }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [quotes, setQuotes] = useState(initialQuotes);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<QuoteFilter>(initialFilter);
   const [message, setMessage] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState(() => formatTime(new Date()));
 
   useEffect(() => {
     setQuotes(initialQuotes);
   }, [initialQuotes]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function refreshQuotes() {
-      const response = await adminApiFetch("/api/quotes");
-      const result = (await response.json().catch(() => null)) as { ok?: boolean; source?: string; data?: Quote[]; error?: string } | null;
-      if (cancelled || !response.ok || !result?.ok || !Array.isArray(result.data)) return;
-      setQuotes(result.data);
-      if (result.source !== "supabase") {
-        setMessage(result.error ?? "Database non collegato: stai visualizzando dati demo/locali.");
-      }
+  const fetchQuotes = useCallback(async (cancelled: { value: boolean }) => {
+    const response = await adminApiFetch("/api/quotes?include_deleted=true");
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; source?: string; data?: Quote[]; error?: string } | null;
+    if (cancelled.value || !response.ok || !result?.ok || !Array.isArray(result.data)) return;
+    setQuotes(result.data);
+    setLastUpdated(formatTime(new Date()));
+    if (result.source !== "supabase") {
+      setMessage(result.error ?? "Database non collegato: stai visualizzando dati demo/locali.");
     }
-
-    void refreshQuotes();
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    const cancelled = { value: false };
+    void fetchQuotes(cancelled);
+    return () => { cancelled.value = true; };
+  }, [fetchQuotes]);
+
+  // Auto-refresh every 60 seconds
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      const cancelled = { value: false };
+      void fetchQuotes(cancelled);
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, [fetchQuotes]);
+
+  const handleRefresh = useCallback(() => {
+    startTransition(() => {
+      router.refresh();
+      setLastUpdated(formatTime(new Date()));
+    });
+    const cancelled = { value: false };
+    void fetchQuotes(cancelled);
+  }, [router, fetchQuotes]);
 
   useEffect(() => {
     setFilter(initialFilter);
@@ -164,6 +184,17 @@ export function QuoteFilters({
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/90 px-4 py-3 text-sm shadow-soft">
+        <span className="font-semibold text-ischia-ink/70">Ultimo aggiornamento: {lastUpdated}</span>
+        <button
+          className="inline-flex items-center gap-2 rounded-full bg-ischia-navy px-4 py-2 font-black text-white disabled:opacity-60"
+          disabled={isPending}
+          onClick={handleRefresh}
+          type="button"
+        >
+          Aggiorna
+        </button>
+      </div>
       <div className="rounded-2xl bg-white/90 p-4 shadow-soft">
         {message ? (
           <p className="mb-3 rounded-xl bg-ischia-mist px-4 py-2 text-sm font-semibold text-ischia-navy">{message}</p>
@@ -205,4 +236,8 @@ export function QuoteFilters({
           )}
     </div>
   );
+}
+
+function formatTime(value: Date) {
+  return value.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
 }
