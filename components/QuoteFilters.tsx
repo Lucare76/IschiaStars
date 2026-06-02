@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminApiFetch, adminApiHeaders } from "@/lib/admin-api-client";
 import { QuoteCard, QuoteCardActions, QuoteStats } from "@/components/QuoteCard";
 import { Quote } from "@/lib/types";
@@ -28,8 +27,7 @@ export function QuoteFilters({
   statsByQuote: Record<string, QuoteStats>;
   initialFilter?: QuoteFilter;
 }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [refreshing, setRefreshing] = useState(false);
   const [quotes, setQuotes] = useState(initialQuotes);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<QuoteFilter>(initialFilter);
@@ -40,10 +38,13 @@ export function QuoteFilters({
     setQuotes(initialQuotes);
   }, [initialQuotes]);
 
-  const fetchQuotes = useCallback(async (cancelled: { value: boolean }) => {
+  const fetchQuotes = useCallback(async (opts: { cancelled?: { value: boolean }; showSpinner?: boolean } = {}) => {
+    if (opts.showSpinner) setRefreshing(true);
     const response = await adminApiFetch("/api/quotes?include_deleted=true");
     const result = (await response.json().catch(() => null)) as { ok?: boolean; source?: string; data?: Quote[]; error?: string } | null;
-    if (cancelled.value || !response.ok || !result?.ok || !Array.isArray(result.data)) return;
+    if (opts.cancelled?.value) return;
+    if (opts.showSpinner) setRefreshing(false);
+    if (!response.ok || !result?.ok || !Array.isArray(result.data)) return;
     setQuotes(result.data);
     setLastUpdated(formatTime(new Date()));
     if (result.source !== "supabase") {
@@ -53,27 +54,19 @@ export function QuoteFilters({
 
   useEffect(() => {
     const cancelled = { value: false };
-    void fetchQuotes(cancelled);
+    void fetchQuotes({ cancelled });
     return () => { cancelled.value = true; };
   }, [fetchQuotes]);
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
-    const interval = window.setInterval(() => {
-      const cancelled = { value: false };
-      void fetchQuotes(cancelled);
-    }, 60_000);
+    const interval = window.setInterval(() => void fetchQuotes({}), 60_000);
     return () => window.clearInterval(interval);
   }, [fetchQuotes]);
 
   const handleRefresh = useCallback(() => {
-    startTransition(() => {
-      router.refresh();
-      setLastUpdated(formatTime(new Date()));
-    });
-    const cancelled = { value: false };
-    void fetchQuotes(cancelled);
-  }, [router, fetchQuotes]);
+    void fetchQuotes({ showSpinner: true });
+  }, [fetchQuotes]);
 
   useEffect(() => {
     setFilter(initialFilter);
@@ -188,11 +181,11 @@ export function QuoteFilters({
         <span className="font-semibold text-ischia-ink/70">Ultimo aggiornamento: {lastUpdated}</span>
         <button
           className="inline-flex items-center gap-2 rounded-full bg-ischia-navy px-4 py-2 font-black text-white disabled:opacity-60"
-          disabled={isPending}
+          disabled={refreshing}
           onClick={handleRefresh}
           type="button"
         >
-          Aggiorna
+          {refreshing ? "Aggiornamento..." : "Aggiorna"}
         </button>
       </div>
       <div className="rounded-2xl bg-white/90 p-4 shadow-soft">
