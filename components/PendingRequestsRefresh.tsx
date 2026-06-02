@@ -33,7 +33,8 @@ export function PendingRequestsRefresh() {
       const res = await fetch("/api/quote-requests/import-email", { method: "POST" });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        setImportState({ type: "error", message: data.error ?? "Errore durante l'importazione" });
+        const errorMsg = data.error ?? data.errors?.[0] ?? "Errore durante l'importazione";
+        setImportState({ type: "error", message: errorMsg });
       } else {
         setImportState({
           type: "done",
