@@ -4,7 +4,7 @@ export type HotelPolicyDefaults = {
   paymentPolicy: string;
   cancellationPolicy: string;
   paymentNotes: string;
-  cancellationDays: 7 | 14;
+  cancellationDays: 7 | 14 | 20;
 };
 
 export type PaymentBreakdown = {
@@ -16,11 +16,16 @@ export type PaymentBreakdown = {
 
 export const BALANCE_METHOD_IN_STRUCTURE = "Saldo restante in struttura con carta o contanti.";
 
-export const CANCELLATION_POLICY_14_DAYS =
-  "La cancellazione o modifica della prenotazione è consentita senza penale entro 14 giorni prima della data di arrivo. L’eventuale acconto versato resterà valido come credito utilizzabile entro 12 mesi. Oltre tale termine e in caso di no-show, verrà applicata una penale pari al 100% del totale prenotato. In caso di arrivo posticipato, partenza anticipata o riduzione del numero di persone rispetto a quanto prenotato, l’intero importo della prenotazione resta dovuto. I pasti non fruiti non danno diritto a rimborso.";
+export const BALANCE_METHOD_BONIFICO_14 = "Saldo entro 14 giorni dall’arrivo tramite bonifico bancario.";
 
 export const CANCELLATION_POLICY_7_DAYS =
   "La cancellazione o modifica della prenotazione è consentita senza penale entro 7 giorni prima della data di arrivo. L’eventuale acconto versato resterà valido come credito utilizzabile entro 12 mesi. Oltre tale termine e in caso di no-show, verrà applicata una penale pari al 100% del totale prenotato. In caso di arrivo posticipato, partenza anticipata o riduzione del numero di persone rispetto a quanto prenotato, l’intero importo della prenotazione resta dovuto. I pasti non fruiti non danno diritto a rimborso.";
+
+export const CANCELLATION_POLICY_14_DAYS =
+  "La cancellazione o modifica della prenotazione è consentita senza penale entro 14 giorni prima della data di arrivo. L’eventuale acconto versato resterà valido come credito utilizzabile entro 12 mesi. Oltre tale termine e in caso di no-show, verrà applicata una penale pari al 100% del totale prenotato. In caso di arrivo posticipato, partenza anticipata o riduzione del numero di persone rispetto a quanto prenotato, l’intero importo della prenotazione resta dovuto. I pasti non fruiti non danno diritto a rimborso.";
+
+export const CANCELLATION_POLICY_20_DAYS =
+  "La cancellazione o modifica della prenotazione è consentita senza penale entro 20 giorni prima della data di arrivo. L’eventuale acconto versato resterà valido come credito utilizzabile entro 12 mesi. Oltre tale termine e in caso di no-show, verrà applicata una penale pari al 100% del totale prenotato. In caso di arrivo posticipato, partenza anticipata o riduzione del numero di persone rispetto a quanto prenotato, l’intero importo della prenotazione resta dovuto, senza riduzioni per variazioni della durata del soggiorno o del numero di ospiti. I pasti non fruiti non danno diritto a rimborso.";
 
 const PAYMENT_POLICY_TEMPLATE = (percent: number) =>
   `Acconto ${percent}% alla conferma. ${BALANCE_METHOD_IN_STRUCTURE}`;
@@ -28,6 +33,27 @@ const PAYMENT_POLICY_TEMPLATE = (percent: number) =>
 const GROUP_A = ["felix", "royal", "alexander"];
 const GROUP_B = ["re ferdinando", "saint raphael", "president", "augusto", "pineta"];
 const GROUP_C = ["castiglione village", "tramonto d oro"];
+
+// Group D: 30% deposit, saldo bonifico 14gg, cancellazione 20gg
+// Checked BEFORE GROUP_B to avoid "pineta ischia" matching GROUP_B's "pineta".
+const GROUP_D_30 = [
+  "av club colella",       // AV CLUB Terme Colella
+  "club thermal wellness", // Club Thermal Wellness Forio d'Ischia
+  "roulette ischia porto", // Roulette Ischia Porto 4 ⭐
+  "la villa",              // La Villa Resort & SPA
+  "av isola verde",        // AV ISOLA VERDE – Hotel & Thermal SPA
+  "villa teresa",          // Hotel Terme Villa Teresa
+  "san lorenzo",           // Albergo Terme San Lorenzo
+  "san giovanni",          // Hotel San Giovanni Terme
+  "don pepe",              // Hotel Terme Don Pepe
+  "san valentino",         // Hotel Terme San Valentino
+  "la rosa",               // Hotel La Rosa
+  "pineta ischia",         // Hotel Pineta Ischia (more specific than GROUP_B's "pineta")
+  "regina palace",         // Hotel Regina Palace Terme
+  "carlo magno",           // Park Hotel Carlo Magno
+  "beccaccia",             // PARK HOTEL La Beccaccia
+  "punto azzurro",         // Resort Punto Azzurro
+];
 
 export function normalizeHotelPolicyName(value: string): string {
   return value
@@ -45,6 +71,8 @@ export function getDefaultHotelPoliciesByName(hotelName: string): HotelPolicyDef
   const normalized = normalizeHotelPolicyName(hotelName);
   if (!normalized) return null;
 
+  // GROUP_D checked before GROUP_B: "pineta ischia" is more specific than GROUP_B's "pineta"
+  if (GROUP_D_30.some((name) => normalized.includes(name))) return buildBonificoDefaults(30);
   if (GROUP_A.some((name) => normalized.includes(name))) return buildDefaults(20, 14);
   if (GROUP_B.some((name) => normalized.includes(name))) return buildDefaults(15, 14);
   if (GROUP_C.some((name) => normalized.includes(name))) return buildDefaults(25, 7);
@@ -79,6 +107,17 @@ export function calculatePaymentBreakdown(price: number, depositPercent?: number
     depositAmount,
     balanceAmount: roundCurrency(safePrice - depositAmount),
     balanceMethod
+  };
+}
+
+function buildBonificoDefaults(depositPercent: number): HotelPolicyDefaults {
+  return {
+    depositPercent,
+    cancellationDays: 20,
+    balanceMethod: BALANCE_METHOD_BONIFICO_14,
+    paymentPolicy: `Acconto del ${depositPercent}% e saldo entro 14 giorni dall'arrivo tramite bonifico bancario.`,
+    cancellationPolicy: CANCELLATION_POLICY_20_DAYS,
+    paymentNotes: "Saldo da effettuare tramite bonifico bancario entro 14 giorni dalla data di arrivo."
   };
 }
 
