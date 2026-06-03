@@ -90,6 +90,13 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
   async function toggleExcludeFromStats() {
     setMessage(null);
     const next = !currentQuote.excludedFromStats;
+    if (next) {
+      const ok = window.confirm(
+        `Vuoi escludere il preventivo ${currentQuote.code} dalle statistiche?\n\nNon verrà conteggiato in dashboard, statistiche e liste operative principali. Potrai reincluderlo in seguito.`
+      );
+      if (!ok) return;
+    }
+
     const response = await adminApiFetch(`/api/quotes/${currentQuote.id}`, {
       method: "PATCH",
       body: JSON.stringify({ excludedFromStats: next })

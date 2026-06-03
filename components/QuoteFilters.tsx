@@ -117,6 +117,13 @@ export function QuoteFilters({
 
   async function handleExcludeToggle(quote: Quote) {
     const next = !quote.excludedFromStats;
+    if (next) {
+      const ok = window.confirm(
+        `Vuoi escludere il preventivo ${quote.code} dalle statistiche?\n\nNon verrà conteggiato in dashboard, statistiche e liste operative principali. Potrai reincluderlo dal filtro "Esclusi dalle statistiche".`
+      );
+      if (!ok) return;
+    }
+
     const response = await adminApiFetch(`/api/quotes/${quote.id}`, {
       method: "PATCH",
       headers: adminApiHeaders(),

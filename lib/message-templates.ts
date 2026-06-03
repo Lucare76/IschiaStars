@@ -8,6 +8,14 @@ export function adminQuoteWhatsappMessage(input: {
   hasMultipleOptions: boolean;
 }) {
   const { quote, dates, hotelLine, quoteUrl, hasMultipleOptions } = input;
+  const footer = `Per qualsiasi ulteriore informazione contattaci:
+Tel. 081 90 54 81
+WhatsApp 371 75 90 017
+
+Le disponibilita per queste date sono limitate: se la proposta ti convince, ti consigliamo di bloccarla quanto prima per non perdere la soluzione selezionata.
+
+Grazie,
+Diego - IschiaStars`;
 
   if (hasMultipleOptions) {
     return `Ciao ${quote.customerFirstName},
@@ -20,8 +28,7 @@ ${quoteUrl}
 
 Puoi confrontare le opzioni e confermare online quella che preferisci.
 
-Grazie,
-IschiaStars`;
+${footer}`;
   }
 
   return `Ciao ${quote.customerFirstName},
@@ -34,8 +41,7 @@ ${quoteUrl}
 
 Puoi aprirla, vedere tutti i dettagli e confermare direttamente online.
 
-Grazie,
-IschiaStars`;
+${footer}`;
 }
 
 export function publicQuoteInfoWhatsappMessage(quote: Quote, quoteUrl?: string) {
