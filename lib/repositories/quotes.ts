@@ -43,10 +43,9 @@ export async function listQuotes({ includeDeleted = false }: { includeDeleted?: 
   const demoQuotes = includeDeleted ? allDemoQuotes() : allDemoQuotes().filter((q) => !q.deletedAt);
   if (!supabase) return fallback(demoQuotes);
 
-  const hotelResult = await listHotels();
   let query = supabase.from("quotes").select("*").order("created_at", { ascending: false });
   if (!includeDeleted) query = query.is("deleted_at", null);
-  const { data, error } = await query;
+  const [hotelResult, { data, error }] = await Promise.all([listHotels(), query]);
   if (error) return fallback(demoQuotes, error);
 
   const quoteIds = (data ?? []).map((row) => row.id as string);

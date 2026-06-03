@@ -3,7 +3,6 @@ import { AdminShell } from "@/components/AdminShell";
 import { StatsCards } from "@/components/StatsCards";
 import { QuoteCard, RequestCard } from "@/components/QuoteCard";
 import { listPendingQuoteRequests } from "@/lib/repositories/quoteRequests";
-import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { getDashboardStats } from "@/lib/repositories/stats";
 
@@ -18,7 +17,6 @@ export default async function AdminDashboardPage() {
     pendingRequests: quoteRequests.length
   };
   const featuredQuote = quotes[0];
-  const featuredQuoteStats = featuredQuote ? (await getQuoteEventStats(featuredQuote.id)).data : null;
 
   return (
     <AdminShell title="Dashboard preventivi" subtitle="Panoramica delle richieste, dei preventivi inviati e delle conferme cliente.">
@@ -59,8 +57,8 @@ export default async function AdminDashboardPage() {
             </a>
           </div>
 
-          {featuredQuote && featuredQuoteStats ? (
-            <QuoteCard quote={featuredQuote} stats={featuredQuoteStats} />
+          {featuredQuote ? (
+            <QuoteCard quote={featuredQuote} />
           ) : null}
         </aside>
       </div>
