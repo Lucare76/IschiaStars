@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { adminApiHeaders } from "@/lib/admin-api-client";
+import { adminApiFetch, adminApiHeaders } from "@/lib/admin-api-client";
 import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { Hotel } from "@/lib/types";
 
@@ -83,7 +83,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     setLoading(true);
     setMessage(null);
     const payload = toPayload(form);
-    const response = await fetch(form.id ? `/api/hotels/${form.id}` : "/api/hotels", {
+    const response = await adminApiFetch(form.id ? `/api/hotels/${form.id}` : "/api/hotels", {
       method: form.id ? "PATCH" : "POST",
       headers: adminApiHeaders(),
       body: JSON.stringify(payload)
@@ -123,7 +123,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
   }
 
   async function removeHotel(id: string) {
-    const response = await fetch(`/api/hotels/${id}`, { method: "DELETE", headers: adminApiHeaders() });
+    const response = await adminApiFetch(`/api/hotels/${id}`, { method: "DELETE", headers: adminApiHeaders() });
     const result = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; data?: { reason?: string } } | null;
     if (!response.ok || !result?.ok) {
       setMessage({ text: result?.error ?? result?.data?.reason ?? "Hotel collegato a preventivi: disattivalo.", ok: false });
@@ -136,7 +136,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
   async function syncFromSite() {
     setSyncLoading(true);
     setMessage(null);
-    const response = await fetch("/api/hotels/sync-from-site", {
+    const response = await adminApiFetch("/api/hotels/sync-from-site", {
       method: "POST",
       headers: adminApiHeaders()
     });
@@ -148,7 +148,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
       return;
     }
 
-    const refreshed = await fetch("/api/hotels", { headers: adminApiHeaders() });
+    const refreshed = await adminApiFetch("/api/hotels", { headers: adminApiHeaders() });
     const refreshedResult = (await refreshed.json().catch(() => null)) as { ok?: boolean; data?: Hotel[] } | null;
     if (refreshed.ok && refreshedResult?.data) setHotels(refreshedResult.data);
 
@@ -161,7 +161,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     setLrSyncLoading(true);
     setLrSyncReport(null);
     setMessage(null);
-    const response = await fetch("/api/hotels/sync-from-lr-feed", {
+    const response = await adminApiFetch("/api/hotels/sync-from-lr-feed", {
       method: "POST",
       headers: adminApiHeaders(),
     });
@@ -175,7 +175,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
 
     setLrSyncReport(result.data);
 
-    const refreshed = await fetch("/api/hotels", { headers: adminApiHeaders() });
+    const refreshed = await adminApiFetch("/api/hotels", { headers: adminApiHeaders() });
     const refreshedResult = (await refreshed.json().catch(() => null)) as { ok?: boolean; data?: Hotel[] } | null;
     if (refreshed.ok && refreshedResult?.data) setHotels(refreshedResult.data);
   }
@@ -183,7 +183,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
   async function importFromSite() {
     setImportLoading(true);
     setMessage(null);
-    const response = await fetch(`/api/scrape-hotel?slug=${encodeURIComponent(form.slug.trim())}`, {
+    const response = await adminApiFetch(`/api/scrape-hotel?slug=${encodeURIComponent(form.slug.trim())}`, {
       headers: adminApiHeaders()
     });
     const result = (await response.json().catch(() => null)) as {
@@ -362,7 +362,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
   );
 
   async function toggleActive(hotel: Hotel) {
-    const response = await fetch(`/api/hotels/${hotel.id}`, {
+    const response = await adminApiFetch(`/api/hotels/${hotel.id}`, {
       method: "PATCH",
       headers: adminApiHeaders(),
       body: JSON.stringify(toPayload({ ...fromHotel(hotel), isActive: !hotel.active }))

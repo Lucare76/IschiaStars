@@ -32,7 +32,9 @@ export async function POST(request: NextRequest) {
     paymentPolicy: body.paymentPolicy,
     cancellationPolicy: body.cancellationPolicy,
     internalNotes: body.internalNotes,
-    isActive: body.isActive ?? true
+    isActive: body.isActive ?? true,
+    slug: body.slug,
+    sourceUrl: body.sourceUrl
   });
 
   return NextResponse.json({ ok: Boolean(result.data), source: result.source, data: result.data, error: result.error }, { status: result.data ? 200 : 503 });
