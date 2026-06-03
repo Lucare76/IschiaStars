@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { useState } from "react";
+import { CloneQuoteButton } from "@/components/CloneQuoteButton";
 import { ConfirmationAvailabilityPanel } from "@/components/ConfirmationAvailabilityPanel";
 import {
   HotelOptionState,
@@ -356,6 +357,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
                 {currentQuote.excludedFromStats ? "Reincludi nelle statistiche" : "Escludi dalle statistiche"}
               </button>
             ) : null}
+            <CloneQuoteButton quoteId={currentQuote.id} />
             {currentQuote.deletedAt ? (
               <button className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white" onClick={() => void restoreCurrentQuote()} type="button">
                 Ripristina preventivo

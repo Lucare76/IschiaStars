@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CloneQuoteButton } from "@/components/CloneQuoteButton";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
@@ -148,6 +149,7 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
             <Link className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/preventivi/${quote.code}`}>
               Dettaglio / modifica
             </Link>
+            <CloneQuoteButton quoteId={quote.id} />
             </>
           )
         ) : null}
