@@ -1,4 +1,4 @@
-import { listQuoteRequests } from "@/lib/repositories/quoteRequests";
+import { listPendingQuoteRequests } from "@/lib/repositories/quoteRequests";
 import { getDashboardEventStats } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
@@ -18,7 +18,7 @@ export type DashboardStats = {
 export async function getDashboardStats(): Promise<RepositoryResult<DashboardStats>> {
   const [quotesResult, requestsResult, eventsResult] = await Promise.all([
     listQuotes({ includeDeleted: false }),
-    listQuoteRequests(),
+    listPendingQuoteRequests(),
     getDashboardEventStats()
   ]);
 
@@ -39,7 +39,7 @@ export async function getDashboardStats(): Promise<RepositoryResult<DashboardSta
 
   const stats = {
     createdQuotes: activeQuotes.length,
-    pendingRequests: requestsResult.data.filter((request) => request.status === "da_evadere").length,
+    pendingRequests: requestsResult.data.length,
     sentQuotes: evaded.length,
     openedQuotes: activeOpenedIds.size,
     confirmedQuotes: confirmed.length,
