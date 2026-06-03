@@ -11,17 +11,17 @@ export type HotelInput = {
   location: string;
   stars: number;
   shortDescription?: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   standardServices?: string[];
-  defaultDepositPercent?: number;
-  defaultBalanceMethod?: string;
-  defaultPaymentNotes?: string;
-  paymentPolicy?: string;
-  cancellationPolicy?: string;
-  internalNotes?: string;
+  defaultDepositPercent?: number | null;
+  defaultBalanceMethod?: string | null;
+  defaultPaymentNotes?: string | null;
+  paymentPolicy?: string | null;
+  cancellationPolicy?: string | null;
+  internalNotes?: string | null;
   isActive?: boolean;
-  slug?: string;
-  sourceUrl?: string;
+  slug?: string | null;
+  sourceUrl?: string | null;
 };
 
 export type HotelSyncReport = {
@@ -123,11 +123,11 @@ export async function createHotel(input: HotelInput): Promise<RepositoryResult<H
         zone: input.location,
         stars: input.stars,
         description: input.shortDescription ?? "",
-        imageUrl: input.imageUrl,
+        imageUrl: input.imageUrl ?? undefined,
         standardServices: input.standardServices ?? [],
-        defaultDepositPercent: input.defaultDepositPercent,
-        defaultBalanceMethod: input.defaultBalanceMethod,
-        defaultPaymentNotes: input.defaultPaymentNotes,
+        defaultDepositPercent: input.defaultDepositPercent ?? undefined,
+        defaultBalanceMethod: input.defaultBalanceMethod ?? undefined,
+        defaultPaymentNotes: input.defaultPaymentNotes ?? undefined,
         paymentPolicy: input.paymentPolicy ?? "",
         cancellationPolicy: input.cancellationPolicy ?? "",
         internalNotes: input.internalNotes ?? "",
@@ -138,7 +138,7 @@ export async function createHotel(input: HotelInput): Promise<RepositoryResult<H
 
   const { data, error } = await supabase
     .from("hotels")
-    .insert(toHotelRow(input))
+    .insert(toHotelRow(input, { fillDefaults: true }))
     .select("*")
     .single();
 
@@ -158,14 +158,14 @@ export async function updateHotel(id: string, input: Partial<HotelInput>): Promi
         zone: input.location ?? current.zone,
         stars: input.stars ?? current.stars,
         description: input.shortDescription ?? current.description,
-        imageUrl: input.imageUrl ?? current.imageUrl,
+        imageUrl: input.imageUrl === undefined ? current.imageUrl : input.imageUrl ?? undefined,
         standardServices: input.standardServices ?? current.standardServices,
-        defaultDepositPercent: input.defaultDepositPercent ?? current.defaultDepositPercent,
-        defaultBalanceMethod: input.defaultBalanceMethod ?? current.defaultBalanceMethod,
-        defaultPaymentNotes: input.defaultPaymentNotes ?? current.defaultPaymentNotes,
-        paymentPolicy: input.paymentPolicy ?? current.paymentPolicy,
-        cancellationPolicy: input.cancellationPolicy ?? current.cancellationPolicy,
-        internalNotes: input.internalNotes ?? current.internalNotes,
+        defaultDepositPercent: input.defaultDepositPercent === undefined ? current.defaultDepositPercent : input.defaultDepositPercent ?? undefined,
+        defaultBalanceMethod: input.defaultBalanceMethod === undefined ? current.defaultBalanceMethod : input.defaultBalanceMethod ?? undefined,
+        defaultPaymentNotes: input.defaultPaymentNotes === undefined ? current.defaultPaymentNotes : input.defaultPaymentNotes ?? undefined,
+        paymentPolicy: input.paymentPolicy === undefined ? current.paymentPolicy : input.paymentPolicy ?? "",
+        cancellationPolicy: input.cancellationPolicy === undefined ? current.cancellationPolicy : input.cancellationPolicy ?? "",
+        internalNotes: input.internalNotes === undefined ? current.internalNotes : input.internalNotes ?? "",
         active: input.isActive ?? current.active
       })
     );
@@ -173,7 +173,7 @@ export async function updateHotel(id: string, input: Partial<HotelInput>): Promi
 
   const { data, error } = await supabase
     .from("hotels")
-    .update({ ...toHotelRow(input), updated_at: new Date().toISOString() })
+    .update({ ...toHotelRow(input, { fillDefaults: false }), updated_at: new Date().toISOString() })
     .eq("id", id)
     .select("*")
     .single();
@@ -198,15 +198,23 @@ export async function deleteHotel(id: string): Promise<RepositoryResult<{ delete
   return fromSupabase({ deleted: true });
 }
 
-function toHotelRow(input: Partial<HotelInput>) {
-  const policies = fillMissingHotelPolicies({
-    hotelName: input.name ?? "",
-    depositPercent: input.defaultDepositPercent,
-    balanceMethod: input.defaultBalanceMethod,
-    paymentPolicy: input.paymentPolicy,
-    cancellationPolicy: input.cancellationPolicy,
-    paymentNotes: input.defaultPaymentNotes
-  });
+function toHotelRow(input: Partial<HotelInput>, options: { fillDefaults: boolean }) {
+  const policies = options.fillDefaults
+    ? fillMissingHotelPolicies({
+        hotelName: input.name ?? "",
+        depositPercent: input.defaultDepositPercent,
+        balanceMethod: input.defaultBalanceMethod,
+        paymentPolicy: input.paymentPolicy,
+        cancellationPolicy: input.cancellationPolicy,
+        paymentNotes: input.defaultPaymentNotes
+      })
+    : {
+        depositPercent: input.defaultDepositPercent,
+        balanceMethod: input.defaultBalanceMethod,
+        paymentPolicy: input.paymentPolicy,
+        cancellationPolicy: input.cancellationPolicy,
+        paymentNotes: input.defaultPaymentNotes
+      };
   return {
     ...(input.name !== undefined ? { name: input.name } : {}),
     ...(input.location !== undefined ? { location: input.location } : {}),

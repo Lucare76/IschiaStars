@@ -400,17 +400,17 @@ function toPayload(form: HotelForm) {
     location: form.location,
     stars: form.stars,
     shortDescription: form.shortDescription,
-    imageUrl: form.imageUrl || undefined,
+    imageUrl: form.imageUrl.trim() || null,
     standardServices: form.standardServices.split("\n").map((item) => item.trim()).filter(Boolean),
-    defaultDepositPercent: form.defaultDepositPercent ? Number(form.defaultDepositPercent) : undefined,
+    defaultDepositPercent: form.defaultDepositPercent.trim() ? Number(form.defaultDepositPercent) : null,
     defaultBalanceMethod: form.defaultBalanceMethod,
     paymentPolicy: form.paymentPolicy,
     cancellationPolicy: form.cancellationPolicy,
     defaultPaymentNotes: form.defaultPaymentNotes,
     internalNotes: form.internalNotes,
     isActive: form.isActive,
-    slug: form.slug.trim() || undefined,
-    sourceUrl: form.sourceUrl.trim() || undefined
+    slug: form.slug.trim() || null,
+    sourceUrl: form.sourceUrl.trim() || null
   };
 }
 

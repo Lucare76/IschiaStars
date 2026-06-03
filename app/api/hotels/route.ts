@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     shortDescription: body.shortDescription,
     imageUrl: body.imageUrl,
     standardServices: body.standardServices ?? [],
-    defaultDepositPercent: body.defaultDepositPercent !== undefined ? Number(body.defaultDepositPercent) : undefined,
+    defaultDepositPercent: parseOptionalNumber(body.defaultDepositPercent),
     defaultBalanceMethod: body.defaultBalanceMethod,
     defaultPaymentNotes: body.defaultPaymentNotes,
     paymentPolicy: body.paymentPolicy,
@@ -38,4 +38,10 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ ok: Boolean(result.data), source: result.source, data: result.data, error: result.error }, { status: result.data ? 200 : 503 });
+}
+
+function parseOptionalNumber(value: unknown) {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  return Number(value);
 }
