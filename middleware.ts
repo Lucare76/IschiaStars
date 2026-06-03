@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_ACCESS_COOKIE, ADMIN_REFRESH_COOKIE } from "@/lib/server/auth-guard";
-import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
+
+const ADMIN_ACCESS_COOKIE = "ischiastars_admin_access_token";
+const ADMIN_REFRESH_COOKIE = "ischiastars_admin_refresh_token";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -32,13 +33,21 @@ export async function middleware(request: NextRequest) {
 }
 
 async function hasValidAdminSession(accessToken?: string) {
-  if (!accessToken || !isSupabaseConfigured()) return false;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!accessToken || !supabaseUrl || !anonKey) return false;
 
-  const supabase = createSupabaseServerClient();
-  if (!supabase) return false;
-
-  const { data, error } = await supabase.auth.getUser(accessToken);
-  return Boolean(!error && data.user);
+  try {
+    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${accessToken}`
+      }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 function clearAuthCookies(response: NextResponse) {
