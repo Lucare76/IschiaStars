@@ -11,11 +11,11 @@ export async function POST(request: NextRequest) {
   }
 
   const { firstName, lastName, email, phone, checkIn, checkOut } = body;
-  if (!firstName || !lastName || !email || !phone || !checkIn || !checkOut) {
-    return NextResponse.json({ ok: false, error: "Compila tutti i campi obbligatori" }, { status: 400 });
+  if (!firstName || !lastName || (!email && !phone) || !checkIn || !checkOut) {
+    return NextResponse.json({ ok: false, error: "Compila tutti i campi obbligatori (almeno email o telefono)" }, { status: 400 });
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
     return NextResponse.json({ ok: false, error: "Indirizzo email non valido" }, { status: 400 });
   }
 

@@ -59,7 +59,7 @@ export default function RichiestaPreventivo() {
     }));
   }
 
-  const canSubmit = form.firstName && form.lastName && form.email && form.phone && form.checkIn && form.checkOut
+  const canSubmit = form.firstName && form.lastName && (form.email || form.phone) && form.checkIn && form.checkOut
     && (form.children.length === 0 || form.children.every((c) => c.age !== ""));
 
   async function submit() {
@@ -135,9 +135,10 @@ export default function RichiestaPreventivo() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Nome *" value={form.firstName} onChange={(v) => set("firstName", v)} autoComplete="given-name" />
                 <Field label="Cognome *" value={form.lastName} onChange={(v) => set("lastName", v)} autoComplete="family-name" />
-                <Field label="Email *" type="email" value={form.email} onChange={(v) => set("email", v)} autoComplete="email" />
-                <Field label="Telefono *" type="tel" value={form.phone} onChange={(v) => set("phone", v)} autoComplete="tel" />
+                <Field label="Email" type="email" value={form.email} onChange={(v) => set("email", v)} autoComplete="email" />
+                <Field label="Telefono" type="tel" value={form.phone} onChange={(v) => set("phone", v)} autoComplete="tel" />
               </div>
+              <p className="mt-2 text-xs text-ischia-ink/55">* Inserisci almeno un contatto tra email e telefono.</p>
             </section>
 
             {/* Date e ospiti */}
