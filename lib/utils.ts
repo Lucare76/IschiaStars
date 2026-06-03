@@ -33,20 +33,22 @@ export function normalizeItalianPhone(phone: string) {
   if (digits.startsWith("00")) return digits.slice(2);
   return `39${digits}`;
 }
-export function whatsappQuoteLink(quote: Quote) {
+export function whatsappQuoteMessage(quote: Quote) {
   const hotelNames = Array.from(new Map(quote.hotelOptions.map((o) => [o.hotelGroup, o.hotelName])).values());
   const hasMultipleOptions = hotelNames.length > 1;
   const hotelLine = hasMultipleOptions ? hotelNames.join(" - ") : (hotelNames[0] ?? quote.proposedHotel.name);
   const dates = `${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`;
-  const message = adminQuoteWhatsappMessage({
+  return adminQuoteWhatsappMessage({
     quote,
     dates,
     hotelLine,
     quoteUrl: absolutePublicQuoteUrl(quote),
     hasMultipleOptions
   });
+}
 
-  return `https://wa.me/${normalizeItalianPhone(quote.customerPhone)}?text=${encodeURIComponent(message)}`;
+export function whatsappQuoteLink(quote: Quote) {
+  return `https://wa.me/${normalizeItalianPhone(quote.customerPhone)}?text=${encodeURIComponent(whatsappQuoteMessage(quote))}`;
 }
 export function ischiastarsWhatsappNumber() {
   return (process.env.NEXT_PUBLIC_ISCHIASTARS_WHATSAPP || "393717590017").replace(/\D/g, "");
