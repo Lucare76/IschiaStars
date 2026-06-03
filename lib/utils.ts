@@ -34,7 +34,7 @@ export function normalizeItalianPhone(phone: string) {
 }
 
 export function whatsappQuoteLink(quote: Quote) {
-  const hotelNames = [...new Map(quote.hotelOptions.map((o) => [o.hotelGroup, o.hotelName])).values()];
+  const hotelNames = Array.from(new Map(quote.hotelOptions.map((o) => [o.hotelGroup, o.hotelName])).values());
   const hasMultipleOptions = hotelNames.length > 1;
   const hotelLine = hasMultipleOptions ? hotelNames.join(' · ') : (hotelNames[0] ?? quote.proposedHotel.name);
   const dates = `${formatDate(quote.arrivalDate)} – ${formatDate(quote.departureDate)}`;
