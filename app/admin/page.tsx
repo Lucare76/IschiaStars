@@ -13,6 +13,10 @@ export default async function AdminDashboardPage() {
   const [requestResult, quoteResult, statsResult] = await Promise.all([listPendingQuoteRequests(), listQuotes(), getDashboardStats()]);
   const quoteRequests = requestResult.data;
   const quotes = quoteResult.data;
+  const dashboardStats = {
+    ...statsResult.data,
+    pendingRequests: quoteRequests.length
+  };
   const featuredQuote = quotes[0];
   const featuredQuoteStats = featuredQuote ? (await getQuoteEventStats(featuredQuote.id)).data : null;
 
@@ -20,7 +24,7 @@ export default async function AdminDashboardPage() {
     <AdminShell title="Dashboard preventivi" subtitle="Panoramica delle richieste, dei preventivi inviati e delle conferme cliente.">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
         <section className="min-w-0 space-y-7">
-          <StatsCards stats={statsResult.data} />
+          <StatsCards stats={dashboardStats} />
 
           <div>
             <div className="mb-4 flex items-center justify-between gap-3">
