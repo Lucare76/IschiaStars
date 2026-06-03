@@ -31,6 +31,7 @@ export function QuoteFilters({
   const [quotes, setQuotes] = useState(initialQuotes);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<QuoteFilter>(initialFilter);
+  const [sort, setSort] = useState<"date_desc" | "date_asc" | "lastname" | "price" | "arrival">("date_desc");
   const [message, setMessage] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState(() => formatTime(new Date()));
 
@@ -112,6 +113,14 @@ export function QuoteFilters({
 
     return matchesSearch && matchesFilter;
   }), [filter, query, quotes, statsByQuote]);
+
+  const sorted = useMemo(() => [...filtered].sort((a, b) => {
+    if (sort === "date_asc") return a.createdAt.localeCompare(b.createdAt);
+    if (sort === "lastname") return a.customerLastName.localeCompare(b.customerLastName, "it");
+    if (sort === "price") return b.totalPrice - a.totalPrice;
+    if (sort === "arrival") return a.arrivalDate.localeCompare(b.arrivalDate);
+    return b.createdAt.localeCompare(a.createdAt); // date_desc default
+  }), [filtered, sort]);
 
   const exactCodeSearch = /^is-\d{4}-\d+$/i.test(query.trim()) ? query.trim().toUpperCase() : null;
 
@@ -196,7 +205,7 @@ export function QuoteFilters({
         {message ? (
           <p className="mb-3 rounded-xl bg-ischia-mist px-4 py-2 text-sm font-semibold text-ischia-navy">{message}</p>
         ) : null}
-        <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
           <input
             className="w-full rounded-xl border border-ischia-blue/20 px-4 py-3 text-sm"
             placeholder="Cerca per cliente, email, telefono, codice o hotel..."
@@ -219,11 +228,22 @@ export function QuoteFilters({
             <option value="esclusi">Esclusi dalle statistiche</option>
             <option value="cancellati">Cancellati</option>
           </select>
+          <select
+            className="rounded-xl border border-ischia-blue/20 px-4 py-3 text-sm font-semibold text-ischia-navy"
+            value={sort}
+            onChange={(event) => setSort(event.target.value as typeof sort)}
+          >
+            <option value="date_desc">Più recenti</option>
+            <option value="date_asc">Più vecchi</option>
+            <option value="lastname">Cognome A→Z</option>
+            <option value="arrival">Data arrivo</option>
+            <option value="price">Prezzo ↓</option>
+          </select>
         </div>
       </div>
 
-      {filtered.length
-        ? filtered.map((quote) => (
+      {sorted.length
+        ? sorted.map((quote) => (
             <QuoteCard key={quote.id} quote={quote} stats={statsByQuote[quote.id]} actions={actions} />
           ))
         : (
