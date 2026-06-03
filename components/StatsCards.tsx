@@ -4,28 +4,86 @@ import { dashboardStats, formatCurrency } from "@/lib/utils";
 
 export function StatsCards({ stats: providedStats }: { stats?: DashboardStats }) {
   const stats = providedStats ?? dashboardStats();
-  const cards: { label: string; value: string | number; href: string; highlight?: boolean }[] = [
-    { label: "Da evadere", value: stats.pendingRequests, href: "/admin/preventivi-da-evadere", highlight: stats.pendingRequests > 0 },
-    { label: "Evasi", value: stats.sentQuotes, href: "/admin/preventivi?filter=evasi" },
-    { label: "Confermati", value: stats.confirmedQuotes, href: "/admin/preventivi?filter=confermati" },
-    { label: "Aperti", value: stats.openedQuotes, href: "/admin/preventivi?filter=aperti" },
-    { label: "Click WhatsApp", value: stats.whatsappClicks, href: "/admin/preventivi?filter=click_whatsapp" },
-    { label: "Valore confermato", value: formatCurrency(stats.confirmedValue), href: "/admin/preventivi?filter=confermati" },
-    { label: "Conversione", value: `${stats.conversionRate}%`, href: "/admin/statistiche" },
+
+  const primary = [
+    {
+      label: "Da evadere",
+      value: stats.pendingRequests,
+      href: "/admin/preventivi-da-evadere",
+      style: stats.pendingRequests > 0
+        ? "bg-amber-50 ring-amber-200 hover:bg-amber-100 text-amber-900"
+        : "bg-white/90 ring-white hover:bg-white text-ischia-navy",
+      valueStyle: stats.pendingRequests > 0 ? "text-amber-700" : "text-ischia-navy",
+    },
+    {
+      label: "Evasi",
+      value: stats.sentQuotes,
+      href: "/admin/preventivi?filter=evasi",
+      style: "bg-white/90 ring-white hover:bg-white text-ischia-navy",
+      valueStyle: "text-ischia-navy",
+    },
+    {
+      label: "Confermati",
+      value: stats.confirmedQuotes,
+      href: "/admin/preventivi?filter=confermati",
+      style: stats.confirmedQuotes > 0
+        ? "bg-emerald-50 ring-emerald-100 hover:bg-emerald-100 text-emerald-900"
+        : "bg-white/90 ring-white hover:bg-white text-ischia-navy",
+      valueStyle: stats.confirmedQuotes > 0 ? "text-emerald-700" : "text-ischia-navy",
+    },
+    {
+      label: "Aperti",
+      value: stats.openedQuotes,
+      href: "/admin/preventivi?filter=aperti",
+      style: "bg-white/90 ring-white hover:bg-white text-ischia-navy",
+      valueStyle: "text-ischia-navy",
+    },
+  ];
+
+  const secondary = [
+    {
+      label: "WhatsApp",
+      value: stats.whatsappClicks,
+      href: "/admin/preventivi?filter=click_whatsapp",
+    },
+    {
+      label: "Incassato",
+      value: formatCurrency(stats.confirmedValue),
+      href: "/admin/preventivi?filter=confermati",
+    },
+    {
+      label: "Conversione",
+      value: `${stats.conversionRate}%`,
+      href: "/admin/statistiche",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-      {cards.map(({ label, value, href, highlight }) => (
-        <Link
-          key={label}
-          href={href}
-          className={`flex min-h-28 flex-col justify-between rounded-2xl p-5 shadow-soft ring-1 ring-white transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ischia-blue focus:ring-offset-2 ${highlight ? "bg-ischia-sun/60 hover:bg-ischia-sun/80" : "bg-white/90 hover:bg-white"}`}
-        >
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{label}</p>
-          <p className="mt-3 text-2xl font-black leading-none text-ischia-navy tabular-nums">{value}</p>
-        </Link>
-      ))}
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {primary.map(({ label, value, href, style, valueStyle }) => (
+          <Link
+            key={label}
+            href={href}
+            className={`flex flex-col justify-between rounded-2xl p-4 shadow-soft ring-1 transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ischia-blue focus:ring-offset-2 ${style}`}
+          >
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/80">{label}</p>
+            <p className={`mt-4 text-4xl font-black leading-none tabular-nums ${valueStyle}`}>{value}</p>
+          </Link>
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {secondary.map(({ label, value, href }) => (
+          <Link
+            key={label}
+            href={href}
+            className="flex items-center justify-between rounded-xl bg-white/70 px-4 py-3 shadow-soft ring-1 ring-white transition hover:bg-white hover:shadow-md focus:outline-none"
+          >
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/70">{label}</p>
+            <p className="text-lg font-black text-ischia-navy tabular-nums">{value}</p>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
