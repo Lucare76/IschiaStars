@@ -126,7 +126,7 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
         <Info label="Totale" value={quote.totalPrice > 0 ? formatCurrency(quote.totalPrice) : "vedi proposte"} numeric />
         {!isDeleted ? <Info label="Aperture" value={`${stats.openings}`} numeric /> : null}
       </div>
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap gap-2 sm:flex-nowrap sm:flex-wrap">
         {!isDeleted ? (
           hasConfirmation ? (
             <>

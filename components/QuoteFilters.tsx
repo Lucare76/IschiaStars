@@ -205,7 +205,7 @@ export function QuoteFilters({
         {message ? (
           <p className="mb-3 rounded-xl bg-ischia-mist px-4 py-2 text-sm font-semibold text-ischia-navy">{message}</p>
         ) : null}
-        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto]">
           <input
             className="w-full rounded-xl border border-ischia-blue/20 px-4 py-3 text-sm"
             placeholder="Cerca per cliente, email, telefono, codice o hotel..."
