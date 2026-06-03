@@ -11,6 +11,7 @@ export type QuoteInput = {
   quoteRequestId?: string;
   code?: string;
   publicToken?: string;
+  status?: QuoteStatus;
   clientFirstName: string;
   clientLastName: string;
   clientEmail: string;
@@ -151,6 +152,7 @@ export async function createQuoteFromRequest(input: QuoteInput, options: { acces
   const supabase = createSupabaseAuthenticatedClient(options.accessToken) ?? createSupabaseAdminClient();
   const normalizedInput = {
     ...input,
+    status: input.status ?? "in_lavorazione",
     code: input.code ?? await nextQuoteCode(supabase ?? undefined),
     publicToken: input.publicToken ?? secureToken()
   };
@@ -193,14 +195,14 @@ export async function createQuoteFromRequest(input: QuoteInput, options: { acces
       cancellationPolicy: normalizedInput.cancellationPolicy ?? proposedHotel.cancellationPolicy,
       internalNotes: normalizedInput.internalNotes ?? "",
       customerNotes: normalizedInput.publicNotes ?? "",
-      status: "preventivo_inviato",
+      status: normalizedInput.status,
       createdAt: new Date().toISOString(),
       sentAt: new Date().toISOString(),
       excludedFromStats: false,
       hotelOptions: []
     };
     addDemoQuote(quote);
-    await createQuoteStatusEvent({ quoteId: quote.id, fromStatus: null, toStatus: quote.status, note: "Preventivo creato" });
+    await createQuoteStatusEvent({ quoteId: quote.id, fromStatus: null, toStatus: quote.status, note: "Preventivo preparato" });
     return fallback(quote);
   }
 
@@ -208,7 +210,7 @@ export async function createQuoteFromRequest(input: QuoteInput, options: { acces
   const { data, error } = await supabase.from("quotes").insert(row).select("*").single();
   if (error) return fallback(null, error);
 
-  await createQuoteStatusEvent({ quoteId: (data as Record<string, unknown>).id as string, fromStatus: null, toStatus: "preventivo_inviato", note: "Preventivo creato" });
+  await createQuoteStatusEvent({ quoteId: (data as Record<string, unknown>).id as string, fromStatus: null, toStatus: normalizedInput.status, note: "Preventivo preparato" });
 
   const quoteId = (data as Record<string, unknown>).id as string;
 
@@ -443,6 +445,7 @@ function toQuoteRow(input: Partial<QuoteInput>) {
     ...(isUuid(input.quoteRequestId) ? { quote_request_id: input.quoteRequestId } : {}),
     ...(input.code !== undefined ? { code: input.code } : {}),
     ...(input.publicToken !== undefined ? { public_token: input.publicToken } : {}),
+    ...(input.status !== undefined ? { status: input.status } : {}),
     ...(input.clientFirstName !== undefined ? { client_first_name: input.clientFirstName } : {}),
     ...(input.clientLastName !== undefined ? { client_last_name: input.clientLastName } : {}),
     ...(input.clientEmail !== undefined ? { client_email: input.clientEmail } : {}),

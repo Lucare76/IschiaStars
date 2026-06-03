@@ -1,8 +1,8 @@
 ﻿"use client";
 
-import Link from "next/link";
 import type { FormEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   createHotelOption,
   HotelOptionState,
@@ -11,23 +11,17 @@ import {
   mapHotelOptionsToPayload,
   suggestedGuestsPerRoom
 } from "@/components/HotelOptionsEditor";
-import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { Hotel, Quote, QuoteRequest } from "@/lib/types";
-import { publicQuoteUrl } from "@/lib/utils";
-
-type SavedQuote = Quote | null;
-type EmailStatus = { sent: boolean; skipReason?: string } | null;
 
 export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { hotels: Hotel[]; initialRequest?: QuoteRequest | null; requestedRequestId?: string }) {
+  const router = useRouter();
   const activeHotels = hotels.filter((h) => h.active);
   const requestedHotelName = initialRequest?.requestedHotel?.trim() ?? "";
   const requestedHotelMatch = requestedHotelName ? findRequestedHotelInDb(requestedHotelName, activeHotels) : undefined;
   const [childrenCount, setChildrenCount] = useState(initialRequest?.children.length ?? 0);
   const [adultsCount, setAdultsCount] = useState(initialRequest?.adults ?? 2);
   const [roomsCount, setRoomsCount] = useState(initialRequest?.rooms ?? 1);
-  const [savedQuote, setSavedQuote] = useState<SavedQuote>(null);
-  const [emailStatus, setEmailStatus] = useState<EmailStatus>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isAlternativeOffer, setIsAlternativeOffer] = useState(false);
@@ -92,57 +86,18 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
         hotelOptions: mappedOptions
       })
     });
-    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string; emailSent?: boolean; emailSkipReason?: string }>(response);
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
     setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
       setError(adminApiErrorMessage(response, result, `Preventivo non salvato (${response.status}). Riprova o verifica la sessione operatore.`));
       return;
     }
-    setEmailStatus({ sent: result.emailSent ?? false, skipReason: result.emailSkipReason });
-    setSavedQuote(result.data);
+    router.push(`/admin/preventivi/${result.data.code}`);
+    router.refresh();
   }
 
   if (!activeHotels.length) {
     return <div className="rounded-2xl bg-white/90 p-6 text-sm font-semibold text-ischia-ink/70 shadow-soft">Configura almeno un hotel attivo prima di creare un preventivo.</div>;
-  }
-
-  if (savedQuote) {
-    return (
-      <section className="rounded-2xl bg-white/90 p-6 shadow-soft">
-        <p className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800 ring-1 ring-emerald-100">
-          Preventivo generato. La richiesta non compare piu tra i preventivi da evadere.
-        </p>
-        {emailStatus !== null && (
-          emailStatus.sent
-            ? <p className="mt-3 rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">Email inviata al cliente.</p>
-            : <p className="mt-3 rounded-xl bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800">
-                Email cliente NON inviata ({emailStatus.skipReason ?? "motivo sconosciuto"}). Usa il link WhatsApp per condividere il preventivo.
-              </p>
-        )}
-        <div className="mt-5 grid gap-4 text-sm">
-          <div>
-            <p className="font-black text-ischia-navy">Codice preventivo</p>
-            <p className="mt-1 text-lg font-black text-ischia-ink">{savedQuote.code}</p>
-          </div>
-          <div>
-            <p className="font-black text-ischia-navy">Link cliente</p>
-            <p className="mt-1 break-all rounded-xl bg-ischia-mist px-3 py-2 font-semibold text-ischia-ink">{publicQuoteUrl(savedQuote)}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <WhatsAppSendButton quote={savedQuote} />
-            <Link className="rounded-full bg-ischia-navy px-4 py-2 font-black text-white" href={publicQuoteUrl(savedQuote)} rel="noopener noreferrer" target="_blank">
-              Apri link cliente
-            </Link>
-            <Link className="rounded-full bg-white px-4 py-2 font-black text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/preventivi/${savedQuote.code}`}>
-              Dettaglio preventivo
-            </Link>
-            <Link className="rounded-full bg-white px-4 py-2 font-black text-ischia-navy ring-1 ring-ischia-blue/20" href="/admin/preventivi">
-              Tutti i preventivi
-            </Link>
-          </div>
-        </div>
-      </section>
-    );
   }
 
   return (

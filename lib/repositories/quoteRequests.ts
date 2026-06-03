@@ -1,4 +1,4 @@
-import { allDemoQuoteRequests, updateDemoQuoteRequestStatus } from "@/lib/demo-store";
+import { allDemoQuoteRequests, allDemoQuotes, updateDemoQuoteRequestStatus } from "@/lib/demo-store";
 import { fallback, fromSupabase, normalizeStatus, RepositoryResult } from "@/lib/repositories/shared";
 import { createSupabaseAdminClient, createSupabaseAuthenticatedClient } from "@/lib/supabase/admin";
 import { ChildGuest, QuoteRequest, QuoteStatus } from "@/lib/types";
@@ -36,9 +36,16 @@ export async function listQuoteRequests(status?: QuoteStatus): Promise<Repositor
 }
 
 export async function listPendingQuoteRequests() {
-  const demoRequests = allDemoQuoteRequests().filter((request) => request.status === "da_evadere");
+  const demoRequests = filterUnprocessedRequests(allDemoQuoteRequests().filter((request) => request.status === "da_evadere"));
+  const demoLinkedRequestIds = new Set(
+    allDemoQuotes()
+      .filter((quote) => !quote.deletedAt)
+      .map((quote) => quote.requestId)
+      .filter(Boolean)
+  );
+  const local = demoRequests.filter((request) => !demoLinkedRequestIds.has(request.id));
   const supabase = createSupabaseAdminClient();
-  if (!supabase) return fallback(demoRequests);
+  if (!supabase) return fallback(local);
 
   const { data, error } = await supabase
     .from("quote_requests")
@@ -46,9 +53,26 @@ export async function listPendingQuoteRequests() {
     .is("deleted_at", null)
     .in("status", ["da_evadere", "pending"])
     .order("created_at", { ascending: false });
-  if (error) return fallback(demoRequests, error);
+  if (error) return fallback(local, error);
 
-  return fromSupabase((data ?? []).map(mapQuoteRequest).filter((request) => !request.processedAt && !request.processedQuoteId));
+  const pendingRequests = filterUnprocessedRequests((data ?? []).map(mapQuoteRequest));
+  const requestIds = pendingRequests.map((request) => request.id);
+  if (!requestIds.length) return fromSupabase([]);
+
+  const linkedQuotes = await supabase
+    .from("quotes")
+    .select("quote_request_id")
+    .in("quote_request_id", requestIds)
+    .is("deleted_at", null);
+  if (linkedQuotes.error) return fromSupabase(pendingRequests);
+
+  const linkedRequestIds = new Set(
+    (linkedQuotes.data ?? [])
+      .map((quote) => quote.quote_request_id ? String(quote.quote_request_id) : "")
+      .filter(Boolean)
+  );
+
+  return fromSupabase(pendingRequests.filter((request) => !linkedRequestIds.has(request.id)));
 }
 
 export async function getQuoteRequestById(id: string): Promise<RepositoryResult<QuoteRequest | null>> {
@@ -248,6 +272,10 @@ function mapQuoteRequest(row: Record<string, any>): QuoteRequest {
     processedAt: row.processed_at ? String(row.processed_at) : undefined,
     processedQuoteId: row.processed_quote_id ? String(row.processed_quote_id) : undefined
   };
+}
+
+function filterUnprocessedRequests(requests: QuoteRequest[]) {
+  return requests.filter((request) => !request.processedAt && !request.processedQuoteId);
 }
 
 function isMissingProcessedColumnError(error: { message?: string; code?: string }) {

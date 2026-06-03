@@ -3,7 +3,6 @@ import { requireAdminApiKey } from "@/lib/admin-api-guard";
 import { createQuoteFromRequest, listQuotes } from "@/lib/repositories/quotes";
 import { markQuoteRequestProcessed } from "@/lib/repositories/quoteRequests";
 import { ADMIN_ACCESS_COOKIE } from "@/lib/server/auth-guard";
-import { sendQuoteEmailToClient } from "@/lib/server/brevo";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { validateQuoteHotelOptions } from "@/lib/quote-validation";
@@ -45,6 +44,7 @@ export async function POST(request: NextRequest) {
     quoteRequestId: body.quoteRequestId,
     code: body.code,
     publicToken: body.publicToken,
+    status: "in_lavorazione",
     clientFirstName: body.clientFirstName,
     clientLastName: body.clientLastName,
     clientEmail: body.clientEmail,
@@ -82,19 +82,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (result.data) {
-    let emailSent = false;
-    let emailSkipReason: string | undefined;
-    try {
-      const emailResult = await sendQuoteEmailToClient(result.data);
-      emailSent = emailResult.sent;
-      emailSkipReason = emailResult.skipReason;
-    } catch (err) {
-      console.warn("POST /api/quotes brevo error", { code: result.data.code, message: err instanceof Error ? err.message : String(err) });
-      emailSkipReason = "exception";
-    }
-    return NextResponse.json({ ok: true, source: result.source, data: result.data, emailSent, emailSkipReason });
-  }
+  if (result.data) return NextResponse.json({ ok: true, source: result.source, data: result.data });
 
   const error = result.error ?? "Sistema non configurato per il salvataggio. Verifica le variabili ambiente.";
   return NextResponse.json({ ok: false, source: result.source, data: result.data, error }, { status: 503 });

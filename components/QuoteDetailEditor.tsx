@@ -20,7 +20,7 @@ import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Hotel, Quote, QuoteStatus, TransportOffer } from "@/lib/types";
 import { formatCurrency, publicQuoteUrl } from "@/lib/utils";
 
-const statusOptions: QuoteStatus[] = ["preventivo_inviato", "confermato", "perso_non_disponibile"];
+const statusOptions: QuoteStatus[] = ["in_lavorazione", "confermato", "perso_non_disponibile"];
 
 export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings }) {
   const router = useRouter();
@@ -153,16 +153,17 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
     setSending(true);
     setMessage(null);
     const response = await adminApiFetch(`/api/quotes/${currentQuote.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ statusOnly: true, status: "preventivo_inviato" })
+      method: "POST",
+      body: JSON.stringify({ action: "send" })
     });
     const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
     setSending(false);
     if (response.ok && result?.data) {
       setCurrentQuote(result.data);
       setSent(true);
+      setMessage("Preventivo inviato al cliente.");
     } else {
-      setMessage(adminApiErrorMessage(response, result, "Impossibile aggiornare lo stato. Riprova."));
+      setMessage(adminApiErrorMessage(response, result, "Impossibile inviare il preventivo. Riprova."));
     }
   }
 
@@ -311,7 +312,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
               >
                 {sending ? "Aggiornamento..." : previewOpened ? "Invia preventivo" : "Apri prima l'anteprima"}
               </button>
-              <WhatsAppSendButton quote={currentQuote} />
+              {previewOpened ? <WhatsAppSendButton quote={currentQuote} /> : null}
               <button className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy" onClick={() => void duplicateCurrentQuote()} type="button">
                 Duplica preventivo
               </button>

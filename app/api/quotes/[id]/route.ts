@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
-import { duplicateQuote, excludeQuoteFromStats, restoreQuote, softDeleteQuote, updateQuote, updateQuoteStatus } from "@/lib/repositories/quotes";
+import { duplicateQuote, excludeQuoteFromStats, getQuoteById, restoreQuote, softDeleteQuote, updateQuote, updateQuoteStatus } from "@/lib/repositories/quotes";
 import { validateQuoteHotelOptions } from "@/lib/quote-validation";
+import { sendQuoteEmailToClient } from "@/lib/server/brevo";
 import { QuoteStatus } from "@/lib/types";
 
 const statuses: QuoteStatus[] = ["da_evadere", "in_lavorazione", "preventivo_inviato", "confermato", "perso_non_disponibile"];
@@ -77,6 +78,34 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   if (body?.action === "restore") {
     const result = await restoreQuote(params.id);
     return quoteMutationResponse(result);
+  }
+
+  if (body?.action === "send") {
+    const quoteResult = await getQuoteById(params.id);
+    if (quoteResult.source !== "supabase") return quoteMutationResponse(quoteResult);
+    if (!quoteResult.data) return NextResponse.json({ ok: false, source: quoteResult.source, data: null, error: "Preventivo non trovato" }, { status: 404 });
+
+    try {
+      const emailResult = await sendQuoteEmailToClient(quoteResult.data);
+      if (!emailResult.sent) {
+        return NextResponse.json({
+          ok: false,
+          source: quoteResult.source,
+          data: quoteResult.data,
+          error: `Email non inviata: ${emailResult.skipReason ?? "motivo sconosciuto"}`
+        }, { status: 400 });
+      }
+    } catch (err) {
+      return NextResponse.json({
+        ok: false,
+        source: quoteResult.source,
+        data: quoteResult.data,
+        error: err instanceof Error ? err.message : "Errore durante l'invio email"
+      }, { status: 500 });
+    }
+
+    const statusResult = await updateQuoteStatus(params.id, "preventivo_inviato");
+    return quoteMutationResponse(statusResult);
   }
 
   return NextResponse.json({ ok: false, error: "Azione non valida" }, { status: 400 });
