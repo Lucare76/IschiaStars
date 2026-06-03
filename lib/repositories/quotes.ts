@@ -87,6 +87,28 @@ export async function getQuoteByCodeAndToken(code: string, token?: string): Prom
   return fromSupabase(withDemoStatus(mapQuote(data as Record<string, unknown>, allHotels, childRowsResult.data as Record<string, unknown>[] ?? [], hotelOpts, confirmationsMap[quoteId])));
 }
 
+export async function getQuoteByCode(code: string): Promise<RepositoryResult<Quote | null>> {
+  const local = allDemoQuotes().find((q) => q.code === code) ?? null;
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(local);
+
+  const { data, error } = await supabase.from("quotes").select("*").eq("code", code).maybeSingle();
+  if (error) return fallback(local, error);
+  if (!data) return fromSupabase(null);
+
+  const quoteId = (data as Record<string, unknown>).id as string;
+  const hotelResult = await listHotels();
+  const [childRowsResult, hotelOptionsMap, confirmationsMap] = await Promise.all([
+    supabase.from("quote_children").select("*").eq("quote_id", quoteId),
+    fetchHotelOptionsForQuotes([quoteId]),
+    fetchConfirmationsForQuotes([quoteId])
+  ]);
+
+  const hotelOpts = hotelOptionsMap[quoteId] ?? [];
+  const allHotels = hotelResult.data.length ? hotelResult.data : hotels;
+  return fromSupabase(withDemoStatus(mapQuote(data as Record<string, unknown>, allHotels, childRowsResult.data as Record<string, unknown>[] ?? [], hotelOpts, confirmationsMap[quoteId])));
+}
+
 export async function getQuoteById(id: string): Promise<RepositoryResult<Quote | null>> {
   const local = allDemoQuotes().find((q) => q.id === id) ?? null;
   const supabase = createSupabaseAdminClient();

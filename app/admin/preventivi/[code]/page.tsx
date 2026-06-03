@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
 import { QuoteDetailEditor } from "@/components/QuoteDetailEditor";
 import { listHotels } from "@/lib/repositories/hotels";
-import { listQuotes } from "@/lib/repositories/quotes";
+import { getQuoteByCode } from "@/lib/repositories/quotes";
 import { getPaymentSettings } from "@/lib/repositories/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function QuoteDetailPage({ params }: { params: { code: string } }) {
-  const [quoteResult, hotelResult, paymentSettings] = await Promise.all([listQuotes(), listHotels(), getPaymentSettings()]);
-  const quote = quoteResult.data.find((item) => item.code === params.code);
+  const [quoteResult, hotelResult, paymentSettings] = await Promise.all([getQuoteByCode(params.code), listHotels(), getPaymentSettings()]);
+  const quote = quoteResult.data;
   if (!quote) notFound();
 
   return (
