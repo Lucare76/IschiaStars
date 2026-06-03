@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import type { FormEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createHotelOption,
@@ -12,7 +12,68 @@ import {
   suggestedGuestsPerRoom
 } from "@/components/HotelOptionsEditor";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
+import { adminApiHeaders } from "@/lib/admin-api-client";
 import { Hotel, Quote, QuoteRequest } from "@/lib/types";
+
+type ClientResult = { firstName: string; lastName: string; email: string; phone: string };
+
+function ClientSearch({ onSelect }: { onSelect: (c: ClientResult) => void }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ClientResult[]>([]);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (query.length < 2) { setResults([]); setOpen(false); return; }
+    const timer = setTimeout(async () => {
+      const res = await fetch(`/api/clients?q=${encodeURIComponent(query)}`, { headers: adminApiHeaders() });
+      const data = await res.json().catch(() => null) as { ok?: boolean; data?: ClientResult[] } | null;
+      const clients = data?.data ?? [];
+      setResults(clients);
+      setOpen(clients.length > 0);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div className="relative sm:col-span-2" ref={ref}>
+      <label className="text-sm font-semibold text-ischia-ink">
+        Cerca cliente esistente
+        <input
+          autoComplete="off"
+          className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2 text-sm"
+          placeholder="Nome, cognome, email o telefono…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </label>
+      {open && (
+        <ul className="absolute z-20 mt-1 w-full rounded-xl border border-ischia-blue/20 bg-white shadow-lg">
+          {results.map((c, i) => (
+            <li key={i}>
+              <button
+                className="w-full px-4 py-3 text-left text-sm hover:bg-ischia-mist"
+                type="button"
+                onClick={() => { onSelect(c); setQuery(""); setOpen(false); }}
+              >
+                <span className="font-bold text-ischia-navy">{c.firstName} {c.lastName}</span>
+                <span className="ml-2 text-ischia-ink/60">{c.email} · {c.phone}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { hotels: Hotel[]; initialRequest?: QuoteRequest | null; requestedRequestId?: string }) {
   const router = useRouter();
@@ -26,6 +87,10 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
   const [loading, setLoading] = useState(false);
   const [isAlternativeOffer, setIsAlternativeOffer] = useState(false);
   const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>([createHotelOption(requestedHotelMatch)]);
+  const [firstName, setFirstName] = useState(initialRequest?.firstName ?? "");
+  const [lastName, setLastName] = useState(initialRequest?.lastName ?? "");
+  const [phone, setPhone] = useState(initialRequest?.phone ?? "");
+  const [email, setEmail] = useState(initialRequest?.email ?? "");
   const roomCapacitySuggestion = suggestedGuestsPerRoom(adultsCount + childrenCount, roomsCount);
 
   const requestedHotelMissing = Boolean(requestedHotelName && !requestedHotelMatch);
@@ -126,10 +191,11 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
 
         <Section title="Cliente e soggiorno">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input name="firstName" label="Nome cliente" required defaultValue={initialRequest?.firstName} />
-            <Input name="lastName" label="Cognome cliente" required defaultValue={initialRequest?.lastName} />
-            <Input name="phone" label="Telefono WhatsApp" required defaultValue={initialRequest?.phone} />
-            <Input name="email" label="Email" required type="email" defaultValue={initialRequest?.email} />
+            <ClientSearch onSelect={(c) => { setFirstName(c.firstName); setLastName(c.lastName); setPhone(c.phone); setEmail(c.email); }} />
+            <Input name="firstName" label="Nome cliente" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <Input name="lastName" label="Cognome cliente" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            <Input name="phone" label="Telefono WhatsApp" required value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <Input name="email" label="Email" required type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             <Input name="checkIn" label="Data arrivo" required type="date" defaultValue={initialRequest?.arrivalDate} />
             <Input name="checkOut" label="Data partenza" required type="date" defaultValue={initialRequest?.departureDate} />
             <Input name="adults" label="Adulti" min="1" required type="number" value={String(adultsCount)} onChange={(e) => setAdultsCount(Number(e.target.value) || 1)} />
