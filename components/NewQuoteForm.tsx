@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { FormEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
 import { useState } from "react";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
-import { adminApiFetch } from "@/lib/admin-api-client";
+import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
 import { Hotel, Quote, QuoteRequest } from "@/lib/types";
@@ -220,10 +220,10 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
         hotelOptions: mappedOptions
       })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string; emailSent?: boolean; emailSkipReason?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string; emailSent?: boolean; emailSkipReason?: string }>(response);
     setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
-      setError(response.status === 401 ? "Sessione scaduta, effettua di nuovo il login." : result?.error ?? `Preventivo non salvato (${response.status}). Riprova o verifica la sessione operatore.`);
+      setError(adminApiErrorMessage(response, result, `Preventivo non salvato (${response.status}). Riprova o verifica la sessione operatore.`));
       return;
     }
     setEmailStatus({ sent: result.emailSent ?? false, skipReason: result.emailSkipReason });

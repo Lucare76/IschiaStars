@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { adminApiFetch } from "@/lib/admin-api-client";
 
 type ImportState =
   | { type: "idle" }
@@ -30,7 +31,7 @@ export function PendingRequestsRefresh() {
   const handleImport = useCallback(async () => {
     setImportState({ type: "loading" });
     try {
-      const res = await fetch("/api/quote-requests/import-email", { method: "POST" });
+      const res = await adminApiFetch("/api/quote-requests/import-email", { method: "POST" });
       const data = await res.json();
       if (!res.ok || !data.ok) {
         const errorMsg = data.error ?? data.errors?.[0] ?? "Errore durante l'importazione";

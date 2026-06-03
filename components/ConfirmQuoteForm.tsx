@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { publicQuoteConfirmedWhatsappMessage } from "@/lib/message-templates";
 import { Quote } from "@/lib/types";
 import { formatCurrency, publicWhatsappLink } from "@/lib/utils";
 
@@ -34,7 +35,7 @@ export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; sele
         <p className="mt-2 text-sm">Grazie, il preventivo e stato confermato correttamente. IschiaStars ti contattera per i prossimi passaggi.</p>
         <a
           className="mt-4 inline-flex rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white"
-          href={publicWhatsappLink(`Ciao IschiaStars, ho confermato il preventivo ${quote.code}.`)}
+          href={publicWhatsappLink(publicQuoteConfirmedWhatsappMessage(quote))}
         >
           Scrivi su WhatsApp
         </a>

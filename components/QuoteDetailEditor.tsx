@@ -1,12 +1,13 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { FormEvent, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { useState } from "react";
 import { ConfirmationAvailabilityPanel } from "@/components/ConfirmationAvailabilityPanel";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
-import { adminApiFetch } from "@/lib/admin-api-client";
+import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { PaymentSettings } from "@/lib/payment-settings";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
@@ -107,6 +108,7 @@ function emptyOption(hotel?: Hotel, groupId = 1): HotelOptionState {
 }
 
 export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings }) {
+  const router = useRouter();
   const effective = getEffectiveHotelOptions(quote);
   const [currentQuote, setCurrentQuote] = useState(quote);
   const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>(groupOptionsToState(effective));
@@ -238,10 +240,10 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       method: "PATCH",
       body: JSON.stringify(payload)
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; source?: string; error?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; source?: string; error?: string }>(response);
     setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage(response.status === 401 ? "Sessione scaduta, effettua di nuovo il login." : result?.error ?? "Salvataggio non riuscito");
+      setMessage(adminApiErrorMessage(response, result, "Salvataggio non riuscito."));
       return;
     }
     setCurrentQuote(result.data);
@@ -253,7 +255,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       method: "PATCH",
       body: JSON.stringify({ statusOnly: true, status })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
     if (response.ok && result?.data) setCurrentQuote(result.data);
   }
 
@@ -264,7 +266,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       method: "PATCH",
       body: JSON.stringify({ excludedFromStats: next })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
     if (response.ok && result?.data) {
       setCurrentQuote(result.data);
       setMessage(next ? "Preventivo escluso dalle statistiche." : "Preventivo reinclueso nelle statistiche.");
@@ -281,7 +283,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       method: "PATCH",
       body: JSON.stringify({ softDelete: true })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote }>(response);
     if (response.ok && result?.data) {
       setCurrentQuote(result.data);
       setMessage("Preventivo cancellato.");
@@ -296,7 +298,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       method: "POST",
       body: JSON.stringify({ action: "restore" })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote }>(response);
     if (response.ok && result?.data) {
       setCurrentQuote(result.data);
       setMessage("Preventivo ripristinato.");
@@ -311,12 +313,12 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       method: "POST",
       body: JSON.stringify({ action: "duplicate" })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage(response.status === 401 ? "Sessione scaduta, effettua di nuovo il login." : result?.error ?? "Duplicazione non riuscita");
+      setMessage(adminApiErrorMessage(response, result, "Duplicazione non riuscita."));
       return;
     }
-    window.location.href = `/admin/preventivi/${result.data.code}`;
+    router.push(`/admin/preventivi/${result.data.code}`);
   }
 
   async function sendQuote() {
@@ -326,13 +328,13 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       method: "PATCH",
       body: JSON.stringify({ statusOnly: true, status: "preventivo_inviato" })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
     setSending(false);
     if (response.ok && result?.data) {
       setCurrentQuote(result.data);
       setSent(true);
     } else {
-      setMessage(response.status === 401 ? "Sessione scaduta, effettua di nuovo il login." : "Impossibile aggiornare lo stato. Riprova.");
+      setMessage(adminApiErrorMessage(response, result, "Impossibile aggiornare lo stato. Riprova."));
     }
   }
 
@@ -448,7 +450,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
               {getEffectiveHotelOptions(currentQuote).filter((o) => o.hotelName).map((opt) => (
                 <p key={opt.id} className={opt.isSelected ? "font-bold text-emerald-700" : ""}>
                   {opt.isSelected ? "✓ " : ""}{opt.hotelName}
-                  {opt.treatments.length > 0 && ` — ${opt.treatments.map((t) => formatCurrency(t.price)).join(" / ")}`}
+                  {opt.treatments.length > 0 && ` - ${opt.treatments.map((t) => formatCurrency(t.price)).join(" / ")}`}
                 </p>
               ))}
             </div>
@@ -568,7 +570,7 @@ function HotelOptionBlock({
           <label className="col-span-2 text-sm font-semibold text-ischia-ink sm:col-span-1">
             Seleziona da DB
             <select className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" value={opt.hotelId} onChange={(e) => onSelectHotel(e.target.value)}>
-              <option value="">— Digita nome manualmente —</option>
+              <option value="">- Digita nome manualmente -</option>
               {activeHotels.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
             </select>
           </label>

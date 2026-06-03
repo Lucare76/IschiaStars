@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 import { duplicateQuote, excludeQuoteFromStats, restoreQuote, softDeleteQuote, updateQuote, updateQuoteStatus } from "@/lib/repositories/quotes";
+import { validateQuoteHotelOptions } from "@/lib/quote-validation";
 import { QuoteStatus } from "@/lib/types";
 
 const statuses: QuoteStatus[] = ["da_evadere", "in_lavorazione", "preventivo_inviato", "confermato", "perso_non_disponibile"];
@@ -28,12 +29,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return quoteMutationResponse(result);
   }
 
-  // Validazione hotel options se presenti
-  if (body.hotelOptions?.length) {
-    const groupCount = new Set(body.hotelOptions.map((o: Record<string, unknown>) => Number(o.hotelGroup ?? o.position ?? 1))).size;
-    if (groupCount > 3 || body.hotelOptions.length > 9) {
-      return NextResponse.json({ ok: false, error: "Massimo 3 strutture per preventivo" }, { status: 400 });
-    }
+  const hotelOptionsValidation = validateQuoteHotelOptions(body.hotelOptions, { requirePrice: false });
+  if (!hotelOptionsValidation.ok) {
+    return NextResponse.json({ ok: false, error: hotelOptionsValidation.error }, { status: 400 });
   }
 
   const result = await updateQuote(params.id, {

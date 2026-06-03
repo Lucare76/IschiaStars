@@ -2,7 +2,7 @@
 
 import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { useState } from "react";
-import { adminApiHeaders } from "@/lib/admin-api-client";
+import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 
 export function HotelCreateForm() {
   const [message, setMessage] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export function HotelCreateForm() {
           .map((item) => item.trim())
           .filter(Boolean);
 
-        void fetch("/api/hotels", {
+        void adminApiFetch("/api/hotels", {
           method: "POST",
           headers: adminApiHeaders(),
           body: JSON.stringify({
@@ -38,8 +38,8 @@ export function HotelCreateForm() {
           })
         })
           .then(async (response) => {
-            const payload = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; source?: string } | null;
-            if (!response.ok || !payload?.ok) throw new Error(payload?.error ?? "Hotel non salvato");
+            const payload = await readAdminApiJson<{ ok?: boolean; error?: string; source?: string }>(response);
+            if (!response.ok || !payload?.ok) throw new Error(adminApiErrorMessage(response, payload, "Hotel non salvato."));
             setMessage("Hotel salvato. Aggiorna la pagina per vederlo in elenco.");
           })
           .catch((error: unknown) => setMessage(error instanceof Error ? error.message : "Errore salvataggio hotel"))

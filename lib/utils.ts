@@ -1,5 +1,6 @@
-import { allDemoQuoteRequests, allDemoQuotes, allQuoteEvents } from "@/lib/demo-store";
+﻿import { allDemoQuoteRequests, allDemoQuotes, allQuoteEvents } from "@/lib/demo-store";
 import { formatDateRome, formatDateTimeRome } from "@/lib/date-format";
+import { adminQuoteWhatsappMessage } from "@/lib/message-templates";
 import { Quote } from "@/lib/types";
 
 export function formatCurrency(value: number) {
@@ -32,42 +33,21 @@ export function normalizeItalianPhone(phone: string) {
   if (digits.startsWith("00")) return digits.slice(2);
   return `39${digits}`;
 }
-
 export function whatsappQuoteLink(quote: Quote) {
   const hotelNames = Array.from(new Map(quote.hotelOptions.map((o) => [o.hotelGroup, o.hotelName])).values());
   const hasMultipleOptions = hotelNames.length > 1;
-  const hotelLine = hasMultipleOptions ? hotelNames.join(' · ') : (hotelNames[0] ?? quote.proposedHotel.name);
-  const dates = `${formatDate(quote.arrivalDate)} – ${formatDate(quote.departureDate)}`;
-
-  const message = hasMultipleOptions
-    ? `Ciao ${quote.customerFirstName},
-ho preparato la tua proposta con più soluzioni per il soggiorno a Ischia:
-
-📅 ${dates}
-🏨 ${hotelLine}
-
-${absolutePublicQuoteUrl(quote)}
-
-Puoi confrontare le opzioni e confermare online quella che preferisci.
-
-Grazie,
-IschiaStars`
-    : `Ciao ${quote.customerFirstName},
-ho preparato la tua proposta per il soggiorno a Ischia:
-
-📅 ${dates}
-🏨 ${hotelLine}
-
-${absolutePublicQuoteUrl(quote)}
-
-Puoi aprirla, vedere tutti i dettagli e confermare direttamente online.
-
-Grazie,
-IschiaStars`;
+  const hotelLine = hasMultipleOptions ? hotelNames.join(" - ") : (hotelNames[0] ?? quote.proposedHotel.name);
+  const dates = `${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`;
+  const message = adminQuoteWhatsappMessage({
+    quote,
+    dates,
+    hotelLine,
+    quoteUrl: absolutePublicQuoteUrl(quote),
+    hasMultipleOptions
+  });
 
   return `https://wa.me/${normalizeItalianPhone(quote.customerPhone)}?text=${encodeURIComponent(message)}`;
 }
-
 export function ischiastarsWhatsappNumber() {
   return (process.env.NEXT_PUBLIC_ISCHIASTARS_WHATSAPP || "393717590017").replace(/\D/g, "");
 }

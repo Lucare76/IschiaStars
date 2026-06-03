@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { adminApiFetch, adminApiHeaders } from "@/lib/admin-api-client";
+import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { Hotel } from "@/lib/types";
 
@@ -88,14 +88,14 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
       headers: adminApiHeaders(),
       body: JSON.stringify(payload)
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Hotel; error?: string; source?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Hotel; error?: string; source?: string }>(response);
     setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage({ text: result?.error ?? "Salvataggio non riuscito", ok: false });
+      setMessage({ text: adminApiErrorMessage(response, result, "Salvataggio non riuscito."), ok: false });
       return;
     }
     if (result.source !== "supabase") {
-      setMessage({ text: "⚠️ Database non raggiunto — la modifica NON è stata salvata sul server. Verifica la connessione.", ok: false });
+      setMessage({ text: "Database non raggiunto: la modifica non è stata salvata sul server. Verifica la connessione.", ok: false });
       return;
     }
     setHotels((current) => (form.id ? current.map((hotel) => (hotel.id === result.data!.id ? result.data! : hotel)) : [result.data!, ...current]));
@@ -124,9 +124,9 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
 
   async function removeHotel(id: string) {
     const response = await adminApiFetch(`/api/hotels/${id}`, { method: "DELETE", headers: adminApiHeaders() });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; data?: { reason?: string } } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; error?: string; data?: { reason?: string } }>(response);
     if (!response.ok || !result?.ok) {
-      setMessage({ text: result?.error ?? result?.data?.reason ?? "Hotel collegato a preventivi: disattivalo.", ok: false });
+      setMessage({ text: result?.data?.reason ?? adminApiErrorMessage(response, result, "Hotel collegato a preventivi: disattivalo."), ok: false });
       return;
     }
     setHotels((current) => current.filter((hotel) => hotel.id !== id));
@@ -140,16 +140,16 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
       method: "POST",
       headers: adminApiHeaders()
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: { imported: number; updated: number; alreadyPresent: number; errors?: string[] }; error?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: { imported: number; updated: number; alreadyPresent: number; errors?: string[] }; error?: string }>(response);
 
     if (!response.ok || !result?.ok || !result.data) {
       setSyncLoading(false);
-      setMessage({ text: result?.error ?? "Sincronizzazione non riuscita", ok: false });
+      setMessage({ text: adminApiErrorMessage(response, result, "Sincronizzazione non riuscita."), ok: false });
       return;
     }
 
     const refreshed = await adminApiFetch("/api/hotels", { headers: adminApiHeaders() });
-    const refreshedResult = (await refreshed.json().catch(() => null)) as { ok?: boolean; data?: Hotel[] } | null;
+    const refreshedResult = await readAdminApiJson<{ ok?: boolean; data?: Hotel[] }>(refreshed);
     if (refreshed.ok && refreshedResult?.data) setHotels(refreshedResult.data);
 
     const errors = result.data.errors?.length ? ` Errori: ${result.data.errors.length}.` : "";
@@ -165,18 +165,18 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
       method: "POST",
       headers: adminApiHeaders(),
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: LrSyncReport; error?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: LrSyncReport; error?: string }>(response);
     setLrSyncLoading(false);
 
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage({ text: result?.error ?? "Sincronizzazione LR Hotel non riuscita", ok: false });
+      setMessage({ text: adminApiErrorMessage(response, result, "Sincronizzazione LR Hotel non riuscita."), ok: false });
       return;
     }
 
     setLrSyncReport(result.data);
 
     const refreshed = await adminApiFetch("/api/hotels", { headers: adminApiHeaders() });
-    const refreshedResult = (await refreshed.json().catch(() => null)) as { ok?: boolean; data?: Hotel[] } | null;
+    const refreshedResult = await readAdminApiJson<{ ok?: boolean; data?: Hotel[] }>(refreshed);
     if (refreshed.ok && refreshedResult?.data) setHotels(refreshedResult.data);
   }
 
@@ -186,14 +186,14 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     const response = await adminApiFetch(`/api/scrape-hotel?slug=${encodeURIComponent(form.slug.trim())}`, {
       headers: adminApiHeaders()
     });
-    const result = (await response.json().catch(() => null)) as {
+    const result = await readAdminApiJson<{
       ok?: boolean;
       data?: { descrizione: string; serviziInclusi: string[] };
       error?: string;
-    } | null;
+    }>(response);
     setImportLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage({ text: result?.error ?? "Importazione non riuscita", ok: false });
+      setMessage({ text: adminApiErrorMessage(response, result, "Importazione non riuscita."), ok: false });
       return;
     }
     const { descrizione, serviziInclusi } = result.data;
@@ -231,12 +231,12 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
         {lrSyncReport ? (
           <div className="mt-3 rounded-xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
             <p className="text-sm font-black text-emerald-800">
-              Sincronizzazione LR Hotel completata — {lrSyncReport.imported} importati, {lrSyncReport.updated} aggiornati
+              Sincronizzazione LR Hotel completata - {lrSyncReport.imported} importati, {lrSyncReport.updated} aggiornati
               {lrSyncReport.errors.length > 0 ? `, ${lrSyncReport.errors.length} errori` : ""}
             </p>
             <p className="mt-1 text-xs text-emerald-700">
-              Feed: {lrSyncReport.hotelsCount} hotel · generato {lrSyncReport.generatedAt}
-              {lrSyncReport.cacheStatus ? ` · cache: ${lrSyncReport.cacheStatus}` : ""}
+              Feed: {lrSyncReport.hotelsCount} hotel - generato {lrSyncReport.generatedAt}
+              {lrSyncReport.cacheStatus ? ` - cache: ${lrSyncReport.cacheStatus}` : ""}
             </p>
             {lrSyncReport.items.length > 0 && (
               <div className="mt-3 space-y-1">
@@ -246,7 +246,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
                       {item.action === "imported" ? "Nuovo" : item.action === "updated" ? "Aggiornato" : "Saltato"}
                     </span>
                     <span className="font-semibold">{item.name}</span>
-                    {item.hasImage && <span className="text-emerald-600">📷</span>}
+                    {item.hasImage && <span className="text-emerald-600">Foto</span>}
                     {item.servicesCount > 0 && <span className="text-emerald-600">{item.servicesCount} servizi</span>}
                     {item.hasListino && <span className="text-emerald-600">Listino</span>}
                   </div>
@@ -367,7 +367,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
       headers: adminApiHeaders(),
       body: JSON.stringify(toPayload({ ...fromHotel(hotel), isActive: !hotel.active }))
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Hotel } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Hotel }>(response);
     if (response.ok && result?.data) setHotels((current) => current.map((item) => (item.id === hotel.id ? result.data! : item)));
   }
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { adminApiHeaders } from "@/lib/admin-api-client";
+import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { QuoteRequest } from "@/lib/types";
@@ -18,15 +18,14 @@ export function PendingRequestCard({ request }: { request: QuoteRequest }) {
   async function handleDelete() {
     setDeleting(true);
     setError(null);
-    const res = await fetch(`/api/quote-requests/${request.id}`, {
+    const res = await adminApiFetch(`/api/quote-requests/${request.id}`, {
       method: "DELETE",
-      credentials: "include",
       headers: adminApiHeaders(),
     });
-    const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+    const data = await readAdminApiJson<{ ok?: boolean; error?: string }>(res);
     setDeleting(false);
     if (!res.ok || !data?.ok) {
-      setError(data?.error ?? "Eliminazione non riuscita");
+      setError(adminApiErrorMessage(res, data, "Eliminazione non riuscita."));
       setConfirmDelete(false);
       return;
     }

@@ -1,13 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { adminApiHeaders } from "@/lib/admin-api-client";
+import { useRouter } from "next/navigation";
+import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { availabilityStatusLabel, defaultUnavailabilityMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
 import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
 import { Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
 export function ConfirmationAvailabilityPanel({ quote, paymentSettings }: { quote: Quote; paymentSettings: PaymentSettings }) {
+  const router = useRouter();
   const confirmation = quote.confirmation;
   const [message, setMessage] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -48,19 +50,19 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings }: { quot
   async function postAction(path: string, body: Record<string, unknown>, success: string) {
     setLoadingAction(path);
     setMessage(null);
-    const response = await fetch(`/api/quote-confirmations/${confirmationId}/${path}`, {
+    const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/${path}`, {
       method: "POST",
       headers: adminApiHeaders(),
       body: JSON.stringify(body)
     });
-    const result = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; error?: string }>(response);
     setLoadingAction(null);
     if (!response.ok || !result?.ok) {
-      setMessage(result?.error ?? "Operazione non riuscita");
+      setMessage(adminApiErrorMessage(response, result));
       return;
     }
     setMessage(success);
-    window.location.reload();
+    router.refresh();
   }
 
   return (

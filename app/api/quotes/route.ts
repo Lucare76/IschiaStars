@@ -6,6 +6,7 @@ import { ADMIN_ACCESS_COOKIE } from "@/lib/server/auth-guard";
 import { sendQuoteEmailToClient } from "@/lib/server/brevo";
 import { isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { validateQuoteHotelOptions } from "@/lib/quote-validation";
 
 export async function GET(request: NextRequest) {
   const unauthorized = await requireAdminApiKey(request);
@@ -34,18 +35,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Dati preventivo incompleti" }, { status: 400 });
   }
 
-  // Validazione hotel options se presenti
-  if (body.hotelOptions?.length) {
-    const groupCount = new Set(body.hotelOptions.map((o: Record<string, unknown>) => Number(o.hotelGroup ?? o.position ?? 1))).size;
-    if (groupCount > 3 || body.hotelOptions.length > 9) {
-      return NextResponse.json({ ok: false, error: "Massimo 3 strutture per preventivo" }, { status: 400 });
-    }
-    const hasAtLeastOnePrice = body.hotelOptions.some(
-      (o: Record<string, unknown>) => o.breakfastPrice || o.halfBoardPrice || o.fullBoardPrice
-    );
-    if (!hasAtLeastOnePrice) {
-      return NextResponse.json({ ok: false, error: "Inserisci almeno un prezzo in almeno una struttura" }, { status: 400 });
-    }
+  const hotelOptionsValidation = validateQuoteHotelOptions(body.hotelOptions, { requirePrice: true });
+  if (!hotelOptionsValidation.ok) {
+    return NextResponse.json({ ok: false, error: hotelOptionsValidation.error }, { status: 400 });
   }
 
   const accessToken = request.cookies.get(ADMIN_ACCESS_COOKIE)?.value;

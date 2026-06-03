@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { adminApiFetch, adminApiHeaders } from "@/lib/admin-api-client";
+import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { QuoteCard, QuoteCardActions, QuoteStats } from "@/components/QuoteCard";
 import { Quote } from "@/lib/types";
 
@@ -41,7 +41,7 @@ export function QuoteFilters({
   const fetchQuotes = useCallback(async (opts: { cancelled?: { value: boolean }; showSpinner?: boolean } = {}) => {
     if (opts.showSpinner) setRefreshing(true);
     const response = await adminApiFetch("/api/quotes?include_deleted=true");
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; source?: string; data?: Quote[]; error?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; source?: string; data?: Quote[]; error?: string }>(response);
     if (opts.cancelled?.value) return;
     if (opts.showSpinner) setRefreshing(false);
     if (!response.ok || !result?.ok || !Array.isArray(result.data)) return;
@@ -117,18 +117,17 @@ export function QuoteFilters({
 
   async function handleExcludeToggle(quote: Quote) {
     const next = !quote.excludedFromStats;
-    const response = await fetch(`/api/quotes/${quote.id}`, {
+    const response = await adminApiFetch(`/api/quotes/${quote.id}`, {
       method: "PATCH",
-      credentials: "include",
       headers: adminApiHeaders(),
       body: JSON.stringify({ excludedFromStats: next })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
     if (response.ok && result?.data) {
       setQuotes((current) => current.map((q) => (q.id === quote.id ? result.data! : q)));
       setMessage(next ? `${quote.code} escluso dalle statistiche.` : `${quote.code} reinclueso nelle statistiche.`);
     } else {
-      setMessage(result?.error ?? "Operazione non riuscita.");
+      setMessage(adminApiErrorMessage(response, result));
     }
   }
 
@@ -138,34 +137,32 @@ export function QuoteFilters({
     );
     if (!ok) return;
 
-    const response = await fetch(`/api/quotes/${quote.id}`, {
+    const response = await adminApiFetch(`/api/quotes/${quote.id}`, {
       method: "PATCH",
-      credentials: "include",
       headers: adminApiHeaders(),
       body: JSON.stringify({ softDelete: true })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
     if (response.ok && result?.data) {
       setQuotes((current) => current.map((q) => (q.id === quote.id ? result.data! : q)));
       setMessage(`Preventivo ${quote.code} cancellato.`);
     } else {
-      setMessage(result?.error ?? "Cancellazione non riuscita.");
+      setMessage(adminApiErrorMessage(response, result, "Cancellazione non riuscita."));
     }
   }
 
   async function handleRestore(quote: Quote) {
-    const response = await fetch(`/api/quotes/${quote.id}`, {
+    const response = await adminApiFetch(`/api/quotes/${quote.id}`, {
       method: "POST",
-      credentials: "include",
       headers: adminApiHeaders(),
       body: JSON.stringify({ action: "restore" })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Quote; error?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
     if (response.ok && result?.data) {
       setQuotes((current) => current.map((q) => (q.id === quote.id ? result.data! : q)));
       setMessage(`Preventivo ${quote.code} ripristinato.`);
     } else {
-      setMessage(result?.error ?? "Ripristino non riuscito.");
+      setMessage(adminApiErrorMessage(response, result, "Ripristino non riuscito."));
     }
   }
 

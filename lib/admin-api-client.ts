@@ -23,3 +23,17 @@ export async function adminApiFetch(input: RequestInfo | URL, init: RequestInit 
   if (!refresh?.ok) return response;
   return fetch(input, requestInit);
 }
+
+export async function readAdminApiJson<T>(response: Response): Promise<T | null> {
+  return (await response.json().catch(() => null)) as T | null;
+}
+
+export function adminApiErrorMessage(
+  response: Response,
+  payload: { error?: string } | null | undefined,
+  fallback = "Operazione non riuscita."
+) {
+  if (response.status === 401) return "Sessione scaduta, effettua di nuovo il login.";
+  if (response.status === 403) return "Non hai i permessi per completare questa operazione.";
+  return payload?.error ?? fallback;
+}

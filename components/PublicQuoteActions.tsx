@@ -2,6 +2,7 @@
 
 import { PrintButton } from "@/components/PrintButton";
 import { trackQuoteEvent } from "@/lib/client-tracking";
+import { publicQuoteConfirmOrInfoWhatsappMessage, publicQuoteInfoWhatsappMessage } from "@/lib/message-templates";
 import { Quote } from "@/lib/types";
 import { absolutePublicQuoteUrl, publicWhatsappLink } from "@/lib/utils";
 
@@ -11,7 +12,7 @@ export function PublicQuoteHeaderActions({ quote }: { quote: Quote }) {
     <div className="flex flex-wrap gap-2">
       <a
         className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white"
-        href={publicWhatsappLink(`Ciao IschiaStars, vorrei informazioni sul preventivo ${quote.code}: ${quoteUrl}`)}
+        href={publicWhatsappLink(publicQuoteInfoWhatsappMessage(quote, quoteUrl))}
         onClick={() => trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "whatsapp_clicked", { placement: "public_header" })}
       >
         WhatsApp
@@ -27,7 +28,7 @@ export function PublicQuoteMainActions({ quote }: { quote: Quote }) {
     <div className="no-print grid gap-3 rounded-2xl bg-white p-5 shadow-soft">
       <a
         className="rounded-full bg-ischia-leaf px-5 py-3 text-center font-black text-white"
-        href={publicWhatsappLink(`Ciao IschiaStars, vorrei confermare o chiedere info sul preventivo ${quote.code}: ${quoteUrl}`)}
+        href={publicWhatsappLink(publicQuoteConfirmOrInfoWhatsappMessage(quote, quoteUrl))}
         onClick={() => trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "whatsapp_clicked", { placement: "public_offer_card" })}
       >
         Hai domande? Scrivici su WhatsApp
@@ -45,7 +46,7 @@ export function MobileFloatingWhatsApp({ quote }: { quote: Quote }) {
   return (
     <a
       className="no-print fixed bottom-3 left-3 right-3 z-20 rounded-full bg-ischia-leaf px-5 py-3 text-center text-sm font-black text-white shadow-soft sm:hidden"
-      href={publicWhatsappLink(`Ciao IschiaStars, vorrei informazioni sul preventivo ${quote.code}: ${quoteUrl}`)}
+      href={publicWhatsappLink(publicQuoteInfoWhatsappMessage(quote, quoteUrl))}
       onClick={() => trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "whatsapp_clicked", { placement: "mobile_sticky" })}
     >
       Hai domande? WhatsApp

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { adminApiHeaders } from "@/lib/admin-api-client";
+import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
 
 export function PaymentSettingsForm({ initialSettings }: { initialSettings: PaymentSettings }) {
@@ -15,7 +15,7 @@ export function PaymentSettingsForm({ initialSettings }: { initialSettings: Paym
   async function save() {
     setLoading(true);
     setMessage(null);
-    const response = await fetch("/api/settings/payment", {
+    const response = await adminApiFetch("/api/settings/payment", {
       method: "PATCH",
       headers: adminApiHeaders(),
       body: JSON.stringify({
@@ -23,10 +23,10 @@ export function PaymentSettingsForm({ initialSettings }: { initialSettings: Paym
         acceptedBalanceMethods: form.acceptedBalanceMethodsText.split(",").map((item) => item.trim()).filter(Boolean)
       })
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: PaymentSettings; warning?: string; error?: string } | null;
+    const result = await readAdminApiJson<{ ok?: boolean; data?: PaymentSettings; warning?: string; error?: string }>(response);
     setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage(result?.error ?? "Salvataggio non riuscito");
+      setMessage(adminApiErrorMessage(response, result, "Salvataggio non riuscito."));
       return;
     }
     setForm({ ...result.data, acceptedBalanceMethodsText: result.data.acceptedBalanceMethods.join(", ") });

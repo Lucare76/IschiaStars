@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { ConfirmQuoteForm } from "@/components/ConfirmQuoteForm";
 import { trackQuoteEvent } from "@/lib/client-tracking";
 import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown } from "@/lib/hotel-policies";
+import { publicQuoteInfoWhatsappMessage } from "@/lib/message-templates";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Quote, QuoteHotelOption, TreatmentOption } from "@/lib/types";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
@@ -114,7 +115,7 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
       <div className="no-print rounded-2xl bg-white/90 p-5 shadow-soft">
         <a
           className="block w-full rounded-full bg-ischia-leaf px-5 py-3 text-center font-black text-white"
-          href={publicWhatsappLink(`Ciao IschiaStars, vorrei informazioni sul preventivo ${quote.code}`)}
+          href={publicWhatsappLink(publicQuoteInfoWhatsappMessage(quote))}
           onClick={() => trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "whatsapp_clicked", { placement: "proposal_section" })}
         >
           Hai domande? Scrivici su WhatsApp
