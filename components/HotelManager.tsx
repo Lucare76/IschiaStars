@@ -95,8 +95,9 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
       return;
     }
     setHotels((current) => (form.id ? current.map((hotel) => (hotel.id === result.data!.id ? result.data! : hotel)) : [result.data!, ...current]));
-    setForm(emptyForm);
-    setMessage({ text: "Hotel salvato.", ok: true });
+    // Mantieni il form aperto con i dati salvati: l'utente può verificare che siano rimasti
+    setForm(fromHotel(result.data!));
+    setMessage({ text: `Hotel salvato. Puoi verificare i dati nel form qui sopra.`, ok: true });
   }
 
   function prefillPolicyDefaults() {
