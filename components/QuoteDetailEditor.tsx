@@ -167,6 +167,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
 
   const activeHotels = hotels.filter((h) => h.active);
   const roomCapacitySuggestion = suggestedGuestsPerRoom(adultsCount + currentQuote.children.length, roomsCount);
+  const isQuoteSent = sent || currentQuote.status === "preventivo_inviato";
 
   // Struttura selezionata dal cliente (se confermata con opzione)
   const effectiveOptions = getEffectiveHotelOptions(currentQuote);
@@ -248,8 +249,8 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
         ) : null}
 
         {/* Card principale: codice + stato + azioni chiave */}
-        <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
-          <div className="flex items-center justify-between gap-3">
+        <div className="rounded-2xl bg-white/90 p-5 text-center shadow-soft">
+          <div className="flex flex-col items-center justify-center gap-2 sm:flex-row sm:justify-between">
             <h2 className="text-xl font-black text-ischia-navy">{currentQuote.code}</h2>
             <QuoteStatusBadge status={currentQuote.status} />
           </div>
@@ -267,10 +268,10 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
           )}
 
           {/* Stato "inviato": mostra solo WhatsApp */}
-          {sent ? (
-            <div className="mt-5 space-y-3">
+          {isQuoteSent ? (
+            <div className="mt-5 grid gap-3 [&_a]:block [&_a]:text-center">
               <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                Preventivo segnato come inviato. Invia il link al cliente su WhatsApp.
+                Preventivo già inviato. Puoi reinviare il link al cliente su WhatsApp.
               </div>
               <WhatsAppSendButton quote={currentQuote} label="Invia link su WhatsApp" />
               <Link className="block rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)} rel="noopener noreferrer" target="_blank">
@@ -278,7 +279,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
               </Link>
             </div>
           ) : currentQuote.confirmation ? (
-            <div className="mt-5 grid gap-2">
+            <div className="mt-5 grid gap-2 [&_a]:block [&_a]:text-center">
               <Link className="rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)} rel="noopener noreferrer" target="_blank">
                 Apri link cliente
               </Link>
@@ -288,7 +289,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
               </button>
             </div>
           ) : (
-            <div className="mt-5 grid gap-2">
+            <div className="mt-5 grid gap-2 [&_a]:block [&_a]:text-center">
               <Link
                 className="rounded-full bg-ischia-navy/10 px-4 py-2 text-center text-sm font-bold text-ischia-navy ring-1 ring-ischia-navy/20"
                 href={publicQuoteUrl(currentQuote)}
@@ -314,8 +315,8 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
         </div>
 
         {/* Cambia stato manuale */}
-        {!sent && (
-          <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
+        {!isQuoteSent && (
+          <div className="rounded-2xl bg-white/90 p-5 text-center shadow-soft">
             <h3 className="font-black text-ischia-navy">Cambia stato</h3>
             <div className="mt-3 grid gap-2">
               {statusOptions.map((status) => (
@@ -328,7 +329,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
         )}
 
         {/* Azioni preventivo */}
-        <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
+        <div className="rounded-2xl bg-white/90 p-5 text-center shadow-soft">
           <h3 className="font-black text-ischia-navy">Azioni preventivo</h3>
           {currentQuote.excludedFromStats && !currentQuote.deletedAt ? (
             <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Escluso dalle statistiche</p>
