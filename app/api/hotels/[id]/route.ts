@@ -22,7 +22,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     paymentPolicy: body.paymentPolicy,
     cancellationPolicy: body.cancellationPolicy,
     internalNotes: body.internalNotes,
-    isActive: body.isActive
+    isActive: body.isActive,
+    slug: body.slug,
+    sourceUrl: body.sourceUrl
   });
 
   return NextResponse.json({ ok: Boolean(result.data), source: result.source, data: result.data, error: result.error }, { status: result.data ? 200 : 400 });

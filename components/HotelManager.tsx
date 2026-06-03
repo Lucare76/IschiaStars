@@ -45,6 +45,7 @@ type HotelForm = {
   internalNotes: string;
   isActive: boolean;
   slug: string;
+  sourceUrl: string;
 };
 
 const emptyForm: HotelForm = {
@@ -61,13 +62,14 @@ const emptyForm: HotelForm = {
   defaultPaymentNotes: "",
   internalNotes: "",
   isActive: true,
-  slug: ""
+  slug: "",
+  sourceUrl: ""
 };
 
 export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
   const [hotels, setHotels] = useState(initialHotels);
   const [form, setForm] = useState<HotelForm>(emptyForm);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
   const [lrSyncLoading, setLrSyncLoading] = useState(false);
@@ -89,12 +91,12 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: Hotel; error?: string; source?: string } | null;
     setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage(result?.error ?? "Salvataggio non riuscito");
+      setMessage({ text: result?.error ?? "Salvataggio non riuscito", ok: false });
       return;
     }
     setHotels((current) => (form.id ? current.map((hotel) => (hotel.id === result.data!.id ? result.data! : hotel)) : [result.data!, ...current]));
     setForm(emptyForm);
-    setMessage("Hotel salvato.");
+    setMessage({ text: "Hotel salvato.", ok: true });
   }
 
   function prefillPolicyDefaults() {
@@ -120,11 +122,11 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     const response = await fetch(`/api/hotels/${id}`, { method: "DELETE", headers: adminApiHeaders() });
     const result = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; data?: { reason?: string } } | null;
     if (!response.ok || !result?.ok) {
-      setMessage(result?.error ?? result?.data?.reason ?? "Hotel collegato a preventivi: disattivalo.");
+      setMessage({ text: result?.error ?? result?.data?.reason ?? "Hotel collegato a preventivi: disattivalo.", ok: false });
       return;
     }
     setHotels((current) => current.filter((hotel) => hotel.id !== id));
-    setMessage("Hotel eliminato.");
+    setMessage({ text: "Hotel eliminato.", ok: true });
   }
 
   async function syncFromSite() {
@@ -138,7 +140,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
 
     if (!response.ok || !result?.ok || !result.data) {
       setSyncLoading(false);
-      setMessage(result?.error ?? "Sincronizzazione non riuscita");
+      setMessage({ text: result?.error ?? "Sincronizzazione non riuscita", ok: false });
       return;
     }
 
@@ -147,7 +149,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     if (refreshed.ok && refreshedResult?.data) setHotels(refreshedResult.data);
 
     const errors = result.data.errors?.length ? ` Errori: ${result.data.errors.length}.` : "";
-    setMessage(`${result.data.imported} hotel importati, ${result.data.updated} aggiornati, ${result.data.alreadyPresent} già presenti.${errors}`);
+    setMessage({ text: `${result.data.imported} hotel importati, ${result.data.updated} aggiornati, ${result.data.alreadyPresent} già presenti.${errors}`, ok: !errors });
     setSyncLoading(false);
   }
 
@@ -163,7 +165,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     setLrSyncLoading(false);
 
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage(result?.error ?? "Sincronizzazione LR Hotel non riuscita");
+      setMessage({ text: result?.error ?? "Sincronizzazione LR Hotel non riuscita", ok: false });
       return;
     }
 
@@ -187,7 +189,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     } | null;
     setImportLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage(result?.error ?? "Importazione non riuscita");
+      setMessage({ text: result?.error ?? "Importazione non riuscita", ok: false });
       return;
     }
     const { descrizione, serviziInclusi } = result.data;
@@ -197,7 +199,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
       standardServices: serviziInclusi.length ? serviziInclusi.join("\n") : prev.standardServices
     }));
     const parts = [descrizione ? "descrizione" : null, serviziInclusi.length ? `${serviziInclusi.length} servizi` : null].filter(Boolean);
-    setMessage(parts.length ? `Importati: ${parts.join(" e ")}.` : "Nessun dato trovato per questo slug.");
+    setMessage({ text: parts.length ? `Importati: ${parts.join(" e ")}.` : "Nessun dato trovato per questo slug.", ok: Boolean(parts.length) });
   }
 
   return (
@@ -217,7 +219,11 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
             </button>
           </div>
         </div>
-        {message ? <p className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700 ring-1 ring-rose-100">{message}</p> : null}
+        {message ? (
+          <p className={`mt-3 rounded-xl p-3 text-sm font-semibold ring-1 ${message.ok ? "bg-emerald-50 text-emerald-800 ring-emerald-100" : "bg-rose-50 text-rose-700 ring-rose-100"}`}>
+            {message.text}
+          </p>
+        ) : null}
         {lrSyncReport ? (
           <div className="mt-3 rounded-xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
             <p className="text-sm font-black text-emerald-800">
@@ -275,6 +281,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
           <Textarea label="Descrizione breve" value={form.shortDescription} onChange={(value) => setForm({ ...form, shortDescription: value })} />
           <Textarea label="Immagine URL opzionale" value={form.imageUrl} onChange={(value) => setForm({ ...form, imageUrl: value })} />
+          <Input label="URL pagina hotel su IschiaStars.it (visibile sul preventivo cliente)" value={form.sourceUrl} onChange={(value) => setForm({ ...form, sourceUrl: value })} />
           <Textarea label="Servizi inclusi standard" value={form.standardServices} onChange={(value) => setForm({ ...form, standardServices: value })} />
           <Input label="Acconto standard (%)" type="number" value={form.defaultDepositPercent} onChange={(value) => setForm({ ...form, defaultDepositPercent: value })} />
           <Textarea label="Modalita saldo standard" value={form.defaultBalanceMethod} onChange={(value) => setForm({ ...form, defaultBalanceMethod: value })} />
@@ -378,7 +385,8 @@ function fromHotel(hotel: Hotel): HotelForm {
     defaultPaymentNotes: hotel.defaultPaymentNotes ?? "",
     internalNotes: hotel.internalNotes,
     isActive: hotel.active,
-    slug: derivedSlug
+    slug: derivedSlug,
+    sourceUrl: hotel.sourceUrl ?? ""
   };
 }
 
@@ -397,7 +405,8 @@ function toPayload(form: HotelForm) {
     defaultPaymentNotes: form.defaultPaymentNotes,
     internalNotes: form.internalNotes,
     isActive: form.isActive,
-    slug: form.slug.trim() || undefined
+    slug: form.slug.trim() || undefined,
+    sourceUrl: form.sourceUrl.trim() || undefined
   };
 }
 
