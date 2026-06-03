@@ -11,12 +11,12 @@ export const dynamic = "force-dynamic";
 export default async function AdminDashboardPage() {
   const [requestResult, quoteResult, statsResult] = await Promise.all([listPendingQuoteRequests(), listQuotes(), getDashboardStats()]);
   const quoteRequests = requestResult.data;
-  const quotes = quoteResult.data;
+  const activeQuotes = quoteResult.data.filter((quote) => !quote.deletedAt && !quote.excludedFromStats);
   const dashboardStats = {
     ...statsResult.data,
     pendingRequests: quoteRequests.length
   };
-  const featuredQuote = quotes[0];
+  const featuredQuote = activeQuotes[0];
 
   return (
     <AdminShell title="Dashboard preventivi" subtitle="Panoramica delle richieste, dei preventivi inviati e delle conferme cliente.">

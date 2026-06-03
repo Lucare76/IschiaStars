@@ -23,7 +23,7 @@ export async function getDashboardStats(): Promise<RepositoryResult<DashboardSta
   ]);
 
   // Solo preventivi attivi nelle statistiche: non cancellati e non esclusi
-  const activeQuotes = quotesResult.data.filter((quote) => !quote.excludedFromStats);
+  const activeQuotes = quotesResult.data.filter((quote) => !quote.deletedAt && !quote.excludedFromStats);
   const activeIds = new Set(activeQuotes.map((quote) => quote.id));
 
   const events = eventsResult.data;

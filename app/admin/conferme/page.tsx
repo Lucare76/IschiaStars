@@ -27,7 +27,7 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
   const [result, paymentSettings] = await Promise.all([listQuotes(), getPaymentSettings()]);
   const missingPaymentSettings = !isPaymentSettingsConfigured(paymentSettings.data);
   const confirmations = result.data
-    .filter((quote) => quote.confirmation && !quote.deletedAt)
+    .filter((quote) => quote.confirmation && !quote.deletedAt && !quote.excludedFromStats)
     .filter((quote) => selectedFilter === "tutte" || (quote.confirmation?.availabilityStatus ?? "availability_to_check") === selectedFilter);
 
   return (

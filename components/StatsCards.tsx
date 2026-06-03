@@ -60,27 +60,27 @@ export function StatsCards({ stats: providedStats }: { stats?: DashboardStats })
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
         {primary.map(({ label, value, href, style, valueStyle }) => (
           <Link
             key={label}
             href={href}
-            className={`flex flex-col justify-between rounded-2xl p-4 shadow-soft ring-1 transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ischia-blue focus:ring-offset-2 ${style}`}
+            className={`flex min-h-28 flex-col justify-between rounded-2xl p-3 shadow-soft ring-1 transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ischia-blue focus:ring-offset-2 sm:p-4 ${style}`}
           >
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/80">{label}</p>
-            <p className={`mt-4 text-4xl font-black leading-none tabular-nums ${valueStyle}`}>{value}</p>
+            <p className={`mt-4 break-words text-3xl font-black leading-none tabular-nums sm:text-4xl ${valueStyle}`}>{value}</p>
           </Link>
         ))}
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid gap-2.5 sm:grid-cols-3 sm:gap-3">
         {secondary.map(({ label, value, href }) => (
           <Link
             key={label}
             href={href}
-            className="flex items-center justify-between rounded-xl bg-white/70 px-4 py-3 shadow-soft ring-1 ring-white transition hover:bg-white hover:shadow-md focus:outline-none"
+            className="flex min-h-14 items-center justify-between gap-3 rounded-xl bg-white/70 px-4 py-3 shadow-soft ring-1 ring-white transition hover:bg-white hover:shadow-md focus:outline-none"
           >
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/70">{label}</p>
-            <p className="text-lg font-black text-ischia-navy tabular-nums">{value}</p>
+            <p className="break-words text-right text-lg font-black text-ischia-navy tabular-nums">{value}</p>
           </Link>
         ))}
       </div>

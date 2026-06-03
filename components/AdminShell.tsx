@@ -20,7 +20,7 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
   return (
     <main className="min-h-screen bg-ischia-mist">
       <header className="brand-shell relative z-30 text-white shadow-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3">
           <div className="shrink-0">
             <IschiaStarsLogo light />
           </div>
@@ -35,18 +35,20 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
               </Link>
             ))}
           </nav>
-          <div className="flex shrink-0 items-center gap-2 text-sm">
-            <SystemModeBadge />
+          <div className="flex shrink-0 items-center gap-1.5 text-sm sm:gap-2">
+            <div className="hidden sm:block">
+              <SystemModeBadge />
+            </div>
             <LogoutButton />
             <MobileNav />
           </div>
         </div>
       </header>
 
-      <section className="mx-auto max-w-7xl px-3 py-5 sm:px-5 sm:py-8">
-        <div className="mb-5">
+      <section className="mx-auto max-w-7xl px-3 py-4 sm:px-5 sm:py-8">
+        <div className="mb-4 sm:mb-5">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-ischia-blue/70">Backoffice IschiaStars</p>
-          <h1 className="mt-1 text-2xl font-black text-ischia-navy sm:text-4xl">{title}</h1>
+          <h1 className="mt-1 text-2xl font-black leading-tight text-ischia-navy sm:text-4xl">{title}</h1>
           {subtitle ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ischia-ink/65">{subtitle}</p> : null}
         </div>
         {children}

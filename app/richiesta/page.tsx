@@ -99,10 +99,10 @@ export default function RichiestaPreventivo() {
 
   if (submitted) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ischia-mist px-5 py-12">
+      <main className="flex min-h-screen items-center justify-center bg-ischia-mist px-3 py-8 sm:px-5 sm:py-12">
         <div className="w-full max-w-lg text-center">
           <IschiaStarsLogo />
-          <div className="mt-8 rounded-[28px] bg-white p-8 shadow-soft">
+          <div className="mt-6 rounded-[22px] bg-white p-5 shadow-soft sm:mt-8 sm:rounded-[28px] sm:p-8">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">✓</div>
             <h1 className="mt-5 text-2xl font-black text-ischia-navy">Richiesta inviata!</h1>
             <p className="mt-3 text-ischia-ink/75">Grazie {form.firstName}, abbiamo ricevuto la tua richiesta. Ti risponderemo entro 24 ore con una proposta personalizzata.</p>
@@ -116,18 +116,18 @@ export default function RichiestaPreventivo() {
   }
 
   return (
-    <main className="min-h-screen bg-ischia-mist px-5 py-8">
+    <main className="min-h-screen bg-ischia-mist px-3 py-4 sm:px-5 sm:py-8">
       <div className="mx-auto max-w-2xl">
         <IschiaStarsLogo />
 
-        <div className="mt-6 overflow-hidden rounded-[28px] bg-white shadow-soft">
-          <div className="brand-shell p-7 text-white sm:p-9">
+        <div className="mt-5 overflow-hidden rounded-[22px] bg-white shadow-soft sm:mt-6 sm:rounded-[28px]">
+          <div className="brand-shell p-5 text-white sm:p-9">
             <p className="text-sm font-bold uppercase tracking-[0.16em] text-ischia-sand">IschiaStars</p>
-            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Richiedi il tuo preventivo</h1>
+            <h1 className="mt-2 text-2xl font-black leading-tight sm:text-4xl">Richiedi il tuo preventivo</h1>
             <p className="mt-3 max-w-md text-white/80">Compila il modulo e riceverai una proposta personalizzata entro 24 ore, senza impegno.</p>
           </div>
 
-          <div className="space-y-7 p-6 sm:p-9">
+          <div className="space-y-6 p-4 sm:space-y-7 sm:p-9">
 
             {/* Dati personali */}
             <section>
@@ -220,7 +220,7 @@ export default function RichiestaPreventivo() {
             ) : null}
 
             <button
-              className="w-full rounded-full bg-ischia-navy py-4 text-base font-black text-white disabled:opacity-50"
+              className="min-h-12 w-full rounded-full bg-ischia-navy px-4 py-3 text-base font-black text-white disabled:opacity-50 sm:py-4"
               disabled={loading || !canSubmit}
               onClick={() => void submit()}
               type="button"
@@ -234,7 +234,7 @@ export default function RichiestaPreventivo() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-sm text-ischia-ink/55">
+        <p className="mt-5 px-2 text-center text-sm leading-relaxed text-ischia-ink/55 sm:mt-6">
           Preferisci chiamare? <strong className="text-ischia-navy">081 90 54 81</strong> · WhatsApp <strong className="text-ischia-navy">371 75 90 017</strong>
         </p>
       </div>
@@ -243,7 +243,7 @@ export default function RichiestaPreventivo() {
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="mb-3 text-lg font-black text-ischia-navy">{children}</h2>;
+  return <h2 className="mb-3 text-base font-black text-ischia-navy sm:text-lg">{children}</h2>;
 }
 
 function Field({
@@ -256,7 +256,7 @@ function Field({
     <label className="flex flex-col gap-1 text-sm font-semibold text-ischia-ink">
       {label}
       <input
-        className="rounded-xl border border-ischia-blue/20 px-3 py-2 font-normal"
+        className="min-h-11 rounded-xl border border-ischia-blue/20 px-3 py-2 font-normal"
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -279,7 +279,7 @@ function Select({
     <label className="flex flex-col gap-1 text-sm font-semibold text-ischia-ink">
       {label}
       <select
-        className="rounded-xl border border-ischia-blue/20 px-3 py-2 font-normal"
+        className="min-h-11 rounded-xl border border-ischia-blue/20 px-3 py-2 font-normal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >

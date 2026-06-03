@@ -24,10 +24,10 @@ export function RequestCard({ request }: { request: QuoteRequest }) {
   const showImportedAt = request.importedAt && request.importedAt !== request.receivedAt;
 
   return (
-    <article className="min-w-0 rounded-2xl border border-white bg-white/86 p-5 shadow-soft">
+    <article className="min-w-0 rounded-2xl border border-white bg-white/86 p-4 shadow-soft sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-xl font-black text-ischia-navy">{request.firstName} {request.lastName}</h2>
+          <h2 className="break-words text-lg font-black leading-tight text-ischia-navy sm:text-xl">{request.firstName} {request.lastName}</h2>
           <p className="break-words text-sm text-ischia-ink/65">{request.email} - {request.phone}</p>
         </div>
         <QuoteStatusBadge status={request.status} />
@@ -50,12 +50,12 @@ export function RequestCard({ request }: { request: QuoteRequest }) {
         </p>
       ) : null}
       {request.message ? <p className="mt-4 rounded-xl bg-ischia-mist p-4 text-sm text-ischia-ink/80">{request.message}</p> : null}
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-ischia-blue/10 pt-4 text-sm">
+      <div className="mt-5 flex flex-col items-stretch gap-3 border-t border-ischia-blue/10 pt-4 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <span>
           Ricevuta: {formatDateTime(request.receivedAt)}
           {showImportedAt ? ` - Importata: ${formatDateTime(request.importedAt!)}` : ""}
         </span>
-        <Link className="rounded-full bg-ischia-sun px-4 py-2 font-bold text-ischia-navy" href={`/admin/preventivi/nuovo?requestId=${request.id}`}>
+        <Link className="rounded-full bg-ischia-sun px-4 py-2 text-center font-bold text-ischia-navy" href={`/admin/preventivi/nuovo?requestId=${request.id}`}>
           Crea preventivo
         </Link>
       </div>
@@ -79,11 +79,11 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
   const expiresSoon = !isDeleted && !hasConfirmation && isExpiresSoon(quote.offerExpiresAt);
 
   return (
-    <article className={`min-w-0 rounded-2xl border border-white p-5 shadow-soft ${isDeleted ? "bg-rose-50/60 opacity-75" : "bg-white/90"}`}>
+    <article className={`min-w-0 rounded-2xl border border-white p-4 shadow-soft sm:p-5 ${isDeleted ? "bg-rose-50/60 opacity-75" : "bg-white/90"}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-bold uppercase tracking-[0.14em] text-ischia-blue">{quote.code}</p>
-          <h2 className="text-xl font-black text-ischia-navy">{quote.customerFirstName} {quote.customerLastName}</h2>
+          <h2 className="break-words text-lg font-black leading-tight text-ischia-navy sm:text-xl">{quote.customerFirstName} {quote.customerLastName}</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {expiresSoon ? (
@@ -99,7 +99,7 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
           )}
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
+      <div className="mt-4 grid gap-x-4 gap-y-4 text-sm sm:grid-cols-2">
         {(() => {
           const options = getEffectiveHotelOptions(quote);
           const selectedOption = options.find((o) => o.isSelected);
@@ -126,27 +126,27 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
         <Info label="Totale" value={quote.totalPrice > 0 ? formatCurrency(quote.totalPrice) : "vedi proposte"} numeric />
         {!isDeleted ? <Info label="Aperture" value={`${stats.openings}`} numeric /> : null}
       </div>
-      <div className="mt-5 flex flex-wrap gap-2 sm:flex-nowrap sm:flex-wrap">
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {!isDeleted ? (
           hasConfirmation ? (
             <>
-              <Link className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-bold text-white" href={`/admin/preventivi/${quote.code}#verifica-disponibilita`}>
+              <Link className="rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-bold text-white" href={`/admin/preventivi/${quote.code}#verifica-disponibilita`}>
                 Gestisci conferma
               </Link>
-              <Link className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/conferme?filter=${quote.confirmation?.availabilityStatus ?? "availability_to_check"}`}>
+              <Link className="rounded-full bg-white px-4 py-2 text-center text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/conferme?filter=${quote.confirmation?.availabilityStatus ?? "availability_to_check"}`}>
                 Vai a conferme
               </Link>
-              <Link className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/preventivi/${quote.code}`}>
+              <Link className="rounded-full bg-white px-4 py-2 text-center text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/preventivi/${quote.code}`}>
                 Dettaglio
               </Link>
             </>
           ) : (
             <>
-              <Link className="rounded-full bg-ischia-navy px-4 py-2 text-sm font-bold text-white" href={publicQuoteUrl(quote)} rel="noopener noreferrer" target="_blank">
+              <Link className="rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-bold text-white" href={publicQuoteUrl(quote)} rel="noopener noreferrer" target="_blank">
                 Apri link cliente
               </Link>
               <WhatsAppSendButton quote={quote} />
-            <Link className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/preventivi/${quote.code}`}>
+            <Link className="rounded-full bg-white px-4 py-2 text-center text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" href={`/admin/preventivi/${quote.code}`}>
               Dettaglio / modifica
             </Link>
             <CloneQuoteButton quoteId={quote.id} />

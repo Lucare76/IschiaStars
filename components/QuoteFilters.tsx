@@ -190,10 +190,10 @@ export function QuoteFilters({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/90 px-4 py-3 text-sm shadow-soft">
+      <div className="flex flex-col items-stretch gap-3 rounded-2xl bg-white/90 px-4 py-3 text-sm shadow-soft sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <span className="font-semibold text-ischia-ink/70">Ultimo aggiornamento: {lastUpdated}</span>
         <button
-          className="inline-flex items-center gap-2 rounded-full bg-ischia-navy px-4 py-2 font-black text-white disabled:opacity-60"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-ischia-navy px-4 py-2 font-black text-white disabled:opacity-60"
           disabled={refreshing}
           onClick={handleRefresh}
           type="button"
@@ -205,15 +205,15 @@ export function QuoteFilters({
         {message ? (
           <p className="mb-3 rounded-xl bg-ischia-mist px-4 py-2 text-sm font-semibold text-ischia-navy">{message}</p>
         ) : null}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto]">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[1fr_auto_auto]">
           <input
-            className="w-full rounded-xl border border-ischia-blue/20 px-4 py-3 text-sm"
+            className="w-full rounded-xl border border-ischia-blue/20 px-4 py-3 text-base sm:text-sm"
             placeholder="Cerca per cliente, email, telefono, codice o hotel..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
           <select
-            className="rounded-xl border border-ischia-blue/20 px-4 py-3 text-sm font-semibold text-ischia-navy"
+            className="w-full rounded-xl border border-ischia-blue/20 px-4 py-3 text-base font-semibold text-ischia-navy sm:text-sm"
             value={filter}
             onChange={(event) => setFilter(event.target.value as QuoteFilter)}
           >
@@ -229,7 +229,7 @@ export function QuoteFilters({
             <option value="cancellati">Cancellati</option>
           </select>
           <select
-            className="rounded-xl border border-ischia-blue/20 px-4 py-3 text-sm font-semibold text-ischia-navy"
+            className="w-full rounded-xl border border-ischia-blue/20 px-4 py-3 text-base font-semibold text-ischia-navy sm:text-sm"
             value={sort}
             onChange={(event) => setSort(event.target.value as typeof sort)}
           >

@@ -19,7 +19,7 @@ export function WhatsAppSendButton({ quote, label = "Invia su WhatsApp" }: { quo
 
   return (
     <button
-      className="focus-ring rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white shadow-sm transition hover:brightness-95"
+      className="focus-ring rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white shadow-sm transition hover:brightness-95"
       onClick={() => void handleClick()}
       type="button"
     >

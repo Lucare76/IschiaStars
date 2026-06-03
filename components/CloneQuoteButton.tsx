@@ -24,7 +24,7 @@ export function CloneQuoteButton({ quoteId }: { quoteId: string }) {
 
   return (
     <button
-      className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
+      className="rounded-full bg-white px-4 py-2 text-center text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
       disabled={loading}
       onClick={() => void handleClone()}
       type="button"

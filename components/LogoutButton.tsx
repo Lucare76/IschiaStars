@@ -15,7 +15,7 @@ export function LogoutButton() {
   }
 
   return (
-    <button className="rounded-full bg-white px-4 py-2 font-bold text-ischia-navy transition hover:bg-ischia-sun disabled:opacity-60" disabled={loading} onClick={logout} type="button">
+    <button className="min-h-10 rounded-full bg-white px-3 py-2 font-bold text-ischia-navy transition hover:bg-ischia-sun disabled:opacity-60 sm:px-4" disabled={loading} onClick={logout} type="button">
       {loading ? "Uscita..." : "Esci"}
     </button>
   );

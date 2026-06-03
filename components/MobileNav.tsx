@@ -21,7 +21,7 @@ export function MobileNav() {
     <>
       <button
         aria-label="Menu"
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-white hover:bg-white/15 lg:hidden"
+        className="flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/15 lg:hidden"
         onClick={() => setOpen((v) => !v)}
         type="button"
       >
@@ -37,12 +37,12 @@ export function MobileNav() {
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-40 border-t border-white/10 bg-ischia-navy px-4 py-3 shadow-lg lg:hidden">
-          <nav className="flex flex-col gap-1">
+        <div className="absolute left-0 right-0 top-full z-40 max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-white/10 bg-ischia-navy px-3 py-3 shadow-lg lg:hidden">
+          <nav className="grid gap-1 sm:grid-cols-2">
             {nav.map((item) => (
               <Link
                 key={item.href}
-                className="rounded-lg px-4 py-3 text-sm font-semibold text-white/90 hover:bg-white/15 hover:text-white"
+                className="rounded-lg px-4 py-3 text-base font-semibold text-white/90 hover:bg-white/15 hover:text-white sm:text-sm"
                 href={item.href}
                 onClick={() => setOpen(false)}
               >
