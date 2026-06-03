@@ -477,7 +477,14 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
             </div>
           ) : (
             <div className="mt-5 grid gap-2">
-              {/* Pulsante principale: Invia preventivo */}
+              <Link
+                className="rounded-full bg-ischia-navy/10 px-4 py-2 text-center text-sm font-bold text-ischia-navy ring-1 ring-ischia-navy/20"
+                href={publicQuoteUrl(currentQuote)}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Anteprima preventivo →
+              </Link>
               <button
                 className="rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white disabled:opacity-60"
                 disabled={sending}
@@ -486,9 +493,6 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
               >
                 {sending ? "Aggiornamento..." : "Invia preventivo"}
               </button>
-              <Link className="rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)} rel="noopener noreferrer" target="_blank">
-                Apri link cliente
-              </Link>
               <WhatsAppSendButton quote={currentQuote} />
               <button className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy" onClick={() => void duplicateCurrentQuote()} type="button">
                 Duplica preventivo

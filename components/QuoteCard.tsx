@@ -62,11 +62,20 @@ export function RequestCard({ request }: { request: QuoteRequest }) {
   );
 }
 
+function isExpiresSoon(offerExpiresAt?: string): boolean {
+  if (!offerExpiresAt) return false;
+  const expiresAt = new Date(offerExpiresAt).getTime();
+  if (!Number.isFinite(expiresAt)) return false;
+  const diff = expiresAt - Date.now();
+  return diff >= 0 && diff <= 3 * 24 * 60 * 60 * 1000;
+}
+
 export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quote; stats?: QuoteStats; actions?: QuoteCardActions }) {
   const stats = providedStats ?? { openings: 0, whatsappClicks: 0, confirmClicked: false, confirmed: false };
   const effectiveStatus = stats.confirmed ? "confermato" : quote.status === "perso_non_disponibile" ? "perso_non_disponibile" : stats.openings > 0 ? "aperto" : quote.status;
   const isDeleted = Boolean(quote.deletedAt);
   const hasConfirmation = Boolean(quote.confirmation);
+  const expiresSoon = !isDeleted && !hasConfirmation && isExpiresSoon(quote.offerExpiresAt);
 
   return (
     <article className={`min-w-0 rounded-2xl border border-white p-5 shadow-soft ${isDeleted ? "bg-rose-50/60 opacity-75" : "bg-white/90"}`}>
@@ -76,6 +85,9 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
           <h2 className="text-xl font-black text-ischia-navy">{quote.customerFirstName} {quote.customerLastName}</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {expiresSoon ? (
+            <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-700">⏰ Scadenza vicina</span>
+          ) : null}
           {quote.excludedFromStats && !isDeleted ? (
             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800">Escluso stats</span>
           ) : null}

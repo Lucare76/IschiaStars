@@ -34,23 +34,33 @@ export function normalizeItalianPhone(phone: string) {
 }
 
 export function whatsappQuoteLink(quote: Quote) {
-  const hasMultipleOptions = quote.hotelOptions.length > 1;
+  const hotelNames = [...new Map(quote.hotelOptions.map((o) => [o.hotelGroup, o.hotelName])).values()];
+  const hasMultipleOptions = hotelNames.length > 1;
+  const hotelLine = hasMultipleOptions ? hotelNames.join(' · ') : (hotelNames[0] ?? quote.proposedHotel.name);
+  const dates = `${formatDate(quote.arrivalDate)} – ${formatDate(quote.departureDate)}`;
+
   const message = hasMultipleOptions
     ? `Ciao ${quote.customerFirstName},
-abbiamo preparato la tua proposta IschiaStars con più soluzioni hotel:
+ho preparato la tua proposta con più soluzioni per il soggiorno a Ischia:
+
+📅 ${dates}
+🏨 ${hotelLine}
 
 ${absolutePublicQuoteUrl(quote)}
 
-Puoi aprire il link, confrontare le opzioni disponibili e confermare online quella che preferisci.
+Puoi confrontare le opzioni e confermare online quella che preferisci.
 
 Grazie,
 IschiaStars`
     : `Ciao ${quote.customerFirstName},
-abbiamo preparato la tua proposta personalizzata IschiaStars:
+ho preparato la tua proposta per il soggiorno a Ischia:
+
+📅 ${dates}
+🏨 ${hotelLine}
 
 ${absolutePublicQuoteUrl(quote)}
 
-Puoi aprirla, vedere hotel, servizi inclusi, condizioni e confermare direttamente online.
+Puoi aprirla, vedere tutti i dettagli e confermare direttamente online.
 
 Grazie,
 IschiaStars`;
