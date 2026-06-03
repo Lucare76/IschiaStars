@@ -18,7 +18,7 @@ const nav = [
 export function AdminShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
     <main className="min-h-screen bg-ischia-mist">
-      <header className="brand-shell sticky top-0 z-30 text-white shadow-md">
+      <header className="brand-shell relative z-30 text-white shadow-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3">
           <div className="shrink-0">
             <IschiaStarsLogo light />
