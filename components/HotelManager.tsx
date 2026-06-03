@@ -94,10 +94,13 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
       setMessage({ text: result?.error ?? "Salvataggio non riuscito", ok: false });
       return;
     }
+    if (result.source !== "supabase") {
+      setMessage({ text: "⚠️ Database non raggiunto — la modifica NON è stata salvata sul server. Verifica la connessione.", ok: false });
+      return;
+    }
     setHotels((current) => (form.id ? current.map((hotel) => (hotel.id === result.data!.id ? result.data! : hotel)) : [result.data!, ...current]));
-    // Mantieni il form aperto con i dati salvati: l'utente può verificare che siano rimasti
     setForm(fromHotel(result.data!));
-    setMessage({ text: `Hotel salvato. Puoi verificare i dati nel form qui sopra.`, ok: true });
+    setMessage({ text: "Hotel salvato su database.", ok: true });
   }
 
   function prefillPolicyDefaults() {
