@@ -6,6 +6,8 @@ import { getFollowUpQuotes, FollowUpQuote, FollowUpSegment } from "@/lib/reposit
 import { formatDate, formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 type FollowUpFilter = "caldi" | "da_sollecitare" | "mai_aperti" | "gia_richiamati" | "tutti";
 
@@ -75,6 +77,7 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
                 : "bg-white text-ischia-navy ring-slate-200 hover:bg-ischia-blue/10"
             }`}
             href={`/admin/follow-up?filter=${filter.value}`}
+            prefetch={false}
           >
             {filter.label}
           </Link>

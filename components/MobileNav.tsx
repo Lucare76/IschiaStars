@@ -45,6 +45,7 @@ export function MobileNav() {
                 className="rounded-lg px-4 py-3 text-base font-semibold text-white/90 hover:bg-white/15 hover:text-white sm:text-sm"
                 href={item.href}
                 onClick={() => setOpen(false)}
+                prefetch={false}
               >
                 {item.label}
               </Link>

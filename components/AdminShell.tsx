@@ -30,6 +30,7 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
                 key={item.href}
                 className="rounded-lg px-3 py-1.5 font-semibold text-white/90 transition hover:bg-white/15 hover:text-white"
                 href={item.href}
+                prefetch={false}
               >
                 {item.label}
               </Link>
