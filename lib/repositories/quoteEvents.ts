@@ -61,6 +61,22 @@ export async function getQuoteEvents(quoteId: string): Promise<RepositoryResult<
   return fromSupabase((data ?? []).map(mapEvent));
 }
 
+export async function getQuoteEventsForQuoteIds(quoteIds: string[]): Promise<RepositoryResult<Record<string, QuoteEvent[]>>> {
+  const local = groupEventsByQuote(allQuoteEvents().filter((event) => quoteIds.includes(event.quoteId)));
+  if (!quoteIds.length) return fromSupabase({});
+
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(local);
+
+  const { data, error } = await supabase
+    .from("quote_events")
+    .select("*")
+    .in("quote_id", quoteIds)
+    .order("created_at");
+  if (error) return fallback(local, error);
+  return fromSupabase(groupEventsByQuote((data ?? []).map(mapEvent)));
+}
+
 export async function getQuoteEventStats(quoteId: string) {
   const result = await getQuoteEvents(quoteId);
   const events = result.data;
@@ -69,7 +85,7 @@ export async function getQuoteEventStats(quoteId: string) {
     data: {
       openings: openings.length,
       lastOpening: openings.at(-1)?.createdAt,
-      whatsappClicks: events.filter((event) => event.eventType === "whatsapp_clicked").length,
+      whatsappClicks: events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event)).length,
       confirmClicked: events.some((event) => event.eventType === "confirm_clicked"),
       confirmed: events.some((event) => event.eventType === "quote_confirmed")
     },
@@ -91,10 +107,22 @@ export async function getDashboardEventStats() {
 function eventDashboard(events: QuoteEvent[]) {
   return {
     openedQuoteIds: new Set(events.filter((event) => event.eventType === "quote_opened").map((event) => event.quoteId)),
-    whatsappClickQuoteIds: events.filter((event) => event.eventType === "whatsapp_clicked").map((event) => event.quoteId),
+    whatsappClickQuoteIds: events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event)).map((event) => event.quoteId),
     confirmedEventIds: new Set(events.filter((event) => event.eventType === "quote_confirmed").map((event) => event.quoteId)),
     lastOpened: events.filter((event) => event.eventType === "quote_opened").at(-1)
   };
+}
+
+function isCustomerWhatsappEvent(event: QuoteEvent) {
+  const placement = typeof event.metadata?.placement === "string" ? event.metadata.placement : "";
+  return placement !== "admin_quote_card";
+}
+
+function groupEventsByQuote(events: QuoteEvent[]) {
+  return events.reduce<Record<string, QuoteEvent[]>>((grouped, event) => {
+    grouped[event.quoteId] = [...(grouped[event.quoteId] ?? []), event];
+    return grouped;
+  }, {});
 }
 
 function mapEvent(row: Record<string, any>): QuoteEvent {

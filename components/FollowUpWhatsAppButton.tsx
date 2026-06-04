@@ -28,6 +28,8 @@ export function FollowUpWhatsAppButton({ href, quoteCode, token, segment, client
         token,
         eventType: "follow_up_whatsapp_click",
         metadata: {
+          action: "whatsapp",
+          source: "admin_follow_up",
           segment,
           quote_code: quoteCode,
           client_phone: clientPhone
@@ -38,7 +40,7 @@ export function FollowUpWhatsAppButton({ href, quoteCode, token, segment, client
 
   return (
     <a
-      className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-bold text-white transition hover:bg-ischia-navy"
+      className="inline-flex h-9 items-center justify-center rounded-full bg-ischia-leaf px-3.5 text-center text-xs font-black text-white transition hover:bg-ischia-navy"
       href={href}
       onClick={trackClick}
       rel="noreferrer"

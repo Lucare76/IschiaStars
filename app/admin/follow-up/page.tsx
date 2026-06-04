@@ -1,41 +1,68 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
+import { FollowUpActionButtons } from "@/components/FollowUpActionButtons";
 import { FollowUpWhatsAppButton } from "@/components/FollowUpWhatsAppButton";
 import { getFollowUpQuotes, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-type FollowUpFilter = "tutti" | "mai_aperti" | "aperti_non_confermati" | "molto_interessati" | "da_sollecitare";
+type FollowUpFilter = "caldi" | "da_sollecitare" | "mai_aperti" | "gia_richiamati" | "tutti";
 
 const filters: { value: FollowUpFilter; label: string }[] = [
-  { value: "tutti", label: "Tutti" },
+  { value: "caldi", label: "Caldi" },
+  { value: "da_sollecitare", label: "Da sollecitare" },
   { value: "mai_aperti", label: "Mai aperti" },
-  { value: "aperti_non_confermati", label: "Aperti non confermati" },
-  { value: "molto_interessati", label: "Molto interessati" },
-  { value: "da_sollecitare", label: "Da sollecitare" }
+  { value: "gia_richiamati", label: "Gia richiamati" },
+  { value: "tutti", label: "Tutti" }
 ];
+
+type FollowUpGroup = {
+  key: string;
+  primary: FollowUpQuote;
+  quotes: FollowUpQuote[];
+  totalOpenings: number;
+  totalWhatsappClicks: number;
+  totalHotelClicks: number;
+  totalPrints: number;
+  totalConfirmClicks: number;
+  engagementScore: number;
+  lastEventAt?: string;
+  lastFollowUpAt?: string;
+  snoozedUntil?: string;
+  isSnoozed: boolean;
+};
 
 export default async function FollowUpPage({ searchParams }: { searchParams?: { filter?: string } }) {
   const activeFilter = normalizeFilter(searchParams?.filter);
   const followUpResult = await getFollowUpQuotes();
+
+  if (followUpResult.source !== "supabase") {
+    return (
+      <AdminShell title="Follow-up" subtitle="Clienti da recuperare ordinati per segnali reali: aperture, click hotel, WhatsApp cliente e conferma.">
+        <DataUnavailable error={followUpResult.error} />
+      </AdminShell>
+    );
+  }
+
   const quotes = followUpResult.data;
-  const visibleQuotes = quotes.filter((quote) => matchesFilter(quote, activeFilter));
+  const groups = groupFollowUps(quotes);
+  const visibleGroups = groups.filter((group) => matchesFilter(group, activeFilter));
 
   const stats = {
-    total: quotes.length,
-    neverOpened: quotes.filter((quote) => quote.segment === "mai_aperto").length,
-    opened: quotes.filter((quote) => quote.openedCount > 0).length,
-    veryInterested: quotes.filter((quote) => quote.segment === "molto_interessato").length
+    hot: groups.filter((group) => group.primary.priority === "alta" && !group.lastFollowUpAt && !group.isSnoozed).length,
+    toSolicit: groups.filter((group) => group.primary.segment === "da_sollecitare" && !group.lastFollowUpAt && !group.isSnoozed).length,
+    neverOpened: groups.filter((group) => group.primary.segment === "mai_aperto" && !group.lastFollowUpAt && !group.isSnoozed).length,
+    contacted: groups.filter((group) => Boolean(group.lastFollowUpAt)).length
   };
 
   return (
-    <AdminShell title="Da richiamare" subtitle="Preventivi caldi da recuperare: clienti che hanno ricevuto o aperto la proposta ma non hanno ancora confermato.">
-      <section className="grid gap-4 md:grid-cols-4">
-        <Kpi label="Preventivi da richiamare" value={stats.total} />
+    <AdminShell title="Follow-up" subtitle="Clienti da recuperare ordinati per segnali reali: aperture, click hotel, WhatsApp cliente e conferma.">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi label="Clienti caldi" value={stats.hot} />
+        <Kpi label="Da sollecitare" value={stats.toSolicit} />
         <Kpi label="Mai aperti" value={stats.neverOpened} />
-        <Kpi label="Aperti non confermati" value={stats.opened} />
-        <Kpi label="Molto interessati" value={stats.veryInterested} />
+        <Kpi label="Gia richiamati" value={stats.contacted} />
       </section>
 
       <nav className="mt-6 flex flex-wrap gap-2">
@@ -54,20 +81,26 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
         ))}
       </nav>
 
-      {followUpResult.error ? (
-        <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 ring-1 ring-amber-200">
-          Dati caricati in fallback: {followUpResult.error}
-        </p>
-      ) : null}
-
       <section className="mt-6 grid gap-4">
-        {visibleQuotes.length === 0 ? (
+        {visibleGroups.length === 0 ? (
           <div className="rounded-2xl bg-white p-6 text-ischia-ink/70 ring-1 ring-slate-200">Nessun preventivo in questa lista.</div>
         ) : (
-          visibleQuotes.map((quote) => <FollowUpCard key={quote.id} quote={quote} />)
+          visibleGroups.map((group) => <FollowUpCard key={group.key} group={group} />)
         )}
       </section>
     </AdminShell>
+  );
+}
+
+function DataUnavailable({ error }: { error?: string }) {
+  return (
+    <div className="rounded-2xl bg-red-50 p-5 text-sm font-semibold text-red-800 shadow-soft ring-1 ring-red-200">
+      <p className="text-base font-black">Follow-up non disponibile</p>
+      <p className="mt-2">
+        Connessione al database eventi non riuscita. Per evitare liste parziali o dati non reali, il follow-up resta nascosto finche Supabase non risponde correttamente.
+      </p>
+      {error ? <p className="mt-3 break-words text-xs text-red-700/80">Dettaglio tecnico: {error}</p> : null}
+    </div>
   );
 }
 
@@ -80,7 +113,8 @@ function Kpi({ label, value }: { label: string; value: number }) {
   );
 }
 
-function FollowUpCard({ quote }: { quote: FollowUpQuote }) {
+function FollowUpCard({ group }: { group: FollowUpGroup }) {
+  const quote = group.primary;
   return (
     <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -89,35 +123,55 @@ function FollowUpCard({ quote }: { quote: FollowUpQuote }) {
             <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${segmentClass(quote.segment)}`}>{quote.segmentLabel}</span>
             <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${priorityClass(quote.priority)}`}>Priorità {quote.priority}</span>
             {quote.expiresSoon ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black uppercase text-amber-800">Scadenza vicina</span> : null}
+            {group.isSnoozed && group.snoozedUntil ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase text-slate-700">Rimandato a {formatDate(group.snoozedUntil)}</span> : null}
           </div>
           <h2 className="mt-3 text-2xl font-black text-ischia-navy">{quote.clientName}</h2>
           <p className="mt-1 text-sm font-semibold text-ischia-ink/65">
-            {quote.code} · inviato {formatDate(quote.sentAt)}
+            {group.quotes.length} {group.quotes.length === 1 ? "preventivo" : "preventivi"} · ultimo invio {formatDate(quote.sentAt)}
           </p>
           <p className="mt-3 text-sm text-ischia-ink/75">
             {quote.clientPhone || "Telefono assente"} · {quote.clientEmail || "Email assente"}
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <a className="rounded-full bg-ischia-navy px-4 py-2 text-sm font-bold text-white transition hover:bg-ischia-blue" href={quote.publicUrl} rel="noreferrer" target="_blank">
+        <div className="flex flex-wrap justify-start gap-2 lg:max-w-[56rem] lg:justify-end">
+          <a className="inline-flex h-9 items-center justify-center rounded-full bg-ischia-navy px-3.5 text-center text-xs font-black text-white transition hover:bg-ischia-blue" href={quote.publicUrl} rel="noreferrer" target="_blank">
             Apri preventivo
           </a>
           <FollowUpWhatsAppButton href={quote.whatsappHref} quoteCode={quote.code} token={quote.token} segment={quote.segment} clientPhone={quote.clientPhone} />
+          <a className="inline-flex h-9 items-center justify-center rounded-full bg-white px-3.5 text-center text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/20" href={`tel:${quote.clientPhone.replace(/\D/g, "")}`}>
+            Chiama
+          </a>
+          <FollowUpActionButtons quoteId={quote.id} />
         </div>
       </div>
 
       <div className="mt-5 grid gap-3 text-sm md:grid-cols-4">
-        <Info label="Ultimo evento" value={quote.lastEventAt ? `${quote.lastEventLabel} · ${formatDateTime(quote.lastEventAt)}` : quote.lastEventLabel} />
-        <Info label="Aperture" value={String(quote.openedCount)} />
-        <Info label="Click WhatsApp" value={String(quote.whatsappClickCount)} />
-        <Info label="Click hotel / PDF" value={`${quote.hotelLinkClickCount} / ${quote.printClickCount}`} />
+        <Info label="Ultimo evento" value={group.lastEventAt ? `${quote.lastEventLabel} · ${formatDateTime(group.lastEventAt)}` : quote.lastEventLabel} />
+        <Info label="Aperture" value={String(group.totalOpenings)} />
+        <Info label="Click WhatsApp cliente" value={String(group.totalWhatsappClicks)} />
+        <Info label="Click hotel / PDF" value={`${group.totalHotelClicks} / ${group.totalPrints}`} />
       </div>
 
       <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
-        <Info label="Hotel proposti" value={quote.hotelsSummary || "Non indicati"} />
-        <Info label="Offerta principale" value={quote.mainOffer} />
+        <Info label="Punteggio interesse" value={String(group.engagementScore)} />
+        <Info label="Ultimo follow-up" value={group.lastFollowUpAt ? formatDateTime(group.lastFollowUpAt) : "Non ancora registrato"} />
       </div>
+      <div className="mt-4 grid gap-3 text-sm">
+        <Info label="Hotel proposti" value={quote.hotelsSummary || "Non indicati"} />
+      </div>
+      {group.quotes.length > 1 ? (
+        <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
+          <p className="text-xs font-black uppercase text-ischia-ink/45">Preventivi collegati</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {group.quotes.map((item) => (
+              <Link key={item.id} className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-ischia-navy ring-1 ring-slate-200" href={`/admin/preventivi/${item.code}`}>
+                {item.code}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -132,15 +186,68 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 function normalizeFilter(value?: string): FollowUpFilter {
-  return filters.some((filter) => filter.value === value) ? value as FollowUpFilter : "tutti";
+  return filters.some((filter) => filter.value === value) ? value as FollowUpFilter : "caldi";
 }
 
-function matchesFilter(quote: FollowUpQuote, filter: FollowUpFilter) {
+function matchesFilter(group: FollowUpGroup, filter: FollowUpFilter) {
   if (filter === "tutti") return true;
-  if (filter === "mai_aperti") return quote.segment === "mai_aperto";
-  if (filter === "aperti_non_confermati") return quote.openedCount > 0;
-  if (filter === "molto_interessati") return quote.segment === "molto_interessato";
-  return quote.segment === "da_sollecitare";
+  if (filter === "gia_richiamati") return Boolean(group.lastFollowUpAt);
+  if (group.lastFollowUpAt) return false;
+  if (group.isSnoozed) return false;
+  if (filter === "caldi") return group.primary.priority === "alta";
+  if (filter === "mai_aperti") return group.primary.segment === "mai_aperto";
+  return group.primary.segment === "da_sollecitare";
+}
+
+function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
+  const map = new Map<string, FollowUpQuote[]>();
+  for (const quote of quotes) {
+    const key = groupKey(quote);
+    map.set(key, [...(map.get(key) ?? []), quote]);
+  }
+
+  return Array.from(map.entries()).map(([key, items]) => {
+    const sorted = [...items].sort((a, b) =>
+      b.engagementScore - a.engagementScore ||
+      priorityWeight(b.priority) - priorityWeight(a.priority) ||
+      new Date(b.lastEventAt ?? b.sentAt).getTime() - new Date(a.lastEventAt ?? a.sentAt).getTime()
+    );
+    const primary = sorted[0];
+    const lastEventAt = sorted.map((quote) => quote.lastEventAt ?? quote.sentAt).sort().at(-1);
+    const lastFollowUpAt = sorted.map((quote) => quote.lastFollowUpAt).filter(Boolean).sort().at(-1);
+    const snoozedUntil = sorted.map((quote) => quote.snoozedUntil).filter(Boolean).sort().at(-1);
+    return {
+      key,
+      primary,
+      quotes: sorted,
+      totalOpenings: sorted.reduce((sum, quote) => sum + quote.openedCount, 0),
+      totalWhatsappClicks: sorted.reduce((sum, quote) => sum + quote.whatsappClickCount, 0),
+      totalHotelClicks: sorted.reduce((sum, quote) => sum + quote.hotelLinkClickCount, 0),
+      totalPrints: sorted.reduce((sum, quote) => sum + quote.printClickCount, 0),
+      totalConfirmClicks: sorted.reduce((sum, quote) => sum + quote.confirmClickCount, 0),
+      engagementScore: sorted.reduce((sum, quote) => sum + quote.engagementScore, 0),
+      lastEventAt,
+      lastFollowUpAt,
+      snoozedUntil,
+      isSnoozed: Boolean(snoozedUntil && new Date(snoozedUntil).getTime() > Date.now())
+    };
+  }).sort((a, b) =>
+    b.engagementScore - a.engagementScore ||
+    priorityWeight(b.primary.priority) - priorityWeight(a.primary.priority) ||
+    new Date(b.lastEventAt ?? b.primary.sentAt).getTime() - new Date(a.lastEventAt ?? a.primary.sentAt).getTime()
+  );
+}
+
+function groupKey(quote: FollowUpQuote) {
+  const phone = quote.clientPhone.replace(/\D/g, "");
+  if (phone.length >= 8) return `phone:${phone}`;
+  const email = quote.clientEmail.trim().toLowerCase();
+  if (email && !isGenericContactEmail(email)) return `email:${email}`;
+  return `name:${quote.clientName.trim().toLowerCase()}`;
+}
+
+function isGenericContactEmail(email: string) {
+  return ["info@ischiastars.it", "preventivi@ischiastars.it"].includes(email);
 }
 
 function segmentClass(segment: FollowUpSegment) {
@@ -156,4 +263,8 @@ function segmentClass(segment: FollowUpSegment) {
 
 function priorityClass(priority: FollowUpQuote["priority"]) {
   return priority === "alta" ? "bg-red-100 text-red-800" : priority === "media" ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-700";
+}
+
+function priorityWeight(priority: FollowUpQuote["priority"]) {
+  return priority === "alta" ? 3 : priority === "media" ? 2 : 1;
 }

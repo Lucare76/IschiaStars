@@ -6,7 +6,7 @@ import Link from "next/link";
 const nav = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/preventivi-da-evadere", label: "Da evadere" },
-  { href: "/admin/follow-up", label: "Da richiamare" },
+  { href: "/admin/follow-up", label: "Follow-up" },
   { href: "/admin/preventivi", label: "Preventivi evasi" },
   { href: "/admin/conferme", label: "Confermati" },
   { href: "/admin/preventivi/nuovo", label: "+ Nuovo preventivo" },

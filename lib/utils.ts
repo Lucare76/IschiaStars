@@ -64,7 +64,7 @@ export function quoteEventStats(quoteId: string) {
   return {
     openings: openings.length,
     lastOpening: openings.at(-1)?.createdAt,
-    whatsappClicks: events.filter((event) => event.eventType === "whatsapp_clicked").length,
+    whatsappClicks: events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event)).length,
     confirmClicked: events.some((event) => event.eventType === "confirm_clicked"),
     confirmed: events.some((event) => event.eventType === "quote_confirmed")
   };
@@ -87,7 +87,12 @@ export function dashboardStats() {
     confirmedQuotes: confirmed.length,
     lostQuotes: quotes.filter((quote) => quote.status === "perso_non_disponibile").length,
     conversionRate: quotes.length ? Math.round((confirmed.length / quotes.length) * 100) : 0,
-    whatsappClicks: events.filter((event) => event.eventType === "whatsapp_clicked").length,
+    whatsappClicks: events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event)).length,
     confirmedValue: confirmed.reduce((sum, quote) => sum + quote.totalPrice, 0)
   };
+}
+
+function isCustomerWhatsappEvent(event: { metadata?: Record<string, unknown> }) {
+  const placement = typeof event.metadata?.placement === "string" ? event.metadata.placement : "";
+  return placement !== "admin_quote_card";
 }

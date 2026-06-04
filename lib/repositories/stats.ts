@@ -2,6 +2,7 @@ import { listPendingQuoteRequests } from "@/lib/repositories/quoteRequests";
 import { getDashboardEventStats } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
+import type { Quote, QuoteRequest } from "@/lib/types";
 
 export type DashboardStats = {
   createdQuotes: number;
@@ -22,24 +23,49 @@ export async function getDashboardStats(): Promise<RepositoryResult<DashboardSta
     getDashboardEventStats()
   ]);
 
+  const stats = buildDashboardStats({
+    quotes: quotesResult.data,
+    pendingRequests: requestsResult.data,
+    openedQuoteIds: eventsResult.data.openedQuoteIds,
+    confirmedEventIds: eventsResult.data.confirmedEventIds,
+    whatsappClickQuoteIds: eventsResult.data.whatsappClickQuoteIds
+  });
+
+  const error = [quotesResult.error, requestsResult.error, eventsResult.error].filter(Boolean).join(" | ") || undefined;
+  return quotesResult.source === "supabase" && requestsResult.source === "supabase" && eventsResult.source === "supabase"
+    ? fromSupabase(stats)
+    : fallback(stats, error);
+}
+
+export function buildDashboardStats({
+  quotes,
+  pendingRequests,
+  openedQuoteIds,
+  confirmedEventIds,
+  whatsappClickQuoteIds
+}: {
+  quotes: Quote[];
+  pendingRequests: QuoteRequest[];
+  openedQuoteIds: Set<string>;
+  confirmedEventIds: Set<string>;
+  whatsappClickQuoteIds: string[];
+}): DashboardStats {
   // Solo preventivi attivi nelle statistiche: non cancellati e non esclusi
-  const activeQuotes = quotesResult.data.filter((quote) => !quote.deletedAt && !quote.excludedFromStats);
+  const activeQuotes = quotes.filter((quote) => !quote.deletedAt && !quote.excludedFromStats);
   const activeIds = new Set(activeQuotes.map((quote) => quote.id));
 
-  const events = eventsResult.data;
-
   // Filtra eventi per soli preventivi attivi
-  const activeOpenedIds = new Set(Array.from(events.openedQuoteIds).filter((id) => activeIds.has(id)));
-  const activeConfirmedIds = new Set(Array.from(events.confirmedEventIds).filter((id) => activeIds.has(id)));
-  const activeWhatsappClicks = events.whatsappClickQuoteIds.filter((id) => activeIds.has(id)).length;
+  const activeOpenedIds = new Set(Array.from(openedQuoteIds).filter((id) => activeIds.has(id)));
+  const activeConfirmedIds = new Set(Array.from(confirmedEventIds).filter((id) => activeIds.has(id)));
+  const activeWhatsappClicks = whatsappClickQuoteIds.filter((id) => activeIds.has(id)).length;
 
   const confirmed = activeQuotes.filter((quote) => quote.status === "confermato" || Boolean(quote.confirmation) || activeConfirmedIds.has(quote.id));
   const confirmedIds = new Set(confirmed.map((quote) => quote.id));
   const evaded = activeQuotes.filter((quote) => !confirmedIds.has(quote.id) && quote.status !== "perso_non_disponibile");
 
-  const stats = {
+  return {
     createdQuotes: activeQuotes.length,
-    pendingRequests: requestsResult.data.length,
+    pendingRequests: pendingRequests.length,
     sentQuotes: evaded.length,
     openedQuotes: activeOpenedIds.size,
     confirmedQuotes: confirmed.length,
@@ -48,8 +74,4 @@ export async function getDashboardStats(): Promise<RepositoryResult<DashboardSta
     whatsappClicks: activeWhatsappClicks,
     confirmedValue: confirmed.reduce((sum, quote) => sum + quote.totalPrice, 0)
   };
-
-  return quotesResult.source === "supabase" || requestsResult.source === "supabase" || eventsResult.source === "supabase"
-    ? fromSupabase(stats)
-    : fallback(stats);
 }

@@ -1,4 +1,4 @@
-import { getQuoteEvents } from "@/lib/repositories/quoteEvents";
+import { getQuoteEventsForQuoteIds } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, getEffectiveHotelOptions, RepositoryResult } from "@/lib/repositories/shared";
 import { absolutePublicQuoteUrl, formatCurrency, normalizeItalianPhone } from "@/lib/utils";
@@ -22,6 +22,11 @@ export type FollowUpQuote = {
   whatsappClickCount: number;
   hotelLinkClickCount: number;
   printClickCount: number;
+  confirmClickCount: number;
+  followUpCount: number;
+  engagementScore: number;
+  lastFollowUpAt?: string;
+  snoozedUntil?: string;
   segment: FollowUpSegment;
   segmentLabel: string;
   priority: FollowUpPriority;
@@ -36,25 +41,32 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuote[]>> {
   const quotesResult = await listQuotes({ includeDeleted: false });
-  const mapped = await Promise.all(quotesResult.data.map(toFollowUpQuote));
+  const quoteIds = quotesResult.data.map((quote) => quote.id);
+  const eventsResult = await getQuoteEventsForQuoteIds(quoteIds);
+  const mapped = quotesResult.data.map((quote) => toFollowUpQuote(quote, eventsResult.data[quote.id] ?? []));
   const data = mapped
     .filter((quote): quote is FollowUpQuote => Boolean(quote))
-    .sort((a, b) => priorityWeight(b.priority) - priorityWeight(a.priority) || new Date(b.lastEventAt ?? b.sentAt).getTime() - new Date(a.lastEventAt ?? a.sentAt).getTime());
+    .sort(compareFollowUpQuotes);
 
-  return quotesResult.source === "supabase" ? fromSupabase(data) : fallback(data, quotesResult.error);
+  const error = [quotesResult.error, eventsResult.error].filter(Boolean).join(" | ") || undefined;
+  return quotesResult.source === "supabase" && eventsResult.source === "supabase"
+    ? fromSupabase(data)
+    : fallback(data, error);
 }
 
-async function toFollowUpQuote(quote: Quote): Promise<FollowUpQuote | null> {
-  if (quote.deletedAt || quote.excludedFromStats || quote.status === "confermato" || quote.confirmation) return null;
+function toFollowUpQuote(quote: Quote, events: QuoteEvent[]): FollowUpQuote | null {
+  if (quote.deletedAt || quote.excludedFromStats || quote.status !== "preventivo_inviato" || quote.confirmation) return null;
 
-  const eventsResult = await getQuoteEvents(quote.id);
-  const events = eventsResult.data;
   if (events.some((event) => event.eventType === "quote_confirmed")) return null;
 
   const opened = events.filter((event) => event.eventType === "quote_opened");
-  const whatsappClicks = events.filter((event) => event.eventType === "whatsapp_clicked");
+  const whatsappClicks = events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event));
   const hotelLinkClicks = events.filter((event) => event.eventType === "hotel_link_clicked");
   const printClicks = events.filter((event) => event.eventType === "print_clicked");
+  const confirmClicks = events.filter((event) => event.eventType === "confirm_clicked");
+  const followUpEvents = events.filter((event) => event.eventType === "follow_up_whatsapp_click");
+  const lastFollowUp = latestEvent(followUpEvents);
+  const snoozedUntil = latestSnoozeUntil(followUpEvents);
   const lastEvent = latestEvent(events);
   const sentAt = quote.sentAt ?? quote.createdAt;
   const publicUrl = absolutePublicQuoteUrl(quote);
@@ -63,10 +75,12 @@ async function toFollowUpQuote(quote: Quote): Promise<FollowUpQuote | null> {
     opened,
     whatsappClicks,
     hotelLinkClicks,
-    printClicks
+    printClicks,
+    confirmClicks
   });
   const clientName = [quote.customerFirstName, quote.customerLastName].filter(Boolean).join(" ").trim() || "Cliente";
   const clientPhone = quote.customerPhone.trim();
+  const engagementScore = scoreEngagement({ opened, whatsappClicks, hotelLinkClicks, printClicks, confirmClicks });
 
   return {
     id: quote.id,
@@ -83,6 +97,11 @@ async function toFollowUpQuote(quote: Quote): Promise<FollowUpQuote | null> {
     whatsappClickCount: whatsappClicks.length,
     hotelLinkClickCount: hotelLinkClicks.length,
     printClickCount: printClicks.length,
+    confirmClickCount: confirmClicks.length,
+    followUpCount: followUpEvents.length,
+    engagementScore,
+    lastFollowUpAt: lastFollowUp?.createdAt,
+    snoozedUntil,
     segment,
     segmentLabel: segmentLabel(segment),
     priority: priorityFor(segment),
@@ -99,16 +118,18 @@ function resolveSegment({
   opened,
   whatsappClicks,
   hotelLinkClicks,
-  printClicks
+  printClicks,
+  confirmClicks
 }: {
   sentAt: string;
   opened: QuoteEvent[];
   whatsappClicks: QuoteEvent[];
   hotelLinkClicks: QuoteEvent[];
   printClicks: QuoteEvent[];
+  confirmClicks: QuoteEvent[];
 }): FollowUpSegment {
   const lastOpening = opened.at(-1)?.createdAt;
-  const isVeryInterested = opened.length > 1 || whatsappClicks.length > 0 || hotelLinkClicks.length > 0 || printClicks.length > 0;
+  const isVeryInterested = opened.length > 1 || whatsappClicks.length > 0 || hotelLinkClicks.length > 0 || printClicks.length > 0 || confirmClicks.length > 0;
   if (isVeryInterested) return "molto_interessato";
   if (lastOpening && hoursSince(lastOpening) >= 24) return "da_sollecitare";
   if (opened.length > 0) return "aperto_non_confermato";
@@ -133,6 +154,19 @@ function followUpWhatsappHref(phone: string, message: string) {
 
 function latestEvent(events: QuoteEvent[]) {
   return [...events].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).at(-1);
+}
+
+function isCustomerWhatsappEvent(event: QuoteEvent) {
+  const placement = typeof event.metadata?.placement === "string" ? event.metadata.placement : "";
+  return placement !== "admin_quote_card";
+}
+
+function latestSnoozeUntil(events: QuoteEvent[]) {
+  return events
+    .map((event) => typeof event.metadata?.snoozed_until === "string" ? event.metadata.snoozed_until : undefined)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1);
 }
 
 function hoursSince(value: string) {
@@ -198,4 +232,26 @@ function priorityFor(segment: FollowUpSegment): FollowUpPriority {
 
 function priorityWeight(priority: FollowUpPriority) {
   return priority === "alta" ? 3 : priority === "media" ? 2 : 1;
+}
+
+function scoreEngagement({
+  opened,
+  whatsappClicks,
+  hotelLinkClicks,
+  printClicks,
+  confirmClicks
+}: {
+  opened: QuoteEvent[];
+  whatsappClicks: QuoteEvent[];
+  hotelLinkClicks: QuoteEvent[];
+  printClicks: QuoteEvent[];
+  confirmClicks: QuoteEvent[];
+}) {
+  return opened.length + (whatsappClicks.length * 4) + (hotelLinkClicks.length * 3) + (printClicks.length * 3) + (confirmClicks.length * 6);
+}
+
+function compareFollowUpQuotes(a: FollowUpQuote, b: FollowUpQuote) {
+  return b.engagementScore - a.engagementScore ||
+    priorityWeight(b.priority) - priorityWeight(a.priority) ||
+    new Date(b.lastEventAt ?? b.sentAt).getTime() - new Date(a.lastEventAt ?? a.sentAt).getTime();
 }
