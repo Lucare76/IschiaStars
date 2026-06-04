@@ -10,6 +10,10 @@ export function FollowUpActionButtons({ quoteId }: { quoteId: string }) {
   const [message, setMessage] = useState<string | null>(null);
 
   async function postAction(action: "called" | "snoozed") {
+    if (action === "called" && !window.confirm("Confermi di voler segnare questo cliente come richiamato?")) {
+      return;
+    }
+
     setLoading(action);
     setMessage(null);
     const snoozedUntil = action === "snoozed"

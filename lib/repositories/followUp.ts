@@ -64,6 +64,7 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[]): FollowUpQuote | nu
   const hotelLinkClicks = events.filter((event) => event.eventType === "hotel_link_clicked");
   const printClicks = events.filter((event) => event.eventType === "print_clicked");
   const confirmClicks = events.filter((event) => event.eventType === "confirm_clicked");
+  const detailsOpened = events.filter((event) => event.eventType === "details_opened");
   const followUpEvents = events.filter((event) => event.eventType === "follow_up_whatsapp_click");
   const lastFollowUp = latestEvent(followUpEvents);
   const snoozedUntil = latestSnoozeUntil(followUpEvents);
@@ -76,11 +77,12 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[]): FollowUpQuote | nu
     whatsappClicks,
     hotelLinkClicks,
     printClicks,
-    confirmClicks
+    confirmClicks,
+    detailsOpened
   });
   const clientName = [quote.customerFirstName, quote.customerLastName].filter(Boolean).join(" ").trim() || "Cliente";
   const clientPhone = quote.customerPhone.trim();
-  const engagementScore = scoreEngagement({ opened, whatsappClicks, hotelLinkClicks, printClicks, confirmClicks });
+  const engagementScore = scoreEngagement({ opened, whatsappClicks, hotelLinkClicks, printClicks, confirmClicks, detailsOpened });
 
   return {
     id: quote.id,
@@ -119,7 +121,8 @@ function resolveSegment({
   whatsappClicks,
   hotelLinkClicks,
   printClicks,
-  confirmClicks
+  confirmClicks,
+  detailsOpened
 }: {
   sentAt: string;
   opened: QuoteEvent[];
@@ -127,9 +130,10 @@ function resolveSegment({
   hotelLinkClicks: QuoteEvent[];
   printClicks: QuoteEvent[];
   confirmClicks: QuoteEvent[];
+  detailsOpened: QuoteEvent[];
 }): FollowUpSegment {
   const lastOpening = opened.at(-1)?.createdAt;
-  const isVeryInterested = opened.length > 1 || whatsappClicks.length > 0 || hotelLinkClicks.length > 0 || printClicks.length > 0 || confirmClicks.length > 0;
+  const isVeryInterested = opened.length > 1 || whatsappClicks.length > 0 || hotelLinkClicks.length > 0 || printClicks.length > 0 || confirmClicks.length > 0 || detailsOpened.length > 0;
   if (isVeryInterested) return "molto_interessato";
   if (lastOpening && hoursSince(lastOpening) >= 24) return "da_sollecitare";
   if (opened.length > 0) return "aperto_non_confermato";
@@ -239,15 +243,17 @@ function scoreEngagement({
   whatsappClicks,
   hotelLinkClicks,
   printClicks,
-  confirmClicks
+  confirmClicks,
+  detailsOpened
 }: {
   opened: QuoteEvent[];
   whatsappClicks: QuoteEvent[];
   hotelLinkClicks: QuoteEvent[];
   printClicks: QuoteEvent[];
   confirmClicks: QuoteEvent[];
+  detailsOpened: QuoteEvent[];
 }) {
-  return opened.length + (whatsappClicks.length * 4) + (hotelLinkClicks.length * 3) + (printClicks.length * 3) + (confirmClicks.length * 6);
+  return opened.length + (whatsappClicks.length * 4) + (hotelLinkClicks.length * 3) + (printClicks.length * 3) + (confirmClicks.length * 6) + (detailsOpened.length * 2);
 }
 
 function compareFollowUpQuotes(a: FollowUpQuote, b: FollowUpQuote) {
