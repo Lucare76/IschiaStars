@@ -3,6 +3,7 @@ import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 import { MobileFloatingWhatsApp, PublicQuoteHeaderActions } from "@/components/PublicQuoteActions";
 import { PublicEventTracker } from "@/components/PublicEventTracker";
 import { CountdownBanner } from "@/components/public/CountdownBanner";
+import { QuotePageWrapper } from "@/components/public/QuotePageWrapper";
 import { QuoteProposalSection } from "@/components/QuoteProposalSection";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { PrintButton } from "@/components/PrintButton";
@@ -16,6 +17,7 @@ export function PublicQuotePage({ quote, hotelPopularity = {} }: { quote: Quote;
   const hasMultipleOptions = options.length > 1;
 
   return (
+    <QuotePageWrapper customerFirstName={quote.customerFirstName} quoteCode={quote.code}>
     <main className="print-page mx-auto max-w-5xl px-5 py-6">
       <PublicEventTracker quoteCode={quote.code} token={quote.token} />
 
@@ -114,6 +116,7 @@ export function PublicQuotePage({ quote, hotelPopularity = {} }: { quote: Quote;
 
       <MobileFloatingWhatsApp quote={quote} />
     </main>
+    </QuotePageWrapper>
   );
 }
 
