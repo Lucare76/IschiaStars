@@ -139,6 +139,8 @@ export type QuoteHotelOption = {
   hotelId?: string;
   hotelGroup: number;
   position: number;
+  badge?: string | null;
+  hotelReason?: string | null;
   roomTypeLabel?: string;
   hotelName: string;
   hotelLocation?: string;
@@ -151,6 +153,9 @@ export type QuoteHotelOption = {
   breakfastLabel: string;
   halfBoardLabel: string;
   fullBoardLabel: string;
+  breakfastDetails?: string | null;
+  halfBoardDetails?: string | null;
+  fullBoardDetails?: string | null;
   includedServices?: string;
   depositPercent?: number;
   balanceMethod?: string;

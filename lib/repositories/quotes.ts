@@ -351,7 +351,10 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
     .filter((o) => !o.id.startsWith("virtual-"))
     .map((o) => ({
       hotelId: o.hotelId,
+      hotelGroup: o.hotelGroup,
       position: o.position,
+      badge: o.badge,
+      hotelReason: o.hotelReason,
       hotelName: o.hotelName,
       hotelLocation: o.hotelLocation,
       hotelStars: o.hotelStars,
@@ -363,6 +366,9 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
       breakfastLabel: o.breakfastLabel,
       halfBoardLabel: o.halfBoardLabel,
       fullBoardLabel: o.fullBoardLabel,
+      breakfastDetails: o.breakfastDetails,
+      halfBoardDetails: o.halfBoardDetails,
+      fullBoardDetails: o.fullBoardDetails,
       includedServices: o.includedServices,
       depositPercent: o.depositPercent,
       balanceMethod: o.balanceMethod,

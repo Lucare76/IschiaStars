@@ -32,6 +32,30 @@ function visibleTreatments(option: QuoteHotelOption) {
   return option.treatments.filter(hasDisplayablePrice);
 }
 
+function treatmentDetails(option: QuoteHotelOption, treatment: TreatmentOption) {
+  if (treatment.key === "breakfast") return option.breakfastDetails?.trim();
+  if (treatment.key === "half_board") return option.halfBoardDetails?.trim();
+  return option.fullBoardDetails?.trim();
+}
+
+function treatmentPriceDeltas(option: QuoteHotelOption) {
+  const activeTreatments = visibleTreatments(option);
+  if (activeTreatments.length <= 1) return new Map<string, number>();
+
+  return activeTreatments.slice(1).reduce((deltas, treatment, index) => {
+    const previous = activeTreatments[index];
+    const delta = treatment.price - previous.price;
+    if (Number.isFinite(delta) && delta > 0) deltas.set(treatment.key, delta);
+    return deltas;
+  }, new Map<string, number>());
+}
+
+function treatmentBenefit(treatment: TreatmentOption) {
+  if (treatment.key === "half_board") return "Cena inclusa ogni sera — nessun pensiero al ristorante";
+  if (treatment.key === "full_board") return "Pranzo e cena inclusi — tutto compreso";
+  return undefined;
+}
+
 function treatmentDescription(treatment: TreatmentOption) {
   if (treatment.key === "breakfast") return "Include pernottamento e prima colazione.";
   if (treatment.key === "half_board") return "Include pernottamento, prima colazione e un pasto secondo le condizioni della struttura.";
@@ -45,6 +69,16 @@ function splitLines(value?: string) {
 function sharperWordPressImageUrl(url?: string) {
   if (!url) return undefined;
   return url.replace(/-\d+x\d+(?=\.(?:jpe?g|png|webp|avif)(?:\?|$))/i, "");
+}
+
+function badgeColorClass(badge: string) {
+  if (badge === "Consigliato") return "bg-[#C9A84C]";
+  if (badge === "Miglior prezzo") return "bg-[#16A34A]";
+  if (badge === "Più richiesto") return "bg-[#2563EB]";
+  if (badge === "Soluzione premium") return "bg-[#1B3A5C]";
+  if (badge === "Ideale per famiglie") return "bg-[#7C3AED]";
+  if (badge === "Vicino al mare") return "bg-[#0891B2]";
+  return "";
 }
 
 export function QuoteProposalSection({ quote }: { quote: Quote }) {
@@ -149,11 +183,14 @@ function HotelCard({
   onSelectTreatment: (option: QuoteHotelOption, treatment: TreatmentOption) => void;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [expandedTreatmentDetails, setExpandedTreatmentDetails] = useState<string | null>(null);
   const services = splitLines(mainOption.includedServices);
   const stars = mainOption.hotelStars ? "★".repeat(mainOption.hotelStars) : null;
   const isAnySelected = allGroupOptions.some((o) => o.isSelected);
   const hasMultipleRoomTypes = allGroupOptions.length > 1;
   const imageUrl = sharperWordPressImageUrl(mainOption.hotelImageUrl);
+  const badge = mainOption.badge?.trim();
+  const hotelReason = mainOption.hotelReason?.trim();
   const features = extractHighlightedFeatures({
     hotelName: mainOption.hotelName,
     includedServices: mainOption.includedServices,
@@ -161,7 +198,12 @@ function HotelCard({
   });
 
   return (
-    <div className={`print-card overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ${isAnySelected ? "ring-emerald-400" : "ring-ischia-blue/10"}`}>
+    <div className={`print-card relative overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ${isAnySelected ? "ring-emerald-400" : "ring-ischia-blue/10"} ${badge === "Consigliato" ? "ring-2 ring-[#C9A84C]" : ""}`}>
+      {badge ? (
+        <span className={`absolute left-0 top-0 z-10 rounded-br-lg px-3 py-1 text-xs font-bold uppercase text-white ${badgeColorClass(badge)}`}>
+          {badge}
+        </span>
+      ) : null}
       <div className={imageUrl ? "grid lg:grid-cols-[minmax(18rem,0.42fr)_1fr]" : ""}>
         {imageUrl && (
           <div className="bg-ischia-mist lg:min-h-full">
@@ -197,6 +239,13 @@ function HotelCard({
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Scelta dal cliente</span>
           )}
         </div>
+
+        {hotelReason ? (
+          <div className="mt-3 rounded-r-lg border-l-[3px] border-[#C9A84C] bg-[#FBF5E6] px-4 py-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#C9A84C]">Perché te lo proponiamo</p>
+            <p className="mt-1 text-sm text-gray-700">{hotelReason}</p>
+          </div>
+        ) : null}
 
         {features.length > 0 && (
           <div className="mt-3">
@@ -237,6 +286,10 @@ function HotelCard({
                   {visibleTreatments(opt).map((treatment) => {
                     const detailKey = `${opt.id}-${treatment.key}`;
                     const isExpanded = expanded === detailKey;
+                    const details = treatmentDetails(opt, treatment);
+                    const priceDelta = treatmentPriceDeltas(opt).get(treatment.key);
+                    const benefit = details ? undefined : treatmentBenefit(treatment);
+                    const areTreatmentDetailsExpanded = expandedTreatmentDetails === detailKey;
                     return (
                     <div key={detailKey} className="rounded-2xl bg-ischia-mist p-4">
                       {(() => {
@@ -245,7 +298,34 @@ function HotelCard({
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="font-black text-ischia-navy">{treatment.label}</p>
-                          <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
+                            {priceDelta != null ? (
+                              <span className="rounded-full bg-[#F0FDF4] px-2 py-0.5 text-xs font-medium text-[#16A34A]">
+                                +{formatCurrency(priceDelta)}
+                              </span>
+                            ) : null}
+                          </div>
+                          {priceDelta != null && benefit ? (
+                            <p className="mt-0.5 text-xs italic text-gray-500">{benefit}</p>
+                          ) : null}
+                          {details ? (
+                            <div className="mt-1">
+                              <button
+                                aria-expanded={areTreatmentDetailsExpanded}
+                                className="no-print text-xs font-bold text-[#C9A84C]"
+                                onClick={() => setExpandedTreatmentDetails(areTreatmentDetailsExpanded ? null : detailKey)}
+                                type="button"
+                              >
+                                Cosa include ›
+                              </button>
+                              {areTreatmentDetailsExpanded ? (
+                                <p className="mt-1 whitespace-pre-line rounded-r-md border-l-2 border-[#E5E7EB] bg-[#F3F4F6] px-3 py-2 text-xs text-gray-600">
+                                  {details}
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : null}
                           {breakdown.depositPercent > 0 ? (
                             <p className="mt-1 text-sm font-semibold text-ischia-ink/72">
                               Acconto {breakdown.depositPercent}%: {formatCurrency(breakdown.depositAmount)} · Saldo {formatCurrency(breakdown.balanceAmount)}

@@ -6,6 +6,8 @@ export type QuoteHotelOptionInput = {
   hotelId?: string;
   hotelGroup?: number;
   position: number;
+  badge?: string | null;
+  hotelReason?: string | null;
   roomTypeLabel?: string;
   hotelName: string;
   hotelLocation?: string;
@@ -18,6 +20,9 @@ export type QuoteHotelOptionInput = {
   breakfastLabel?: string;
   halfBoardLabel?: string;
   fullBoardLabel?: string;
+  breakfastDetails?: string | null;
+  halfBoardDetails?: string | null;
+  fullBoardDetails?: string | null;
   includedServices?: string;
   depositPercent?: number;
   balanceMethod?: string;
@@ -47,6 +52,8 @@ export function mapHotelOptionRow(row: Record<string, unknown>): QuoteHotelOptio
     hotelId: row.hotel_id ? String(row.hotel_id) : undefined,
     hotelGroup: row.hotel_group != null ? Number(row.hotel_group) : 1,
     position: Number(row.position),
+    badge: row.badge ? String(row.badge) : null,
+    hotelReason: row.hotel_reason ? String(row.hotel_reason) : null,
     roomTypeLabel: row.room_type_label ? String(row.room_type_label) : undefined,
     hotelName: String(row.hotel_name),
     hotelLocation: row.hotel_location ? String(row.hotel_location) : undefined,
@@ -59,6 +66,9 @@ export function mapHotelOptionRow(row: Record<string, unknown>): QuoteHotelOptio
     breakfastLabel,
     halfBoardLabel,
     fullBoardLabel,
+    breakfastDetails: row.breakfast_details ? String(row.breakfast_details) : null,
+    halfBoardDetails: row.half_board_details ? String(row.half_board_details) : null,
+    fullBoardDetails: row.full_board_details ? String(row.full_board_details) : null,
     includedServices: row.included_services ? String(row.included_services) : undefined,
     depositPercent: row.deposit_percent != null ? Number(row.deposit_percent) : undefined,
     balanceMethod: row.balance_method ? String(row.balance_method) : undefined,
@@ -93,6 +103,8 @@ export async function upsertHotelOptions(quoteId: string, options: QuoteHotelOpt
       hotel_id: isUuid(opt.hotelId) ? opt.hotelId : null,
       hotel_group: opt.hotelGroup ?? index + 1,
       position: opt.position ?? index + 1,
+      badge: opt.badge || null,
+      hotel_reason: opt.hotelReason || null,
       room_type_label: opt.roomTypeLabel ?? null,
       hotel_name: opt.hotelName,
       hotel_location: opt.hotelLocation ?? null,
@@ -105,6 +117,9 @@ export async function upsertHotelOptions(quoteId: string, options: QuoteHotelOpt
       breakfast_label: opt.breakfastLabel ?? "Camera e colazione",
       half_board_label: opt.halfBoardLabel ?? "Mezza pensione",
       full_board_label: opt.fullBoardLabel ?? "Pensione completa",
+      breakfast_details: opt.breakfastDetails || null,
+      half_board_details: opt.halfBoardDetails || null,
+      full_board_details: opt.fullBoardDetails || null,
       included_services: opt.includedServices ?? null,
       deposit_percent: policies.depositPercent ?? null,
       balance_method: policies.balanceMethod || null,

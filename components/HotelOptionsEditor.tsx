@@ -14,6 +14,11 @@ export type RoomTypeState = {
 
 export type HotelOptionState = {
   hotelGroup?: number;
+  badge?: string;
+  hotelReason?: string;
+  breakfastDetails?: string;
+  halfBoardDetails?: string;
+  fullBoardDetails?: string;
   hotelId: string;
   hotelName: string;
   hotelLocation: string;
@@ -31,6 +36,29 @@ export type HotelOptionState = {
 };
 
 const CUSTOM_ROOM_VALUE = "__custom__";
+
+const HOTEL_REASON_QUICK_PHRASES = [
+  "Struttura centrale, facile da raggiungere",
+  "Ottimo rapporto qualità/prezzo",
+  "Trattamento termale incluso",
+  "Ideale per famiglie con bambini",
+  "Vista mare garantita",
+  "Struttura tranquilla, lontana dal caos",
+  "Consigliato per coppie",
+  "Uno dei più richiesti della stagione"
+] as const;
+
+const TREATMENT_DETAIL_QUICK_PHRASES = [
+  "Bevande escluse",
+  "Bevande incluse ai pasti",
+  "Prima colazione a buffet",
+  "Cena con menù fisso",
+  "Accesso spa/terme incluso",
+  "Spiaggia convenzionata inclusa",
+  "Parcheggio incluso",
+  "Transfer incluso",
+  "Extra esclusi salvo diversa indicazione"
+] as const;
 
 const ROOM_TYPE_PRESETS = [
   { label: "Camera singola standard", capacity: 1 },
@@ -50,6 +78,11 @@ export function createHotelOption(hotel?: Hotel, hotelGroup?: number): HotelOpti
   const policies = hotelPolicies(hotel);
   return {
     hotelGroup,
+    badge: "",
+    hotelReason: "",
+    breakfastDetails: "",
+    halfBoardDetails: "",
+    fullBoardDetails: "",
     hotelId: hotel?.id ?? "",
     hotelName: hotel?.name ?? "",
     hotelLocation: hotel?.zone ?? "",
@@ -83,6 +116,11 @@ export function mapHotelOptionsToPayload(hotelOptions: HotelOptionState[], optio
         hotelId: opt.hotelId || undefined,
         hotelGroup,
         position: globalPosition,
+        badge: opt.badge || undefined,
+        hotelReason: opt.hotelReason || undefined,
+        breakfastDetails: opt.breakfastDetails || undefined,
+        halfBoardDetails: opt.halfBoardDetails || undefined,
+        fullBoardDetails: opt.fullBoardDetails || undefined,
         roomTypeLabel: rt.label || undefined,
         hotelName: opt.hotelName,
         hotelLocation: opt.hotelLocation || undefined,
@@ -121,6 +159,11 @@ export function quoteOptionsToHotelOptionState(opts: QuoteHotelOption[]): HotelO
       const first = groupOpts[0];
       return {
         hotelGroup: groupId,
+        badge: first.badge ?? "",
+        hotelReason: first.hotelReason ?? "",
+        breakfastDetails: first.breakfastDetails ?? "",
+        halfBoardDetails: first.halfBoardDetails ?? "",
+        fullBoardDetails: first.fullBoardDetails ?? "",
         hotelId: first.hotelId ?? "",
         hotelName: first.hotelName,
         hotelLocation: first.hotelLocation ?? "",
@@ -328,6 +371,50 @@ function HotelOptionBlock({
           Zona
           <input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" value={opt.hotelLocation} onChange={(e) => onChange({ hotelLocation: e.target.value })} />
         </label>
+        <label className="text-sm font-semibold text-ischia-ink">
+          Badge commerciale
+          <select
+            className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+            value={opt.badge ?? ""}
+            onChange={(e) => onChange({ badge: e.target.value })}
+          >
+            <option value="">Nessun badge</option>
+            <option value="Consigliato">Consigliato</option>
+            <option value="Miglior prezzo">Miglior prezzo</option>
+            <option value="Più richiesto">Più richiesto</option>
+            <option value="Soluzione premium">Soluzione premium</option>
+            <option value="Ideale per famiglie">Ideale per famiglie</option>
+            <option value="Vicino al mare">Vicino al mare</option>
+          </select>
+        </label>
+        <div className="sm:col-span-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-ischia-blue/70">Frasi rapide</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {HOTEL_REASON_QUICK_PHRASES.map((phrase) => (
+              <button
+                key={phrase}
+                className="rounded-full border border-gray-300 bg-white px-3 py-1 text-xs text-ischia-ink transition hover:border-[#C9A84C] hover:bg-[#FBF5E6]"
+                onClick={() => {
+                  const current = opt.hotelReason?.trim();
+                  onChange({ hotelReason: current ? `${current}, ${phrase}` : phrase });
+                }}
+                type="button"
+              >
+                {phrase}
+              </button>
+            ))}
+          </div>
+          <label className="mt-3 block text-sm font-semibold text-ischia-ink">
+            Perché te lo proponiamo
+            <textarea
+              className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+              placeholder="Scrivi una motivazione oppure seleziona una frase rapida sopra."
+              rows={2}
+              value={opt.hotelReason ?? ""}
+              onChange={(e) => onChange({ hotelReason: e.target.value })}
+            />
+          </label>
+        </div>
         {showStars ? (
           <label className="text-sm font-semibold text-ischia-ink">
             Stelle
@@ -399,6 +486,33 @@ function HotelOptionBlock({
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {opt.roomTypes.some((room) => Boolean(room.breakfastPrice)) ? (
+          <TreatmentDetailsEditor
+            label="Camera e colazione"
+            placeholder="Es. Pernottamento e colazione a buffet. Bevande escluse."
+            value={opt.breakfastDetails ?? ""}
+            onChange={(breakfastDetails) => onChange({ breakfastDetails })}
+          />
+        ) : null}
+        {opt.roomTypes.some((room) => Boolean(room.halfBoardPrice)) ? (
+          <TreatmentDetailsEditor
+            label="Mezza pensione"
+            placeholder="Es. Pernottamento, colazione e cena. Bevande escluse salvo diversa indicazione."
+            value={opt.halfBoardDetails ?? ""}
+            onChange={(halfBoardDetails) => onChange({ halfBoardDetails })}
+          />
+        ) : null}
+        {opt.roomTypes.some((room) => Boolean(room.fullBoardPrice)) ? (
+          <TreatmentDetailsEditor
+            label="Pensione completa"
+            placeholder="Es. Pernottamento, colazione, pranzo e cena. Bevande incluse ai pasti."
+            value={opt.fullBoardDetails ?? ""}
+            onChange={(fullBoardDetails) => onChange({ fullBoardDetails })}
+          />
+        ) : null}
       </div>
 
       {!hasPrice && (
@@ -478,6 +592,49 @@ function RoomTypeSelect({
         </optgroup>
       </select>
     </label>
+  );
+}
+
+function TreatmentDetailsEditor({
+  label,
+  placeholder,
+  value,
+  onChange
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-ischia-blue/10 bg-white p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-ischia-blue/70">Dettagli {label}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {TREATMENT_DETAIL_QUICK_PHRASES.map((phrase) => (
+          <button
+            key={phrase}
+            className="rounded-full border border-gray-300 bg-white px-3 py-1 text-xs text-ischia-ink transition hover:border-[#C9A84C] hover:bg-[#FBF5E6]"
+            onClick={() => {
+              const current = value.trim();
+              onChange(current ? `${current}, ${phrase}` : phrase);
+            }}
+            type="button"
+          >
+            {phrase}
+          </button>
+        ))}
+      </div>
+      <label className="mt-3 block text-sm font-semibold text-ischia-ink">
+        Cosa include — {label}
+        <textarea
+          className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+          placeholder={placeholder}
+          rows={2}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </label>
+    </div>
   );
 }
 
