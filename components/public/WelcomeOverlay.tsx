@@ -122,7 +122,7 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
             opacity: phase >= 1 ? 1 : 0,
             transition: "opacity 600ms ease",
             textAlign: "center",
-            fontSize: 28,
+            fontSize: 30,
             fontWeight: 700,
             color: "#ffffff",
             lineHeight: 1.4,
@@ -146,12 +146,27 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
           }}
         />
 
+        {/* Frase emozionale */}
+        <p
+          style={{
+            opacity: phase >= 3 ? 1 : 0,
+            transition: "opacity 600ms ease",
+            fontSize: 14,
+            fontStyle: "italic",
+            color: "rgba(255,255,255,0.7)",
+            textAlign: "center",
+            margin: 0,
+          }}
+        >
+          Certi luoghi non si scelgono — ti scelgono.
+        </p>
+
         {/* Sottotitolo */}
         <p
           style={{
             opacity: phase >= 3 ? 1 : 0,
             transition: "opacity 600ms ease",
-            fontSize: 15,
+            fontSize: 16,
             color: "#C9A84C",
             textAlign: "center",
             lineHeight: 1.6,
