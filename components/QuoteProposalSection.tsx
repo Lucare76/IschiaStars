@@ -184,6 +184,7 @@ function HotelCard({
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedTreatmentDetails, setExpandedTreatmentDetails] = useState<string | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<{ option: QuoteHotelOption; treatment: TreatmentOption } | null>(null);
   const services = splitLines(mainOption.includedServices);
   const stars = mainOption.hotelStars ? "★".repeat(mainOption.hotelStars) : null;
   const isAnySelected = allGroupOptions.some((o) => o.isSelected);
@@ -353,13 +354,16 @@ function HotelCard({
                             Cosa include
                           </button>
                           {!isConfirmed && (
-                            <button
-                              className="no-print rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
-                              onClick={() => onSelectTreatment(opt, treatment)}
-                              type="button"
-                            >
-                              Conferma questa opzione
-                            </button>
+                            <div className="no-print text-center">
+                              <button
+                                className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
+                                onClick={() => setPendingSelection({ option: opt, treatment })}
+                                type="button"
+                              >
+                                Conferma questa opzione
+                              </button>
+                              <p className="mt-1 text-center text-xs text-gray-400">Nessun pagamento online — ti ricontattiamo per finalizzare</p>
+                            </div>
                           )}
                           {isConfirmed && opt.isSelected && (
                             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Confermato</span>
@@ -392,6 +396,35 @@ function HotelCard({
         )}
       </div>
       </div>
+      {pendingSelection ? (
+        <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5" role="dialog" aria-modal="true" aria-labelledby={`confirm-selection-${pendingSelection.option.id}`}>
+          <div className="mx-auto w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-black text-ischia-navy" id={`confirm-selection-${pendingSelection.option.id}`}>Stai confermando la tua preferenza</h3>
+            <p className="mt-3 text-sm leading-6 text-gray-600">
+              Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà per completare la prenotazione.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20"
+                onClick={() => setPendingSelection(null)}
+                type="button"
+              >
+                Annulla
+              </button>
+              <button
+                className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
+                onClick={() => {
+                  onSelectTreatment(pendingSelection.option, pendingSelection.treatment);
+                  setPendingSelection(null);
+                }}
+                type="button"
+              >
+                Sì, confermo
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

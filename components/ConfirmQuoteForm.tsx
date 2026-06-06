@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { publicQuoteConfirmedWhatsappMessage } from "@/lib/message-templates";
 import { Quote } from "@/lib/types";
-import { formatCurrency, publicWhatsappLink } from "@/lib/utils";
+import { formatCurrency, ischiastarsWhatsappNumber } from "@/lib/utils";
 
 type SelectedOption = {
   optionId: string;
@@ -27,18 +26,25 @@ export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; sele
   // Se il preventivo ha opzioni hotel esplicite (sistema multi-proposta), la selezione è obbligatoria.
   const requiresSelection = quote.hotelOptions.length > 0;
   const canSubmit = !requiresSelection || Boolean(selectedOption);
+  const whatsappNumber = ischiastarsWhatsappNumber();
 
   if (confirmed) {
     return (
       <div className="rounded-2xl bg-emerald-50 p-5 text-emerald-900 ring-1 ring-emerald-200">
-        <h3 className="text-xl font-black">Preventivo confermato</h3>
-        <p className="mt-2 text-sm">Grazie, il preventivo e stato confermato correttamente. IschiaStars ti contattera per i prossimi passaggi.</p>
-        <a
-          className="mt-4 inline-flex rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white"
-          href={publicWhatsappLink(publicQuoteConfirmedWhatsappMessage(quote))}
-        >
-          Scrivi su WhatsApp
-        </a>
+        <h3 className="text-2xl font-black">Grazie, abbiamo ricevuto la tua preferenza.</h3>
+        <p className="mt-2 text-sm leading-6">
+          Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà a breve per completare la prenotazione.
+        </p>
+        {whatsappNumber ? (
+          <a
+            className="mt-4 inline-flex rounded-full bg-[#25D366] px-6 py-3 font-semibold text-white"
+            href={`https://wa.me/${whatsappNumber}`}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Scrivici su WhatsApp
+          </a>
+        ) : null}
       </div>
     );
   }
