@@ -1,6 +1,4 @@
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
-import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
-import { markHotelOptionSelected } from "@/lib/repositories/quoteHotelOptions";
 import { markQuoteConfirmed as markStoredQuoteConfirmed } from "@/lib/repositories/quotes";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ConfirmationAvailabilityStatus } from "@/lib/types";
@@ -41,61 +39,8 @@ export async function createQuoteConfirmation(quoteId: string, input: QuoteConfi
     return fallback({ confirmedAt: now });
   }
 
-  const { error } = await supabase.from("quote_confirmations").upsert({
-    quote_id: quoteId,
-    first_name: input.firstName,
-    last_name: input.lastName,
-    fiscal_code: input.fiscalCode,
-    phone: input.phone,
-    email: input.email,
-    address: input.address,
-    city: input.city,
-    postal_code: input.postalCode,
-    province: input.province,
-    accepted_terms: input.acceptedTerms,
-    accepted_privacy: input.acceptedPrivacy,
-    selected_hotel_option_id: input.selectedHotelOptionId ?? null,
-    selected_hotel_name: input.selectedHotelName ?? null,
-    selected_treatment_key: input.selectedTreatmentKey ?? null,
-    selected_treatment_label: input.selectedTreatmentLabel ?? null,
-    selected_price: input.selectedPrice ?? null,
-    selected_deposit_percent: input.selectedDepositPercent ?? null,
-    selected_deposit_amount: input.selectedDepositAmount ?? null,
-    selected_balance_amount: input.selectedBalanceAmount ?? null,
-    selected_balance_method: input.selectedBalanceMethod ?? null,
-    selected_payment_policy: input.selectedPaymentPolicy ?? null,
-    selected_cancellation_policy: input.selectedCancellationPolicy ?? null,
-    payment_settings_snapshot: input.paymentSettingsSnapshot ?? null,
-    availability_status: "availability_to_check",
-    availability_updated_at: now,
-    metadata: {
-      ...(input.metadata ?? {}),
-      selectedHotelOptionId: input.selectedHotelOptionId,
-      selectedHotelName: input.selectedHotelName,
-      selectedTreatmentKey: input.selectedTreatmentKey,
-      selectedTreatmentLabel: input.selectedTreatmentLabel,
-      selectedPrice: input.selectedPrice,
-      selectedDepositPercent: input.selectedDepositPercent,
-      selectedDepositAmount: input.selectedDepositAmount,
-      selectedBalanceAmount: input.selectedBalanceAmount,
-      selectedBalanceMethod: input.selectedBalanceMethod,
-      selectedPaymentPolicy: input.selectedPaymentPolicy,
-      selectedCancellationPolicy: input.selectedCancellationPolicy,
-      ...(input.paymentSettingsSnapshot ? { paymentSettingsSnapshot: input.paymentSettingsSnapshot } : {})
-    }
-  });
-
-  if (error) return fallback(null, error);
-
-  await markStoredQuoteConfirmed(quoteId);
-  console.info(`[confirmation] status updated quote=${quoteId}`);
-
-  if (input.selectedHotelOptionId) {
-    await markHotelOptionSelected(input.selectedHotelOptionId, quoteId);
-  }
-
-  await trackQuoteEvent(quoteId, "quote_confirmed", {
-    source: "quote_confirmation",
+  const metadata = {
+    ...(input.metadata ?? {}),
     selectedHotelOptionId: input.selectedHotelOptionId,
     selectedHotelName: input.selectedHotelName,
     selectedTreatmentKey: input.selectedTreatmentKey,
@@ -108,8 +53,46 @@ export async function createQuoteConfirmation(quoteId: string, input: QuoteConfi
     selectedPaymentPolicy: input.selectedPaymentPolicy,
     selectedCancellationPolicy: input.selectedCancellationPolicy,
     ...(input.paymentSettingsSnapshot ? { paymentSettingsSnapshot: input.paymentSettingsSnapshot } : {})
+  };
+  const { error } = await supabase.rpc("confirm_quote", {
+    p_quote_id: quoteId,
+    p_option_id: input.selectedHotelOptionId ?? null,
+    p_treatment_key: input.selectedTreatmentKey ?? null,
+    p_confirmation_data: {
+      first_name: input.firstName,
+      last_name: input.lastName,
+      fiscal_code: input.fiscalCode,
+      phone: input.phone,
+      email: input.email,
+      address: input.address,
+      city: input.city,
+      postal_code: input.postalCode,
+      province: input.province,
+      accepted_terms: input.acceptedTerms,
+      accepted_privacy: input.acceptedPrivacy,
+      selected_hotel_option_id: input.selectedHotelOptionId ?? null,
+      selected_hotel_name: input.selectedHotelName ?? null,
+      selected_treatment_key: input.selectedTreatmentKey ?? null,
+      selected_treatment_label: input.selectedTreatmentLabel ?? null,
+      selected_price: input.selectedPrice ?? null,
+      selected_deposit_percent: input.selectedDepositPercent ?? null,
+      selected_deposit_amount: input.selectedDepositAmount ?? null,
+      selected_balance_amount: input.selectedBalanceAmount ?? null,
+      selected_balance_method: input.selectedBalanceMethod ?? null,
+      selected_payment_policy: input.selectedPaymentPolicy ?? null,
+      selected_cancellation_policy: input.selectedCancellationPolicy ?? null,
+      payment_settings_snapshot: input.paymentSettingsSnapshot ?? null,
+      metadata
+    }
   });
-  console.info(`[confirmation] event saved quote=${quoteId}`);
+
+  if (error) {
+    console.error("[confirmation] confirm_quote RPC failed", error);
+    const message = error.message.includes("already_confirmed")
+      ? "Questo preventivo è già stato confermato"
+      : "Operazione non riuscita. Riprova.";
+    return fallback(null, message);
+  }
 
   return fromSupabase({ confirmedAt: now });
 }

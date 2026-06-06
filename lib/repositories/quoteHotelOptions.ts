@@ -87,17 +87,20 @@ export function mapHotelOptionRow(row: Record<string, unknown>): QuoteHotelOptio
 
 export async function upsertHotelOptions(quoteId: string, options: QuoteHotelOptionInput[]): Promise<void> {
   const supabase = createSupabaseAdminClient();
-  if (!supabase || options.length === 0) return;
+  if (!supabase) return;
 
-  const { data: existingOptions, error: existingOptionsError } = await supabase
-    .from("quote_hotel_options")
-    .select("id")
-    .eq("quote_id", quoteId);
-  if (existingOptionsError) {
-    throw new Error(`Impossibile leggere le opzioni hotel esistenti: ${existingOptionsError.message}`);
+  const { error } = await supabase.rpc("replace_hotel_options", {
+    p_quote_id: quoteId,
+    p_new_options: buildHotelOptionRows(options)
+  });
+  if (error) {
+    console.error("[quote-hotel-options] replace_hotel_options RPC failed", error);
+    throw new Error(error.message);
   }
+}
 
-  const rows = options.slice(0, 9).map((opt, index) => {
+export function buildHotelOptionRows(options: QuoteHotelOptionInput[]) {
+  return options.slice(0, 9).map((opt, index) => {
     const policies = fillMissingHotelPolicies({
       hotelName: opt.hotelName,
       depositPercent: opt.depositPercent,
@@ -107,7 +110,6 @@ export async function upsertHotelOptions(quoteId: string, options: QuoteHotelOpt
       paymentNotes: opt.paymentNotes
     });
     return {
-      quote_id: quoteId,
       hotel_id: isUuid(opt.hotelId) ? opt.hotelId : null,
       hotel_group: opt.hotelGroup ?? index + 1,
       position: opt.position ?? index + 1,
@@ -139,19 +141,6 @@ export async function upsertHotelOptions(quoteId: string, options: QuoteHotelOpt
       is_selected: false
     };
   });
-
-  const { error: insertError } = await supabase.from("quote_hotel_options").insert(rows);
-  if (insertError) {
-    throw new Error(`Impossibile salvare le nuove opzioni hotel: ${insertError.message}`);
-  }
-
-  const existingOptionIds = (existingOptions ?? []).map((option) => option.id);
-  if (existingOptionIds.length > 0) {
-    const { error: deleteError } = await supabase.from("quote_hotel_options").delete().in("id", existingOptionIds);
-    if (deleteError) {
-      throw new Error(`Nuove opzioni salvate, ma impossibile rimuovere le precedenti: ${deleteError.message}`);
-    }
-  }
 }
 
 export async function fetchHotelOptionsForQuotes(quoteIds: string[]): Promise<Record<string, QuoteHotelOption[]>> {

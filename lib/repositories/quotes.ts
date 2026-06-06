@@ -1,10 +1,10 @@
 import { hotels } from "@/lib/mock-data";
 import { addDemoQuote, allDemoQuotes, excludeDemoQuoteFromStats, isQuoteConfirmedInDemo, markQuoteConfirmed as markDemoQuoteConfirmed, restoreDemoQuote, softDeleteDemoQuote, updateDemoQuote } from "@/lib/demo-store";
 import { listHotels } from "@/lib/repositories/hotels";
-import { QuoteHotelOptionInput, fetchHotelOptionsForQuotes, upsertHotelOptions } from "@/lib/repositories/quoteHotelOptions";
+import { buildHotelOptionRows, QuoteHotelOptionInput, fetchHotelOptionsForQuotes, upsertHotelOptions } from "@/lib/repositories/quoteHotelOptions";
 import { createQuoteStatusEvent } from "@/lib/repositories/quoteStatusEvents";
 import { fallback, fromSupabase, mapQuote, RepositoryResult } from "@/lib/repositories/shared";
-import { createSupabaseAdminClient, createSupabaseAuthenticatedClient } from "@/lib/supabase/admin";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { Quote, QuoteStatus, TransportOffer } from "@/lib/types";
 
 export type QuoteInput = {
@@ -148,11 +148,12 @@ async function fetchConfirmationsForQuotes(quoteIds: string[]): Promise<Record<s
   return result;
 }
 
-export async function createQuoteFromRequest(input: QuoteInput, options: { accessToken?: string } = {}): Promise<RepositoryResult<Quote | null>> {
-  const supabase = createSupabaseAuthenticatedClient(options.accessToken) ?? createSupabaseAdminClient();
+export async function createQuoteFromRequest(input: QuoteInput, _options: { accessToken?: string } = {}): Promise<RepositoryResult<Quote | null>> {
+  const supabase = createSupabaseAdminClient();
   const normalizedInput = {
     ...input,
     status: input.status ?? "in_lavorazione",
+    // TODO: move quote-code generation to a Postgres sequence to remove the remaining race condition.
     code: input.code ?? await nextQuoteCode(supabase ?? undefined),
     publicToken: input.publicToken ?? secureToken()
   };
@@ -208,27 +209,20 @@ export async function createQuoteFromRequest(input: QuoteInput, options: { acces
   }
 
   const row = toQuoteRow(normalizedInput);
-  const { data, error } = await supabase.from("quotes").insert(row).select("*").single();
-  if (error) return fallback(null, error);
-
-  await createQuoteStatusEvent({ quoteId: (data as Record<string, unknown>).id as string, fromStatus: null, toStatus: normalizedInput.status, note: "Preventivo preparato" });
-
-  const quoteId = (data as Record<string, unknown>).id as string;
-
-  if (normalizedInput.children?.length) {
-    await supabase.from("quote_children").insert(
-      normalizedInput.children.map((child) => ({
-        quote_id: quoteId,
-        birth_date: child.birthDate || null,
-        age: child.age ?? null
-      }))
-    );
+  const { data, error } = await supabase.rpc("create_quote_with_options", {
+    p_quote_data: row,
+    p_children_data: (normalizedInput.children ?? []).map((child) => ({
+      birth_date: child.birthDate || null,
+      age: child.age ?? null
+    })),
+    p_hotel_options_data: buildHotelOptionRows(normalizedInput.hotelOptions ?? [])
+  });
+  if (error || !data) {
+    console.error("[quotes] create_quote_with_options RPC failed", error ?? { message: "Missing quote id" });
+    return fallback(null, "Operazione non riuscita. Riprova.");
   }
 
-  if (normalizedInput.hotelOptions?.length) {
-    await upsertHotelOptions(quoteId, normalizedInput.hotelOptions);
-  }
-
+  const quoteId = String(data);
   return getQuoteById(quoteId);
 }
 
