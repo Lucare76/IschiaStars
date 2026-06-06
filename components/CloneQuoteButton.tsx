@@ -19,6 +19,7 @@ export function CloneQuoteButton({ quoteId }: { quoteId: string }) {
     setLoading(false);
     if (result?.ok && result.data?.code) {
       router.push(`/admin/preventivi/${result.data.code}`);
+      router.refresh();
     }
   }
 

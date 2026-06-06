@@ -81,6 +81,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
     }
     setCurrentQuote(result.data);
     setMessage("Preventivo aggiornato.");
+    router.refresh();
   }
 
   async function changeStatus(status: QuoteStatus) {
@@ -89,7 +90,10 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       body: JSON.stringify({ statusOnly: true, status })
     });
     const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
-    if (response.ok && result?.data) setCurrentQuote(result.data);
+    if (response.ok && result?.data) {
+      setCurrentQuote(result.data);
+      router.refresh();
+    }
   }
 
   async function toggleExcludeFromStats() {
@@ -110,6 +114,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
     if (response.ok && result?.data) {
       setCurrentQuote(result.data);
       setMessage(next ? "Preventivo escluso dalle statistiche." : "Preventivo reinclueso nelle statistiche.");
+      router.refresh();
     } else {
       setMessage("Operazione non riuscita.");
     }
@@ -127,6 +132,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
     if (response.ok && result?.data) {
       setCurrentQuote(result.data);
       setMessage("Preventivo cancellato.");
+      router.refresh();
     } else {
       setMessage("Cancellazione non riuscita.");
     }
@@ -142,6 +148,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
     if (response.ok && result?.data) {
       setCurrentQuote(result.data);
       setMessage("Preventivo ripristinato.");
+      router.refresh();
     } else {
       setMessage("Ripristino non riuscito.");
     }
@@ -159,6 +166,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       return;
     }
     router.push(`/admin/preventivi/${result.data.code}`);
+    router.refresh();
   }
 
   async function sendQuote() {
@@ -174,6 +182,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       setCurrentQuote(result.data);
       setSent(true);
       setMessage("Preventivo inviato al cliente.");
+      router.refresh();
     } else {
       setMessage(adminApiErrorMessage(response, result, "Impossibile inviare il preventivo. Riprova."));
     }

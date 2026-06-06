@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { QuoteCard, QuoteCardActions, QuoteStats } from "@/components/QuoteCard";
 import { Quote } from "@/lib/types";
@@ -27,6 +28,7 @@ export function QuoteFilters({
   statsByQuote: Record<string, QuoteStats>;
   initialFilter?: QuoteFilter;
 }) {
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [quotes, setQuotes] = useState(initialQuotes);
   const [query, setQuery] = useState("");
@@ -142,6 +144,7 @@ export function QuoteFilters({
     if (response.ok && result?.data) {
       setQuotes((current) => current.map((q) => (q.id === quote.id ? result.data! : q)));
       setMessage(next ? `${quote.code} escluso dalle statistiche.` : `${quote.code} reinclueso nelle statistiche.`);
+      router.refresh();
     } else {
       setMessage(adminApiErrorMessage(response, result));
     }
@@ -162,6 +165,7 @@ export function QuoteFilters({
     if (response.ok && result?.data) {
       setQuotes((current) => current.map((q) => (q.id === quote.id ? result.data! : q)));
       setMessage(`Preventivo ${quote.code} cancellato.`);
+      router.refresh();
     } else {
       setMessage(adminApiErrorMessage(response, result, "Cancellazione non riuscita."));
     }
@@ -177,6 +181,7 @@ export function QuoteFilters({
     if (response.ok && result?.data) {
       setQuotes((current) => current.map((q) => (q.id === quote.id ? result.data! : q)));
       setMessage(`Preventivo ${quote.code} ripristinato.`);
+      router.refresh();
     } else {
       setMessage(adminApiErrorMessage(response, result, "Ripristino non riuscito."));
     }
