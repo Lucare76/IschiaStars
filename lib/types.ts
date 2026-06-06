@@ -67,7 +67,8 @@ export type QuoteEvent = {
     | "availability_unavailable_email_sent"
     | "alternative_to_propose"
     | "follow_up_whatsapp_click"
-    | "compare_opened";
+    | "compare_opened"
+    | "reveal_options_clicked";
   createdAt: string;
   userAgent?: string;
   metadata?: Record<string, unknown>;

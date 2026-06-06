@@ -11,7 +11,9 @@ const allowedEvents: QuoteEvent["eventType"][] = [
   "print_clicked",
   "hotel_link_clicked",
   "details_opened",
-  "follow_up_whatsapp_click"
+  "follow_up_whatsapp_click",
+  "compare_opened",
+  "reveal_options_clicked"
 ];
 
 export async function POST(request: NextRequest) {
