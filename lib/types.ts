@@ -68,7 +68,8 @@ export type QuoteEvent = {
     | "alternative_to_propose"
     | "follow_up_whatsapp_click"
     | "compare_opened"
-    | "reveal_options_clicked";
+    | "reveal_options_clicked"
+    | "hesitant_whatsapp_clicked";
   createdAt: string;
   userAgent?: string;
   metadata?: Record<string, unknown>;

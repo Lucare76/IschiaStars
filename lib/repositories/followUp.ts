@@ -214,7 +214,8 @@ function eventLabel(eventType: QuoteEvent["eventType"]) {
     alternative_to_propose: "Alternativa da proporre",
     follow_up_whatsapp_click: "Follow-up WhatsApp",
     compare_opened: "Vista confronto aperta",
-    reveal_options_clicked: "Altre proposte rivelate su mobile"
+    reveal_options_clicked: "Altre proposte rivelate su mobile",
+    hesitant_whatsapp_clicked: "Click WhatsApp (cliente indeciso)"
   };
   return labels[eventType];
 }
