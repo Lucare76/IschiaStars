@@ -80,10 +80,7 @@ function Dot() {
 }
 
 export function CountdownBanner({ offerExpiresAt, isConfirmed }: CountdownBannerProps) {
-  const [remainingMs, setRemainingMs] = useState<number | null>(() => {
-    if (isConfirmed || !offerExpiresAt) return null;
-    return getRemainingMs(offerExpiresAt);
-  });
+  const [remainingMs, setRemainingMs] = useState<number | null>(null);
 
   useEffect(() => {
     if (isConfirmed || !offerExpiresAt) {
