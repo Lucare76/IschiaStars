@@ -87,7 +87,13 @@ export async function upsertHotelOptions(quoteId: string, options: QuoteHotelOpt
   const supabase = createSupabaseAdminClient();
   if (!supabase || options.length === 0) return;
 
-  await supabase.from("quote_hotel_options").delete().eq("quote_id", quoteId);
+  const { data: existingOptions, error: existingOptionsError } = await supabase
+    .from("quote_hotel_options")
+    .select("id")
+    .eq("quote_id", quoteId);
+  if (existingOptionsError) {
+    throw new Error(`Impossibile leggere le opzioni hotel esistenti: ${existingOptionsError.message}`);
+  }
 
   const rows = options.slice(0, 9).map((opt, index) => {
     const policies = fillMissingHotelPolicies({
@@ -131,7 +137,18 @@ export async function upsertHotelOptions(quoteId: string, options: QuoteHotelOpt
     };
   });
 
-  await supabase.from("quote_hotel_options").insert(rows);
+  const { error: insertError } = await supabase.from("quote_hotel_options").insert(rows);
+  if (insertError) {
+    throw new Error(`Impossibile salvare le nuove opzioni hotel: ${insertError.message}`);
+  }
+
+  const existingOptionIds = (existingOptions ?? []).map((option) => option.id);
+  if (existingOptionIds.length > 0) {
+    const { error: deleteError } = await supabase.from("quote_hotel_options").delete().in("id", existingOptionIds);
+    if (deleteError) {
+      throw new Error(`Nuove opzioni salvate, ma impossibile rimuovere le precedenti: ${deleteError.message}`);
+    }
+  }
 }
 
 export async function fetchHotelOptionsForQuotes(quoteIds: string[]): Promise<Record<string, QuoteHotelOption[]>> {
@@ -139,11 +156,14 @@ export async function fetchHotelOptionsForQuotes(quoteIds: string[]): Promise<Re
   const supabase = createSupabaseAdminClient();
   if (!supabase) return {};
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("quote_hotel_options")
     .select("*")
     .in("quote_id", quoteIds)
     .order("position");
+  if (error) {
+    throw new Error(`Impossibile caricare le opzioni hotel: ${error.message}`);
+  }
 
   const result: Record<string, QuoteHotelOption[]> = {};
   for (const row of data ?? []) {
