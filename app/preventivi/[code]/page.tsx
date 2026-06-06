@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 import { PublicQuotePage } from "@/components/PublicQuotePage";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
+import { getConfirmedHotelCounts } from "@/lib/repositories/quoteConfirmations";
 import { ischiastarsWhatsappNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +16,13 @@ export const metadata: Metadata = {
 };
 
 export default async function QuotePublicRoute({ params, searchParams }: { params: { code: string }; searchParams: { token?: string } }) {
-  const result = await getQuoteByCodeAndToken(params.code, searchParams.token);
+  const [result, hotelPopularity] = await Promise.all([
+    getQuoteByCodeAndToken(params.code, searchParams.token),
+    getConfirmedHotelCounts(),
+  ]);
   const quote = result.data;
   if (!quote || quote.deletedAt) return <InvalidQuotePage />;
-  return <PublicQuotePage quote={quote} />;
+  return <PublicQuotePage quote={quote} hotelPopularity={hotelPopularity} />;
 }
 
 function InvalidQuotePage() {

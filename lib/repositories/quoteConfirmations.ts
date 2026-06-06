@@ -132,6 +132,30 @@ export async function getQuoteConfirmationById(id: string): Promise<RepositoryRe
   return fromSupabase(data as Record<string, unknown> | null);
 }
 
+export async function getConfirmedHotelCounts(): Promise<Record<string, number>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return {};
+
+  const year = new Date().getFullYear();
+  const { data, error } = await supabase
+    .from("quote_confirmations")
+    .select("quote_hotel_options!inner(hotel_name)")
+    .not("selected_hotel_option_id", "is", null)
+    .gte("created_at", `${year}-01-01T00:00:00.000Z`)
+    .lt("created_at", `${year + 1}-01-01T00:00:00.000Z`);
+
+  if (error) return {};
+
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    const hotelName = (row.quote_hotel_options as unknown as { hotel_name: string } | null)?.hotel_name;
+    if (typeof hotelName === "string" && hotelName) {
+      counts[hotelName] = (counts[hotelName] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
+
 export async function updateQuoteConfirmationAvailability(
   id: string,
   input: {

@@ -81,6 +81,33 @@ function badgeColorClass(badge: string) {
   return "";
 }
 
+function UsersIcon() {
+  return (
+    <svg fill="none" height={13} stroke="#16A34A" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={13}>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function PopularityBadge({ count }: { count: number }) {
+  if (count < 3) return null;
+  const text = count >= 10
+    ? `Uno dei più richiesti — scelto da ${count} clienti quest'estate`
+    : `Scelto da ${count} clienti IschiaStars quest'estate`;
+  return (
+    <span
+      className="mt-1 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-[#16A34A]"
+      style={{ background: "#DCFCE7" }}
+    >
+      <UsersIcon />
+      {text}
+    </span>
+  );
+}
+
 function ColumnsIcon() {
   return (
     <svg fill="none" height={16} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={16}>
@@ -105,7 +132,7 @@ function BuildingIcon() {
   );
 }
 
-export function QuoteProposalSection({ quote }: { quote: Quote }) {
+export function QuoteProposalSection({ quote, hotelPopularity = {} }: { quote: Quote; hotelPopularity?: Record<string, number> }) {
   const [selected, setSelected] = useState<SelectedOption | null>(null);
   const [compareMode, setCompareMode] = useState(false);
   const confirmRef = useRef<HTMLDivElement>(null);
@@ -172,6 +199,7 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
       {compareMode ? (
         <CompareView
           groupedHotels={groupedHotels}
+          hotelPopularity={hotelPopularity}
           isConfirmed={isConfirmed}
           onSelectTreatment={handleSelectTreatment}
         />
@@ -188,6 +216,7 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
                 mainOption={firstOpt}
                 allGroupOptions={optionsWithTreatments}
                 isConfirmed={isConfirmed}
+                popularity={hotelPopularity[firstOpt.hotelName] ?? 0}
                 quoteCode={quote.code}
                 token={quote.token}
                 onSelectTreatment={handleSelectTreatment}
@@ -221,10 +250,12 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
 
 function CompareView({
   groupedHotels,
+  hotelPopularity,
   isConfirmed,
   onSelectTreatment,
 }: {
   groupedHotels: [number, QuoteHotelOption[]][];
+  hotelPopularity: Record<string, number>;
   isConfirmed: boolean;
   onSelectTreatment: (option: QuoteHotelOption, treatment: TreatmentOption) => void;
 }) {
@@ -310,7 +341,7 @@ function CompareView({
                   )}
                 </div>
 
-                {/* Riga 2: NOME + STELLE */}
+                {/* Riga 2: NOME + STELLE + POPOLARITÀ */}
                 <div style={{ ...sep, background: headerBg }}>
                   <p className="font-bold leading-tight text-[#1B3A5C]" style={{ fontSize: 15 }}>
                     {mainOption.hotelName}
@@ -318,6 +349,7 @@ function CompareView({
                   {mainOption.hotelStars ? (
                     <p className="mt-0.5 text-sm text-[#C9A84C]">{"★".repeat(mainOption.hotelStars)}</p>
                   ) : null}
+                  <PopularityBadge count={hotelPopularity[mainOption.hotelName] ?? 0} />
                 </div>
 
                 {/* Riga 3: BADGE */}
@@ -474,6 +506,7 @@ function HotelCard({
   mainOption,
   allGroupOptions,
   isConfirmed,
+  popularity = 0,
   quoteCode,
   token,
   onSelectTreatment
@@ -481,6 +514,7 @@ function HotelCard({
   mainOption: QuoteHotelOption;
   allGroupOptions: QuoteHotelOption[];
   isConfirmed: boolean;
+  popularity?: number;
   quoteCode: string;
   token: string;
   onSelectTreatment: (option: QuoteHotelOption, treatment: TreatmentOption) => void;
@@ -538,6 +572,7 @@ function HotelCard({
               ) : null}
             </div>
             {stars && <p className="mt-1 text-sm text-ischia-sun">{stars}</p>}
+            <PopularityBadge count={popularity} />
           </div>
           {isAnySelected && (
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Scelta dal cliente</span>
