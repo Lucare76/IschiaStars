@@ -9,12 +9,10 @@ import { ConfirmationAvailabilityPanel } from "@/components/ConfirmationAvailabi
 import {
   HotelOptionState,
   HotelOptionsEditor,
-  hotelOptionStateToQuoteHotelOptions,
   mapHotelOptionsToPayload,
   quoteOptionsToHotelOptionState,
   suggestedGuestsPerRoom
 } from "@/components/HotelOptionsEditor";
-import { LivePreviewPanel } from "@/components/LivePreviewPanel";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
@@ -204,15 +202,6 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
     currentQuote.confirmation?.selectedPrice != null ? formatCurrency(currentQuote.confirmation.selectedPrice) : undefined
   ].filter(Boolean).join(" - ");
 
-  const previewQuote: Quote = {
-    ...currentQuote,
-    code: "ANTEPRIMA",
-    token: "",
-    status: "confermato",
-    requiresCommitment,
-    hotelOptions: hotelOptionStateToQuoteHotelOptions(hotelOptions),
-  };
-
   return (
     <div className="space-y-6">
       {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} paymentSettings={paymentSettings} /> : null}
@@ -277,8 +266,6 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       </form>
 
       <aside className="space-y-4">
-        <LivePreviewPanel quote={previewQuote} />
-
         {currentQuote.confirmation ? (
           <div className="rounded-2xl bg-emerald-50/80 p-5 shadow-soft ring-1 ring-emerald-200">
             <h3 className="font-black text-ischia-navy">Conferma cliente ricevuta</h3>

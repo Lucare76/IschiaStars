@@ -8,11 +8,9 @@ import {
   HotelOptionState,
   HotelOptionsEditor,
   hotelOptionHasPrice,
-  hotelOptionStateToQuoteHotelOptions,
   mapHotelOptionsToPayload,
   suggestedGuestsPerRoom
 } from "@/components/HotelOptionsEditor";
-import { LivePreviewPanel } from "@/components/LivePreviewPanel";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { adminApiHeaders } from "@/lib/admin-api-client";
 import { Hotel, Quote, QuoteRequest } from "@/lib/types";
@@ -256,40 +254,15 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
       </form>
 
       <aside className="space-y-4">
-        <LivePreviewPanel quote={{
-          id: "preview",
-          code: "ANTEPRIMA",
-          token: "",
-          status: "confermato",
-          requestId: "",
-          customerFirstName: firstName || "Cliente",
-          customerLastName: lastName,
-          customerEmail: email,
-          customerPhone: phone,
-          arrivalDate: "",
-          departureDate: "",
-          adults: adultsCount,
-          children: [],
-          rooms: roomsCount,
-          totalPrice: 0,
-          deposit: 0,
-          offerExpiresAt: "",
-          requestedHotel: "",
-          isAlternative: false,
-          unavailableRequestedHotel: false,
-          proposedHotel: activeHotels[0] as unknown as import("@/lib/types").Hotel,
-          treatment: "",
-          servicesIncluded: [],
-          paymentPolicy: "",
-          cancellationPolicy: "",
-          customerNotes: "",
-          internalNotes: "",
-          requiresCommitment,
-          excludedFromStats: false,
-          createdAt: new Date().toISOString(),
-          hotelOptions: hotelOptionStateToQuoteHotelOptions(hotelOptions),
-          transportOffers: [],
-        }} />
+        <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
+          <h2 className="text-xl font-black text-ischia-navy">Come funziona</h2>
+          <ul className="mt-3 space-y-2 text-sm text-ischia-ink/70">
+            <li>Aggiungi fino a 3 strutture hotel.</li>
+            <li>Per ogni struttura inserisci il prezzo dei trattamenti che vuoi proporre.</li>
+            <li>Il cliente vede solo i trattamenti con prezzo e sceglie quello preferito.</li>
+            <li>Se una struttura non ha prezzi, non viene mostrata.</li>
+          </ul>
+        </div>
       </aside>
     </div>
   );
