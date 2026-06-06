@@ -207,9 +207,9 @@ function HotelCard({
       ) : null}
       <div className={imageUrl ? "grid lg:grid-cols-[minmax(18rem,0.42fr)_1fr]" : ""}>
         {imageUrl && (
-          <div className="bg-ischia-mist lg:min-h-full">
+          <div className="max-h-72 overflow-hidden bg-ischia-mist">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img alt={mainOption.hotelName} className="h-56 w-full object-cover sm:h-64 lg:h-full" decoding="async" src={imageUrl} />
+            <img alt={mainOption.hotelName} className="h-56 max-h-72 w-full object-cover object-center sm:h-64 lg:h-72" decoding="async" src={imageUrl} />
           </div>
         )}
       <div className="p-5">
@@ -275,8 +275,10 @@ function HotelCard({
           </div>
         )}
 
+      </div>
+
         {/* Per ogni tipologia camera, mostra i trattamenti */}
-        <div className="mt-4 space-y-4">
+        <div className={imageUrl ? "mt-4 space-y-4 px-5 pb-5 lg:col-span-2 lg:mt-0" : "mt-4 space-y-4 px-5 pb-5"}>
           {allGroupOptions.map((opt) => (
             <div key={opt.id}>
               {hasMultipleRoomTypes && opt.roomTypeLabel && (
@@ -379,8 +381,6 @@ function HotelCard({
               )}
             </div>
           ))}
-        </div>
-
         {/* Condizioni dal primo option del gruppo */}
         {(mainOption.depositPercent != null || mainOption.balanceMethod || mainOption.paymentPolicy || mainOption.cancellationPolicy) && (
           <div className="mt-4 border-t border-ischia-blue/10 pt-4 text-sm text-ischia-ink/70">
@@ -394,7 +394,7 @@ function HotelCard({
         {mainOption.notes && (
           <p className="mt-3 rounded-xl bg-ischia-sun/10 px-3 py-2 text-sm text-ischia-ink/80">{mainOption.notes}</p>
         )}
-      </div>
+        </div>
       </div>
       {pendingSelection ? (
         <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5" role="dialog" aria-modal="true" aria-labelledby={`confirm-selection-${pendingSelection.option.id}`}>
