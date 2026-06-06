@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 import { LogoutButton } from "@/components/LogoutButton";
 import { MobileNav } from "@/components/MobileNav";
+import { QuoteNotificationsBell } from "@/components/QuoteNotificationsBell";
 import { SystemModeBadge } from "@/components/SystemModeBadge";
 
 const nav = [
@@ -40,6 +41,7 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
             <div className="hidden sm:block">
               <SystemModeBadge />
             </div>
+            <QuoteNotificationsBell />
             <LogoutButton />
             <MobileNav />
           </div>
