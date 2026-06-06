@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 import { MobileFloatingWhatsApp, PublicQuoteHeaderActions } from "@/components/PublicQuoteActions";
 import { PublicEventTracker } from "@/components/PublicEventTracker";
+import { CountdownBanner } from "@/components/public/CountdownBanner";
 import { QuoteProposalSection } from "@/components/QuoteProposalSection";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { PrintButton } from "@/components/PrintButton";
@@ -54,10 +55,11 @@ export function PublicQuotePage({ quote }: { quote: Quote }) {
               ["Date", `${formatDate(quote.arrivalDate)} — ${formatDate(quote.departureDate)}`],
               ["Ospiti", guests],
               ["Camere", `${quote.rooms}`],
-              ...(quote.isAlternative && quote.requestedHotel ? [["Struttura richiesta", quote.requestedHotel] as [string, string]] : []),
-              ...(quote.offerExpiresAt ? [["Offerta valida fino al", formatDate(quote.offerExpiresAt)] as [string, string]] : [])
+              ...(quote.isAlternative && quote.requestedHotel ? [["Struttura richiesta", quote.requestedHotel] as [string, string]] : [])
             ]}
           />
+
+          <CountdownBanner offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
 
           {quote.isAlternative && quote.requestedHotel ? (
             <div className="mt-4 rounded-2xl bg-ischia-sun/15 p-4 text-sm font-semibold leading-6 text-ischia-navy ring-1 ring-ischia-sun/30">
