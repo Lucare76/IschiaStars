@@ -4,6 +4,7 @@ import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 import { PublicQuotePage } from "@/components/PublicQuotePage";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { getConfirmedHotelCounts } from "@/lib/repositories/quoteConfirmations";
+import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
 import { ischiastarsWhatsappNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -16,13 +17,19 @@ export const metadata: Metadata = {
 };
 
 export default async function QuotePublicRoute({ params, searchParams }: { params: { code: string }; searchParams: { token?: string } }) {
-  const [result, hotelPopularity] = await Promise.all([
-    getQuoteByCodeAndToken(params.code, searchParams.token),
-    getConfirmedHotelCounts(),
-  ]);
+  const result = await getQuoteByCodeAndToken(params.code, searchParams.token);
   const quote = result.data;
   if (!quote || quote.deletedAt) return <InvalidQuotePage />;
-  return <PublicQuotePage quote={quote} hotelPopularity={hotelPopularity} />;
+
+  const [hotelPopularity, eventStats] = await Promise.all([
+    getConfirmedHotelCounts(),
+    getQuoteEventStats(quote.id),
+  ]);
+
+  const openingsCount = eventStats.data?.openings ?? 0;
+  const showHesitantBanner = openingsCount >= 3 && quote.status !== "confermato";
+
+  return <PublicQuotePage quote={quote} hotelPopularity={hotelPopularity} showHesitantBanner={showHesitantBanner} />;
 }
 
 function InvalidQuotePage() {
