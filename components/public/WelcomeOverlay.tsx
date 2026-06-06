@@ -110,8 +110,8 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
         <Image
           src="/ischiastars-logo.png"
           alt="IschiaStars"
-          width={160}
-          height={160}
+          width={140}
+          height={140}
           priority
           style={{ objectFit: "contain", flexShrink: 0 }}
         />
@@ -122,7 +122,7 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
             opacity: phase >= 1 ? 1 : 0,
             transition: "opacity 600ms ease",
             textAlign: "center",
-            fontSize: 30,
+            fontSize: 27,
             fontWeight: 700,
             color: "#ffffff",
             lineHeight: 1.4,
@@ -151,7 +151,7 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
           style={{
             opacity: phase >= 3 ? 1 : 0,
             transition: "opacity 600ms ease",
-            fontSize: 26,
+            fontSize: 23,
             fontStyle: "italic",
             color: "rgba(255,255,255,0.7)",
             textAlign: "center",
@@ -166,7 +166,7 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
           style={{
             opacity: phase >= 3 ? 1 : 0,
             transition: "opacity 600ms ease",
-            fontSize: 24,
+            fontSize: 21,
             color: "#C9A84C",
             textAlign: "center",
             lineHeight: 1.6,
@@ -184,7 +184,7 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
           style={{
             opacity: phase >= 4 ? 1 : 0,
             transition: "opacity 600ms ease",
-            fontSize: 20,
+            fontSize: 17,
             color: "rgba(255,255,255,0.4)",
             textAlign: "center",
             margin: 0,
