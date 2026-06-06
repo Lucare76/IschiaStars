@@ -16,6 +16,7 @@ export type HotelOptionState = {
   hotelGroup?: number;
   badge?: string;
   hotelReason?: string;
+  requiresCommitment?: boolean;
   breakfastDetails?: string;
   halfBoardDetails?: string;
   fullBoardDetails?: string;
@@ -80,6 +81,7 @@ export function createHotelOption(hotel?: Hotel, hotelGroup?: number): HotelOpti
     hotelGroup,
     badge: "",
     hotelReason: "",
+    requiresCommitment: false,
     breakfastDetails: "",
     halfBoardDetails: "",
     fullBoardDetails: "",
@@ -136,7 +138,8 @@ export function mapHotelOptionsToPayload(hotelOptions: HotelOptionState[], optio
         paymentPolicy: opt.paymentPolicy || undefined,
         cancellationPolicy: opt.cancellationPolicy || undefined,
         paymentNotes: opt.paymentNotes || undefined,
-        notes: opt.notes || undefined
+        notes: opt.notes || undefined,
+        requiresCommitment: opt.requiresCommitment ?? false
       });
     });
   });
@@ -161,6 +164,7 @@ export function quoteOptionsToHotelOptionState(opts: QuoteHotelOption[]): HotelO
         hotelGroup: groupId,
         badge: first.badge ?? "",
         hotelReason: first.hotelReason ?? "",
+        requiresCommitment: Boolean(first.requiresCommitment),
         breakfastDetails: first.breakfastDetails ?? "",
         halfBoardDetails: first.halfBoardDetails ?? "",
         fullBoardDetails: first.fullBoardDetails ?? "",
@@ -531,6 +535,15 @@ function HotelOptionBlock({
         <Textarea label="Policy cancellazione" value={opt.cancellationPolicy} onChange={(value) => onChange({ cancellationPolicy: value })} />
         <Textarea label="Note pagamento" value={opt.paymentNotes} onChange={(value) => onChange({ paymentNotes: value })} />
         <Textarea label="Note per il cliente" value={opt.notes} onChange={(value) => onChange({ notes: value })} />
+        <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-700">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={opt.requiresCommitment ?? false}
+            onChange={(e) => onChange({ requiresCommitment: e.target.checked })}
+          />
+          Offerta soggetta a obbligo di impegnativa
+        </label>
       </div>
 
       {detectedPlus.length > 0 && (

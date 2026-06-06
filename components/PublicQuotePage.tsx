@@ -64,7 +64,7 @@ export function PublicQuotePage({ quote, hotelPopularity = {}, showHesitantBanne
           />
 
           <CountdownBanner offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
-          <CommitmentBanner show={quote.requiresCommitment === true} />
+          <CommitmentBanner show={options.some((o) => o.requiresCommitment === true)} />
 
           {quote.isAlternative && quote.requestedHotel ? (
             <div className="mt-4 rounded-2xl bg-ischia-sun/15 p-4 text-sm font-semibold leading-6 text-ischia-navy ring-1 ring-ischia-sun/30">

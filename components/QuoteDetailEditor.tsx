@@ -31,7 +31,6 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
   const [roomsCount, setRoomsCount] = useState(quote.rooms);
   const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>(quoteOptionsToHotelOptionState(effective));
   const [transportOffers] = useState<TransportOffer[]>(withDefaultTransportOffers(quote.transportOffers));
-  const [requiresCommitment, setRequiresCommitment] = useState(quote.requiresCommitment ?? false);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -63,7 +62,6 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       transportOffers,
       publicNotes: formData.get("publicNotes"),
       internalNotes: formData.get("internalNotes"),
-      requiresCommitment,
       hotelOptions: mappedOptions.length > 0 ? mappedOptions : undefined
     };
 
@@ -249,15 +247,6 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
           </div>
           <Textarea name="publicNotes" label="Note visibili al cliente" defaultValue={currentQuote.customerNotes} />
           <Textarea name="internalNotes" label="Note interne" defaultValue={currentQuote.internalNotes} />
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              className="h-4 w-4"
-              checked={requiresCommitment}
-              onChange={(e) => setRequiresCommitment(e.target.checked)}
-            />
-            Offerta soggetta a obbligo di impegnativa
-          </label>
         </Section>
 
         <button className="rounded-full bg-ischia-sun px-5 py-3 font-black text-ischia-navy disabled:opacity-60" disabled={loading} type="submit">

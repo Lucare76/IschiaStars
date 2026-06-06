@@ -86,7 +86,6 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isAlternativeOffer, setIsAlternativeOffer] = useState(false);
-  const [requiresCommitment, setRequiresCommitment] = useState(false);
   const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>([createHotelOption(requestedHotelMatch)]);
   const [firstName, setFirstName] = useState(initialRequest?.firstName ?? "");
   const [lastName, setLastName] = useState(initialRequest?.lastName ?? "");
@@ -149,7 +148,6 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
         validUntil: formData.get("validUntil"),
         publicNotes: formData.get("publicNotes"),
         internalNotes: formData.get("internalNotes"),
-        requiresCommitment,
         hotelOptions: mappedOptions
       })
     });
@@ -233,15 +231,6 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
           </div>
           <Textarea name="publicNotes" label="Note visibili al cliente" />
           <Textarea name="internalNotes" label="Note interne" defaultValue={initialRequest?.message} />
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              className="h-4 w-4"
-              checked={requiresCommitment}
-              onChange={(e) => setRequiresCommitment(e.target.checked)}
-            />
-            Offerta soggetta a obbligo di impegnativa
-          </label>
         </Section>
 
         <button

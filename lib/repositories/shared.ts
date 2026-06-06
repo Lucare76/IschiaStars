@@ -217,6 +217,7 @@ function mapHotelOptionRowInline(row: Record<string, unknown>): QuoteHotelOption
     cancellationPolicy: row.cancellation_policy ? String(row.cancellation_policy) : undefined,
     paymentNotes: row.payment_notes ? String(row.payment_notes) : undefined,
     notes: row.notes ? String(row.notes) : undefined,
+    requiresCommitment: Boolean(row.requires_commitment ?? false),
     isSelected: Boolean(row.is_selected),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at ?? row.created_at),
