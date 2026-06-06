@@ -81,8 +81,33 @@ function badgeColorClass(badge: string) {
   return "";
 }
 
+function ColumnsIcon() {
+  return (
+    <svg fill="none" height={16} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={16}>
+      <rect height={18} rx={1} width={9} x={2} y={3} />
+      <rect height={18} rx={1} width={9} x={13} y={3} />
+    </svg>
+  );
+}
+
+function BuildingIcon() {
+  return (
+    <svg fill="none" height={36} stroke="#9CA3AF" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} viewBox="0 0 24 24" width={36}>
+      <path d="M3 21h18" />
+      <path d="M9 8h1" />
+      <path d="M9 12h1" />
+      <path d="M9 16h1" />
+      <path d="M14 8h1" />
+      <path d="M14 12h1" />
+      <path d="M14 16h1" />
+      <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+    </svg>
+  );
+}
+
 export function QuoteProposalSection({ quote }: { quote: Quote }) {
   const [selected, setSelected] = useState<SelectedOption | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
   const confirmRef = useRef<HTMLDivElement>(null);
 
   const allOptions = getEffectiveHotelOptions(quote);
@@ -125,25 +150,52 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
 
   return (
     <div className="space-y-5">
-      {/* Hotel cards raggruppate per struttura */}
-      <div className="space-y-4">
-        {groupedHotels.map(([groupId, groupOptions]) => {
-          const optionsWithTreatments = groupOptions.filter((o) => visibleTreatments(o).length > 0);
-          if (!optionsWithTreatments.length) return null;
-          const firstOpt = optionsWithTreatments[0];
-          return (
-            <HotelCard
-              key={groupId}
-              mainOption={firstOpt}
-              allGroupOptions={optionsWithTreatments}
-              isConfirmed={isConfirmed}
-              quoteCode={quote.code}
-              token={quote.token}
-              onSelectTreatment={handleSelectTreatment}
-            />
-          );
-        })}
-      </div>
+      {/* Bottone toggle confronto — visibile solo con 2+ gruppi hotel */}
+      {groupedHotels.length >= 2 && (
+        <div className="no-print">
+          <button
+            className="inline-flex items-center gap-2 rounded-full border border-[#C9A84C] bg-transparent px-5 py-2 text-sm font-medium text-[#C9A84C] transition-colors hover:bg-[#FBF5E6]"
+            onClick={() => {
+              if (!compareMode) {
+                trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "compare_opened");
+              }
+              setCompareMode((prev) => !prev);
+            }}
+            type="button"
+          >
+            <ColumnsIcon />
+            {compareMode ? "Torna alle proposte" : "Confronta le opzioni"}
+          </button>
+        </div>
+      )}
+
+      {compareMode ? (
+        <CompareView
+          groupedHotels={groupedHotels}
+          isConfirmed={isConfirmed}
+          onSelectTreatment={handleSelectTreatment}
+        />
+      ) : (
+        /* Hotel cards raggruppate per struttura */
+        <div className="space-y-4">
+          {groupedHotels.map(([groupId, groupOptions]) => {
+            const optionsWithTreatments = groupOptions.filter((o) => visibleTreatments(o).length > 0);
+            if (!optionsWithTreatments.length) return null;
+            const firstOpt = optionsWithTreatments[0];
+            return (
+              <HotelCard
+                key={groupId}
+                mainOption={firstOpt}
+                allGroupOptions={optionsWithTreatments}
+                isConfirmed={isConfirmed}
+                quoteCode={quote.code}
+                token={quote.token}
+                onSelectTreatment={handleSelectTreatment}
+              />
+            );
+          })}
+        </div>
+      )}
 
       {/* WhatsApp link */}
       <div className="no-print rounded-2xl bg-white/90 p-5 shadow-soft">
@@ -164,6 +216,257 @@ export function QuoteProposalSection({ quote }: { quote: Quote }) {
         />
       </div>
     </div>
+  );
+}
+
+function CompareView({
+  groupedHotels,
+  isConfirmed,
+  onSelectTreatment,
+}: {
+  groupedHotels: [number, QuoteHotelOption[]][];
+  isConfirmed: boolean;
+  onSelectTreatment: (option: QuoteHotelOption, treatment: TreatmentOption) => void;
+}) {
+  const [pendingSelection, setPendingSelection] = useState<{
+    option: QuoteHotelOption;
+    treatment: TreatmentOption;
+  } | null>(null);
+
+  const groups = groupedHotels
+    .map(([groupId, options]) => {
+      const withTreatments = options.filter((o) => visibleTreatments(o).length > 0);
+      if (!withTreatments.length) return null;
+      return { groupId, mainOption: withTreatments[0] };
+    })
+    .filter((g): g is NonNullable<typeof g> => g !== null);
+
+  if (!groups.length) return null;
+
+  const is3 = groups.length >= 3;
+  // 3 hotel: ogni colonna ha minWidth 260px → forza scroll orizzontale su mobile
+  const colTemplate = is3 ? "repeat(3, minmax(260px, 1fr))" : "repeat(2, 1fr)";
+
+  return (
+    <>
+      <div className={is3 ? "overflow-x-auto" : ""}>
+        {/*
+          Layout CSS subgrid: il grid padre definisce 8 righe (una per sezione).
+          Ogni colonna-hotel usa grid-template-rows: subgrid per partecipare
+          alle stesse righe del padre → tutte le colonne hanno righe allineate.
+        */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: colTemplate,
+            gridTemplateRows: "repeat(8, auto)",
+            columnGap: 16,
+            rowGap: 0,
+          }}
+        >
+          {groups.map(({ groupId, mainOption }, colIndex) => {
+            const isRecommended = mainOption.badge?.trim() === "Consigliato";
+            const imageUrl = sharperWordPressImageUrl(mainOption.hotelImageUrl);
+            const badge = mainOption.badge?.trim();
+            const hotelReason = mainOption.hotelReason?.trim();
+            const services = splitLines(mainOption.includedServices);
+            const treatments = visibleTreatments(mainOption);
+            const minPrice = treatments.length > 0 ? Math.min(...treatments.map((t) => t.price)) : null;
+            const firstTreatment = treatments[0] ?? null;
+            const headerBg = isRecommended ? "#FBF5E6" : "#ffffff";
+            const sep: React.CSSProperties = { borderTop: "1px solid #F3F4F6", padding: "12px 16px" };
+
+            return (
+              <div
+                key={groupId}
+                style={{
+                  display: "grid",
+                  gridColumn: colIndex + 1,
+                  gridRow: "1 / 9",
+                  gridTemplateRows: "subgrid",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  border: isRecommended ? "2px solid #C9A84C" : "1px solid #E5E7EB",
+                }}
+              >
+                {/* Riga 1: FOTO */}
+                <div style={{ background: headerBg }}>
+                  {imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt={mainOption.hotelName}
+                      className="w-full object-cover object-center"
+                      decoding="async"
+                      src={imageUrl}
+                      style={{ aspectRatio: "4/3" }}
+                    />
+                  ) : (
+                    <div
+                      className="flex w-full items-center justify-center"
+                      style={{ aspectRatio: "4/3", background: "#F3F4F6" }}
+                    >
+                      <BuildingIcon />
+                    </div>
+                  )}
+                </div>
+
+                {/* Riga 2: NOME + STELLE */}
+                <div style={{ ...sep, background: headerBg }}>
+                  <p className="font-bold leading-tight text-[#1B3A5C]" style={{ fontSize: 15 }}>
+                    {mainOption.hotelName}
+                  </p>
+                  {mainOption.hotelStars ? (
+                    <p className="mt-0.5 text-sm text-[#C9A84C]">{"★".repeat(mainOption.hotelStars)}</p>
+                  ) : null}
+                </div>
+
+                {/* Riga 3: BADGE */}
+                <div style={{ ...sep, minHeight: 48, display: "flex", alignItems: "center" }}>
+                  {badge ? (
+                    <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold uppercase text-white ${badgeColorClass(badge)}`}>
+                      {badge}
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* Riga 4: PERCHÉ TE LO PROPONIAMO */}
+                <div style={{ ...sep, minHeight: 52 }}>
+                  {hotelReason ? (
+                    <>
+                      <p
+                        className="font-bold uppercase text-[#C9A84C]"
+                        style={{ fontSize: 10, letterSpacing: "0.07em" }}
+                      >
+                        Perché te lo proponiamo
+                      </p>
+                      <p className="mt-1 text-xs italic text-[#8B7355]">{hotelReason}</p>
+                    </>
+                  ) : null}
+                </div>
+
+                {/* Riga 5: PREZZO DI PARTENZA */}
+                <div style={sep}>
+                  {minPrice != null ? (
+                    <>
+                      <p className="text-xs text-gray-400">a partire da</p>
+                      <p className="font-bold tabular-nums text-[#1B3A5C]" style={{ fontSize: 20 }}>
+                        {formatCurrency(minPrice)}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-center text-sm text-gray-400">—</p>
+                  )}
+                </div>
+
+                {/* Riga 6: TRATTAMENTI */}
+                <div style={sep}>
+                  {treatments.length > 0 ? (
+                    <div>
+                      {treatments.map((t) => (
+                        <div
+                          key={t.key}
+                          className="flex items-center justify-between border-b border-gray-100 py-1 text-sm last:border-0 last:pb-0"
+                        >
+                          <span className="text-gray-600">{t.label}</span>
+                          <span className="font-semibold tabular-nums text-[#1B3A5C]">{formatCurrency(t.price)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-sm text-gray-400">—</p>
+                  )}
+                </div>
+
+                {/* Riga 7: SERVIZI INCLUSI */}
+                <div style={sep}>
+                  {services.length > 0 ? (
+                    <ul className="space-y-1">
+                      {services.slice(0, 4).map((s) => (
+                        <li key={s} className="flex items-start gap-1.5 text-xs text-gray-600">
+                          <span className="mt-0.5 flex-shrink-0 font-bold text-[#16A34A]">✓</span>
+                          <span>{s}</span>
+                        </li>
+                      ))}
+                      {services.length > 4 && (
+                        <li className="text-xs text-gray-400">+{services.length - 4} altri</li>
+                      )}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-400">—</p>
+                  )}
+                </div>
+
+                {/* Riga 8: BOTTONE */}
+                <div style={{ ...sep, display: "flex", flexDirection: "column", alignItems: "stretch" }}>
+                  {!isConfirmed && firstTreatment ? (
+                    <>
+                      <button
+                        className="w-full rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
+                        onClick={() => setPendingSelection({ option: mainOption, treatment: firstTreatment })}
+                        type="button"
+                      >
+                        Scegli questo hotel
+                      </button>
+                      <p className="mt-1 text-center text-xs leading-snug text-gray-400">
+                        Nessun pagamento online — ti ricontattiamo per finalizzare
+                      </p>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {is3 && (
+          <p className="mt-2 text-center text-xs text-gray-400 sm:hidden">
+            Scorri per vedere tutte le proposte
+          </p>
+        )}
+      </div>
+
+      {/* Modal conferma — stessa logica di HotelCard */}
+      {pendingSelection ? (
+        <div
+          aria-modal="true"
+          className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5"
+          role="dialog"
+        >
+          <div className="mx-auto w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-black text-ischia-navy">Stai confermando la tua preferenza</h3>
+            <p className="mt-3 text-sm leading-6 text-gray-600">
+              Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà per completare la prenotazione.
+            </p>
+            <div className="mt-4 rounded-xl bg-ischia-mist p-3 text-sm text-ischia-ink/80">
+              <p><strong>Hotel:</strong> {pendingSelection.option.hotelName}</p>
+              {pendingSelection.option.roomTypeLabel ? (
+                <p><strong>Camera:</strong> {pendingSelection.option.roomTypeLabel}</p>
+              ) : null}
+              <p><strong>Trattamento:</strong> {pendingSelection.treatment.label}</p>
+            </div>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20"
+                onClick={() => setPendingSelection(null)}
+                type="button"
+              >
+                Annulla
+              </button>
+              <button
+                className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
+                onClick={() => {
+                  onSelectTreatment(pendingSelection.option, pendingSelection.treatment);
+                  setPendingSelection(null);
+                }}
+                type="button"
+              >
+                Sì, confermo
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 

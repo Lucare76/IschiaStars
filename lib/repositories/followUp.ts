@@ -212,7 +212,8 @@ function eventLabel(eventType: QuoteEvent["eventType"]) {
     availability_unavailable: "Disponibilità terminata",
     availability_unavailable_email_sent: "Email disponibilità terminata",
     alternative_to_propose: "Alternativa da proporre",
-    follow_up_whatsapp_click: "Follow-up WhatsApp"
+    follow_up_whatsapp_click: "Follow-up WhatsApp",
+    compare_opened: "Vista confronto aperta"
   };
   return labels[eventType];
 }
