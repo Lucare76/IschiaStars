@@ -153,9 +153,7 @@ function BuildingIcon() {
 export function QuoteProposalSection({ quote, hotelPopularity = {} }: { quote: Quote; hotelPopularity?: Record<string, number> }) {
   const [selected, setSelected] = useState<SelectedOption | null>(null);
   const [compareMode, setCompareMode] = useState(false);
-  const [revealedOnMobile, setRevealedOnMobile] = useState(false);
   const confirmRef = useRef<HTMLDivElement>(null);
-  const hasTrackedReveal = useRef(false);
 
   const allOptions = getEffectiveHotelOptions(quote);
 
@@ -239,71 +237,23 @@ export function QuoteProposalSection({ quote, hotelPopularity = {} }: { quote: Q
       ) : (
         /* Hotel cards raggruppate per struttura */
         <div className="space-y-4">
-          {renderableGroups.map(([groupId, groupOptions], cardIndex) => {
+          {renderableGroups.map(([groupId, groupOptions]) => {
             const optionsWithTreatments = groupOptions.filter((o) => visibleTreatments(o).length > 0);
             const firstOpt = optionsWithTreatments[0];
-            const isFirst = cardIndex === 0;
-            // Delay progressivo solo all'apertura; chiusura uniforme senza delay.
-            const delay = !isFirst && revealedOnMobile ? `${(cardIndex - 1) * 150}ms` : "0ms";
-            const hotelCard = (
-              <HotelCard
-                mainOption={firstOpt}
-                allGroupOptions={optionsWithTreatments}
-                isConfirmed={isConfirmed}
-                popularity={hotelPopularity[firstOpt.hotelName] ?? 0}
-                quoteCode={quote.code}
-                token={quote.token}
-                onSelectTreatment={handleSelectTreatment}
-              />
-            );
-            if (isFirst) {
-              return (
-                <div key={groupId} data-first-hotel-card="true">
-                  {hotelCard}
-                </div>
-              );
-            }
             return (
-              <div
-                key={groupId}
-                className={`transition-all duration-[400ms] ease-out md:opacity-100 md:max-h-none md:overflow-visible ${
-                  revealedOnMobile
-                    ? "opacity-100 max-h-[2000px] overflow-visible"
-                    : "opacity-0 max-h-0 overflow-hidden"
-                }`}
-                style={{ transitionDelay: delay }}
-              >
-                {hotelCard}
+              <div key={groupId}>
+                <HotelCard
+                  mainOption={firstOpt}
+                  allGroupOptions={optionsWithTreatments}
+                  isConfirmed={isConfirmed}
+                  popularity={hotelPopularity[firstOpt.hotelName] ?? 0}
+                  quoteCode={quote.code}
+                  token={quote.token}
+                  onSelectTreatment={handleSelectTreatment}
+                />
               </div>
             );
           })}
-
-          {/* Bottone reveal — solo mobile, solo in modalità card normale */}
-          {renderableGroups.length >= 2 && (
-            <button
-              className="md:hidden flex w-full items-center justify-center gap-2 rounded-xl border border-[#C9A84C] bg-white py-3 text-sm font-medium text-[#C9A84C]"
-              onClick={() => {
-                if (!revealedOnMobile) {
-                  if (!hasTrackedReveal.current) {
-                    trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "reveal_options_clicked");
-                    hasTrackedReveal.current = true;
-                  }
-                  setRevealedOnMobile(true);
-                } else {
-                  setRevealedOnMobile(false);
-                  setTimeout(() => {
-                    document.querySelector("[data-first-hotel-card]")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }, 80);
-                }
-              }}
-              type="button"
-            >
-              {revealedOnMobile
-                ? "Mostra meno"
-                : `Vedi le altre soluzioni (${renderableGroups.length - 1} ${renderableGroups.length - 1 === 1 ? "proposta" : "proposte"})`}
-              <ChevronIcon rotated={revealedOnMobile} />
-            </button>
-          )}
         </div>
       )}
 

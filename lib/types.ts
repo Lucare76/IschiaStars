@@ -207,4 +207,5 @@ export type Quote = {
   excludedFromStats: boolean;
   deletedAt?: string;
   hotelOptions: QuoteHotelOption[];
+  requiresCommitment?: boolean;
 };

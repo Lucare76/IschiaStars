@@ -126,6 +126,7 @@ export function mapQuote(
     createdAt: String(row.created_at ?? ""),
     sentAt: row.sent_at ? String(row.sent_at) : undefined,
     excludedFromStats: Boolean(row.excluded_from_stats ?? false),
+    requiresCommitment: Boolean(row.requires_commitment ?? false),
     deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
     confirmation: row.confirmed_at || confirmationRow
       ? {

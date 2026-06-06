@@ -9,10 +9,12 @@ import { ConfirmationAvailabilityPanel } from "@/components/ConfirmationAvailabi
 import {
   HotelOptionState,
   HotelOptionsEditor,
+  hotelOptionStateToQuoteHotelOptions,
   mapHotelOptionsToPayload,
   quoteOptionsToHotelOptionState,
   suggestedGuestsPerRoom
 } from "@/components/HotelOptionsEditor";
+import { LivePreviewPanel } from "@/components/LivePreviewPanel";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
@@ -31,6 +33,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
   const [roomsCount, setRoomsCount] = useState(quote.rooms);
   const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>(quoteOptionsToHotelOptionState(effective));
   const [transportOffers] = useState<TransportOffer[]>(withDefaultTransportOffers(quote.transportOffers));
+  const [requiresCommitment, setRequiresCommitment] = useState(quote.requiresCommitment ?? false);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -62,6 +65,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       transportOffers,
       publicNotes: formData.get("publicNotes"),
       internalNotes: formData.get("internalNotes"),
+      requiresCommitment,
       hotelOptions: mappedOptions.length > 0 ? mappedOptions : undefined
     };
 
@@ -191,6 +195,15 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
     currentQuote.confirmation?.selectedPrice != null ? formatCurrency(currentQuote.confirmation.selectedPrice) : undefined
   ].filter(Boolean).join(" - ");
 
+  const previewQuote: Quote = {
+    ...currentQuote,
+    code: "ANTEPRIMA",
+    token: "",
+    status: "confermato",
+    requiresCommitment,
+    hotelOptions: hotelOptionStateToQuoteHotelOptions(hotelOptions),
+  };
+
   return (
     <div className="space-y-6">
       {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} paymentSettings={paymentSettings} /> : null}
@@ -238,6 +251,15 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
           </div>
           <Textarea name="publicNotes" label="Note visibili al cliente" defaultValue={currentQuote.customerNotes} />
           <Textarea name="internalNotes" label="Note interne" defaultValue={currentQuote.internalNotes} />
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={requiresCommitment}
+              onChange={(e) => setRequiresCommitment(e.target.checked)}
+            />
+            Offerta soggetta a obbligo di impegnativa
+          </label>
         </Section>
 
         <button className="rounded-full bg-ischia-sun px-5 py-3 font-black text-ischia-navy disabled:opacity-60" disabled={loading} type="submit">
@@ -246,6 +268,8 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
       </form>
 
       <aside className="space-y-4">
+        <LivePreviewPanel quote={previewQuote} />
+
         {currentQuote.confirmation ? (
           <div className="rounded-2xl bg-emerald-50/80 p-5 shadow-soft ring-1 ring-emerald-200">
             <h3 className="font-black text-ischia-navy">Conferma cliente ricevuta</h3>

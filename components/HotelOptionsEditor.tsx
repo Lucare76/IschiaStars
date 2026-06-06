@@ -187,6 +187,64 @@ export function quoteOptionsToHotelOptionState(opts: QuoteHotelOption[]): HotelO
     });
 }
 
+export function hotelOptionStateToQuoteHotelOptions(opts: HotelOptionState[]): QuoteHotelOption[] {
+  const result: QuoteHotelOption[] = [];
+  let position = 0;
+  const now = new Date().toISOString();
+
+  opts.forEach((opt, groupIdx) => {
+    const hotelGroup = opt.hotelGroup ?? groupIdx + 1;
+    opt.roomTypes.forEach((rt, rtIdx) => {
+      position++;
+      const bPrice = rt.breakfastPrice ? Number(rt.breakfastPrice) : undefined;
+      const hbPrice = rt.halfBoardPrice ? Number(rt.halfBoardPrice) : undefined;
+      const fbPrice = rt.fullBoardPrice ? Number(rt.fullBoardPrice) : undefined;
+      const treatments: QuoteHotelOption["treatments"] = [];
+      if (bPrice) treatments.push({ key: "breakfast", label: "Camera e colazione", price: bPrice });
+      if (hbPrice) treatments.push({ key: "half_board", label: "Mezza pensione", price: hbPrice });
+      if (fbPrice) treatments.push({ key: "full_board", label: "Pensione completa", price: fbPrice });
+
+      result.push({
+        id: `preview-${groupIdx}-${rtIdx}`,
+        quoteId: "preview",
+        hotelId: opt.hotelId || undefined,
+        hotelGroup,
+        position,
+        badge: opt.badge || undefined,
+        hotelReason: opt.hotelReason || undefined,
+        roomTypeLabel: rt.label || undefined,
+        hotelName: opt.hotelName,
+        hotelLocation: opt.hotelLocation || undefined,
+        hotelStars: opt.hotelStars ? Number(opt.hotelStars) : undefined,
+        hotelImageUrl: opt.hotelImageUrl || undefined,
+        sourceUrl: opt.sourceUrl || undefined,
+        breakfastPrice: bPrice,
+        halfBoardPrice: hbPrice,
+        fullBoardPrice: fbPrice,
+        breakfastLabel: "Camera e colazione",
+        halfBoardLabel: "Mezza pensione",
+        fullBoardLabel: "Pensione completa",
+        breakfastDetails: opt.breakfastDetails || undefined,
+        halfBoardDetails: opt.halfBoardDetails || undefined,
+        fullBoardDetails: opt.fullBoardDetails || undefined,
+        includedServices: opt.includedServices || undefined,
+        depositPercent: opt.depositPercent ? Number(opt.depositPercent) : undefined,
+        balanceMethod: opt.balanceMethod || undefined,
+        paymentPolicy: opt.paymentPolicy || undefined,
+        cancellationPolicy: opt.cancellationPolicy || undefined,
+        paymentNotes: opt.paymentNotes || undefined,
+        notes: opt.notes || undefined,
+        isSelected: false,
+        createdAt: now,
+        updatedAt: now,
+        treatments,
+      });
+    });
+  });
+
+  return result;
+}
+
 export function suggestedGuestsPerRoom(totalGuests: number, rooms: number) {
   return Math.max(1, Math.ceil(Math.max(1, totalGuests) / Math.max(1, rooms)));
 }
