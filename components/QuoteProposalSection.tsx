@@ -285,7 +285,7 @@ function HotelCard({
                 <p className="mb-2 text-sm font-black text-ischia-navy">{opt.roomTypeLabel}</p>
               )}
               {opt.treatments.length > 0 && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {visibleTreatments(opt).map((treatment) => {
                     const detailKey = `${opt.id}-${treatment.key}`;
                     const isExpanded = expanded === detailKey;
@@ -294,12 +294,12 @@ function HotelCard({
                     const benefit = details ? undefined : treatmentBenefit(treatment);
                     const areTreatmentDetailsExpanded = expandedTreatmentDetails === detailKey;
                     return (
-                    <div key={detailKey} className="rounded-2xl bg-ischia-mist p-4">
+                    <div key={detailKey} className="min-h-[13rem] rounded-2xl bg-ischia-mist p-4">
                       {(() => {
                         const breakdown = calculatePaymentBreakdown(treatment.price, opt.depositPercent, opt.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
                         return (
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
+                      <div className="flex min-h-[10rem] flex-col justify-between gap-4 lg:flex-row lg:items-end">
+                        <div className="min-w-0 flex-1">
                           <p className="font-black text-ischia-navy">{treatment.label}</p>
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
@@ -335,10 +335,10 @@ function HotelCard({
                             </p>
                           ) : null}
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end lg:w-auto lg:justify-end">
                           <button
                             aria-expanded={isExpanded}
-                            className="no-print rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/15"
+                            className="no-print rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/15 sm:min-w-32"
                             onClick={() => {
                               const nextExpanded = isExpanded ? null : detailKey;
                               setExpanded(nextExpanded);
@@ -356,15 +356,15 @@ function HotelCard({
                             Cosa include
                           </button>
                           {!isConfirmed && (
-                            <div className="no-print text-center">
+                            <div className="no-print w-full text-center sm:w-72">
                               <button
-                                className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
+                                className="w-full rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
                                 onClick={() => setPendingSelection({ option: opt, treatment })}
                                 type="button"
                               >
                                 Conferma questa opzione
                               </button>
-                              <p className="mt-1 text-center text-xs text-gray-400">Nessun pagamento online — ti ricontattiamo per finalizzare</p>
+                              <p className="mt-1 text-center text-xs leading-snug text-gray-400">Nessun pagamento online — ti ricontattiamo per finalizzare</p>
                             </div>
                           )}
                           {isConfirmed && opt.isSelected && (
