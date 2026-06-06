@@ -22,11 +22,10 @@ type ConfirmationPayload = {
   acceptedPrivacy?: boolean;
   children?: { id?: string; birthDate?: string }[];
   selectedHotelOptionId?: string;
-  selectedHotelName?: string;
   selectedTreatmentKey?: string;
-  selectedTreatmentLabel?: string;
-  selectedPrice?: number;
 };
+
+const INVALID_SELECTION_MESSAGE = "Impossibile completare la conferma. Contattaci su WhatsApp.";
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as ConfirmationPayload | null;
@@ -44,7 +43,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Inserisci la data di nascita per ogni bambino" }, { status: 400 });
   }
 
-  const selection = resolveSelection(quoteResult.data, body!);
+  let selection: ReturnType<typeof resolveSelection>;
+  try {
+    selection = resolveSelection(quoteResult.data, body!);
+  } catch (error) {
+    console.error("[confirmation] invalid commercial selection", {
+      code: quoteResult.data.code,
+      selectedHotelOptionId: body!.selectedHotelOptionId,
+      selectedTreatmentKey: body!.selectedTreatmentKey,
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return NextResponse.json({ error: INVALID_SELECTION_MESSAGE }, { status: 400 });
+  }
   const ageComparison = buildChildrenAgeComparison(quoteResult.data.children, body!.children ?? [], quoteResult.data.arrivalDate);
   const hasAgeMismatch = ageComparison.some((c) => c.ageMismatch);
 
@@ -155,26 +165,29 @@ function buildChildrenAgeComparison(
 }
 
 function resolveSelection(quote: NonNullable<Awaited<ReturnType<typeof getQuoteByCodeAndToken>>["data"]>, body: ConfirmationPayload) {
-  const option = body.selectedHotelOptionId
-    ? quote.hotelOptions.find((item) => item.id === body.selectedHotelOptionId)
-    : undefined;
+  const option = quote.hotelOptions.find((item) => item.id === body.selectedHotelOptionId);
+  if (!option) {
+    throw new Error("Opzione hotel non valida per questo preventivo");
+  }
+
   const treatment = option?.treatments.find((item) => item.key === body.selectedTreatmentKey);
-  const selectedPrice = treatment?.price ?? body.selectedPrice;
-  const breakdown = selectedPrice != null
-    ? calculatePaymentBreakdown(selectedPrice, option?.depositPercent, option?.balanceMethod || BALANCE_METHOD_IN_STRUCTURE)
-    : null;
+  if (!treatment || treatment.price <= 0) {
+    throw new Error("Trattamento non disponibile per questa opzione");
+  }
+
+  const breakdown = calculatePaymentBreakdown(treatment.price, option.depositPercent, option.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
 
   return {
-    selectedHotelOptionId: option?.id ?? body.selectedHotelOptionId,
-    selectedHotelName: option ? option.hotelName + (option.roomTypeLabel ? ` — ${option.roomTypeLabel}` : "") : body.selectedHotelName,
-    selectedTreatmentKey: treatment?.key ?? body.selectedTreatmentKey,
-    selectedTreatmentLabel: treatment?.label ?? body.selectedTreatmentLabel,
-    selectedPrice,
-    selectedDepositPercent: breakdown?.depositPercent,
-    selectedDepositAmount: breakdown?.depositAmount,
-    selectedBalanceAmount: breakdown?.balanceAmount,
-    selectedBalanceMethod: breakdown?.balanceMethod,
-    selectedPaymentPolicy: option?.paymentPolicy,
-    selectedCancellationPolicy: option?.cancellationPolicy
+    selectedHotelOptionId: option.id,
+    selectedHotelName: option.hotelName,
+    selectedTreatmentKey: treatment.key,
+    selectedTreatmentLabel: treatment.label,
+    selectedPrice: treatment.price,
+    selectedDepositPercent: breakdown.depositPercent,
+    selectedDepositAmount: breakdown.depositAmount,
+    selectedBalanceAmount: breakdown.balanceAmount,
+    selectedBalanceMethod: breakdown.balanceMethod,
+    selectedPaymentPolicy: option.paymentPolicy,
+    selectedCancellationPolicy: option.cancellationPolicy
   };
 }
