@@ -294,12 +294,15 @@ function HotelCard({
                     const benefit = details ? undefined : treatmentBenefit(treatment);
                     const areTreatmentDetailsExpanded = expandedTreatmentDetails === detailKey;
                     return (
-                    <div key={detailKey} className="min-h-[13rem] rounded-2xl bg-ischia-mist p-4">
+                    <div key={detailKey} className="rounded-2xl bg-ischia-mist p-4">
                       {(() => {
                         const breakdown = calculatePaymentBreakdown(treatment.price, opt.depositPercent, opt.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
                         return (
-                      <div className="flex min-h-[10rem] flex-col justify-between gap-4 lg:flex-row lg:items-end">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0 flex-1">
+                          {opt.roomTypeLabel ? (
+                            <p className="text-xs font-bold uppercase tracking-wide text-ischia-blue/60">{opt.roomTypeLabel}</p>
+                          ) : null}
                           <p className="font-black text-ischia-navy">{treatment.label}</p>
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
@@ -335,10 +338,10 @@ function HotelCard({
                             </p>
                           ) : null}
                         </div>
-                        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end lg:w-auto lg:justify-end">
+                        <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
                           <button
                             aria-expanded={isExpanded}
-                            className="no-print rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/15 sm:min-w-32"
+                            className="no-print min-w-32 rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/15"
                             onClick={() => {
                               const nextExpanded = isExpanded ? null : detailKey;
                               setExpanded(nextExpanded);
@@ -356,7 +359,7 @@ function HotelCard({
                             Cosa include
                           </button>
                           {!isConfirmed && (
-                            <div className="no-print w-full text-center sm:w-72">
+                            <div className="no-print w-full text-center sm:w-64">
                               <button
                                 className="w-full rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
                                 onClick={() => setPendingSelection({ option: opt, treatment })}
@@ -403,6 +406,13 @@ function HotelCard({
             <p className="mt-3 text-sm leading-6 text-gray-600">
               Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà per completare la prenotazione.
             </p>
+            <div className="mt-4 rounded-xl bg-ischia-mist p-3 text-sm text-ischia-ink/80">
+              <p><strong>Hotel:</strong> {pendingSelection.option.hotelName}</p>
+              {pendingSelection.option.roomTypeLabel ? (
+                <p><strong>Camera:</strong> {pendingSelection.option.roomTypeLabel}</p>
+              ) : null}
+              <p><strong>Trattamento:</strong> {pendingSelection.treatment.label}</p>
+            </div>
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
                 className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20"
@@ -439,6 +449,7 @@ function TreatmentDetails({ option, treatment, className }: { option: QuoteHotel
       <p className="font-black text-ischia-navy">Cosa include questa opzione</p>
       <div className="mt-2 grid gap-1">
         <p><strong>Hotel:</strong> {option.hotelName}</p>
+        {option.roomTypeLabel ? <p><strong>Camera:</strong> {option.roomTypeLabel}</p> : null}
         <p><strong>Trattamento:</strong> {treatment.label}</p>
         <p><strong>Prezzo:</strong> {formatCurrency(treatment.price)}</p>
         {breakdown.depositPercent > 0 ? (
