@@ -62,8 +62,8 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
   const activeDot = phase >= 4 ? 3 : phase >= 2 ? 2 : 1;
 
   return (
+    // Sfondo blu che copre tutta la pagina (position: absolute; inset: 0)
     <div
-      onClick={handleDismiss}
       style={{
         position: "absolute",
         top: 0,
@@ -72,129 +72,143 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
         left: 0,
         background: "#1B3A5C",
         zIndex: 50,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 20,
-        padding: 32,
         opacity: fading ? 0 : 1,
         transition: "opacity 800ms ease",
+        pointerEvents: fading ? "none" : "auto",
         cursor: "pointer",
         userSelect: "none",
       }}
+      onClick={handleDismiss}
     >
-      {/* Cerchio logo IS */}
+      {/*
+        Inner container sticky: si ancora al top del viewport e occupa 100vh,
+        così il contenuto è sempre centrato rispetto allo schermo, non alla pagina.
+      */}
       <div
         style={{
-          width: 64,
-          height: 64,
-          borderRadius: "50%",
-          background: "#C9A84C",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 22,
-          fontWeight: 700,
-          color: "#1B3A5C",
-          flexShrink: 0,
-          letterSpacing: "0.04em",
+          gap: 20,
+          padding: 32,
         }}
       >
-        IS
+        {/* Cerchio logo IS */}
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "50%",
+            background: "#C9A84C",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 22,
+            fontWeight: 700,
+            color: "#1B3A5C",
+            flexShrink: 0,
+            letterSpacing: "0.04em",
+          }}
+        >
+          IS
+        </div>
+
+        {/* Titolo */}
+        <div
+          style={{
+            opacity: phase >= 1 ? 1 : 0,
+            transition: "opacity 600ms ease",
+            textAlign: "center",
+            fontSize: 24,
+            fontWeight: 700,
+            color: "#ffffff",
+            lineHeight: 1.4,
+          }}
+        >
+          {name ? `Ciao ${name},` : "Benvenuto,"}
+          <br />
+          ho preparato qualcosa per te
+        </div>
+
+        {/* Linea oro */}
+        <div
+          style={{
+            height: 2,
+            background: "#C9A84C",
+            width: phase >= 2 ? 80 : 0,
+            opacity: phase >= 2 ? 1 : 0,
+            transition: "width 500ms ease, opacity 300ms ease",
+            borderRadius: 1,
+            flexShrink: 0,
+          }}
+        />
+
+        {/* Sottotitolo */}
+        <p
+          style={{
+            opacity: phase >= 3 ? 1 : 0,
+            transition: "opacity 600ms ease",
+            fontSize: 13,
+            color: "#C9A84C",
+            textAlign: "center",
+            lineHeight: 1.6,
+            maxWidth: 260,
+            margin: 0,
+          }}
+        >
+          Ho selezionato le migliori soluzioni
+          <br />
+          per il tuo soggiorno a Ischia
+        </p>
+
+        {/* Hint tocca */}
+        <p
+          style={{
+            opacity: phase >= 4 ? 1 : 0,
+            transition: "opacity 600ms ease",
+            fontSize: 11,
+            color: "rgba(255,255,255,0.4)",
+            textAlign: "center",
+            margin: 0,
+          }}
+        >
+          Tocca per scoprire la tua proposta
+        </p>
+
+        {/* Dot indicatori */}
+        <div style={{ display: "flex", gap: 8 }}>
+          {[1, 2, 3].map((dot) => (
+            <div
+              key={dot}
+              style={{
+                width: 5,
+                height: 5,
+                borderRadius: "50%",
+                background: activeDot === dot ? "#C9A84C" : "rgba(255,255,255,0.3)",
+                transition: "background 300ms ease",
+                flexShrink: 0,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Barra progresso — ancorata al fondo del viewport (bottom del container sticky) */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            height: 3,
+            background: "#C9A84C",
+            width: `${progressWidth}%`,
+            transition: progressMode ? "width 2s linear" : "none",
+          }}
+        />
       </div>
-
-      {/* Titolo */}
-      <div
-        style={{
-          opacity: phase >= 1 ? 1 : 0,
-          transition: "opacity 600ms ease",
-          textAlign: "center",
-          fontSize: 24,
-          fontWeight: 700,
-          color: "#ffffff",
-          lineHeight: 1.4,
-        }}
-      >
-        {name ? `Ciao ${name},` : "Benvenuto,"}
-        <br />
-        ho preparato qualcosa per te
-      </div>
-
-      {/* Linea oro */}
-      <div
-        style={{
-          height: 2,
-          background: "#C9A84C",
-          width: phase >= 2 ? 80 : 0,
-          opacity: phase >= 2 ? 1 : 0,
-          transition: "width 500ms ease, opacity 300ms ease",
-          borderRadius: 1,
-          flexShrink: 0,
-        }}
-      />
-
-      {/* Sottotitolo */}
-      <p
-        style={{
-          opacity: phase >= 3 ? 1 : 0,
-          transition: "opacity 600ms ease",
-          fontSize: 13,
-          color: "#C9A84C",
-          textAlign: "center",
-          lineHeight: 1.6,
-          maxWidth: 260,
-          margin: 0,
-        }}
-      >
-        Ho selezionato le migliori soluzioni
-        <br />
-        per il tuo soggiorno a Ischia
-      </p>
-
-      {/* Hint tocca */}
-      <p
-        style={{
-          opacity: phase >= 4 ? 1 : 0,
-          transition: "opacity 600ms ease",
-          fontSize: 11,
-          color: "rgba(255,255,255,0.4)",
-          textAlign: "center",
-          margin: 0,
-        }}
-      >
-        Tocca per scoprire la tua proposta
-      </p>
-
-      {/* Dot indicatori */}
-      <div style={{ display: "flex", gap: 8 }}>
-        {[1, 2, 3].map((dot) => (
-          <div
-            key={dot}
-            style={{
-              width: 5,
-              height: 5,
-              borderRadius: "50%",
-              background: activeDot === dot ? "#C9A84C" : "rgba(255,255,255,0.3)",
-              transition: "background 300ms ease",
-              flexShrink: 0,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Barra progresso */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          height: 3,
-          background: "#C9A84C",
-          width: `${progressWidth}%`,
-          transition: progressMode ? "width 2s linear" : "none",
-        }}
-      />
     </div>
   );
 }
