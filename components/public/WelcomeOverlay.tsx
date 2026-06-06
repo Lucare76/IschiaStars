@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Props = {
@@ -13,7 +14,14 @@ function capitalizeName(name: string): string {
 }
 
 export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
-  const [ready, setReady] = useState(false);
+  const storageKey = `welcome_shown_${quoteCode}`;
+
+  // Lazy init: sul server restituisce true (overlay nell'HTML iniziale → nessun flash).
+  // Sul client controlla sessionStorage prima del primo render.
+  const [visible] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return !sessionStorage.getItem(storageKey);
+  });
   const [fading, setFading] = useState(false);
   const [gone, setGone] = useState(false);
   const [phase, setPhase] = useState<0 | 1 | 2 | 3 | 4>(0);
@@ -21,7 +29,6 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
   const [progressWidth, setProgressWidth] = useState(0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const dismissed = useRef(false);
-  const storageKey = `welcome_shown_${quoteCode}`;
 
   const handleDismiss = useCallback(() => {
     if (dismissed.current) return;
@@ -35,8 +42,11 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
   }, [storageKey]);
 
   useEffect(() => {
-    if (sessionStorage.getItem(storageKey)) return;
-    setReady(true);
+    // Già mostrato: dismiss immediato senza animazione
+    if (!visible) {
+      setGone(true);
+      return;
+    }
 
     const add = (fn: () => void, delay: number) => {
       const t = setTimeout(fn, delay);
@@ -54,16 +64,18 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
     return () => {
       timers.current.forEach(clearTimeout);
     };
-  }, [storageKey, handleDismiss]);
+  }, [visible, handleDismiss]);
 
-  if (!ready || gone) return null;
+  if (!visible || gone) return null;
 
   const name = capitalizeName(customerFirstName);
   const activeDot = phase >= 4 ? 3 : phase >= 2 ? 2 : 1;
 
   return (
-    // Sfondo blu che copre tutta la pagina (position: absolute; inset: 0)
+    // Sfondo blu che copre tutta la pagina.
+    // opacity 1 subito — nessun fade-in. Solo il dismiss usa la transizione.
     <div
+      onClick={handleDismiss}
       style={{
         position: "absolute",
         top: 0,
@@ -73,17 +85,14 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
         background: "#1B3A5C",
         zIndex: 50,
         opacity: fading ? 0 : 1,
-        transition: "opacity 800ms ease",
+        transition: fading ? "opacity 800ms ease" : "none",
         pointerEvents: fading ? "none" : "auto",
         cursor: "pointer",
         userSelect: "none",
       }}
-      onClick={handleDismiss}
     >
-      {/*
-        Inner container sticky: si ancora al top del viewport e occupa 100vh,
-        così il contenuto è sempre centrato rispetto allo schermo, non alla pagina.
-      */}
+      {/* Sticky al viewport: il contenuto rimane centrato nello schermo
+          indipendentemente dall'altezza della pagina. */}
       <div
         style={{
           position: "sticky",
@@ -97,25 +106,15 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
           padding: 32,
         }}
       >
-        {/* Cerchio logo IS */}
-        <div
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: "50%",
-            background: "#C9A84C",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 22,
-            fontWeight: 700,
-            color: "#1B3A5C",
-            flexShrink: 0,
-            letterSpacing: "0.04em",
-          }}
-        >
-          IS
-        </div>
+        {/* Logo reale */}
+        <Image
+          src="/ischiastars-logo.png"
+          alt="IschiaStars"
+          width={80}
+          height={80}
+          priority
+          style={{ objectFit: "contain", flexShrink: 0 }}
+        />
 
         {/* Titolo */}
         <div
@@ -123,7 +122,7 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
             opacity: phase >= 1 ? 1 : 0,
             transition: "opacity 600ms ease",
             textAlign: "center",
-            fontSize: 24,
+            fontSize: 28,
             fontWeight: 700,
             color: "#ffffff",
             lineHeight: 1.4,
@@ -152,7 +151,7 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
           style={{
             opacity: phase >= 3 ? 1 : 0,
             transition: "opacity 600ms ease",
-            fontSize: 13,
+            fontSize: 15,
             color: "#C9A84C",
             textAlign: "center",
             lineHeight: 1.6,
@@ -165,12 +164,12 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
           per il tuo soggiorno a Ischia
         </p>
 
-        {/* Hint tocca */}
+        {/* Hint */}
         <p
           style={{
             opacity: phase >= 4 ? 1 : 0,
             transition: "opacity 600ms ease",
-            fontSize: 11,
+            fontSize: 13,
             color: "rgba(255,255,255,0.4)",
             textAlign: "center",
             margin: 0,
@@ -196,7 +195,7 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
           ))}
         </div>
 
-        {/* Barra progresso — ancorata al fondo del viewport (bottom del container sticky) */}
+        {/* Barra progresso — ancorata al fondo del container sticky = fondo viewport */}
         <div
           style={{
             position: "absolute",
