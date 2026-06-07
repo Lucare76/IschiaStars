@@ -173,14 +173,30 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings }: { quot
               <p className="font-semibold text-amber-800">Coordinate pagamento non configurate. Completa le impostazioni prima di inviare la conferma definitiva.</p>
             )}
           </div>
-          <button
-            className="mt-3 rounded-full bg-ischia-navy px-4 py-2 text-sm font-black text-white disabled:opacity-60"
-            disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
-            onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes }, "Conferma definitiva inviata al cliente.")}
-            type="button"
-          >
-            Invia conferma definitiva al cliente
-          </button>
+          {confirmation?.finalConfirmationSentAt ? (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
+                ✓ Conferma inviata il {formatDateTime(confirmation.finalConfirmationSentAt)}
+              </p>
+              <button
+                className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
+                disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
+                onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes }, "Conferma definitiva reinviata al cliente.")}
+                type="button"
+              >
+                Reinvia conferma al cliente
+              </button>
+            </div>
+          ) : (
+            <button
+              className="mt-3 rounded-full bg-ischia-navy px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+              disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
+              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes }, "Conferma definitiva inviata al cliente.")}
+              type="button"
+            >
+              Invia conferma definitiva al cliente
+            </button>
+          )}
         </div>
       ) : null}
 
