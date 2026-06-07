@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { adminApiFetch } from "@/lib/admin-api-client";
 
 type NotificationType = "apertura" | "cliente_caldo" | "conferma";
@@ -17,6 +18,7 @@ type NotificationItem = {
 };
 
 export function QuoteNotificationsBell() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -24,8 +26,20 @@ export function QuoteNotificationsBell() {
 
   useEffect(() => {
     void loadNotifications(setNotifications);
-    const interval = window.setInterval(() => void loadNotifications(setNotifications), 60_000);
-    return () => window.clearInterval(interval);
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadNotifications(setNotifications);
+    }, 30_000);
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") void loadNotifications(setNotifications);
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -44,6 +58,7 @@ export function QuoteNotificationsBell() {
 
     setNotifications((current) => current.map((notification) => ({ ...notification, isRead: true })));
     await adminApiFetch("/api/quote-notifications", { method: "PATCH" }).catch(() => null);
+    router.refresh();
   }
 
   return (

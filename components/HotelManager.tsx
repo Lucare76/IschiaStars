@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { Hotel } from "@/lib/types";
@@ -67,6 +68,7 @@ const emptyForm: HotelForm = {
 };
 
 export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
+  const router = useRouter();
   const [hotels, setHotels] = useState(initialHotels);
   const [form, setForm] = useState<HotelForm>(emptyForm);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
@@ -101,6 +103,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     setHotels((current) => (form.id ? current.map((hotel) => (hotel.id === result.data!.id ? result.data! : hotel)) : [result.data!, ...current]));
     setForm(fromHotel(result.data!));
     setMessage({ text: "Hotel salvato su database.", ok: true });
+    router.refresh();
   }
 
   function prefillPolicyDefaults() {
@@ -131,6 +134,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     }
     setHotels((current) => current.filter((hotel) => hotel.id !== id));
     setMessage({ text: "Hotel eliminato.", ok: true });
+    router.refresh();
   }
 
   async function syncFromSite() {
@@ -155,6 +159,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     const errors = result.data.errors?.length ? ` Errori: ${result.data.errors.length}.` : "";
     setMessage({ text: `${result.data.imported} hotel importati, ${result.data.updated} aggiornati, ${result.data.alreadyPresent} già presenti.${errors}`, ok: !errors });
     setSyncLoading(false);
+    router.refresh();
   }
 
   async function syncFromLrFeed() {
@@ -178,6 +183,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
     const refreshed = await adminApiFetch("/api/hotels", { headers: adminApiHeaders() });
     const refreshedResult = await readAdminApiJson<{ ok?: boolean; data?: Hotel[] }>(refreshed);
     if (refreshed.ok && refreshedResult?.data) setHotels(refreshedResult.data);
+    router.refresh();
   }
 
   async function importFromSite() {
@@ -368,7 +374,10 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
       body: JSON.stringify(toPayload({ ...fromHotel(hotel), isActive: !hotel.active }))
     });
     const result = await readAdminApiJson<{ ok?: boolean; data?: Hotel }>(response);
-    if (response.ok && result?.data) setHotels((current) => current.map((item) => (item.id === hotel.id ? result.data! : item)));
+    if (response.ok && result?.data) {
+      setHotels((current) => current.map((item) => (item.id === hotel.id ? result.data! : item)));
+      router.refresh();
+    }
   }
 }
 

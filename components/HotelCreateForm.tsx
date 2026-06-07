@@ -2,9 +2,11 @@
 
 import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 
 export function HotelCreateForm() {
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -40,7 +42,8 @@ export function HotelCreateForm() {
           .then(async (response) => {
             const payload = await readAdminApiJson<{ ok?: boolean; error?: string; source?: string }>(response);
             if (!response.ok || !payload?.ok) throw new Error(adminApiErrorMessage(response, payload, "Hotel non salvato."));
-            setMessage("Hotel salvato. Aggiorna la pagina per vederlo in elenco.");
+            setMessage("Hotel salvato.");
+            router.refresh();
           })
           .catch((error: unknown) => setMessage(error instanceof Error ? error.message : "Errore salvataggio hotel"))
           .finally(() => setLoading(false));

@@ -1,5 +1,7 @@
 import { AdminShell } from "@/components/AdminShell";
 
+export const revalidate = 0;
+
 export default function ServicesPolicyPage() {
   return (
     <AdminShell title="Servizi inclusi e policy" subtitle="Funzione futura non inclusa nel flusso operativo attuale.">

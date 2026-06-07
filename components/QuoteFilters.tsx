@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
+import { useBackofficePolling } from "@/hooks/useBackofficePolling";
 import { QuoteCard, QuoteCardActions, QuoteStats } from "@/components/QuoteCard";
 import { Quote } from "@/lib/types";
 
@@ -61,11 +62,7 @@ export function QuoteFilters({
     return () => { cancelled.value = true; };
   }, [fetchQuotes]);
 
-  // Auto-refresh every 60 seconds
-  useEffect(() => {
-    const interval = window.setInterval(() => void fetchQuotes({}), 60_000);
-    return () => window.clearInterval(interval);
-  }, [fetchQuotes]);
+  useBackofficePolling(30_000);
 
   const handleRefresh = useCallback(() => {
     void fetchQuotes({ showSpinner: true });

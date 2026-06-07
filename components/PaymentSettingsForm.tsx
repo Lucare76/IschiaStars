@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
 
 export function PaymentSettingsForm({ initialSettings }: { initialSettings: PaymentSettings }) {
+  const router = useRouter();
   const [form, setForm] = useState({
     ...initialSettings,
     acceptedBalanceMethodsText: initialSettings.acceptedBalanceMethods.join(", ")
@@ -31,6 +33,7 @@ export function PaymentSettingsForm({ initialSettings }: { initialSettings: Paym
     }
     setForm({ ...result.data, acceptedBalanceMethodsText: result.data.acceptedBalanceMethods.join(", ") });
     setMessage(result.warning ? `Coordinate salvate. ${result.warning}` : "Coordinate pagamento salvate.");
+    router.refresh();
   }
 
   return (

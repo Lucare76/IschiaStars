@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiFetch } from "@/lib/admin-api-client";
+import { useBackofficePolling } from "@/hooks/useBackofficePolling";
 
 type ImportState =
   | { type: "idle" }
@@ -23,10 +24,7 @@ export function PendingRequestsRefresh() {
     });
   }, [router]);
 
-  useEffect(() => {
-    const interval = window.setInterval(refresh, 60_000);
-    return () => window.clearInterval(interval);
-  }, [refresh]);
+  useBackofficePolling(30_000);
 
   const handleImport = useCallback(async () => {
     setImportState({ type: "loading" });
