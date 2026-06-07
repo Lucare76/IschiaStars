@@ -20,3 +20,5 @@ Thumbs.db
 scripts/
 .vercel
 .env*.local
+
+supabase-export*/
