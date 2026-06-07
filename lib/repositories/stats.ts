@@ -62,12 +62,13 @@ export function buildDashboardStats({
   const confirmed = activeQuotes.filter((quote) => quote.status === "confermato" || Boolean(quote.confirmation) || activeConfirmedIds.has(quote.id));
   const confirmedIds = new Set(confirmed.map((quote) => quote.id));
   const evaded = activeQuotes.filter((quote) => !confirmedIds.has(quote.id) && quote.status !== "perso_non_disponibile");
+  const opened = activeQuotes.filter((quote) => quote.status === "preventivo_inviato" && activeOpenedIds.has(quote.id));
 
   return {
     createdQuotes: activeQuotes.length,
     pendingRequests: pendingRequests.length,
     sentQuotes: evaded.length,
-    openedQuotes: activeOpenedIds.size,
+    openedQuotes: opened.length,
     confirmedQuotes: confirmed.length,
     lostQuotes: activeQuotes.filter((quote) => quote.status === "perso_non_disponibile").length,
     conversionRate: activeQuotes.length ? Math.round((confirmed.length / activeQuotes.length) * 100) : 0,
