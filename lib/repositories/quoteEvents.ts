@@ -99,17 +99,25 @@ export async function getDashboardEventStats() {
   const localEvents = allQuoteEvents();
   if (!supabase) return fallback(eventDashboard(localEvents));
 
-  const { data, error } = await supabase.from("quote_events").select("*");
+  const { data, error } = await supabase.rpc("get_dashboard_event_stats").maybeSingle();
   if (error) return fallback(eventDashboard(localEvents), error);
-  return fromSupabase(eventDashboard((data ?? []).map(mapEvent)));
+  return fromSupabase(mapDashboardEventAggregates(data));
+}
+
+function mapDashboardEventAggregates(row: unknown) {
+  const aggregates = (row ?? {}) as Record<string, string[] | null | undefined>;
+  return {
+    openedQuoteIds: new Set<string>(aggregates.opened_quote_ids ?? []),
+    confirmedEventIds: new Set<string>(aggregates.confirmed_quote_ids ?? []),
+    whatsappClickQuoteIds: aggregates.whatsapp_click_quote_ids ?? []
+  };
 }
 
 function eventDashboard(events: QuoteEvent[]) {
   return {
     openedQuoteIds: new Set(events.filter((event) => event.eventType === "quote_opened").map((event) => event.quoteId)),
     whatsappClickQuoteIds: events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event)).map((event) => event.quoteId),
-    confirmedEventIds: new Set(events.filter((event) => event.eventType === "quote_confirmed").map((event) => event.quoteId)),
-    lastOpened: events.filter((event) => event.eventType === "quote_opened").at(-1)
+    confirmedEventIds: new Set(events.filter((event) => event.eventType === "quote_confirmed").map((event) => event.quoteId))
   };
 }
 
