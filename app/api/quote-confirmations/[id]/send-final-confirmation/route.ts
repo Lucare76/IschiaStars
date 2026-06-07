@@ -58,7 +58,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     selected_price: quoteResult.data.confirmation.selectedPrice
   });
 
-  return NextResponse.json({ ok: true, source: update.source, data: update.data });
+  const freshQuoteResult = await getQuoteById(quoteResult.data.id);
+  return NextResponse.json({ ok: true, source: update.source, data: update.data, quote: freshQuoteResult.data });
 }
 
 async function resolvePaymentSnapshot(quote: NonNullable<Awaited<ReturnType<typeof getQuoteById>>["data"]>, depositDueAt: string, emailSentAt: string) {

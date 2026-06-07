@@ -8,7 +8,7 @@ import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from
 import { Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
-export function ConfirmationAvailabilityPanel({ quote, paymentSettings }: { quote: Quote; paymentSettings: PaymentSettings }) {
+export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfirmationUpdated }: { quote: Quote; paymentSettings: PaymentSettings; onConfirmationUpdated?: (quote: Quote) => void }) {
   const router = useRouter();
   const confirmation = quote.confirmation;
   const [message, setMessage] = useState<string | null>(null);
@@ -55,13 +55,14 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings }: { quot
       headers: adminApiHeaders(),
       body: JSON.stringify(body)
     });
-    const result = await readAdminApiJson<{ ok?: boolean; error?: string }>(response);
+    const result = await readAdminApiJson<{ ok?: boolean; error?: string; quote?: Quote }>(response);
     setLoadingAction(null);
     if (!response.ok || !result?.ok) {
       setMessage(adminApiErrorMessage(response, result));
       return;
     }
     setMessage(success);
+    if (result.quote) onConfirmationUpdated?.(result.quote);
     router.refresh();
   }
 

@@ -24,7 +24,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   await sendFinalConfirmationEmailAutomatically(params.id, quoteResult.data);
 
-  return NextResponse.json({ ok: true, source: result.source, data: result.data, quote: quoteResult.data });
+  const freshQuoteResult = await getQuoteById(quoteId);
+  return NextResponse.json({ ok: true, source: result.source, data: result.data, quote: freshQuoteResult.data });
 }
 
 async function sendFinalConfirmationEmailAutomatically(confirmationId: string, quote: Awaited<ReturnType<typeof getQuoteById>>["data"]) {

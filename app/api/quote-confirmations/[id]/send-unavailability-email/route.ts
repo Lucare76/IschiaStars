@@ -48,5 +48,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     });
   }
 
-  return NextResponse.json({ ok: true, source: result.source, data: result.data });
+  const freshQuoteResult = await getQuoteById(quoteResult.data.id);
+  return NextResponse.json({ ok: true, source: result.source, data: result.data, quote: freshQuoteResult.data });
 }

@@ -202,7 +202,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
 
   return (
     <div className="space-y-6">
-      {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} paymentSettings={paymentSettings} /> : null}
+      {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} paymentSettings={paymentSettings} onConfirmationUpdated={setCurrentQuote} /> : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_0.36fr]">
       <form className="space-y-5" onSubmit={save}>
