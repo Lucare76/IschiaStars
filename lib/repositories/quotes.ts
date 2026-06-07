@@ -13,8 +13,8 @@ export type QuoteInput = {
   publicToken?: string;
   status?: QuoteStatus;
   clientFirstName: string;
-  clientLastName: string;
-  clientEmail: string;
+  clientLastName?: string;
+  clientEmail?: string;
   clientPhone: string;
   hotelRequested?: string;
   hotelId?: string;
@@ -155,7 +155,11 @@ export async function createQuoteFromRequest(input: QuoteInput, _options: { acce
     status: input.status ?? "in_lavorazione",
     // TODO: move quote-code generation to a Postgres sequence to remove the remaining race condition.
     code: input.code ?? await nextQuoteCode(supabase ?? undefined),
-    publicToken: input.publicToken ?? secureToken()
+    publicToken: input.publicToken ?? secureToken(),
+    // client_last_name / client_email hanno vincolo NOT NULL a DB: normalizziamo a stringa vuota
+    // per evitare un fallimento dell'insert quando il backoffice li lascia vuoti.
+    clientLastName: input.clientLastName ?? "",
+    clientEmail: input.clientEmail ?? ""
   };
 
   if (!supabase) {

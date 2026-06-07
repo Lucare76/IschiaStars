@@ -193,9 +193,9 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
           <div className="grid gap-3 sm:grid-cols-2">
             <ClientSearch onSelect={(c) => { setFirstName(c.firstName); setLastName(c.lastName); setPhone(c.phone); setEmail(c.email); }} />
             <Input name="firstName" label="Nome cliente" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-            <Input name="lastName" label="Cognome cliente" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            <Input name="lastName" label="Cognome cliente" value={lastName} onChange={(e) => setLastName(e.target.value)} />
             <Input name="phone" label="Telefono WhatsApp" required value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <Input name="email" label="Email" required type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input name="email" label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             <Input name="checkIn" label="Data arrivo" required type="date" defaultValue={initialRequest?.arrivalDate} />
             <Input name="checkOut" label="Data partenza" required type="date" defaultValue={initialRequest?.departureDate} />
             <Input name="adults" label="Adulti" min="1" required type="number" value={String(adultsCount)} onChange={(e) => setAdultsCount(Number(e.target.value) || 1)} />

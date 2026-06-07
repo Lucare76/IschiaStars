@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   });
 
   const body = await request.json().catch(() => null);
-  if (!body?.clientFirstName || !body?.clientLastName || !body?.clientEmail || !body?.clientPhone || !body?.checkIn || !body?.checkOut) {
+  if (!body?.clientFirstName || !body?.clientPhone || !body?.checkIn || !body?.checkOut) {
     return NextResponse.json({ ok: false, error: "Dati preventivo incompleti" }, { status: 400 });
   }
 

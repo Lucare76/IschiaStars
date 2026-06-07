@@ -211,9 +211,9 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
         <Section title="Cliente e soggiorno">
           <div className="grid gap-3 sm:grid-cols-2">
             <Input name="firstName" label="Nome" defaultValue={currentQuote.customerFirstName} required />
-            <Input name="lastName" label="Cognome" defaultValue={currentQuote.customerLastName} required />
+            <Input name="lastName" label="Cognome" defaultValue={currentQuote.customerLastName} />
             <Input name="phone" label="Telefono WhatsApp" defaultValue={currentQuote.customerPhone} required />
-            <Input name="email" label="Email" defaultValue={currentQuote.customerEmail} required type="email" />
+            <Input name="email" label="Email" defaultValue={currentQuote.customerEmail} type="email" />
             <Input name="checkIn" label="Data arrivo" defaultValue={currentQuote.arrivalDate} required type="date" />
             <Input name="checkOut" label="Data partenza" defaultValue={currentQuote.departureDate} required type="date" />
             <Input name="adults" label="Adulti" min="1" value={String(adultsCount)} onChange={(e) => setAdultsCount(Number(e.target.value) || 1)} required type="number" />
