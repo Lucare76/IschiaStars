@@ -61,13 +61,13 @@ export async function POST(request: NextRequest) {
   const result = await createQuoteConfirmation(quoteResult.data.id, {
     firstName: body!.firstName!.trim(),
     lastName: body!.lastName!.trim(),
-    fiscalCode: body!.fiscalCode!.trim(),
+    fiscalCode: (body!.fiscalCode ?? "").trim(),
     phone: body!.phone!.trim(),
     email: body!.email!.trim(),
-    address: body!.address!.trim(),
-    city: body!.city!.trim(),
-    postalCode: body!.postalCode!.trim(),
-    province: body!.province!.trim(),
+    address: (body!.address ?? "").trim(),
+    city: (body!.city ?? "").trim(),
+    postalCode: (body!.postalCode ?? "").trim(),
+    province: (body!.province ?? "").trim(),
     acceptedTerms: Boolean(body!.acceptedTerms),
     acceptedPrivacy: Boolean(body!.acceptedPrivacy),
     selectedHotelOptionId: selection.selectedHotelOptionId,
@@ -96,13 +96,13 @@ export async function POST(request: NextRequest) {
     await sendQuoteConfirmedInternalEmail(quoteResult.data, {
       firstName: body!.firstName!.trim(),
       lastName: body!.lastName!.trim(),
-      fiscalCode: body!.fiscalCode!.trim(),
+      fiscalCode: (body!.fiscalCode ?? "").trim(),
       phone: body!.phone!.trim(),
       email: body!.email!.trim(),
-      address: body!.address!.trim(),
-      city: body!.city!.trim(),
-      postalCode: body!.postalCode!.trim(),
-      province: body!.province!.trim(),
+      address: (body!.address ?? "").trim(),
+      city: (body!.city ?? "").trim(),
+      postalCode: (body!.postalCode ?? "").trim(),
+      province: (body!.province ?? "").trim(),
       confirmedAt: result.data.confirmedAt,
       children: ageComparison.map((c) => ({
         id: (body!.children ?? [])[c.childIndex - 1]?.id,
@@ -130,11 +130,11 @@ export async function POST(request: NextRequest) {
 
 function validateConfirmation(body: ConfirmationPayload | null) {
   if (!body?.quoteCode || !body.token) return "Link preventivo non valido";
-  const required = [body.firstName, body.lastName, body.fiscalCode, body.phone, body.email, body.address, body.city, body.postalCode, body.province];
+  const required = [body.firstName, body.lastName, body.phone, body.email];
   if (required.some((v) => !v?.trim())) return "Compila tutti i campi obbligatori";
-  if (body.fiscalCode!.trim().length < 11) return "Codice fiscale troppo breve";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email!.trim())) return "Email non valida";
-  if (!/^\d{5}$/.test(body.postalCode!.trim())) return "CAP non valido";
+  if (body.fiscalCode?.trim() && body.fiscalCode.trim().length < 11) return "Codice fiscale troppo breve";
+  if (body.postalCode?.trim() && !/^\d{5}$/.test(body.postalCode.trim())) return "CAP non valido";
   if (!body.acceptedTerms || !body.acceptedPrivacy) return "Accetta condizioni e privacy";
   return null;
 }

@@ -664,9 +664,6 @@ function HotelCard({
                     const areTreatmentDetailsExpanded = expandedTreatmentDetails === detailKey;
                     return (
                     <div key={detailKey} className="rounded-2xl bg-ischia-mist p-4">
-                      {(() => {
-                        const breakdown = calculatePaymentBreakdown(treatment.price, opt.depositPercent, opt.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
-                        return (
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           {opt.roomTypeLabel ? (
@@ -700,11 +697,6 @@ function HotelCard({
                                 </p>
                               ) : null}
                             </div>
-                          ) : null}
-                          {breakdown.depositPercent > 0 ? (
-                            <p className="mt-1 text-sm font-semibold text-ischia-ink/72">
-                              Acconto {breakdown.depositPercent}%: {formatCurrency(breakdown.depositAmount)} · Saldo {formatCurrency(breakdown.balanceAmount)}
-                            </p>
                           ) : null}
                         </div>
                         <div className="flex w-full flex-wrap items-start gap-3 sm:w-auto sm:justify-end">
@@ -744,8 +736,6 @@ function HotelCard({
                           )}
                         </div>
                       </div>
-                        );
-                      })()}
                       <TreatmentDetails className={`${isExpanded ? "block" : "hidden"} print:block`} option={opt} treatment={treatment} />
                     </div>
                   );})}
@@ -753,19 +743,6 @@ function HotelCard({
               )}
             </div>
           ))}
-        {/* Condizioni dal primo option del gruppo */}
-        {(mainOption.depositPercent != null || mainOption.balanceMethod || mainOption.paymentPolicy || mainOption.cancellationPolicy) && (
-          <div className="mt-4 border-t border-ischia-blue/10 pt-4 text-sm text-ischia-ink/70">
-            {mainOption.depositPercent != null ? <p><strong>Acconto:</strong> {mainOption.depositPercent}%</p> : null}
-            {mainOption.balanceMethod ? <p className="mt-1"><strong>Saldo:</strong> {mainOption.balanceMethod}</p> : null}
-            {mainOption.paymentPolicy && <p><strong>Pagamento:</strong> {mainOption.paymentPolicy}</p>}
-            {mainOption.cancellationPolicy && <p className="mt-1"><strong>Cancellazione:</strong> {mainOption.cancellationPolicy}</p>}
-          </div>
-        )}
-
-        {mainOption.notes && (
-          <p className="mt-3 rounded-xl bg-ischia-sun/10 px-3 py-2 text-sm text-ischia-ink/80">{mainOption.notes}</p>
-        )}
         </div>
       </div>
       {pendingSelection ? (

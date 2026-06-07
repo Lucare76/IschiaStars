@@ -147,13 +147,13 @@ export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; sele
       <div className="grid gap-3 sm:grid-cols-2">
         <Input required name="firstName" label="Nome" defaultValue={quote.customerFirstName} />
         <Input required name="lastName" label="Cognome" defaultValue={quote.customerLastName} />
-        <Input required name="fiscalCode" label="Codice fiscale" minLength={11} />
         <Input required name="phone" label="Telefono WhatsApp" defaultValue={quote.customerPhone} />
         <Input required name="email" label="Email" type="email" defaultValue={quote.customerEmail} />
-        <Input required name="address" label="Indirizzo di residenza" />
-        <Input required name="city" label="Citta" />
-        <Input required name="postalCode" label="CAP" pattern="[0-9]{5}" />
-        <Input required name="province" label="Provincia" />
+        <Input name="fiscalCode" label="Codice fiscale (facoltativo)" minLength={11} />
+        <Input name="address" label="Indirizzo di residenza (facoltativo)" />
+        <Input name="city" label="Citta (facoltativo)" />
+        <Input name="postalCode" label="CAP (facoltativo)" pattern="[0-9]{5}" />
+        <Input name="province" label="Provincia (facoltativo)" />
       </div>
 
       {quote.children.length > 0 && (

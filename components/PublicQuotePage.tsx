@@ -7,7 +7,6 @@ import { HesitantClientBanner } from "@/components/public/HesitantClientBanner";
 import { CountdownBanner } from "@/components/public/CountdownBanner";
 import { QuotePageWrapper } from "@/components/public/QuotePageWrapper";
 import { QuoteProposalSection } from "@/components/QuoteProposalSection";
-import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { PrintButton } from "@/components/PrintButton";
 import { Quote } from "@/lib/types";
 import { formatClientName, formatDate } from "@/lib/utils";
@@ -49,7 +48,7 @@ export function PublicQuotePage({ quote, hotelPopularity = {}, showHesitantBanne
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.14em] text-ischia-blue">Dati soggiorno</p>
-              <QuoteStatusBadge status={quote.status} />
+              <PublicQuoteStatusBadge quote={quote} />
             </div>
           </div>
 
@@ -127,6 +126,18 @@ export function PublicQuotePage({ quote, hotelPopularity = {}, showHesitantBanne
     </main>
     </QuotePageWrapper>
   );
+}
+
+// Il cliente non deve vedere gli stati tecnici di backoffice (in_lavorazione, preventivo_inviato...):
+// mostriamo solo l'esito che lo riguarda davvero.
+function PublicQuoteStatusBadge({ quote }: { quote: Quote }) {
+  if (quote.confirmation?.availabilityStatus === "availability_confirmed") {
+    return <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">Confermato</span>;
+  }
+  if (quote.confirmation) {
+    return <span className="inline-flex rounded-full bg-ischia-sun/18 px-3 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-200">In attesa di conferma</span>;
+  }
+  return null;
 }
 
 function InfoGrid({ items }: { items: [string, string][] }) {
