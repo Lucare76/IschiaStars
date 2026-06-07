@@ -707,7 +707,7 @@ function HotelCard({
                             </p>
                           ) : null}
                         </div>
-                        <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
+                        <div className="flex w-full flex-wrap items-start gap-3 sm:w-auto sm:justify-end">
                           <button
                             aria-expanded={isExpanded}
                             className="no-print min-w-32 rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/15"

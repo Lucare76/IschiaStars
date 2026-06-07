@@ -119,7 +119,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
     const formData = new FormData(event.currentTarget);
     const children = Array.from({ length: childrenCount }, (_, index) => ({ age: Number(formData.get(`child-${index}`) ?? "") }));
     if (children.some((c) => isNaN(c.age) || c.age < 0 || c.age > 17)) {
-      setError("Inserisci l'etÃ  (0â€“17 anni) per ogni bambino.");
+      setError("Inserisci l'età (0–17 anni) per ogni bambino.");
       setLoading(false);
       return;
     }
@@ -185,7 +185,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
         ) : null}
         {showAlternativeWarning ? (
           <p className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
-            Stai proponendo una struttura diversa da quella richiesta. Se Ã¨ un&apos;alternativa, seleziona &quot;La struttura richiesta non Ã¨ disponibile&quot;.
+            Stai proponendo una struttura diversa da quella richiesta. Se è un&apos;alternativa, seleziona &quot;La struttura richiesta non è disponibile&quot;.
           </p>
         ) : null}
 
@@ -201,7 +201,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
             <Input name="adults" label="Adulti" min="1" required type="number" value={String(adultsCount)} onChange={(e) => setAdultsCount(Number(e.target.value) || 1)} />
             <Input label="Numero bambini" type="number" value={String(childrenCount)} onChange={(e) => setChildrenCount(Number(e.target.value))} min="0" />
             {Array.from({ length: childrenCount }, (_, index) => (
-              <Input key={index} name={`child-${index}`} label={`EtÃ  bambino ${index + 1}`} required type="number" min="0" max="17" defaultValue={initialRequest?.children[index]?.age != null ? String(initialRequest.children[index].age) : ""} />
+              <Input key={index} name={`child-${index}`} label={`Età bambino ${index + 1}`} required type="number" min="0" max="17" defaultValue={initialRequest?.children[index]?.age != null ? String(initialRequest.children[index].age) : ""} />
             ))}
             <Input name="rooms" label="Camere" min="1" required type="number" value={String(roomsCount)} onChange={(e) => setRoomsCount(Number(e.target.value) || 1)} />
             <Input name="hotelRequested" label="Hotel richiesto dal cliente" placeholder="Es. Hotel Terme Felix" defaultValue={initialRequest?.requestedHotel} />
@@ -209,11 +209,11 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
         </Section>
 
         <Section title="Proposte hotel">
-          <p className="text-sm text-ischia-ink/65">Inserisci fino a 3 strutture. Ogni struttura puÃ² avere uno o piÃ¹ trattamenti con prezzo. Solo i trattamenti con prezzo vengono mostrati al cliente.</p>
+          <p className="text-sm text-ischia-ink/65">Inserisci fino a 3 strutture. Ogni struttura può avere uno o più trattamenti con prezzo. Solo i trattamenti con prezzo vengono mostrati al cliente.</p>
           {requestedHotelName ? (
             <label className="flex gap-3 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-ischia-ink ring-1 ring-ischia-blue/10">
               <input checked={isAlternativeOffer} className="mt-1 h-4 w-4" onChange={(event) => setIsAlternativeOffer(event.target.checked)} type="checkbox" />
-              La struttura richiesta non Ã¨ disponibile
+              La struttura richiesta non è disponibile
             </label>
           ) : null}
           <HotelOptionsEditor
