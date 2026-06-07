@@ -7,6 +7,14 @@ export function formatCurrency(value: number) {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(value);
 }
 
+export function formatClientName(firstName: string, lastName?: string | null): string {
+  const cleanLast = lastName?.trim();
+  if (!cleanLast || cleanLast.toLowerCase() === "cognome" || cleanLast.toLowerCase() === "xxx") {
+    return firstName.trim();
+  }
+  return `${firstName.trim()} ${cleanLast}`;
+}
+
 export function formatDate(value: string) {
   return formatDateRome(value);
 }

@@ -10,7 +10,7 @@ import { QuoteProposalSection } from "@/components/QuoteProposalSection";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { PrintButton } from "@/components/PrintButton";
 import { Quote } from "@/lib/types";
-import { formatDate } from "@/lib/utils";
+import { formatClientName, formatDate } from "@/lib/utils";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 
 export function PublicQuotePage({ quote, hotelPopularity = {}, showHesitantBanner = false }: { quote: Quote; hotelPopularity?: Record<string, number>; showHesitantBanner?: boolean }) {
@@ -55,7 +55,7 @@ export function PublicQuotePage({ quote, hotelPopularity = {}, showHesitantBanne
 
           <InfoGrid
             items={[
-              ["Cliente", `${quote.customerFirstName} ${quote.customerLastName}`],
+              ["Cliente", formatClientName(quote.customerFirstName, quote.customerLastName)],
               ["Date", `${formatDate(quote.arrivalDate)} — ${formatDate(quote.departureDate)}`],
               ["Ospiti", guests],
               ["Camere", `${quote.rooms}`],
