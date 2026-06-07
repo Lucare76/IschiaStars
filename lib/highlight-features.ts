@@ -3,6 +3,8 @@ type FeatureRule = {
   label: string;
   /** Label of the less-specific rule to suppress when this matches */
   blocksLabel?: string;
+  /** Match only to trigger blocksLabel, without adding its own badge */
+  suppressOnly?: boolean;
 };
 
 // Ordered: specific rules first so they can suppress generic siblings
@@ -10,6 +12,9 @@ const FEATURE_RULES: FeatureRule[] = [
   { pattern: /navetta\s+gratuita/i, label: "Navetta gratuita", blocksLabel: "Navetta disponibile" },
   { pattern: /spiaggia\s+inclusa/i, label: "Spiaggia inclusa", blocksLabel: "Spiaggia" },
   { pattern: /spiaggia\s+convenzionata/i, label: "Spiaggia convenzionata", blocksLabel: "Spiaggia" },
+  // "Servizio navetta...e la spiaggia": è un trasferimento verso la spiaggia, non una spiaggia
+  // propria/convenzionata dell'hotel — non deve generare il badge generico "Spiaggia"
+  { pattern: /navetta[^.]*\bspiaggia\b|spiaggia[^.]*\bnavetta\b/i, label: "Navetta verso la spiaggia", blocksLabel: "Spiaggia", suppressOnly: true },
   { pattern: /piscina\s+termale/i, label: "Piscina termale", blocksLabel: "Piscina" },
   { pattern: /parcheggio\s+gratuito/i, label: "Parcheggio gratuito", blocksLabel: "Parcheggio" },
   { pattern: /colazione\s+inclusa/i, label: "Colazione inclusa" },
@@ -53,7 +58,7 @@ export function extractHighlightedFeatures(input: {
     if (found.length >= MAX_FEATURES) break;
     if (blocked.has(rule.label)) continue;
     if (rule.pattern.test(text)) {
-      found.push(rule.label);
+      if (!rule.suppressOnly) found.push(rule.label);
       if (rule.blocksLabel) blocked.add(rule.blocksLabel);
     }
   }
