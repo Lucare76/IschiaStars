@@ -216,7 +216,9 @@ function eventLabel(eventType: QuoteEvent["eventType"]) {
     compare_opened: "Vista confronto aperta",
     reveal_options_clicked: "Altre proposte rivelate su mobile",
     hesitant_whatsapp_clicked: "Click WhatsApp (cliente indeciso)",
-    supplier_confirmation_sent: "Conferma inviata a hotel/agenzia"
+    supplier_confirmation_sent: "Conferma inviata a hotel/agenzia",
+    reaction_interested: "Ha indicato interesse",
+    reaction_too_expensive: "Ha indicato prezzo alto"
   };
   return labels[eventType];
 }

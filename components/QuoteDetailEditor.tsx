@@ -19,12 +19,12 @@ import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/adm
 import { FeatureFlags } from "@/lib/feature-flags";
 import { PaymentSettings } from "@/lib/payment-settings";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
-import { Hotel, Quote, QuoteStatus, TransportOffer } from "@/lib/types";
-import { formatCurrency, publicQuoteUrl } from "@/lib/utils";
+import { Hotel, Quote, QuoteEvent, QuoteStatus, TransportOffer } from "@/lib/types";
+import { formatCurrency, formatDate, publicQuoteUrl } from "@/lib/utils";
 
 const statusOptions: QuoteStatus[] = ["in_lavorazione", "confermato", "perso_non_disponibile"];
 
-export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings; featureFlags: FeatureFlags }) {
+export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags, quoteEvents = [] }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; quoteEvents?: QuoteEvent[] }) {
   const router = useRouter();
   const effective = getEffectiveHotelOptions(quote);
   const [currentQuote, setCurrentQuote] = useState(quote);
@@ -201,9 +201,36 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     currentQuote.confirmation?.selectedPrice != null ? formatCurrency(currentQuote.confirmation.selectedPrice) : undefined
   ].filter(Boolean).join(" - ");
 
+  const reactionEvents = quoteEvents
+    .filter((event) => event.eventType === "reaction_interested" || event.eventType === "reaction_too_expensive")
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
   return (
     <div className="space-y-6">
       {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} paymentSettings={paymentSettings} featureFlags={featureFlags} onConfirmationUpdated={setCurrentQuote} /> : null}
+
+      {reactionEvents.length > 0 ? (
+        <div className="rounded-2xl bg-white p-5 shadow-soft ring-1 ring-ischia-blue/10">
+          <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Reazioni cliente</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {reactionEvents.map((event) => {
+              const hotelName = typeof event.metadata?.hotelName === "string" ? event.metadata.hotelName : "Hotel";
+              const isInterested = event.eventType === "reaction_interested";
+              return (
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                    isInterested ? "bg-[#DCFCE7] text-[#16A34A]" : "bg-[#FEF2F2] text-[#DC2626]"
+                  }`}
+                  key={event.id}
+                >
+                  {isInterested ? "👍 Mi interessa" : "💸 Troppo caro"} — {hotelName}
+                  <span className="text-gray-400">il {formatDate(event.createdAt)}</span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_0.36fr]">
       <form className="space-y-5" onSubmit={save}>

@@ -13,7 +13,9 @@ const allowedEvents: QuoteEvent["eventType"][] = [
   "details_opened",
   "follow_up_whatsapp_click",
   "compare_opened",
-  "reveal_options_clicked"
+  "reveal_options_clicked",
+  "reaction_interested",
+  "reaction_too_expensive"
 ];
 
 export async function POST(request: NextRequest) {

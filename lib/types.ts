@@ -70,7 +70,9 @@ export type QuoteEvent = {
     | "compare_opened"
     | "reveal_options_clicked"
     | "hesitant_whatsapp_clicked"
-    | "supplier_confirmation_sent";
+    | "supplier_confirmation_sent"
+    | "reaction_interested"
+    | "reaction_too_expensive";
   createdAt: string;
   userAgent?: string;
   metadata?: Record<string, unknown>;

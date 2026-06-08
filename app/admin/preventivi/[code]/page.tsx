@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
 import { QuoteDetailEditor } from "@/components/QuoteDetailEditor";
 import { listHotels } from "@/lib/repositories/hotels";
+import { getQuoteEvents } from "@/lib/repositories/quoteEvents";
 import { getQuoteByCode } from "@/lib/repositories/quotes";
 import { getFeatureFlags, getPaymentSettings } from "@/lib/repositories/settings";
 
@@ -18,6 +19,8 @@ export default async function QuoteDetailPage({ params }: { params: { code: stri
   const quote = quoteResult.data;
   if (!quote) notFound();
 
+  const quoteEventsResult = await getQuoteEvents(quote.id);
+
   return (
     <AdminShell title={`Preventivo ${quote.code}`} subtitle="Modifica proposta, trasporti, condizioni e stato operativo.">
       <div className="mb-5 flex flex-wrap gap-2">
@@ -28,7 +31,7 @@ export default async function QuoteDetailPage({ params }: { params: { code: stri
           Tutti i preventivi
         </Link>
       </div>
-      <QuoteDetailEditor quote={quote} hotels={hotelResult.data} paymentSettings={paymentSettings.data} featureFlags={featureFlagsResult.data} />
+      <QuoteDetailEditor quote={quote} hotels={hotelResult.data} paymentSettings={paymentSettings.data} featureFlags={featureFlagsResult.data} quoteEvents={quoteEventsResult.data} />
     </AdminShell>
   );
 }
