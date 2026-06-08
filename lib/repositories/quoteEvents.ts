@@ -1,4 +1,5 @@
 import { allDemoQuotes, allQuoteEvents, allQuoteStatusEvents, recordQuoteEvent } from "@/lib/demo-store";
+import { updateQuoteStatus } from "@/lib/repositories/quotes";
 import { createQuoteStatusEvent } from "@/lib/repositories/quoteStatusEvents";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -41,7 +42,10 @@ async function markQuoteOpenedInSupabase(quoteId: string) {
   if (!supabase) return;
 
   const { data } = await supabase.from("quotes").select("status").eq("id", quoteId).maybeSingle();
-  if (data?.status !== "preventivo_inviato") return;
+  if (data?.status === "in_lavorazione") {
+    await updateQuoteStatus(quoteId, "preventivo_inviato");
+  }
+  if (data?.status !== "preventivo_inviato" && data?.status !== "in_lavorazione") return;
 
   await createQuoteStatusEvent({
     quoteId,

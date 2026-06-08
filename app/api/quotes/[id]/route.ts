@@ -80,6 +80,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     return quoteMutationResponse(result);
   }
 
+  if (body?.action === "mark_sent") {
+    const result = await updateQuoteStatus(params.id, "preventivo_inviato");
+    return quoteMutationResponse(result);
+  }
+
   if (body?.action === "send") {
     const quoteResult = await getQuoteById(params.id);
     if (quoteResult.source !== "supabase") return quoteMutationResponse(quoteResult);

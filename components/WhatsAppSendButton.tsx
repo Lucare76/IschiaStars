@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Quote } from "@/lib/types";
 import { trackQuoteEvent } from "@/lib/client-tracking";
+import { adminApiFetch } from "@/lib/admin-api-client";
 import { normalizeItalianPhone, whatsappQuoteMessage } from "@/lib/utils";
 
 export function WhatsAppSendButton({ quote, label = "Invia su WhatsApp" }: { quote: Quote; label?: string }) {
@@ -15,6 +16,13 @@ export function WhatsAppSendButton({ quote, label = "Invia su WhatsApp" }: { quo
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
     window.open(chatUrl, "_blank", "noopener,noreferrer");
+
+    if (quote.status === "in_lavorazione") {
+      await adminApiFetch(`/api/quotes/${quote.id}`, {
+        method: "POST",
+        body: JSON.stringify({ action: "mark_sent" })
+      }).catch(() => null);
+    }
   }
 
   return (
