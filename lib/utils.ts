@@ -44,12 +44,14 @@ export function normalizeItalianPhone(phone: string) {
 export function whatsappQuoteMessage(quote: Quote) {
   const hotelNames = Array.from(new Map(quote.hotelOptions.map((o) => [o.hotelGroup, o.hotelName])).values());
   const hasMultipleOptions = hotelNames.length > 1;
-  const hotelLine = hasMultipleOptions ? hotelNames.join(" - ") : (hotelNames[0] ?? quote.proposedHotel.name);
+  const hotelBlock = hasMultipleOptions
+    ? hotelNames.map((name) => `🏨 ${name}`).join("\n")
+    : `🏨 ${hotelNames[0] ?? quote.proposedHotel.name}`;
   const dates = formatStayRangeRome(quote.arrivalDate, quote.departureDate);
   return adminQuoteWhatsappMessage({
     quote,
     dates,
-    hotelLine,
+    hotelBlock,
     quoteUrl: absolutePublicQuoteUrl(quote),
     hasMultipleOptions
   });

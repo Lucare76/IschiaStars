@@ -3,11 +3,11 @@ import { Quote } from "@/lib/types";
 export function adminQuoteWhatsappMessage(input: {
   quote: Quote;
   dates: string;
-  hotelLine: string;
+  hotelBlock: string;
   quoteUrl: string;
   hasMultipleOptions: boolean;
 }) {
-  const { quote, dates, hotelLine, quoteUrl, hasMultipleOptions } = input;
+  const { quote, dates, hotelBlock, quoteUrl, hasMultipleOptions } = input;
 
   const intro = hasMultipleOptions
     ? "Abbiamo selezionato per te più soluzioni per il soggiorno a Ischia:"
@@ -23,7 +23,7 @@ La tua proposta personalizzata per Ischia è pronta 🌊
 
 ${intro}
 
-🏨 ${hotelLine}
+${hotelBlock}
 📅 ${dates}
 
 Puoi vedere subito il preventivo completo, con tutti i dettagli del soggiorno, cliccando qui:
