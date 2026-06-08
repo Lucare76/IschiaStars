@@ -69,7 +69,8 @@ export type QuoteEvent = {
     | "follow_up_whatsapp_click"
     | "compare_opened"
     | "reveal_options_clicked"
-    | "hesitant_whatsapp_clicked";
+    | "hesitant_whatsapp_clicked"
+    | "supplier_confirmation_sent";
   createdAt: string;
   userAgent?: string;
   metadata?: Record<string, unknown>;

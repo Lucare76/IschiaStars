@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { availabilityStatusLabel, defaultUnavailabilityMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
@@ -18,6 +18,13 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfir
   const [unavailableReason, setUnavailableReason] = useState("");
   const [alternativeToPropose, setAlternativeToPropose] = useState(false);
   const [unavailableMessage, setUnavailableMessage] = useState(defaultUnavailabilityMessage(quote.customerFirstName, quote.code));
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [supplierSentInfo, setSupplierSentInfo] = useState<{ email: string; sentAt: string } | null>(null);
+  const [supplierRecipientEmail, setSupplierRecipientEmail] = useState("");
+  const [supplierNetPrice, setSupplierNetPrice] = useState("");
+  const [supplierNotes, setSupplierNotes] = useState("");
+  const [supplierSending, setSupplierSending] = useState(false);
+  const [supplierError, setSupplierError] = useState<string | null>(null);
 
   const confirmationId = confirmation?.id;
   const status = confirmation?.availabilityStatus ?? "availability_to_check";
@@ -45,7 +52,63 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfir
     return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
   }, [depositDueAt]);
 
+  useEffect(() => {
+    if (!confirmationId || status !== "availability_confirmed") return;
+    let cancelled = false;
+    void (async () => {
+      const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/send-supplier-confirmation`, {
+        method: "GET",
+        headers: adminApiHeaders()
+      });
+      const result = await readAdminApiJson<{ ok?: boolean; lastSent?: { recipientEmail: string; sentAt: string } | null }>(response);
+      if (!cancelled && result?.ok && result.lastSent) {
+        setSupplierSentInfo({ email: result.lastSent.recipientEmail, sentAt: result.lastSent.sentAt });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [confirmationId, status]);
+
   if (!confirmation || !confirmationId) return null;
+
+  function openSupplierModal() {
+    setSupplierError(null);
+    setShowSupplierModal(true);
+  }
+
+  async function submitSupplierConfirmation() {
+    setSupplierError(null);
+    const netPriceValue = Number(supplierNetPrice);
+    if (!supplierRecipientEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplierRecipientEmail.trim())) {
+      setSupplierError("Inserisci un indirizzo email valido.");
+      return;
+    }
+    if (!Number.isFinite(netPriceValue) || netPriceValue <= 0) {
+      setSupplierError("Inserisci un prezzo netto valido.");
+      return;
+    }
+
+    setSupplierSending(true);
+    const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/send-supplier-confirmation`, {
+      method: "POST",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({ recipientEmail: supplierRecipientEmail.trim(), netPrice: netPriceValue, notes: supplierNotes.trim() || undefined })
+    });
+    const result = await readAdminApiJson<{ success?: boolean; error?: string; sentAt?: string; recipientEmail?: string }>(response);
+    setSupplierSending(false);
+
+    if (!response.ok || !result?.success) {
+      setSupplierError(adminApiErrorMessage(response, result));
+      return;
+    }
+
+    setSupplierSentInfo({ email: result.recipientEmail ?? supplierRecipientEmail.trim(), sentAt: result.sentAt ?? new Date().toISOString() });
+    setShowSupplierModal(false);
+    setSupplierRecipientEmail("");
+    setSupplierNetPrice("");
+    setSupplierNotes("");
+  }
 
   async function postAction(path: string, body: Record<string, unknown>, success: string) {
     setLoadingAction(path);
@@ -216,6 +279,99 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfir
               Invia conferma definitiva al cliente
             </button>
           )}
+        </div>
+      ) : null}
+
+      {status === "availability_confirmed" ? (
+        <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-ischia-blue/15">
+          <h3 className="font-black text-ischia-navy">Conferma a hotel / agenzia</h3>
+          <p className="mt-1 text-sm text-ischia-ink/65">Invia una email di conferma prenotazione al fornitore, con il prezzo netto concordato (non visibile al cliente).</p>
+          {supplierSentInfo ? (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <p className="rounded-xl bg-ischia-mist px-3 py-2 text-sm font-black text-ischia-navy">
+                ✓ Conferma inviata a {supplierSentInfo.email} il {formatDateTime(supplierSentInfo.sentAt)}
+              </p>
+              <button
+                className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[#1B3A5C] ring-1 ring-[#1B3A5C]/30 hover:bg-[#EFF6FF] disabled:opacity-60"
+                disabled={Boolean(loadingAction)}
+                onClick={openSupplierModal}
+                type="button"
+              >
+                Invia di nuovo
+              </button>
+            </div>
+          ) : (
+            <button
+              className="mt-3 rounded-full border border-[#1B3A5C] bg-white px-4 py-2 text-sm font-black text-[#1B3A5C] hover:bg-[#EFF6FF] disabled:opacity-60"
+              disabled={Boolean(loadingAction)}
+              onClick={openSupplierModal}
+              type="button"
+            >
+              Invia conferma a hotel/agenzia
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {showSupplierModal ? (
+        <div aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5" role="dialog">
+          <div className="mx-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-black text-ischia-navy">Invia conferma a hotel/agenzia</h3>
+            <p className="mt-2 text-sm leading-6 text-gray-600">I dati del cliente e del soggiorno verranno inclusi automaticamente.</p>
+
+            {supplierError ? <p className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700 ring-1 ring-rose-100">{supplierError}</p> : null}
+
+            <div className="mt-4 space-y-3">
+              <label className="block text-sm font-semibold text-ischia-ink">
+                Email hotel o agenzia
+                <input
+                  className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+                  placeholder="email@hotel.it"
+                  type="email"
+                  value={supplierRecipientEmail}
+                  onChange={(event) => setSupplierRecipientEmail(event.target.value)}
+                />
+              </label>
+              <label className="block text-sm font-semibold text-ischia-ink">
+                Prezzo netto (visibile solo al fornitore)
+                <input
+                  className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+                  placeholder="es. 1200"
+                  type="number"
+                  value={supplierNetPrice}
+                  onChange={(event) => setSupplierNetPrice(event.target.value)}
+                />
+              </label>
+              <label className="block text-sm font-semibold text-ischia-ink">
+                Note aggiuntive
+                <textarea
+                  className="mt-1 min-h-16 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+                  placeholder="Es. camera vista mare, culla aggiuntiva..."
+                  value={supplierNotes}
+                  onChange={(event) => setSupplierNotes(event.target.value)}
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20"
+                disabled={supplierSending}
+                onClick={() => setShowSupplierModal(false)}
+                type="button"
+              >
+                Annulla
+              </button>
+              <button
+                className="rounded-full bg-[#1B3A5C] px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+                disabled={supplierSending}
+                onClick={() => void submitSupplierConfirmation()}
+                type="button"
+              >
+                {supplierSending ? "Invio in corso…" : "Invia conferma"}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 

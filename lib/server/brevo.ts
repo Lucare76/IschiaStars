@@ -1,5 +1,6 @@
-import type { Quote } from "@/lib/types";
+import type { Quote, QuoteConfirmation } from "@/lib/types";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
+import { ischiastarsWhatsappNumber } from "@/lib/utils";
 
 type BrevoRecipient = { email: string; name?: string };
 
@@ -691,6 +692,115 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
     text,
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" },
     attachment: [{ name: `voucher-${quote.code}.pdf`, content: pdfBase64 }]
+  });
+}
+
+export async function sendSupplierConfirmationEmail(params: {
+  to: string;
+  quote: Quote;
+  confirmation: QuoteConfirmation;
+  netPrice: number;
+  notes?: string;
+}): Promise<boolean> {
+  const { to, quote, confirmation, netPrice, notes } = params;
+
+  const missingEnvReason = brevoMissingEnvReason();
+  if (missingEnvReason) {
+    console.info(`[brevo] skipped supplier confirmation email code=${quote.code} reason=${missingEnvReason}`);
+    return false;
+  }
+
+  const fullName = `${confirmation.firstName ?? quote.customerFirstName} ${confirmation.lastName ?? quote.customerLastName}`.trim();
+  const phone = confirmation.phone ?? quote.customerPhone;
+  const email = confirmation.email ?? quote.customerEmail;
+  const whatsapp = ischiastarsWhatsappNumber();
+
+  const childrenRows = (quote.children ?? [])
+    .map((child, index) => {
+      const ageLabel = child.age != null ? `${child.age} anni` : child.birthDate ? `nato il ${formatDate(child.birthDate)}` : "età non indicata";
+      return `<tr><td style="padding:6px 0;color:#555;">Bambino ${index + 1}</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${ageLabel}</td></tr>`;
+    })
+    .join("");
+  const childrenText = (quote.children ?? [])
+    .map((child, index) => {
+      const ageLabel = child.age != null ? `${child.age} anni` : child.birthDate ? `nato il ${formatDate(child.birthDate)}` : "età non indicata";
+      return `Bambino ${index + 1}: ${ageLabel}`;
+    })
+    .join("; ");
+
+  const netPriceFormatted = formatPrice(netPrice);
+
+  const html = `<!DOCTYPE html><html lang="it"><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:8px;overflow:hidden;">
+        <tr><td style="background:#1B3A5C;padding:22px 32px;color:#fff;">
+          <div style="font-weight:bold;font-size:18px;">IschiaStars — Conferma Prenotazione</div>
+          <div style="margin-top:6px;font-size:13px;color:#dbe5f0;">Gentile fornitore, confermiamo la seguente prenotazione:</div>
+        </td></tr>
+        <tr><td style="padding:24px 32px;color:#333;font-size:14px;line-height:1.6;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+            <tr><td colspan="2" style="font-weight:bold;color:#1B3A5C;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">Dati cliente</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Nome</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${fullName}</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Telefono</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${phone || "-"}</td></tr>
+            ${email ? `<tr><td style="padding:6px 0;color:#555;">Email</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${email}</td></tr>` : ""}
+          </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+            <tr><td colspan="2" style="font-weight:bold;color:#1B3A5C;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">Dati soggiorno</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Hotel/Struttura</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${confirmation.selectedHotelName ?? "-"}</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Trattamento</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${confirmation.selectedTreatmentLabel ?? "-"}</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Check-in</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${formatDate(quote.arrivalDate)}</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Check-out</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${formatDate(quote.departureDate)}</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Adulti</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${quote.adults}</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Camere</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${quote.rooms}</td></tr>
+            ${childrenRows}
+          </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#FBF5E6;border:1px solid #C9A84C;border-radius:8px;margin-bottom:18px;">
+            <tr><td style="padding:14px 18px;font-weight:bold;color:#7a5a12;">Prezzo netto concordato: ${netPriceFormatted}</td></tr>
+          </table>
+          ${notes?.trim() ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6;border-radius:8px;margin-bottom:18px;">
+            <tr><td style="padding:14px 18px;color:#374151;"><strong>Note:</strong> ${notes.trim()}</td></tr>
+          </table>` : ""}
+          <p style="color:#555;">Per conferma rispondere a questa email.</p>
+        </td></tr>
+        <tr><td style="padding:18px 32px;border-top:1px solid #e5e7eb;color:#6B7280;font-size:12px;">
+          IschiaStars — WhatsApp +${whatsapp}
+        </td></tr>
+      </table>
+    </td></tr></table>
+  </body></html>`;
+
+  const text = [
+    "IschiaStars — Conferma Prenotazione",
+    "Gentile fornitore, confermiamo la seguente prenotazione:",
+    "",
+    "Dati cliente",
+    `Nome: ${fullName}`,
+    `Telefono: ${phone || "-"}`,
+    ...(email ? [`Email: ${email}`] : []),
+    "",
+    "Dati soggiorno",
+    `Hotel/Struttura: ${confirmation.selectedHotelName ?? "-"}`,
+    `Trattamento: ${confirmation.selectedTreatmentLabel ?? "-"}`,
+    `Check-in: ${formatDate(quote.arrivalDate)}`,
+    `Check-out: ${formatDate(quote.departureDate)}`,
+    `Adulti: ${quote.adults}`,
+    `Camere: ${quote.rooms}`,
+    ...(childrenText ? [childrenText] : []),
+    "",
+    `Prezzo netto concordato: ${netPriceFormatted}`,
+    ...(notes?.trim() ? ["", `Note: ${notes.trim()}`] : []),
+    "",
+    "Per conferma rispondere a questa email.",
+    "",
+    `IschiaStars — WhatsApp +${whatsapp}`
+  ].join("\n");
+
+  return sendBrevoEmail({
+    to: [{ email: to }],
+    subject: `Conferma prenotazione — ${confirmation.selectedHotelName ?? quote.proposedHotel.name} — ${quote.code}`,
+    html,
+    text,
+    replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
   });
 }
 
