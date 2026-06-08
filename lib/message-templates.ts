@@ -8,40 +8,39 @@ export function adminQuoteWhatsappMessage(input: {
   hasMultipleOptions: boolean;
 }) {
   const { quote, dates, hotelLine, quoteUrl, hasMultipleOptions } = input;
-  const footer = `💬 Per qualsiasi ulteriore informazione contattaci:
-📞 Tel. 081 90 54 81
+
+  const intro = hasMultipleOptions
+    ? "Abbiamo selezionato per te più soluzioni per il soggiorno a Ischia:"
+    : "Abbiamo selezionato per te una soluzione presso:";
+
+  const linkLine = hasMultipleOptions
+    ? "Dal link potrai confrontare le opzioni e confermare direttamente online quella che preferisci."
+    : "Dal link potrai anche confermare direttamente online in modo semplice e veloce.";
+
+  return `👋 Ciao ${quote.customerFirstName}!
+
+La tua proposta personalizzata per Ischia è pronta 🌊
+
+${intro}
+
+🏨 ${hotelLine}
+📅 ${dates}
+
+Puoi vedere subito il preventivo completo, con tutti i dettagli del soggiorno, cliccando qui:
+
+👉 ${quoteUrl}
+
+${linkLine}
+
+⚠️ Per questo periodo le disponibilità sono limitate: se la soluzione è di tuo gradimento, ti consigliamo di bloccarla appena possibile per mantenere la tariffa proposta.
+
+Per dubbi, modifiche o richieste particolari puoi contattarci qui:
+
+📞 081 90 54 81
 💬 WhatsApp 371 75 90 017
 
-⏳ Le disponibilita per queste date sono limitate: se la proposta ti convince, ti consigliamo di bloccarla quanto prima per non perdere la soluzione selezionata.
-
-Grazie,
-Diego - IschiaStars 🌊`;
-
-  if (hasMultipleOptions) {
-    return `👋 Ciao ${quote.customerFirstName},
-ho preparato la tua proposta con più soluzioni per il soggiorno a Ischia:
-
-📅 Date: ${dates}
-🏨 Hotel: ${hotelLine}
-
-👉 ${quoteUrl}
-
-Puoi confrontare le opzioni e confermare online quella che preferisci.
-
-${footer}`;
-  }
-
-  return `👋 Ciao ${quote.customerFirstName},
-ho preparato la tua proposta per il soggiorno a Ischia:
-
-📅 Date: ${dates}
-🏨 Hotel: ${hotelLine}
-
-👉 ${quoteUrl}
-
-Puoi aprirla, vedere tutti i dettagli e confermare direttamente online.
-
-${footer}`;
+A presto,
+Diego - IschiaStars ☀️`;
 }
 
 export function publicQuoteInfoWhatsappMessage(quote: Quote, quoteUrl?: string) {
