@@ -169,13 +169,14 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
       headers: adminApiHeaders(),
       body: JSON.stringify({})
     });
-    const result = await readAdminApiJson<{ success?: boolean; error?: string }>(response);
+    const result = await readAdminApiJson<{ success?: boolean; error?: string; quote?: Quote }>(response);
     setLoadingAction(null);
     if (!response.ok || !result?.success) {
       setMessage(adminApiErrorMessage(response, result));
       return;
     }
     setMessage(success);
+    if (result.quote) onConfirmationUpdated?.(result.quote);
     router.refresh();
   }
 

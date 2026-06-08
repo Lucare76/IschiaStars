@@ -56,5 +56,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     console.error("[deposit-received] voucher generation/sending failed", error);
   }
 
-  return NextResponse.json({ success: true, depositPaidAt });
+  const freshQuoteResult = await getQuoteById(quote.id);
+  return NextResponse.json({ success: true, depositPaidAt, quote: freshQuoteResult.data });
 }
