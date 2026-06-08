@@ -178,13 +178,13 @@ async function fetchConfirmationsForQuotes(quoteIds: string[]): Promise<Record<s
   return result;
 }
 
-export async function createQuoteFromRequest(input: QuoteInput, _options: { accessToken?: string } = {}): Promise<RepositoryResult<Quote | null>> {
+export async function createQuoteFromRequest(input: QuoteInput, _options: { accessToken?: string; isLabTest?: boolean } = {}): Promise<RepositoryResult<Quote | null>> {
   const supabase = createSupabaseAdminClient();
   const normalizedInput = {
     ...input,
     status: input.status ?? "in_lavorazione",
     // TODO: move quote-code generation to a Postgres sequence to remove the remaining race condition.
-    code: input.code ?? await nextQuoteCode(supabase ?? undefined),
+    code: input.code ?? await nextQuoteCode(supabase ?? undefined, _options.isLabTest === true),
     publicToken: input.publicToken ?? secureToken(),
     // client_last_name / client_email hanno vincolo NOT NULL a DB: normalizziamo a stringa vuota
     // per evitare un fallimento dell'insert quando il backoffice li lascia vuoti.
@@ -259,8 +259,21 @@ export async function createQuoteFromRequest(input: QuoteInput, _options: { acce
   return getQuoteById(quoteId);
 }
 
-async function nextQuoteCode(supabase?: ReturnType<typeof createSupabaseAdminClient>): Promise<string> {
+async function nextQuoteCode(supabase?: ReturnType<typeof createSupabaseAdminClient>, isLabTest = false): Promise<string> {
   const year = new Date().getFullYear();
+
+  if (isLabTest) {
+    if (supabase) {
+      const { count } = await supabase
+        .from("quotes")
+        .select("id", { count: "exact", head: true })
+        .like("code", "LAB-%");
+      return `LAB-${year}-${String((count ?? 0) + 1).padStart(3, "0")}`;
+    }
+    const labCount = allDemoQuotes().filter((q) => q.code.startsWith("LAB-")).length;
+    return `LAB-${year}-${String(labCount + 1).padStart(3, "0")}`;
+  }
+
   if (supabase) {
     const { data } = await supabase
       .from("quotes")

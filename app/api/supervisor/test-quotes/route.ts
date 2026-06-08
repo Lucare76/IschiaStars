@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       halfBoardPrice: treatment === "HB" ? price : undefined,
       fullBoardPrice: treatment === "FB" ? price : undefined
     }]
-  });
+  }, { isLabTest: true });
 
   if (!result.data) {
     return NextResponse.json({ ok: false, error: result.error ?? "Creazione non riuscita" }, { status: 503 });
