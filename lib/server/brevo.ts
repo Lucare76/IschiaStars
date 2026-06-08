@@ -3,6 +3,8 @@ import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 
 type BrevoRecipient = { email: string; name?: string };
 
+type BrevoAttachment = { name: string; content: string };
+
 type SendBrevoEmailParams = {
   to: BrevoRecipient[];
   cc?: BrevoRecipient[];
@@ -10,6 +12,7 @@ type SendBrevoEmailParams = {
   html: string;
   text?: string;
   replyTo?: BrevoRecipient;
+  attachment?: BrevoAttachment[];
 };
 
 export type BrevoConfirmationDetails = {
@@ -69,7 +72,8 @@ async function sendBrevoEmailWithResult(params: SendBrevoEmailParams): Promise<B
     subject: params.subject,
     htmlContent: params.html,
     ...(params.text ? { textContent: params.text } : {}),
-    ...(params.replyTo ? { replyTo: params.replyTo } : {})
+    ...(params.replyTo ? { replyTo: params.replyTo } : {}),
+    ...(params.attachment?.length ? { attachment: params.attachment } : {})
   };
 
   try {
@@ -637,6 +641,56 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     html,
     text,
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
+  });
+}
+
+export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string): Promise<boolean> {
+  const missingEnvReason = brevoMissingEnvReason();
+  if (missingEnvReason) {
+    console.info(`[brevo] skipped voucher email code=${quote.code} reason=${missingEnvReason}`);
+    return false;
+  }
+
+  const email = quote.confirmation?.email?.trim() || quote.customerEmail?.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    console.warn(`[brevo] skipped voucher email code=${quote.code} reason=missing_client_email`);
+    return false;
+  }
+
+  const firstName = quote.confirmation?.firstName ?? quote.customerFirstName ?? "Cliente";
+  const fullName = `${quote.confirmation?.firstName ?? quote.customerFirstName} ${quote.confirmation?.lastName ?? quote.customerLastName}`.trim();
+
+  const html = `<!DOCTYPE html><html lang="it"><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:8px;overflow:hidden;">
+        <tr><td style="background:#1B3A5C;padding:22px 32px;color:#fff;font-weight:bold;font-size:18px;">Il tuo voucher IschiaStars</td></tr>
+        <tr><td style="padding:28px 32px;color:#333;font-size:15px;line-height:1.7;">
+          <p>Ciao ${firstName},</p>
+          <p>ti confermiamo la ricezione della caparra per il tuo soggiorno a Ischia. In allegato trovi il tuo voucher di prenotazione.</p>
+          <p>Per qualsiasi informazione siamo sempre disponibili su WhatsApp.</p>
+          <p>IschiaStars</p>
+        </td></tr>
+      </table>
+    </td></tr></table>
+  </body></html>`;
+
+  const text = [
+    `Ciao ${firstName},`,
+    "",
+    "ti confermiamo la ricezione della caparra per il tuo soggiorno a Ischia. In allegato trovi il tuo voucher di prenotazione.",
+    "",
+    "Per qualsiasi informazione siamo sempre disponibili su WhatsApp.",
+    "",
+    "IschiaStars"
+  ].join("\n");
+
+  return sendBrevoEmail({
+    to: [{ email, name: fullName }],
+    subject: `Il tuo voucher IschiaStars — ${quote.code}`,
+    html,
+    text,
+    replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" },
+    attachment: [{ name: `voucher-${quote.code}.pdf`, content: pdfBase64 }]
   });
 }
 

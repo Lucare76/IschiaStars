@@ -176,3 +176,21 @@ export async function updateQuoteConfirmationAvailability(
   if (error) return fallback(null, error);
   return fromSupabase(data as Record<string, unknown>);
 }
+
+export async function markDepositPaid(id: string): Promise<RepositoryResult<Record<string, unknown> | null>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(null);
+
+  const { data, error } = await supabase
+    .from("quote_confirmations")
+    .update({ deposit_paid_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("deposit_paid_at", null)
+    .select("*")
+    .maybeSingle();
+
+  if (error) return fallback(null, error);
+  if (data) return fromSupabase(data as Record<string, unknown>);
+
+  return getQuoteConfirmationById(id);
+}

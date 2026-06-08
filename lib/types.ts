@@ -104,6 +104,7 @@ export type QuoteConfirmation = {
   metadata?: Record<string, unknown>;
   availabilityStatus?: ConfirmationAvailabilityStatus;
   depositDueAt?: string;
+  depositPaidAt?: string | null;
   finalConfirmationSentAt?: string;
   finalConfirmationNotes?: string;
   unavailableReason?: string;

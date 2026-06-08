@@ -66,6 +66,24 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfir
     router.refresh();
   }
 
+  async function postDepositReceived(success: string) {
+    setLoadingAction("deposit-received");
+    setMessage(null);
+    const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/deposit-received`, {
+      method: "POST",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({})
+    });
+    const result = await readAdminApiJson<{ success?: boolean; error?: string }>(response);
+    setLoadingAction(null);
+    if (!response.ok || !result?.success) {
+      setMessage(adminApiErrorMessage(response, result));
+      return;
+    }
+    setMessage(success);
+    router.refresh();
+  }
+
   return (
     <section id="verifica-disponibilita" className="rounded-2xl bg-white/90 p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -196,6 +214,37 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfir
               type="button"
             >
               Invia conferma definitiva al cliente
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {status === "deposit_waiting" ? (
+        <div className="mt-5 rounded-2xl bg-amber-50/60 p-4 ring-1 ring-amber-200/70">
+          <h3 className="font-black text-ischia-navy">Caparra e voucher cliente</h3>
+          {confirmation.depositPaidAt ? (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
+                ✓ Caparra ricevuta il {formatDateTime(confirmation.depositPaidAt)}
+              </p>
+              <button
+                className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
+                disabled={Boolean(loadingAction)}
+                onClick={() => void postDepositReceived("Voucher reinviato al cliente.")}
+                type="button"
+              >
+                Invia voucher di nuovo
+              </button>
+            </div>
+          ) : (
+            <button
+              className="mt-3 rounded-full px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+              style={{ backgroundColor: "#16A34A" }}
+              disabled={Boolean(loadingAction)}
+              onClick={() => void postDepositReceived("Caparra registrata e voucher inviato al cliente.")}
+              type="button"
+            >
+              Caparra ricevuta
             </button>
           )}
         </div>
