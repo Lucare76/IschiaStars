@@ -30,7 +30,7 @@ export type QuoteHotelOptionInput = {
   cancellationPolicy?: string;
   paymentNotes?: string;
   notes?: string;
-  requiresCommitment?: boolean;
+  commitmentNote?: string | null;
 };
 
 export function mapHotelOptionRow(row: Record<string, unknown>): QuoteHotelOption {
@@ -77,7 +77,7 @@ export function mapHotelOptionRow(row: Record<string, unknown>): QuoteHotelOptio
     cancellationPolicy: row.cancellation_policy ? String(row.cancellation_policy) : undefined,
     paymentNotes: row.payment_notes ? String(row.payment_notes) : undefined,
     notes: row.notes ? String(row.notes) : undefined,
-    requiresCommitment: Boolean(row.requires_commitment ?? false),
+    commitmentNote: row.commitment_note ? String(row.commitment_note) : null,
     isSelected: Boolean(row.is_selected),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at ?? row.created_at),
@@ -137,7 +137,7 @@ export function buildHotelOptionRows(options: QuoteHotelOptionInput[]) {
       cancellation_policy: policies.cancellationPolicy || null,
       payment_notes: policies.paymentNotes || null,
       notes: opt.notes ?? null,
-      requires_commitment: opt.requiresCommitment ?? false,
+      commitment_note: opt.commitmentNote || null,
       is_selected: false
     };
   });

@@ -150,6 +150,27 @@ function BuildingIcon() {
   );
 }
 
+function InfoCircleIcon() {
+  return (
+    <svg fill="none" height={13} stroke="#D97706" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={13}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" x2="12" y1="16" y2="12" />
+      <line x1="12" x2="12.01" y1="8" y2="8" />
+    </svg>
+  );
+}
+
+function CommitmentNoteBadge({ note }: { note: string }) {
+  return (
+    <span
+      className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-3 py-1.5 text-xs font-medium text-[#92400E]"
+    >
+      <InfoCircleIcon />
+      {note}
+    </span>
+  );
+}
+
 export function QuoteProposalSection({ quote, hotelPopularity = {} }: { quote: Quote; hotelPopularity?: Record<string, number> }) {
   const [selected, setSelected] = useState<SelectedOption | null>(null);
   const [compareMode, setCompareMode] = useState(false);
@@ -331,6 +352,7 @@ function CompareView({
             const imageUrl = sharperWordPressImageUrl(mainOption.hotelImageUrl);
             const badge = mainOption.badge?.trim();
             const hotelReason = mainOption.hotelReason?.trim();
+            const commitmentNote = mainOption.commitmentNote?.trim();
             const services = splitLines(mainOption.includedServices);
             const treatments = visibleTreatments(mainOption);
             const minPrice = treatments.length > 0 ? Math.min(...treatments.map((t) => t.price)) : null;
@@ -380,6 +402,7 @@ function CompareView({
                   {mainOption.hotelStars ? (
                     <p className="mt-0.5 text-sm text-[#C9A84C]">{"★".repeat(mainOption.hotelStars)}</p>
                   ) : null}
+                  {commitmentNote ? <CommitmentNoteBadge note={commitmentNote} /> : null}
                   <PopularityBadge count={hotelPopularity[mainOption.hotelName] ?? 0} />
                 </div>
 
@@ -560,6 +583,7 @@ function HotelCard({
   const imageUrl = sharperWordPressImageUrl(mainOption.hotelImageUrl);
   const badge = mainOption.badge?.trim();
   const hotelReason = mainOption.hotelReason?.trim();
+  const commitmentNote = mainOption.commitmentNote?.trim();
   const features = extractHighlightedFeatures({
     hotelName: mainOption.hotelName,
     includedServices: mainOption.includedServices,
@@ -609,6 +633,8 @@ function HotelCard({
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Scelta dal cliente</span>
           )}
         </div>
+
+        {commitmentNote ? <CommitmentNoteBadge note={commitmentNote} /> : null}
 
         {hotelReason ? (
           <div className="mt-3 rounded-r-lg border-l-[3px] border-[#C9A84C] bg-[#FBF5E6] px-4 py-2">

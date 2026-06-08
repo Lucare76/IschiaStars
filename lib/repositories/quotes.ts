@@ -35,7 +35,6 @@ export type QuoteInput = {
   cancellationPolicy?: string;
   publicNotes?: string;
   internalNotes?: string;
-  requiresCommitment?: boolean;
   hotelOptions?: QuoteHotelOptionInput[];
 };
 
@@ -204,7 +203,6 @@ export async function createQuoteFromRequest(input: QuoteInput, _options: { acce
       createdAt: new Date().toISOString(),
       sentAt: new Date().toISOString(),
       excludedFromStats: false,
-      requiresCommitment: false,
       hotelOptions: []
     };
     addDemoQuote(quote);
@@ -285,8 +283,7 @@ export async function updateQuote(id: string, input: Partial<QuoteInput>): Promi
         paymentPolicy: input.paymentPolicy ?? quote.paymentPolicy,
         cancellationPolicy: input.cancellationPolicy ?? quote.cancellationPolicy,
         customerNotes: input.publicNotes ?? quote.customerNotes,
-        internalNotes: input.internalNotes ?? quote.internalNotes,
-        requiresCommitment: input.requiresCommitment ?? quote.requiresCommitment
+        internalNotes: input.internalNotes ?? quote.internalNotes
       };
     });
     return fallback(updated);
@@ -474,8 +471,7 @@ function toQuoteRow(input: Partial<QuoteInput>) {
     ...(input.paymentPolicy !== undefined ? { payment_policy: input.paymentPolicy } : {}),
     ...(input.cancellationPolicy !== undefined ? { cancellation_policy: input.cancellationPolicy } : {}),
     ...(input.publicNotes !== undefined ? { public_notes: input.publicNotes } : {}),
-    ...(input.internalNotes !== undefined ? { internal_notes: input.internalNotes } : {}),
-    ...(input.requiresCommitment !== undefined ? { requires_commitment: input.requiresCommitment } : {})
+    ...(input.internalNotes !== undefined ? { internal_notes: input.internalNotes } : {})
   };
 }
 

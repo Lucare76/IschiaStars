@@ -58,7 +58,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     cancellationPolicy: body.cancellationPolicy,
     publicNotes: body.publicNotes,
     internalNotes: body.internalNotes,
-    requiresCommitment: body.requiresCommitment !== undefined ? Boolean(body.requiresCommitment) : undefined,
     hotelOptions: body.hotelOptions ?? undefined
   });
 

@@ -16,7 +16,7 @@ export type HotelOptionState = {
   hotelGroup?: number;
   badge?: string;
   hotelReason?: string;
-  requiresCommitment?: boolean;
+  commitmentNote?: string;
   breakfastDetails?: string;
   halfBoardDetails?: string;
   fullBoardDetails?: string;
@@ -61,6 +61,8 @@ const TREATMENT_DETAIL_QUICK_PHRASES = [
   "Extra esclusi salvo diversa indicazione"
 ] as const;
 
+const COMMITMENT_NOTE_TEXT = "Tariffa riservata ai clienti con impegnativa per fanghi e bagni termali";
+
 const ROOM_TYPE_PRESETS = [
   { label: "Camera singola standard", capacity: 1 },
   { label: "Camera matrimoniale standard", capacity: 2 },
@@ -81,7 +83,7 @@ export function createHotelOption(hotel?: Hotel, hotelGroup?: number): HotelOpti
     hotelGroup,
     badge: "",
     hotelReason: "",
-    requiresCommitment: false,
+    commitmentNote: "",
     breakfastDetails: "",
     halfBoardDetails: "",
     fullBoardDetails: "",
@@ -120,6 +122,7 @@ export function mapHotelOptionsToPayload(hotelOptions: HotelOptionState[], optio
         position: globalPosition,
         badge: opt.badge || undefined,
         hotelReason: opt.hotelReason || undefined,
+        commitmentNote: opt.commitmentNote || undefined,
         breakfastDetails: opt.breakfastDetails || undefined,
         halfBoardDetails: opt.halfBoardDetails || undefined,
         fullBoardDetails: opt.fullBoardDetails || undefined,
@@ -138,8 +141,7 @@ export function mapHotelOptionsToPayload(hotelOptions: HotelOptionState[], optio
         paymentPolicy: opt.paymentPolicy || undefined,
         cancellationPolicy: opt.cancellationPolicy || undefined,
         paymentNotes: opt.paymentNotes || undefined,
-        notes: opt.notes || undefined,
-        requiresCommitment: opt.requiresCommitment ?? false
+        notes: opt.notes || undefined
       });
     });
   });
@@ -164,7 +166,7 @@ export function quoteOptionsToHotelOptionState(opts: QuoteHotelOption[]): HotelO
         hotelGroup: groupId,
         badge: first.badge ?? "",
         hotelReason: first.hotelReason ?? "",
-        requiresCommitment: Boolean(first.requiresCommitment),
+        commitmentNote: first.commitmentNote ?? "",
         breakfastDetails: first.breakfastDetails ?? "",
         halfBoardDetails: first.halfBoardDetails ?? "",
         fullBoardDetails: first.fullBoardDetails ?? "",
@@ -418,6 +420,22 @@ function HotelOptionBlock({
               onChange={(e) => onChange({ hotelReason: e.target.value })}
             />
           </label>
+          <p className="mt-3 text-sm font-semibold text-ischia-ink">Nota impegnativa</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              className={`rounded-full border px-3 py-1 text-xs transition hover:border-[#C9A84C] hover:bg-[#FBF5E6] ${
+                opt.commitmentNote === COMMITMENT_NOTE_TEXT
+                  ? "border-[#C9A84C] bg-[#FBF5E6] text-ischia-ink"
+                  : "border-gray-300 bg-white text-ischia-ink"
+              }`}
+              onClick={() =>
+                onChange({ commitmentNote: opt.commitmentNote === COMMITMENT_NOTE_TEXT ? "" : COMMITMENT_NOTE_TEXT })
+              }
+              type="button"
+            >
+              {COMMITMENT_NOTE_TEXT}
+            </button>
+          </div>
         </div>
         {showStars ? (
           <label className="text-sm font-semibold text-ischia-ink">
@@ -535,15 +553,6 @@ function HotelOptionBlock({
         <Textarea label="Policy cancellazione" value={opt.cancellationPolicy} onChange={(value) => onChange({ cancellationPolicy: value })} />
         <Textarea label="Note pagamento" value={opt.paymentNotes} onChange={(value) => onChange({ paymentNotes: value })} />
         <Textarea label="Note per il cliente" value={opt.notes} onChange={(value) => onChange({ notes: value })} />
-        <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-700">
-          <input
-            type="checkbox"
-            className="h-4 w-4"
-            checked={opt.requiresCommitment ?? false}
-            onChange={(e) => onChange({ requiresCommitment: e.target.checked })}
-          />
-          Offerta soggetta a obbligo di impegnativa
-        </label>
       </div>
 
       {detectedPlus.length > 0 && (

@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 import { MobileFloatingWhatsApp, PublicQuoteHeaderActions } from "@/components/PublicQuoteActions";
 import { PublicEventTracker } from "@/components/PublicEventTracker";
-import { CommitmentBanner } from "@/components/public/CommitmentBanner";
 import { HesitantClientBanner } from "@/components/public/HesitantClientBanner";
 import { CountdownBanner } from "@/components/public/CountdownBanner";
 import { QuotePageWrapper } from "@/components/public/QuotePageWrapper";
@@ -63,7 +62,6 @@ export function PublicQuotePage({ quote, hotelPopularity = {}, showHesitantBanne
           />
 
           <CountdownBanner offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
-          <CommitmentBanner show={options.some((o) => o.requiresCommitment === true)} />
 
           {quote.isAlternative && quote.requestedHotel ? (
             <div className="mt-4 rounded-2xl bg-ischia-sun/15 p-4 text-sm font-semibold leading-6 text-ischia-navy ring-1 ring-ischia-sun/30">

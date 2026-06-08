@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
     cancellationPolicy: body.cancellationPolicy,
     publicNotes: body.publicNotes,
     internalNotes: body.internalNotes,
-    requiresCommitment: Boolean(body.requiresCommitment),
     hotelOptions: body.hotelOptions ?? undefined
   }, { accessToken });
 

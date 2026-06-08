@@ -166,7 +166,7 @@ export type QuoteHotelOption = {
   cancellationPolicy?: string;
   paymentNotes?: string;
   notes?: string;
-  requiresCommitment?: boolean;
+  commitmentNote?: string | null;
   isSelected: boolean;
   createdAt: string;
   updatedAt: string;
@@ -209,5 +209,4 @@ export type Quote = {
   excludedFromStats: boolean;
   deletedAt?: string;
   hotelOptions: QuoteHotelOption[];
-  requiresCommitment?: boolean;
 };

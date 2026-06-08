@@ -126,7 +126,6 @@ export function mapQuote(
     createdAt: String(row.created_at ?? ""),
     sentAt: row.sent_at ? String(row.sent_at) : undefined,
     excludedFromStats: Boolean(row.excluded_from_stats ?? false),
-    requiresCommitment: Boolean(row.requires_commitment ?? false),
     deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
     confirmation: row.confirmed_at || confirmationRow
       ? {
@@ -217,7 +216,7 @@ function mapHotelOptionRowInline(row: Record<string, unknown>): QuoteHotelOption
     cancellationPolicy: row.cancellation_policy ? String(row.cancellation_policy) : undefined,
     paymentNotes: row.payment_notes ? String(row.payment_notes) : undefined,
     notes: row.notes ? String(row.notes) : undefined,
-    requiresCommitment: Boolean(row.requires_commitment ?? false),
+    commitmentNote: row.commitment_note ? String(row.commitment_note) : null,
     isSelected: Boolean(row.is_selected),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at ?? row.created_at),
