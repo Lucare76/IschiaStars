@@ -15,11 +15,6 @@ const AUTHORIZED_EMAILS = {
 export type UserRole = "admin" | "supervisor";
 export type AdminSession = { user: User; role: UserRole };
 
-function validAdminKey(request: NextRequest) {
-  const expectedKey = process.env.ADMIN_API_KEY;
-  return Boolean(expectedKey && request.headers.get("x-admin-key") === expectedKey);
-}
-
 export async function getAdminUserFromToken(accessToken?: string) {
   const result = await getAuthorizedUserFromToken(accessToken);
   return result.status === "authorized" ? result.user : null;
@@ -61,8 +56,6 @@ export async function requireAdminSession(): Promise<AdminSession> {
 }
 
 export async function requireAdminApiAccess(request: NextRequest) {
-  if (validAdminKey(request)) return null;
-
   const accessToken = request.cookies.get(ADMIN_ACCESS_COOKIE)?.value;
   const result = await getAuthorizedUserFromToken(accessToken);
   if (result.status === "authorized") return null;

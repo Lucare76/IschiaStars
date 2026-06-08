@@ -36,7 +36,7 @@ ADMIN_API_KEY=
 
 `NEXT_PUBLIC_ISCHIASTARS_WHATSAPP` imposta il numero IschiaStars usato nella pagina cliente pubblica. Il bottone backoffice usa invece il numero del cliente.
 
-`ADMIN_API_KEY` resta una protezione server-side per chiamate controllate e integrazioni. Non deve essere `NEXT_PUBLIC`.
+`ADMIN_API_KEY` autentica solo le chiamate del cron di sistema (`/api/cron/*`). Non deve essere `NEXT_PUBLIC`.
 
 Il file `supabase/.env` non viene letto da Next.js. In locale usa `.env.local`; in produzione configura le variabili nella dashboard Vercel.
 
@@ -60,7 +60,7 @@ La pagina preventivo cliente resta pubblica solo tramite link sicuro `code + tok
 /preventivi/[code]?token=[token]
 ```
 
-`ADMIN_API_KEY` resta utile per proteggere chiamate server-side o integrazioni controllate. Le API admin accettano una sessione backoffice valida oppure l'header `X-Admin-Key` corretto.
+`ADMIN_API_KEY` autentica esclusivamente le chiamate del cron di sistema. Le API admin del backoffice accettano solo una sessione valida (cookie + email in whitelist), non l'header `X-Admin-Key`.
 
 ## Vercel
 
@@ -160,7 +160,7 @@ In produzione i link vengono generati dal sistema usando `NEXT_PUBLIC_SITE_URL`,
 
 ## API Admin
 
-Queste API admin richiedono una sessione backoffice valida oppure header `X-Admin-Key` corretto:
+Queste API admin richiedono una sessione backoffice valida (cookie di sessione + email in whitelist):
 
 - `POST /api/quotes`
 - `PATCH /api/quotes/[id]`
@@ -174,11 +174,7 @@ Queste API admin richiedono una sessione backoffice valida oppure header `X-Admi
 - `GET /api/hotels`
 - `GET /api/quote-requests`
 
-Header richiesto:
-
-```http
-X-Admin-Key: valore-di-ADMIN_API_KEY
-```
+`ADMIN_API_KEY` / header `X-Admin-Key` non sono più accettati su queste rotte: solo il cron di sistema (`/api/cron/*`) può autenticarsi tramite chiave server-side.
 
 Il backoffice non usa chiavi salvate nel browser: dopo il login, le chiamate interne passano tramite cookie di sessione httpOnly.
 
