@@ -187,8 +187,8 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
           <h2 className="text-xl font-black text-ischia-navy">Verifica disponibilità struttura</h2>
           <p className="mt-1 text-sm text-ischia-ink/65">La conferma cliente non è ancora prenotazione definitiva.</p>
         </div>
-        <span className="rounded-full bg-ischia-mist px-3 py-1 text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/15">
-          {availabilityStatusLabel(status)}
+        <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${confirmation?.depositPaidAt ? "bg-emerald-100 text-emerald-800 ring-emerald-200" : "bg-ischia-mist text-ischia-navy ring-ischia-blue/15"}`}>
+          {confirmation?.depositPaidAt ? "✓ Caparra ricevuta" : availabilityStatusLabel(status)}
         </span>
       </div>
 
