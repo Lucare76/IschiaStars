@@ -5,6 +5,7 @@ import { PublicQuotePage } from "@/components/PublicQuotePage";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { getConfirmedHotelCounts } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
+import { getFeatureFlags } from "@/lib/repositories/settings";
 import { ischiastarsWhatsappNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,15 +22,23 @@ export default async function QuotePublicRoute({ params, searchParams }: { param
   const quote = result.data;
   if (!quote || quote.deletedAt) return <InvalidQuotePage />;
 
-  const [hotelPopularity, eventStats] = await Promise.all([
+  const [hotelPopularity, eventStats, featureFlagsResult] = await Promise.all([
     getConfirmedHotelCounts(),
     getQuoteEventStats(quote.id),
+    getFeatureFlags(),
   ]);
 
   const openingsCount = eventStats.data?.openings ?? 0;
   const showHesitantBanner = openingsCount >= 3 && quote.status !== "confermato";
 
-  return <PublicQuotePage quote={quote} hotelPopularity={hotelPopularity} showHesitantBanner={showHesitantBanner} />;
+  return (
+    <PublicQuotePage
+      quote={quote}
+      hotelPopularity={hotelPopularity}
+      showHesitantBanner={showHesitantBanner}
+      featureFlags={featureFlagsResult.data}
+    />
+  );
 }
 
 function InvalidQuotePage() {

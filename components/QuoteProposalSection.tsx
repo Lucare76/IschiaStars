@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { ConfirmQuoteForm } from "@/components/ConfirmQuoteForm";
 import { trackQuoteEvent } from "@/lib/client-tracking";
+import { emptyFeatureFlags, FeatureFlags } from "@/lib/feature-flags";
 import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown } from "@/lib/hotel-policies";
 import { publicQuoteInfoWhatsappMessage } from "@/lib/message-templates";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
@@ -171,7 +172,17 @@ function CommitmentNoteBadge({ note }: { note: string }) {
   );
 }
 
-export function QuoteProposalSection({ quote, hotelPopularity = {} }: { quote: Quote; hotelPopularity?: Record<string, number> }) {
+export function QuoteProposalSection({
+  quote,
+  hotelPopularity = {},
+  featureFlags = emptyFeatureFlags
+}: {
+  quote: Quote;
+  hotelPopularity?: Record<string, number>;
+  featureFlags?: FeatureFlags;
+}) {
+  void featureFlags;
+
   const [selected, setSelected] = useState<SelectedOption | null>(null);
   const [compareMode, setCompareMode] = useState(false);
   const confirmRef = useRef<HTMLDivElement>(null);

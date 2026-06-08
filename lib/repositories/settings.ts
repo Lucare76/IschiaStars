@@ -1,3 +1,4 @@
+import { emptyFeatureFlags, FEATURE_FLAGS_KEY, FeatureFlagKey, FeatureFlags, normalizeFeatureFlags } from "@/lib/feature-flags";
 import { emptyPaymentSettings, normalizePaymentSettings, PAYMENT_SETTINGS_KEY, PaymentSettings, paymentSettingsToDbValue } from "@/lib/payment-settings";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -33,4 +34,38 @@ export async function updatePaymentSettings(settings: PaymentSettings): Promise<
 
   if (error) return fallback(normalized, error);
   return fromSupabase(normalizePaymentSettings(data?.value));
+}
+
+export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(emptyFeatureFlags);
+
+  const { data, error } = await supabase
+    .from("settings")
+    .select("value")
+    .eq("key", FEATURE_FLAGS_KEY)
+    .maybeSingle();
+
+  if (error) return fallback(emptyFeatureFlags, error);
+  return fromSupabase(normalizeFeatureFlags(data?.value));
+}
+
+export async function updateFeatureFlag(flag: FeatureFlagKey, value: boolean): Promise<RepositoryResult<FeatureFlags>> {
+  const supabase = createSupabaseAdminClient();
+  const current = await getFeatureFlags();
+  const merged = normalizeFeatureFlags({ ...current.data, [flag]: value });
+  if (!supabase) return fallback(merged);
+
+  const { data, error } = await supabase
+    .from("settings")
+    .upsert({
+      key: FEATURE_FLAGS_KEY,
+      value: merged,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "key" })
+    .select("value")
+    .single();
+
+  if (error) return fallback(merged, error);
+  return fromSupabase(normalizeFeatureFlags(data?.value));
 }

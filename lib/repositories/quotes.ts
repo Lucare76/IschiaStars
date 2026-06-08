@@ -45,6 +45,7 @@ export async function listQuotes({ includeDeleted = false }: { includeDeleted?: 
 
   let query = supabase.from("quotes").select("*").order("created_at", { ascending: false });
   if (!includeDeleted) query = query.is("deleted_at", null);
+  query = query.or("metadata->>is_lab_test.is.null,metadata->>is_lab_test.neq.true");
   const [hotelResult, { data, error }] = await Promise.all([listHotels(), query]);
   if (error) return fallback(demoQuotes, error);
 
@@ -64,6 +65,36 @@ export async function listQuotes({ includeDeleted = false }: { includeDeleted?: 
       return withDemoStatus(mapQuote(row as Record<string, unknown>, allHotels, childRows as Record<string, unknown>[], hotelOpts, confirmationsMap[row.id as string]));
     })
   );
+}
+
+export type LabTestQuote = {
+  id: string;
+  code: string;
+  clientName: string;
+  createdAt: string;
+  publicUrl: string;
+};
+
+export async function listLabTestQuotes(): Promise<LabTestQuote[]> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("quotes")
+    .select("id, code, client_first_name, client_last_name, public_token, created_at")
+    .eq("metadata->>is_lab_test", "true")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    code: String(row.code),
+    clientName: [row.client_first_name, row.client_last_name].filter(Boolean).join(" ").trim(),
+    createdAt: String(row.created_at),
+    publicUrl: `/preventivi/${row.code}?token=${row.public_token}`
+  }));
 }
 
 export async function getQuoteByCodeAndToken(code: string, token?: string): Promise<RepositoryResult<Quote | null>> {

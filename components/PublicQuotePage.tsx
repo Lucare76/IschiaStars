@@ -10,8 +10,19 @@ import { PrintButton } from "@/components/PrintButton";
 import { Quote } from "@/lib/types";
 import { formatClientName, formatDate } from "@/lib/utils";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
+import { emptyFeatureFlags, FeatureFlags } from "@/lib/feature-flags";
 
-export function PublicQuotePage({ quote, hotelPopularity = {}, showHesitantBanner = false }: { quote: Quote; hotelPopularity?: Record<string, number>; showHesitantBanner?: boolean }) {
+export function PublicQuotePage({
+  quote,
+  hotelPopularity = {},
+  showHesitantBanner = false,
+  featureFlags = emptyFeatureFlags
+}: {
+  quote: Quote;
+  hotelPopularity?: Record<string, number>;
+  showHesitantBanner?: boolean;
+  featureFlags?: FeatureFlags;
+}) {
   const guests = `${quote.adults} adulti${quote.children.length ? `, ${quote.children.length} bambini` : ""}`;
   const options = getEffectiveHotelOptions(quote);
   const hasMultipleOptions = options.length > 1;
@@ -117,7 +128,7 @@ export function PublicQuotePage({ quote, hotelPopularity = {}, showHesitantBanne
             Confronta le soluzioni disponibili e conferma l&apos;opzione che preferisci.
           </p>
         </div>
-        <QuoteProposalSection quote={quote} hotelPopularity={hotelPopularity} />
+        <QuoteProposalSection quote={quote} hotelPopularity={hotelPopularity} featureFlags={featureFlags} />
       </section>
 
       <MobileFloatingWhatsApp quote={quote} />
