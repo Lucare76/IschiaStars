@@ -428,6 +428,14 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
               <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
                 ✓ Caparra ricevuta il {formatDateTime(confirmation.depositPaidAt)}
               </p>
+              <a
+                className="rounded-full bg-ischia-mist px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20"
+                href={`/api/quote-confirmations/${confirmationId}/voucher-preview`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Anteprima voucher
+              </a>
               <button
                 className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
                 disabled={Boolean(loadingAction)}
