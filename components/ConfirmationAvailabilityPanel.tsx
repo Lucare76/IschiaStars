@@ -237,24 +237,26 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white disabled:opacity-60"
-          disabled={Boolean(loadingAction)}
-          onClick={() => void postAction("availability-confirmed", {}, "Disponibilità struttura confermata.")}
-          type="button"
-        >
-          Disponibilità confermata
-        </button>
-        <button
-          className="rounded-full bg-rose-50 px-4 py-2 text-sm font-black text-rose-700 ring-1 ring-rose-100 disabled:opacity-60"
-          disabled={Boolean(loadingAction)}
-          onClick={() => void postAction("availability-unavailable", { reason: unavailableReason, alternativeToPropose }, "Disponibilità segnata come terminata.")}
-          type="button"
-        >
-          Disponibilità terminata
-        </button>
-      </div>
+      {!confirmation?.finalConfirmationSentAt ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+            disabled={Boolean(loadingAction)}
+            onClick={() => void postAction("availability-confirmed", {}, "Disponibilità struttura confermata.")}
+            type="button"
+          >
+            Disponibilità confermata
+          </button>
+          <button
+            className="rounded-full bg-rose-50 px-4 py-2 text-sm font-black text-rose-700 ring-1 ring-rose-100 disabled:opacity-60"
+            disabled={Boolean(loadingAction)}
+            onClick={() => void postAction("availability-unavailable", { reason: unavailableReason, alternativeToPropose }, "Disponibilità segnata come terminata.")}
+            type="button"
+          >
+            Disponibilità terminata
+          </button>
+        </div>
+      ) : null}
 
       {canSendFinal ? (
         <div className="mt-5 rounded-2xl bg-emerald-50/60 p-4 ring-1 ring-emerald-200/70">
