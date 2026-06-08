@@ -160,7 +160,8 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
         validUntil: formData.get("validUntil"),
         publicNotes: formData.get("publicNotes"),
         internalNotes: formData.get("internalNotes"),
-        hotelOptions: mappedOptions
+        hotelOptions: mappedOptions,
+        isLabTest
       })
     });
     const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
@@ -281,7 +282,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
 
         <Section title="Condizioni preventivo">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input name="validUntil" label="Validita offerta" required type="date" />
+            <Input name="validUntil" label="Validità offerta" required type="date" min={todayDateString()} />
           </div>
           <Textarea name="publicNotes" label="Note visibili al cliente" />
           <Textarea name="internalNotes" label="Note interne" defaultValue={initialRequest?.message} />

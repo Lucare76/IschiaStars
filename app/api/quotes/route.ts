@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     publicNotes: body.publicNotes,
     internalNotes: body.internalNotes,
     hotelOptions: body.hotelOptions ?? undefined
-  }, { accessToken });
+  }, { accessToken, isLabTest: Boolean(body.isLabTest) });
 
   if (!result.data && result.error) {
     console.error("POST /api/quotes repository error", { error: result.error });

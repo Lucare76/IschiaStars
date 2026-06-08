@@ -586,7 +586,6 @@ function HotelCard({
   onSelectTreatment: (option: QuoteHotelOption, treatment: TreatmentOption) => void;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [expandedTreatmentDetails, setExpandedTreatmentDetails] = useState<string | null>(null);
   const [pendingSelection, setPendingSelection] = useState<{ option: QuoteHotelOption; treatment: TreatmentOption } | null>(null);
   const [reaction, setReaction] = useState<"interested" | "too_expensive" | null>(null);
   const reactionKey = `reaction_${quoteCode}_${mainOption.hotelGroup}`;
@@ -769,7 +768,6 @@ function HotelCard({
                     const details = treatmentDetails(opt, treatment);
                     const priceDelta = treatmentPriceDeltas(opt).get(treatment.key);
                     const benefit = details ? undefined : treatmentBenefit(treatment);
-                    const areTreatmentDetailsExpanded = expandedTreatmentDetails === detailKey;
                     return (
                     <div key={detailKey} className="rounded-2xl bg-ischia-mist p-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -788,23 +786,6 @@ function HotelCard({
                           </div>
                           {priceDelta != null && benefit ? (
                             <p className="mt-0.5 text-xs italic text-gray-500">{benefit}</p>
-                          ) : null}
-                          {details ? (
-                            <div className="mt-1">
-                              <button
-                                aria-expanded={areTreatmentDetailsExpanded}
-                                className="no-print text-xs font-bold text-[#C9A84C]"
-                                onClick={() => setExpandedTreatmentDetails(areTreatmentDetailsExpanded ? null : detailKey)}
-                                type="button"
-                              >
-                                Cosa include ›
-                              </button>
-                              {areTreatmentDetailsExpanded ? (
-                                <p className="mt-1 whitespace-pre-line rounded-r-md border-l-2 border-[#E5E7EB] bg-[#F3F4F6] px-3 py-2 text-xs text-gray-600">
-                                  {details}
-                                </p>
-                              ) : null}
-                            </div>
                           ) : null}
                         </div>
                         <div className="flex w-full flex-wrap items-start gap-3 sm:w-auto sm:justify-end">
@@ -844,7 +825,7 @@ function HotelCard({
                           )}
                         </div>
                       </div>
-                      <TreatmentDetails className={`${isExpanded ? "block" : "hidden"} print:block`} option={opt} treatment={treatment} />
+                      <TreatmentDetails className={`${isExpanded ? "block" : "hidden"} print:block`} option={opt} treatment={treatment} details={details} />
                     </div>
                   );})}
                 </div>
@@ -893,7 +874,7 @@ function HotelCard({
   );
 }
 
-function TreatmentDetails({ option, treatment, className }: { option: QuoteHotelOption; treatment: TreatmentOption; className?: string }) {
+function TreatmentDetails({ option, treatment, details, className }: { option: QuoteHotelOption; treatment: TreatmentOption; details?: string; className?: string }) {
   const services = splitLines(option.includedServices);
   const breakdown = calculatePaymentBreakdown(treatment.price, option.depositPercent, option.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
   const hasDetails = services.length > 0 || option.paymentPolicy || option.cancellationPolicy || option.paymentNotes || option.notes || breakdown.depositPercent > 0;
@@ -913,6 +894,7 @@ function TreatmentDetails({ option, treatment, className }: { option: QuoteHotel
           </>
         ) : null}
         <p>{treatmentDescription(treatment)}</p>
+        {details ? <p className="whitespace-pre-line">{details}</p> : null}
       </div>
 
       {services.length > 0 ? (
