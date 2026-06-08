@@ -17,6 +17,16 @@ import { Hotel, Quote, QuoteRequest } from "@/lib/types";
 
 type ClientResult = { firstName: string; lastName: string; email: string; phone: string };
 
+function todayDateString() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function tomorrowDateString() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().split("T")[0];
+}
+
 function ClientSearch({ onSelect }: { onSelect: (c: ClientResult) => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ClientResult[]>([]);
@@ -91,6 +101,8 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
   const [lastName, setLastName] = useState(initialRequest?.lastName ?? "");
   const [phone, setPhone] = useState(initialRequest?.phone ?? "");
   const [email, setEmail] = useState(initialRequest?.email ?? "");
+  const [checkIn, setCheckIn] = useState(initialRequest?.arrivalDate ?? "");
+  const [checkOut, setCheckOut] = useState(initialRequest?.departureDate ?? "");
   const roomCapacitySuggestion = suggestedGuestsPerRoom(adultsCount + childrenCount, roomsCount);
 
   const requestedHotelMissing = Boolean(requestedHotelName && !requestedHotelMatch);
@@ -218,8 +230,28 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
             <Input name="lastName" label="Cognome cliente" value={lastName} onChange={(e) => setLastName(e.target.value)} />
             <Input name="phone" label="Telefono WhatsApp" required value={phone} onChange={(e) => setPhone(e.target.value)} />
             <Input name="email" label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <Input name="checkIn" label="Data arrivo" required type="date" defaultValue={initialRequest?.arrivalDate} />
-            <Input name="checkOut" label="Data partenza" required type="date" defaultValue={initialRequest?.departureDate} />
+            <Input
+              name="checkIn"
+              label="Data arrivo"
+              required
+              type="date"
+              min={todayDateString()}
+              value={checkIn}
+              onChange={(e) => {
+                const value = e.target.value;
+                setCheckIn(value);
+                if (checkOut && checkOut <= value) setCheckOut("");
+              }}
+            />
+            <Input
+              name="checkOut"
+              label="Data partenza"
+              required
+              type="date"
+              min={checkIn || tomorrowDateString()}
+              value={checkOut}
+              onChange={(e) => setCheckOut(e.target.value)}
+            />
             <Input name="adults" label="Adulti" min="1" required type="number" value={String(adultsCount)} onChange={(e) => setAdultsCount(Number(e.target.value) || 1)} />
             <Input label="Numero bambini" type="number" value={String(childrenCount)} onChange={(e) => setChildrenCount(Number(e.target.value))} min="0" />
             {Array.from({ length: childrenCount }, (_, index) => (

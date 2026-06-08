@@ -24,12 +24,24 @@ import { formatCurrency, formatDate, publicQuoteUrl } from "@/lib/utils";
 
 const statusOptions: QuoteStatus[] = ["in_lavorazione", "confermato", "perso_non_disponibile"];
 
+function todayDateString() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function tomorrowDateString() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().split("T")[0];
+}
+
 export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags, quoteEvents = [] }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; quoteEvents?: QuoteEvent[] }) {
   const router = useRouter();
   const effective = getEffectiveHotelOptions(quote);
   const [currentQuote, setCurrentQuote] = useState(quote);
   const [adultsCount, setAdultsCount] = useState(quote.adults);
   const [roomsCount, setRoomsCount] = useState(quote.rooms);
+  const [checkIn, setCheckIn] = useState(quote.arrivalDate);
+  const [checkOut, setCheckOut] = useState(quote.departureDate);
   const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>(quoteOptionsToHotelOptionState(effective));
   const [transportOffers] = useState<TransportOffer[]>(withDefaultTransportOffers(quote.transportOffers));
   const [message, setMessage] = useState<string | null>(null);
@@ -242,8 +254,28 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
             <Input name="lastName" label="Cognome" defaultValue={currentQuote.customerLastName} />
             <Input name="phone" label="Telefono WhatsApp" defaultValue={currentQuote.customerPhone} required />
             <Input name="email" label="Email" defaultValue={currentQuote.customerEmail} type="email" />
-            <Input name="checkIn" label="Data arrivo" defaultValue={currentQuote.arrivalDate} required type="date" />
-            <Input name="checkOut" label="Data partenza" defaultValue={currentQuote.departureDate} required type="date" />
+            <Input
+              name="checkIn"
+              label="Data arrivo"
+              required
+              type="date"
+              min={todayDateString()}
+              value={checkIn}
+              onChange={(e) => {
+                const value = e.target.value;
+                setCheckIn(value);
+                if (checkOut && checkOut <= value) setCheckOut("");
+              }}
+            />
+            <Input
+              name="checkOut"
+              label="Data partenza"
+              required
+              type="date"
+              min={checkIn || tomorrowDateString()}
+              value={checkOut}
+              onChange={(e) => setCheckOut(e.target.value)}
+            />
             <Input name="adults" label="Adulti" min="1" value={String(adultsCount)} onChange={(e) => setAdultsCount(Number(e.target.value) || 1)} required type="number" />
             <Input name="rooms" label="Camere" min="1" value={String(roomsCount)} onChange={(e) => setRoomsCount(Number(e.target.value) || 1)} required type="number" />
             <Input name="hotelRequested" label="Hotel richiesto dal cliente" defaultValue={currentQuote.requestedHotel} />

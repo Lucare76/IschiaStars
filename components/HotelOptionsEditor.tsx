@@ -52,6 +52,7 @@ const HOTEL_REASON_QUICK_PHRASES = [
 const TREATMENT_DETAIL_QUICK_PHRASES = [
   "Bevande escluse",
   "Bevande incluse ai pasti",
+  "Acqua ai pasti inclusa",
   "Prima colazione a buffet",
   "Cena con menù fisso",
   "Accesso spa/terme incluso",
