@@ -26,6 +26,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [supplierNotes, setSupplierNotes] = useState("");
   const [supplierSending, setSupplierSending] = useState(false);
   const [supplierError, setSupplierError] = useState<string | null>(null);
+  const [depositCoordinatesCopied, setDepositCoordinatesCopied] = useState(false);
 
   const confirmationId = confirmation?.id;
   const status = confirmation?.availabilityStatus ?? "availability_to_check";
@@ -53,7 +54,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
   }, [depositDueAt]);
 
-  const depositCoordinatesWhatsappUrl = useMemo(() => {
+  const depositCoordinatesWhatsapp = useMemo(() => {
     if (!hasCurrentCoordinates || depositAmount == null) return null;
     const message = depositCoordinatesWhatsappMessage({
       firstName: confirmation?.firstName ?? quote.customerFirstName,
@@ -72,8 +73,16 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
       paymentInstructions: paymentSettings.paymentInstructions || undefined
     });
     const phone = confirmation?.phone ?? quote.customerPhone;
-    return `https://wa.me/${normalizeItalianPhone(phone)}?text=${encodeURIComponent(message)}`;
+    return { message, chatUrl: `https://wa.me/${normalizeItalianPhone(phone)}` };
   }, [hasCurrentCoordinates, depositAmount, balanceAmount, confirmation, quote, selectedPrice, depositDueIso, paymentSettings, currentPaymentReason]);
+
+  async function handleSendDepositCoordinatesWhatsapp() {
+    if (!depositCoordinatesWhatsapp) return;
+    await navigator.clipboard.writeText(depositCoordinatesWhatsapp.message).catch(() => null);
+    setDepositCoordinatesCopied(true);
+    setTimeout(() => setDepositCoordinatesCopied(false), 3000);
+    window.open(depositCoordinatesWhatsapp.chatUrl, "_blank", "noopener,noreferrer");
+  }
 
   useEffect(() => {
     if (!confirmationId || status !== "availability_confirmed" || !featureFlags.supplier_confirmation) return;
@@ -303,15 +312,14 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
             </button>
           )}
 
-          {depositCoordinatesWhatsappUrl ? (
-            <a
+          {depositCoordinatesWhatsapp ? (
+            <button
               className="mt-3 inline-flex items-center justify-center gap-2 rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white"
-              href={depositCoordinatesWhatsappUrl}
-              rel="noopener noreferrer"
-              target="_blank"
+              onClick={() => void handleSendDepositCoordinatesWhatsapp()}
+              type="button"
             >
-              📲 Invia coordinate acconto su WhatsApp
-            </a>
+              {depositCoordinatesCopied ? "✓ Testo copiato — incolla su WhatsApp" : "📲 Invia coordinate acconto su WhatsApp"}
+            </button>
           ) : null}
         </div>
       ) : null}
