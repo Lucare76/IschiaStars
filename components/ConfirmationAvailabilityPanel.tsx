@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
-import { availabilityStatusLabel, defaultUnavailabilityMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
+import { availabilityStatusLabel, defaultUnavailabilityMessage, depositCoordinatesWhatsappMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
 import { FeatureFlags } from "@/lib/feature-flags";
 import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
 import { Quote } from "@/lib/types";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
+import { formatCurrency, formatDate, formatDateTime, normalizeItalianPhone } from "@/lib/utils";
 
 export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureFlags, onConfirmationUpdated }: { quote: Quote; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; onConfirmationUpdated?: (quote: Quote) => void }) {
   const router = useRouter();
@@ -52,6 +52,28 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     const parsed = new Date(depositDueAt);
     return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
   }, [depositDueAt]);
+
+  const depositCoordinatesWhatsappUrl = useMemo(() => {
+    if (!hasCurrentCoordinates || depositAmount == null) return null;
+    const message = depositCoordinatesWhatsappMessage({
+      firstName: confirmation?.firstName ?? quote.customerFirstName,
+      code: quote.code,
+      hotelName: confirmation?.selectedHotelName ?? quote.proposedHotel.name,
+      treatmentLabel: confirmation?.selectedTreatmentLabel ?? quote.treatment,
+      priceLabel: formatCurrency(selectedPrice),
+      depositLabel: formatCurrency(depositAmount),
+      balanceLabel: balanceAmount != null ? formatCurrency(balanceAmount) : undefined,
+      depositDueLabel: depositDueIso ? formatDateTime(depositDueIso) : undefined,
+      bankAccountHolder: paymentSettings.bankAccountHolder,
+      bankName: paymentSettings.bankName || undefined,
+      iban: paymentSettings.iban,
+      bicSwift: paymentSettings.bicSwift || undefined,
+      paymentReason: currentPaymentReason,
+      paymentInstructions: paymentSettings.paymentInstructions || undefined
+    });
+    const phone = confirmation?.phone ?? quote.customerPhone;
+    return `https://wa.me/${normalizeItalianPhone(phone)}?text=${encodeURIComponent(message)}`;
+  }, [hasCurrentCoordinates, depositAmount, balanceAmount, confirmation, quote, selectedPrice, depositDueIso, paymentSettings, currentPaymentReason]);
 
   useEffect(() => {
     if (!confirmationId || status !== "availability_confirmed" || !featureFlags.supplier_confirmation) return;
@@ -280,6 +302,17 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
               Invia conferma definitiva al cliente
             </button>
           )}
+
+          {depositCoordinatesWhatsappUrl ? (
+            <a
+              className="mt-3 inline-flex items-center justify-center gap-2 rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white"
+              href={depositCoordinatesWhatsappUrl}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              📲 Invia coordinate acconto su WhatsApp
+            </a>
+          ) : null}
         </div>
       ) : null}
 
