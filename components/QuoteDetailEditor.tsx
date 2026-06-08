@@ -16,6 +16,7 @@ import {
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
+import { FeatureFlags } from "@/lib/feature-flags";
 import { PaymentSettings } from "@/lib/payment-settings";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Hotel, Quote, QuoteStatus, TransportOffer } from "@/lib/types";
@@ -23,7 +24,7 @@ import { formatCurrency, publicQuoteUrl } from "@/lib/utils";
 
 const statusOptions: QuoteStatus[] = ["in_lavorazione", "confermato", "perso_non_disponibile"];
 
-export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings }) {
+export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings; featureFlags: FeatureFlags }) {
   const router = useRouter();
   const effective = getEffectiveHotelOptions(quote);
   const [currentQuote, setCurrentQuote] = useState(quote);
@@ -202,7 +203,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings }: { quote: Q
 
   return (
     <div className="space-y-6">
-      {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} paymentSettings={paymentSettings} onConfirmationUpdated={setCurrentQuote} /> : null}
+      {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} paymentSettings={paymentSettings} featureFlags={featureFlags} onConfirmationUpdated={setCurrentQuote} /> : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_0.36fr]">
       <form className="space-y-5" onSubmit={save}>

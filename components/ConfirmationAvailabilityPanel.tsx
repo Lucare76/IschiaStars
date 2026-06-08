@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { availabilityStatusLabel, defaultUnavailabilityMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
+import { FeatureFlags } from "@/lib/feature-flags";
 import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
 import { Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
-export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfirmationUpdated }: { quote: Quote; paymentSettings: PaymentSettings; onConfirmationUpdated?: (quote: Quote) => void }) {
+export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureFlags, onConfirmationUpdated }: { quote: Quote; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; onConfirmationUpdated?: (quote: Quote) => void }) {
   const router = useRouter();
   const confirmation = quote.confirmation;
   const [message, setMessage] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfir
   }, [depositDueAt]);
 
   useEffect(() => {
-    if (!confirmationId || status !== "availability_confirmed") return;
+    if (!confirmationId || status !== "availability_confirmed" || !featureFlags.supplier_confirmation) return;
     let cancelled = false;
     void (async () => {
       const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/send-supplier-confirmation`, {
@@ -68,7 +69,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfir
     return () => {
       cancelled = true;
     };
-  }, [confirmationId, status]);
+  }, [confirmationId, status, featureFlags.supplier_confirmation]);
 
   if (!confirmation || !confirmationId) return null;
 
@@ -282,7 +283,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfir
         </div>
       ) : null}
 
-      {status === "availability_confirmed" ? (
+      {status === "availability_confirmed" && featureFlags.supplier_confirmation ? (
         <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-ischia-blue/15">
           <h3 className="font-black text-ischia-navy">Conferma a hotel / agenzia</h3>
           <p className="mt-1 text-sm text-ischia-ink/65">Invia una email di conferma prenotazione al fornitore, con il prezzo netto concordato (non visibile al cliente).</p>
@@ -313,7 +314,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfir
         </div>
       ) : null}
 
-      {showSupplierModal ? (
+      {showSupplierModal && featureFlags.supplier_confirmation ? (
         <div aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5" role="dialog">
           <div className="mx-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <h3 className="text-xl font-black text-ischia-navy">Invia conferma a hotel/agenzia</h3>
@@ -375,7 +376,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, onConfir
         </div>
       ) : null}
 
-      {status === "deposit_waiting" ? (
+      {status === "deposit_waiting" && featureFlags.voucher_cliente ? (
         <div className="mt-5 rounded-2xl bg-amber-50/60 p-4 ring-1 ring-amber-200/70">
           <h3 className="font-black text-ischia-navy">Caparra e voucher cliente</h3>
           {confirmation.depositPaidAt ? (

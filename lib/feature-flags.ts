@@ -1,4 +1,4 @@
-export type FeatureFlagKey = "wow6_adaptive" | "closing_message" | "instant_reaction" | "alternative_proposal";
+export type FeatureFlagKey = "wow6_adaptive" | "instant_reaction" | "alternative_proposal" | "voucher_cliente" | "supplier_confirmation";
 
 export type FeatureFlags = Record<FeatureFlagKey, boolean>;
 
@@ -8,22 +8,27 @@ export const FEATURE_FLAG_DEFINITIONS: { key: FeatureFlagKey; label: string; des
   {
     key: "wow6_adaptive",
     label: "wow6_adaptive",
-    description: "Versione adattiva della sezione Wow 6 del preventivo (in sviluppo, non ancora visibile al cliente)."
-  },
-  {
-    key: "closing_message",
-    label: "closing_message",
-    description: "Messaggio di chiusura personalizzato a fine preventivo (in sviluppo, non ancora visibile al cliente)."
+    description: "Preventivo adattivo: evidenzia hotel più visto dal cliente nelle sessioni precedenti"
   },
   {
     key: "instant_reaction",
     label: "instant_reaction",
-    description: "Reazioni immediate del cliente sulle proposte hotel (in sviluppo, non ancora visibile al cliente)."
+    description: "Reazione istantanea: mi interessa / troppo caro su ogni proposta"
   },
   {
     key: "alternative_proposal",
     label: "alternative_proposal",
-    description: "Proposta alternativa automatica quando l'hotel richiesto non è disponibile (in sviluppo, non ancora visibile al cliente)."
+    description: "Proposta alternativa: box WhatsApp dopo 3+ aperture senza conferma"
+  },
+  {
+    key: "voucher_cliente",
+    label: "voucher_cliente",
+    description: "Voucher PDF: bottone 'Caparra ricevuta' nel pannello conferma con invio voucher al cliente"
+  },
+  {
+    key: "supplier_confirmation",
+    label: "supplier_confirmation",
+    description: "Conferma fornitore: bottone 'Invia conferma a hotel/agenzia' nel pannello conferma"
   }
 ];
 
@@ -31,9 +36,10 @@ export const FEATURE_FLAG_KEYS: FeatureFlagKey[] = FEATURE_FLAG_DEFINITIONS.map(
 
 export const emptyFeatureFlags: FeatureFlags = {
   wow6_adaptive: false,
-  closing_message: false,
   instant_reaction: false,
-  alternative_proposal: false
+  alternative_proposal: false,
+  voucher_cliente: false,
+  supplier_confirmation: false
 };
 
 export function isFeatureFlagKey(value: unknown): value is FeatureFlagKey {
@@ -44,8 +50,9 @@ export function normalizeFeatureFlags(value: unknown): FeatureFlags {
   const record = value && typeof value === "object" ? value as Record<string, unknown> : {};
   return {
     wow6_adaptive: Boolean(record.wow6_adaptive),
-    closing_message: Boolean(record.closing_message),
     instant_reaction: Boolean(record.instant_reaction),
-    alternative_proposal: Boolean(record.alternative_proposal)
+    alternative_proposal: Boolean(record.alternative_proposal),
+    voucher_cliente: Boolean(record.voucher_cliente),
+    supplier_confirmation: Boolean(record.supplier_confirmation)
   };
 }
