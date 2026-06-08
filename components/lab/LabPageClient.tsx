@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { FEATURE_FLAG_DEFINITIONS, FeatureFlagKey, FeatureFlags } from "@/lib/feature-flags";
@@ -163,6 +164,12 @@ function TestQuotesSection({ initialTestQuotes }: { initialTestQuotes: LabTestQu
                       >
                         Apri come cliente
                       </a>
+                      <Link
+                        href={`/admin/preventivi/${quote.code}`}
+                        className="rounded-full bg-ischia-leaf px-3 py-1.5 text-xs font-bold text-white"
+                      >
+                        Gestisci / invia su WhatsApp
+                      </Link>
                       {confirmingDeleteId === quote.id ? (
                         <span className="flex items-center gap-2 text-xs font-semibold">
                           Sei sicuro?
