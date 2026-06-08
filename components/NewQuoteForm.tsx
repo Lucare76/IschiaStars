@@ -75,7 +75,7 @@ function ClientSearch({ onSelect }: { onSelect: (c: ClientResult) => void }) {
   );
 }
 
-export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { hotels: Hotel[]; initialRequest?: QuoteRequest | null; requestedRequestId?: string }) {
+export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLabTest = false }: { hotels: Hotel[]; initialRequest?: QuoteRequest | null; requestedRequestId?: string; isLabTest?: boolean }) {
   const router = useRouter();
   const activeHotels = hotels.filter((h) => h.active);
   const requestedHotelName = initialRequest?.requestedHotel?.trim() ?? "";
@@ -157,6 +157,23 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
       setError(adminApiErrorMessage(response, result, `Preventivo non salvato (${response.status}). Riprova o verifica la sessione operatore.`));
       return;
     }
+
+    if (isLabTest) {
+      const quoteId = result.data.id;
+      await adminApiFetch(`/api/quotes/${quoteId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ excludedFromStats: true })
+      }).catch((err) => console.error("Esclusione statistiche preventivo di test non riuscita", err));
+      await adminApiFetch("/api/supervisor/test-quotes/mark-lab", {
+        method: "PATCH",
+        body: JSON.stringify({ quoteId })
+      }).catch((err) => console.error("Marcatura preventivo di test non riuscita", err));
+
+      router.push("/admin/lab");
+      router.refresh();
+      return;
+    }
+
     router.push(`/admin/preventivi/${result.data.code}`);
     router.refresh();
   }
@@ -168,6 +185,11 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId }: { h
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_0.36fr]">
       <form className="space-y-5" onSubmit={submit}>
+        {isLabTest ? (
+          <div className="rounded-2xl bg-[#4C1D95] px-4 py-3 text-sm font-semibold text-white">
+            🔬 Modalità test — questo preventivo sarà invisibile a Diego e non conterrà nelle statistiche
+          </div>
+        ) : null}
         {initialRequest ? (
           <div className="rounded-2xl bg-ischia-sun/20 p-4 text-sm font-semibold text-ischia-navy ring-1 ring-ischia-sun/35">
             Stai creando un preventivo dalla richiesta di {initialRequest.firstName} {initialRequest.lastName}. I dati cliente e soggiorno sono stati precompilati.

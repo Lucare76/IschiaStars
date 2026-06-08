@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { FEATURE_FLAG_DEFINITIONS, FeatureFlagKey, FeatureFlags } from "@/lib/feature-flags";
 import { formatDateTime } from "@/lib/utils";
-
-type LabHotel = { id: string; name: string };
 
 type LabTestQuote = {
   id: string;
@@ -15,19 +14,11 @@ type LabTestQuote = {
   publicUrl: string;
 };
 
-const TREATMENTS: { value: "BB" | "HB" | "FB"; label: string }[] = [
-  { value: "BB", label: "Camera e colazione (BB)" },
-  { value: "HB", label: "Mezza pensione (HB)" },
-  { value: "FB", label: "Pensione completa (FB)" }
-];
-
 export function LabPageClient({
   initialFlags,
-  hotels,
   initialTestQuotes
 }: {
   initialFlags: FeatureFlags;
-  hotels: LabHotel[];
   initialTestQuotes: LabTestQuote[];
 }) {
   return (
@@ -37,7 +28,7 @@ export function LabPageClient({
       </div>
 
       <FeatureFlagsSection initialFlags={initialFlags} />
-      <TestQuotesSection hotels={hotels} initialTestQuotes={initialTestQuotes} />
+      <TestQuotesSection initialTestQuotes={initialTestQuotes} />
     </div>
   );
 }
@@ -106,44 +97,11 @@ function FeatureFlagsSection({ initialFlags }: { initialFlags: FeatureFlags }) {
   );
 }
 
-function TestQuotesSection({ hotels, initialTestQuotes }: { hotels: LabHotel[]; initialTestQuotes: LabTestQuote[] }) {
+function TestQuotesSection({ initialTestQuotes }: { initialTestQuotes: LabTestQuote[] }) {
+  const router = useRouter();
   const [testQuotes, setTestQuotes] = useState(initialTestQuotes);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastCreatedUrl, setLastCreatedUrl] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setLastCreatedUrl(null);
-    setLoading(true);
-
-    const formData = new FormData(event.currentTarget);
-    const response = await adminApiFetch("/api/supervisor/test-quotes", {
-      method: "POST",
-      body: JSON.stringify({
-        clientFirstName: formData.get("clientFirstName"),
-        checkIn: formData.get("checkIn"),
-        checkOut: formData.get("checkOut"),
-        adults: Number(formData.get("adults") ?? 2),
-        hotelId: formData.get("hotelId"),
-        treatment: formData.get("treatment"),
-        price: Number(formData.get("price"))
-      })
-    });
-    const result = await readAdminApiJson<{ ok?: boolean; data?: LabTestQuote; error?: string }>(response);
-    setLoading(false);
-
-    if (!response.ok || !result?.ok || !result.data) {
-      setError(adminApiErrorMessage(response, result, "Creazione non riuscita. Riprova."));
-      return;
-    }
-
-    setTestQuotes((current) => [result.data!, ...current]);
-    setLastCreatedUrl(result.data.publicUrl);
-    event.currentTarget.reset();
-  }
 
   async function handleDelete(id: string) {
     setError(null);
@@ -164,56 +122,15 @@ function TestQuotesSection({ hotels, initialTestQuotes }: { hotels: LabHotel[]; 
       <h2 className="text-xl font-black text-ischia-navy">Preventivi di test</h2>
       <p className="mt-1 text-sm text-ischia-ink/60">Crea preventivi fittizi per testare il flusso cliente. Non vengono mai mostrati a Diego né conteggiati nelle statistiche.</p>
 
-      <form onSubmit={handleSubmit} className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Field label="Nome cliente">
-          <input name="clientFirstName" defaultValue="Test Supervisor" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Check-in">
-          <input name="checkIn" type="date" required className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Check-out">
-          <input name="checkOut" type="date" required className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Adulti">
-          <input name="adults" type="number" min={1} defaultValue={2} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Hotel">
-          <select name="hotelId" required defaultValue="" className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
-            <option value="" disabled>Seleziona un hotel</option>
-            {hotels.map((hotel) => (
-              <option key={hotel.id} value={hotel.id}>{hotel.name}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Trattamento">
-          <select name="treatment" required defaultValue="" className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
-            <option value="" disabled>Seleziona</option>
-            {TREATMENTS.map((treatment) => (
-              <option key={treatment.value} value={treatment.value}>{treatment.label}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Prezzo (€)">
-          <input name="price" type="number" min={1} step="0.01" required className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-        </Field>
-
-        <div className="flex items-end">
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-full bg-ischia-navy px-5 py-2.5 text-sm font-black text-white disabled:opacity-50"
-          >
-            {loading ? "Creazione…" : "Crea preventivo di test"}
-          </button>
-        </div>
-      </form>
+      <button
+        type="button"
+        onClick={() => router.push("/admin/preventivi/nuovo?lab=true")}
+        className="mt-5 rounded-full bg-[#1B3A5C] px-5 py-2 text-sm font-medium text-white"
+      >
+        + Crea preventivo di test
+      </button>
 
       {error ? <p className="mt-3 text-sm font-semibold text-red-600">{error}</p> : null}
-      {lastCreatedUrl ? (
-        <p className="mt-3 text-sm font-semibold text-emerald-700">
-          Preventivo creato — <a href={lastCreatedUrl} target="_blank" rel="noreferrer" className="underline">apri il link pubblico</a>
-        </p>
-      ) : null}
 
       <div className="mt-6 overflow-x-auto">
         <table className="w-full min-w-[560px] text-left text-sm">
@@ -270,14 +187,5 @@ function TestQuotesSection({ hotels, initialTestQuotes }: { hotels: LabHotel[]; 
         </table>
       </div>
     </section>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="grid gap-1 text-xs font-bold uppercase tracking-wide text-ischia-ink/60">
-      {label}
-      {children}
-    </label>
   );
 }
