@@ -664,50 +664,52 @@ function HotelCard({
           )}
         </div>
 
-        <div className="no-print mt-3">
-          <div className="flex flex-wrap gap-2">
-            <button
-              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                reaction === "interested"
-                  ? "border border-[#16A34A] bg-[#16A34A] text-white"
-                  : "border border-[#16A34A] bg-white text-[#16A34A]"
-              }`}
-              onClick={() => handleReactionClick("interested")}
-              type="button"
-            >
-              👍 Mi interessa
-            </button>
-            <button
-              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                reaction === "too_expensive"
-                  ? "border border-[#DC2626] bg-[#DC2626] text-white"
-                  : "border border-[#DC2626] bg-white text-[#DC2626]"
-              }`}
-              onClick={() => handleReactionClick("too_expensive")}
-              type="button"
-            >
-              💸 Troppo caro
-            </button>
-          </div>
-          {reaction === "interested" ? (
-            <p className="mt-2 text-xs font-medium text-[#16A34A]" style={{ animation: "fadeIn 300ms ease-in" }}>
-              Ottima scelta! Conferma quando sei pronto.
-            </p>
-          ) : null}
-          {reaction === "too_expensive" ? (
-            <p className="mt-2 text-xs font-medium text-[#DC2626]" style={{ animation: "fadeIn 300ms ease-in" }}>
-              Capito. Scrivici, possiamo trovare una soluzione.{" "}
-              <a
-                className="underline"
-                href={publicWhatsappLink(`Ciao IschiaStars, riguardo al preventivo ${quoteCode} (${mainOption.hotelName}): vorrei parlare del prezzo, magari c'è una soluzione più adatta?`)}
-                rel="noopener noreferrer"
-                target="_blank"
+        {featureFlags.instant_reaction && (
+          <div className="no-print mt-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                  reaction === "interested"
+                    ? "border border-[#16A34A] bg-[#16A34A] text-white"
+                    : "border border-[#16A34A] bg-white text-[#16A34A]"
+                }`}
+                onClick={() => handleReactionClick("interested")}
+                type="button"
               >
-                Scrivici su WhatsApp
-              </a>
-            </p>
-          ) : null}
-        </div>
+                👍 Mi interessa
+              </button>
+              <button
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                  reaction === "too_expensive"
+                    ? "border border-[#DC2626] bg-[#DC2626] text-white"
+                    : "border border-[#DC2626] bg-white text-[#DC2626]"
+                }`}
+                onClick={() => handleReactionClick("too_expensive")}
+                type="button"
+              >
+                💸 Troppo caro
+              </button>
+            </div>
+            {reaction === "interested" ? (
+              <p className="mt-2 text-xs font-medium text-[#16A34A]" style={{ animation: "fadeIn 300ms ease-in" }}>
+                Ottima scelta! Conferma quando sei pronto.
+              </p>
+            ) : null}
+            {reaction === "too_expensive" ? (
+              <p className="mt-2 text-xs font-medium text-[#DC2626]" style={{ animation: "fadeIn 300ms ease-in" }}>
+                Capito. Scrivici, possiamo trovare una soluzione.{" "}
+                <a
+                  className="underline"
+                  href={publicWhatsappLink(`Ciao IschiaStars, riguardo al preventivo ${quoteCode} (${mainOption.hotelName}): vorrei parlare del prezzo, magari c'è una soluzione più adatta?`)}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Scrivici su WhatsApp
+                </a>
+              </p>
+            ) : null}
+          </div>
+        )}
 
         {commitmentNote ? <CommitmentNoteBadge note={commitmentNote} /> : null}
 
