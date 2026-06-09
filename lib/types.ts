@@ -213,6 +213,7 @@ export type Quote = {
   sentAt?: string;
   confirmation?: QuoteConfirmation;
   excludedFromStats: boolean;
+  isLabTest?: boolean;
   deletedAt?: string;
   hotelOptions: QuoteHotelOption[];
 };

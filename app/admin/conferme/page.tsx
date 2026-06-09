@@ -24,10 +24,10 @@ type Filter = (typeof filters)[number];
 
 export default async function ConfirmationsPage({ searchParams }: { searchParams?: { filter?: string } }) {
   const selectedFilter = filters.includes(searchParams?.filter as Filter) ? searchParams?.filter as Filter : "tutte";
-  const [result, paymentSettings] = await Promise.all([listQuotes(), getPaymentSettings()]);
+  const [result, paymentSettings] = await Promise.all([listQuotes({ includeLabTests: true }), getPaymentSettings()]);
   const missingPaymentSettings = !isPaymentSettingsConfigured(paymentSettings.data);
   const confirmations = result.data
-    .filter((quote) => quote.confirmation && !quote.deletedAt && !quote.excludedFromStats)
+    .filter((quote) => quote.confirmation && !quote.deletedAt && (!quote.excludedFromStats || quote.isLabTest))
     .filter((quote) => selectedFilter === "tutte" || (quote.confirmation?.availabilityStatus ?? "availability_to_check") === selectedFilter);
 
   return (

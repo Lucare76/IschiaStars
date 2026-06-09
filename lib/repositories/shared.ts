@@ -73,6 +73,9 @@ export function mapQuote(
   hotelOptions: QuoteHotelOption[] = [],
   confirmationRow?: Record<string, unknown> | null
 ): Quote {
+  const quoteMetadata = typeof row.metadata === "object" && row.metadata
+    ? row.metadata as Record<string, unknown>
+    : {};
   const proposedHotel = allHotels.find((h) => h.id === (row.hotel_id ?? row.proposed_hotel_id)) ?? hotels[0];
   const alternativeHotel = allHotels.find((h) => h.id === row.alternative_hotel_id);
   const children = childRows
@@ -126,6 +129,7 @@ export function mapQuote(
     createdAt: String(row.created_at ?? ""),
     sentAt: row.sent_at ? String(row.sent_at) : undefined,
     excludedFromStats: Boolean(row.excluded_from_stats ?? false),
+    isLabTest: quoteMetadata.is_lab_test === true,
     deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
     confirmation: row.confirmed_at || confirmationRow
       ? {

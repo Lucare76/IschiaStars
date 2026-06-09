@@ -38,14 +38,17 @@ export type QuoteInput = {
   hotelOptions?: QuoteHotelOptionInput[];
 };
 
-export async function listQuotes({ includeDeleted = false }: { includeDeleted?: boolean } = {}): Promise<RepositoryResult<Quote[]>> {
+export async function listQuotes({ includeDeleted = false, includeLabTests = false }: { includeDeleted?: boolean; includeLabTests?: boolean } = {}): Promise<RepositoryResult<Quote[]>> {
   const supabase = createSupabaseAdminClient();
-  const demoQuotes = includeDeleted ? allDemoQuotes() : allDemoQuotes().filter((q) => !q.deletedAt);
+  const demoQuotes = (includeDeleted ? allDemoQuotes() : allDemoQuotes().filter((q) => !q.deletedAt))
+    .filter((quote) => includeLabTests || !quote.isLabTest);
   if (!supabase) return fallback(demoQuotes);
 
   let query = supabase.from("quotes").select("*").order("created_at", { ascending: false });
   if (!includeDeleted) query = query.is("deleted_at", null);
-  query = query.or("metadata->>is_lab_test.is.null,metadata->>is_lab_test.neq.true");
+  if (!includeLabTests) {
+    query = query.or("metadata->>is_lab_test.is.null,metadata->>is_lab_test.neq.true");
+  }
   const [hotelResult, { data, error }] = await Promise.all([listHotels(), query]);
   if (error) return fallback(demoQuotes, error);
 
@@ -234,6 +237,7 @@ export async function createQuoteFromRequest(input: QuoteInput, _options: { acce
       createdAt: new Date().toISOString(),
       sentAt: new Date().toISOString(),
       excludedFromStats: false,
+      isLabTest: _options.isLabTest === true,
       hotelOptions: []
     };
     addDemoQuote(quote);
