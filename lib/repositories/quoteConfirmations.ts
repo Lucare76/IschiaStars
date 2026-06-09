@@ -195,12 +195,16 @@ export async function markDepositPaid(id: string): Promise<RepositoryResult<Reco
   return getQuoteConfirmationById(id);
 }
 
-export async function updateConfirmationAmounts(id: string, depositAmount: number, balanceAmount: number | null): Promise<void> {
+export async function updateConfirmationAmounts(id: string, depositAmount: number, balanceAmount: number | null, selectedPrice?: number): Promise<void> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) return;
   await supabase
     .from("quote_confirmations")
-    .update({ selected_deposit_amount: depositAmount, selected_balance_amount: balanceAmount })
+    .update({
+      ...(selectedPrice !== undefined ? { selected_price: selectedPrice } : {}),
+      selected_deposit_amount: depositAmount,
+      selected_balance_amount: balanceAmount
+    })
     .eq("id", id);
 }
 

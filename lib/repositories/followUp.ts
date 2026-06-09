@@ -218,7 +218,8 @@ function eventLabel(eventType: QuoteEvent["eventType"]) {
     hesitant_whatsapp_clicked: "Click WhatsApp (cliente indeciso)",
     supplier_confirmation_sent: "Conferma inviata a hotel/agenzia",
     reaction_interested: "Ha indicato interesse",
-    reaction_too_expensive: "Ha indicato prezzo alto"
+    reaction_too_expensive: "Ha indicato prezzo alto",
+    amounts_updated: "Importi aggiornati"
   };
   return labels[eventType];
 }

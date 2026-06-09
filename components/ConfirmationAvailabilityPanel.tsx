@@ -12,6 +12,8 @@ import { formatCurrency, formatDate, formatDateTime, normalizeItalianPhone } fro
 export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureFlags, onConfirmationUpdated }: { quote: Quote; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; onConfirmationUpdated?: (quote: Quote) => void }) {
   const router = useRouter();
   const confirmation = quote.confirmation;
+  const defaultSelectedPrice = confirmation?.selectedPrice ?? quote.totalPrice;
+  const defaultDepositAmount = confirmation?.selectedDepositAmount ?? quote.deposit;
   const [message, setMessage] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [depositDueAt, setDepositDueAt] = useState(formatDepositDueLocalInput());
@@ -28,14 +30,24 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [supplierError, setSupplierError] = useState<string | null>(null);
   const [depositCoordinatesCopied, setDepositCoordinatesCopied] = useState(false);
   const [depositAmountOverride, setDepositAmountOverride] = useState("");
+  const [serviceLabel, setServiceLabel] = useState("");
+  const [serviceCost, setServiceCost] = useState("");
+  const [newTotalPrice, setNewTotalPrice] = useState(formatAmountInput(defaultSelectedPrice));
+  const [newDepositAmount, setNewDepositAmount] = useState(formatAmountInput(defaultDepositAmount));
+  const [totalManuallyEdited, setTotalManuallyEdited] = useState(false);
 
   const confirmationId = confirmation?.id;
   const status = confirmation?.availabilityStatus ?? "availability_to_check";
   const canSendFinal = status === "availability_confirmed";
   const isInHotelBalance = confirmation?.selectedBalanceMethod?.toLowerCase().includes("in struttura") ?? false;
-  const selectedPrice = confirmation?.selectedPrice ?? quote.totalPrice;
+  const selectedPrice = defaultSelectedPrice;
   const depositAmount = confirmation?.selectedDepositAmount;
   const balanceAmount = confirmation?.selectedBalanceAmount;
+  const parsedNewTotalPrice = Number(newTotalPrice);
+  const parsedNewDepositAmount = Number(newDepositAmount);
+  const editedBalanceAmount = Number.isFinite(parsedNewTotalPrice) && Number.isFinite(parsedNewDepositAmount)
+    ? parsedNewTotalPrice - parsedNewDepositAmount
+    : 0;
 
   const finalPaymentSnapshot = confirmation?.finalConfirmationSentAt ? confirmation?.paymentSettingsSnapshot ?? {} : {};
   const finalPaymentReason = typeof finalPaymentSnapshot.payment_reason === "string" ? finalPaymentSnapshot.payment_reason : "";
@@ -55,6 +67,14 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     const parsed = new Date(depositDueAt);
     return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
   }, [depositDueAt]);
+
+  useEffect(() => {
+    setServiceLabel("");
+    setServiceCost("");
+    setNewTotalPrice(formatAmountInput(defaultSelectedPrice));
+    setNewDepositAmount(formatAmountInput(defaultDepositAmount));
+    setTotalManuallyEdited(false);
+  }, [confirmationId, defaultSelectedPrice, defaultDepositAmount]);
 
   const depositCoordinatesWhatsapp = useMemo(() => {
     if (!hasCurrentCoordinates || depositAmount == null) return null;
@@ -182,6 +202,64 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     router.refresh();
   }
 
+  function updateServiceCost(value: string) {
+    setServiceCost(value);
+    if (totalManuallyEdited) return;
+
+    const parsedServiceCost = Number(value);
+    const nextTotal = defaultSelectedPrice + (Number.isFinite(parsedServiceCost) && value !== "" ? parsedServiceCost : 0);
+    setNewTotalPrice(formatAmountInput(nextTotal));
+  }
+
+  function updateNewTotalPrice(value: string) {
+    setTotalManuallyEdited(true);
+    setNewTotalPrice(value);
+  }
+
+  async function patchAmounts() {
+    const total = Number(newTotalPrice);
+    const deposit = Number(newDepositAmount);
+    const balance = total - deposit;
+
+    if (!Number.isFinite(total) || total <= 0) {
+      setMessage("Inserisci un nuovo totale valido.");
+      return;
+    }
+    if (!Number.isFinite(deposit) || deposit <= 0) {
+      setMessage("Inserisci una caparra valida.");
+      return;
+    }
+    if (balance < 0) {
+      setMessage("La caparra non puo superare il nuovo totale.");
+      return;
+    }
+
+    setLoadingAction("update-amounts");
+    setMessage(null);
+    const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/update-amounts`, {
+      method: "PATCH",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({
+        newTotalPrice: total,
+        depositAmount: deposit,
+        balanceAmount: balance,
+        serviceLabel: serviceLabel.trim() || undefined,
+        serviceCost: serviceCost ? Number(serviceCost) : undefined
+      })
+    });
+    const result = await readAdminApiJson<{ success?: boolean; error?: string; quote?: Quote }>(response);
+    setLoadingAction(null);
+    if (!response.ok || !result?.success) {
+      setMessage(adminApiErrorMessage(response, result));
+      return;
+    }
+
+    setMessage("\u2713 Importi aggiornati");
+    if (result.quote) onConfirmationUpdated?.(result.quote);
+    setTotalManuallyEdited(false);
+    router.refresh();
+  }
+
   return (
     <section id="verifica-disponibilita" className="rounded-2xl bg-white/90 p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -213,6 +291,86 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
         <Info label="Policy cancellazione" value={confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy ?? "-"} />
         <Info label="Confermata il" value={formatDateTime(confirmation.confirmedAt)} />
         <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
+      </div>
+
+      <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-[#1B3A5C]/20">
+        <h3 className="font-black text-ischia-navy">Modifica importi</h3>
+        <p className="mt-1 text-sm text-ischia-ink/65">Aggiungi un servizio extra o modifica manualmente totale e caparra.</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="text-sm font-semibold text-ischia-ink">
+            Servizio aggiuntivo
+            <input
+              className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+              placeholder="Es. Trasporto porto, Transfer aeroporto"
+              type="text"
+              value={serviceLabel}
+              onChange={(event) => setServiceLabel(event.target.value)}
+            />
+          </label>
+          <label className="text-sm font-semibold text-ischia-ink">
+            Costo aggiuntivo (&euro;)
+            <input
+              className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+              min="0"
+              step="0.01"
+              type="number"
+              value={serviceCost}
+              onChange={(event) => updateServiceCost(event.target.value)}
+            />
+          </label>
+          <label className="text-sm font-semibold text-ischia-ink">
+            Nuovo totale (&euro;)
+            <input
+              className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+              min="0"
+              step="0.01"
+              type="number"
+              value={newTotalPrice}
+              onChange={(event) => updateNewTotalPrice(event.target.value)}
+            />
+          </label>
+          <label className="text-sm font-semibold text-ischia-ink">
+            Caparra (&euro;)
+            <input
+              className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+              min="0"
+              step="0.01"
+              type="number"
+              value={newDepositAmount}
+              onChange={(event) => setNewDepositAmount(event.target.value)}
+            />
+          </label>
+          <label className="text-sm font-semibold text-ischia-ink">
+            Saldo (&euro;)
+            <input
+              className="mt-1 w-full rounded-xl border border-ischia-blue/20 bg-ischia-mist px-3 py-2 font-bold text-ischia-navy"
+              readOnly
+              type="number"
+              value={formatAmountInput(editedBalanceAmount)}
+            />
+          </label>
+        </div>
+        <button
+          className="mt-3 rounded-full border border-[#1B3A5C] bg-white px-4 py-2 text-sm font-black text-[#1B3A5C] hover:bg-[#EFF6FF] disabled:opacity-60"
+          disabled={Boolean(loadingAction)}
+          onClick={() => void patchAmounts()}
+          type="button"
+        >
+          Aggiorna importi
+        </button>
+        {confirmation.finalConfirmationSentAt ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
+            <p>{"\u26A0\uFE0F La conferma definitiva \u00E8 gi\u00E0 stata inviata. Ricorda di reinviarla al cliente con i nuovi importi."}</p>
+            <button
+              className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[#1B3A5C] ring-1 ring-[#1B3A5C]/30 hover:bg-[#EFF6FF] disabled:opacity-60"
+              disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
+              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(depositAmountOverride ? { depositAmountOverride: Number(depositAmountOverride) } : {}) }, "Conferma definitiva reinviata al cliente.")}
+              type="button"
+            >
+              Reinvia conferma al cliente
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-4 rounded-2xl bg-ischia-mist p-4 text-sm text-ischia-ink">
@@ -539,6 +697,11 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
       </div>
     </section>
   );
+}
+
+function formatAmountInput(value: number | undefined) {
+  if (value == null || !Number.isFinite(value)) return "";
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
 function Info({ label, value }: { label: string; value: string }) {
