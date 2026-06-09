@@ -44,10 +44,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       arrivalDate: quote.arrivalDate ? formatDate(quote.arrivalDate) : undefined,
       departureDate: quote.departureDate ? formatDate(quote.departureDate) : undefined,
       guestsLabel: guestsParts.length ? guestsParts.join(", ") : undefined,
+      includedServices: quote.servicesIncluded,
       depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
       depositPaidAtLabel: formatDateTime(depositPaidAt),
       balanceAmountLabel: typeof balanceAmount === "number" ? formatCurrency(balanceAmount) : undefined,
-      balanceMethodLabel: confirmation.selectedBalanceMethod,
       whatsappNumber: ischiastarsWhatsappNumber()
     });
 

@@ -31,6 +31,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const confirmationId = confirmation?.id;
   const status = confirmation?.availabilityStatus ?? "availability_to_check";
   const canSendFinal = status === "availability_confirmed";
+  const isInHotelBalance = confirmation?.selectedBalanceMethod === "Saldo restante in struttura con carta o contanti.";
   const selectedPrice = confirmation?.selectedPrice ?? quote.totalPrice;
   const depositAmount = confirmation?.selectedDepositAmount;
   const balanceAmount = confirmation?.selectedBalanceAmount;
@@ -420,7 +421,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
         </div>
       ) : null}
 
-      {status === "deposit_waiting" && featureFlags.voucher_cliente ? (
+      {status === "deposit_waiting" && featureFlags.voucher_cliente && isInHotelBalance ? (
         <div className="mt-5 rounded-2xl bg-amber-50/60 p-4 ring-1 ring-amber-200/70">
           <h3 className="font-black text-ischia-navy">Caparra e voucher cliente</h3>
           {confirmation.depositPaidAt ? (
