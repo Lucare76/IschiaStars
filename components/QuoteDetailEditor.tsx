@@ -339,15 +339,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
 
       <aside className="space-y-4">
         {currentQuote.confirmation ? (
-          <div className="rounded-2xl bg-emerald-50/80 p-5 shadow-soft ring-1 ring-emerald-200">
-            <h3 className="font-black text-ischia-navy">Conferma cliente ricevuta</h3>
-            <p className="mt-2 text-sm font-semibold text-emerald-800">
-              Ora va verificata la disponibilità con la struttura.
-            </p>
-            <a className="mt-4 block rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white" href="#verifica-disponibilita">
-              Gestisci disponibilità
-            </a>
-          </div>
+          <ConfirmationStatusCard confirmation={currentQuote.confirmation} />
         ) : null}
 
         {/* Card principale: codice + stato + azioni chiave */}
@@ -463,6 +455,78 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
         </div>
       </aside>
     </div>
+    </div>
+  );
+}
+
+function ConfirmationStatusCard({ confirmation }: { confirmation: NonNullable<Quote["confirmation"]> }) {
+  const status = confirmation.availabilityStatus ?? "availability_to_check";
+  const isInHotelBalance = confirmation.selectedBalanceMethod?.toLowerCase().includes("in struttura") ?? false;
+  const allDone = confirmation.balancePaidAt || (isInHotelBalance && confirmation.depositPaidAt);
+
+  if (allDone) {
+    return (
+      <div className="rounded-2xl bg-emerald-50/80 p-5 shadow-soft ring-1 ring-emerald-200">
+        <h3 className="font-black text-ischia-navy">✓ Tutto confermato</h3>
+        <p className="mt-2 text-sm font-semibold text-emerald-800">
+          {confirmation.balancePaidAt ? "Saldo ricevuto. Prenotazione completata." : "Caparra ricevuta. Saldo in struttura all'arrivo."}
+        </p>
+      </div>
+    );
+  }
+
+  if (status === "deposit_waiting" && confirmation.depositPaidAt) {
+    return (
+      <div className="rounded-2xl bg-emerald-50/80 p-5 shadow-soft ring-1 ring-emerald-200">
+        <h3 className="font-black text-ischia-navy">✓ Caparra ricevuta</h3>
+        <p className="mt-2 text-sm font-semibold text-emerald-800">In attesa del saldo dal cliente.</p>
+        <a className="mt-4 block rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white" href="#verifica-disponibilita">
+          Gestisci saldo e voucher
+        </a>
+      </div>
+    );
+  }
+
+  if (status === "deposit_waiting") {
+    return (
+      <div className="rounded-2xl bg-amber-50 p-5 shadow-soft ring-1 ring-amber-200">
+        <h3 className="font-black text-ischia-navy">In attesa caparra</h3>
+        <p className="mt-2 text-sm font-semibold text-amber-800">Email di conferma inviata. Aspettiamo il bonifico del cliente.</p>
+        <a className="mt-4 block rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href="#verifica-disponibilita">
+          Registra caparra
+        </a>
+      </div>
+    );
+  }
+
+  if (status === "availability_confirmed") {
+    return (
+      <div className="rounded-2xl bg-emerald-50/80 p-5 shadow-soft ring-1 ring-emerald-200">
+        <h3 className="font-black text-ischia-navy">✓ Struttura disponibile</h3>
+        <p className="mt-2 text-sm font-semibold text-emerald-800">Invia la conferma definitiva al cliente con le coordinate di pagamento.</p>
+        <a className="mt-4 block rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white" href="#verifica-disponibilita">
+          Invia conferma definitiva
+        </a>
+      </div>
+    );
+  }
+
+  if (status === "availability_unavailable" || status === "alternative_to_propose") {
+    return (
+      <div className="rounded-2xl bg-rose-50 p-5 shadow-soft ring-1 ring-rose-200">
+        <h3 className="font-black text-ischia-navy">Struttura non disponibile</h3>
+        <p className="mt-2 text-sm font-semibold text-rose-800">Email di indisponibilità inviata al cliente.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl bg-emerald-50/80 p-5 shadow-soft ring-1 ring-emerald-200">
+      <h3 className="font-black text-ischia-navy">Conferma cliente ricevuta</h3>
+      <p className="mt-2 text-sm font-semibold text-emerald-800">Verifica la disponibilità con la struttura e procedi.</p>
+      <a className="mt-4 block rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white" href="#verifica-disponibilita">
+        Gestisci disponibilità
+      </a>
     </div>
   );
 }
