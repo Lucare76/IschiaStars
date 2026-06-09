@@ -27,6 +27,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [supplierSending, setSupplierSending] = useState(false);
   const [supplierError, setSupplierError] = useState<string | null>(null);
   const [depositCoordinatesCopied, setDepositCoordinatesCopied] = useState(false);
+  const [depositAmountOverride, setDepositAmountOverride] = useState("");
 
   const confirmationId = confirmation?.id;
   const status = confirmation?.availabilityStatus ?? "availability_to_check";
@@ -188,8 +189,8 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
           <h2 className="text-xl font-black text-ischia-navy">Verifica disponibilità struttura</h2>
           <p className="mt-1 text-sm text-ischia-ink/65">La conferma cliente non è ancora prenotazione definitiva.</p>
         </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${confirmation?.depositPaidAt ? "bg-emerald-100 text-emerald-800 ring-emerald-200" : "bg-ischia-mist text-ischia-navy ring-ischia-blue/15"}`}>
-          {confirmation?.depositPaidAt ? "✓ Caparra ricevuta" : availabilityStatusLabel(status)}
+        <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${(confirmation?.depositPaidAt || confirmation?.balancePaidAt) ? "bg-emerald-100 text-emerald-800 ring-emerald-200" : "bg-ischia-mist text-ischia-navy ring-ischia-blue/15"}`}>
+          {confirmation?.balancePaidAt ? "✓ Saldo ricevuto" : confirmation?.depositPaidAt ? "✓ Caparra ricevuta" : availabilityStatusLabel(status)}
         </span>
       </div>
 
@@ -273,6 +274,17 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
               Scadenza caparra
               <input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" type="datetime-local" value={depositDueAt} onChange={(event) => setDepositDueAt(event.target.value)} />
             </label>
+            <label className="text-sm font-semibold text-ischia-ink">
+              Importo caparra (lascia vuoto per usare quello standard{depositAmount != null ? `: ${formatCurrency(depositAmount)}` : ""})
+              <input
+                className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+                type="number"
+                min="0"
+                placeholder={depositAmount != null ? String(depositAmount) : "es. 300"}
+                value={depositAmountOverride}
+                onChange={(event) => setDepositAmountOverride(event.target.value)}
+              />
+            </label>
             <label className="text-sm font-semibold text-ischia-ink sm:col-span-2">
               Note per il cliente
               <textarea className="mt-1 min-h-20 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" value={finalNotes} onChange={(event) => setFinalNotes(event.target.value)} />
@@ -299,7 +311,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
               <button
                 className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
                 disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
-                onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes }, "Conferma definitiva reinviata al cliente.")}
+                onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(depositAmountOverride ? { depositAmountOverride: Number(depositAmountOverride) } : {}) }, "Conferma definitiva reinviata al cliente.")}
                 type="button"
               >
                 Reinvia conferma al cliente
@@ -309,7 +321,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
             <button
               className="mt-3 rounded-full bg-ischia-navy px-4 py-2 text-sm font-black text-white disabled:opacity-60"
               disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
-              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes }, "Conferma definitiva inviata al cliente.")}
+              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(depositAmountOverride ? { depositAmountOverride: Number(depositAmountOverride) } : {}) }, "Conferma definitiva inviata al cliente.")}
               type="button"
             >
               Invia conferma definitiva al cliente
@@ -421,31 +433,73 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
         </div>
       ) : null}
 
-      {status === "deposit_waiting" && featureFlags.voucher_cliente && isInHotelBalance ? (
+      {status === "deposit_waiting" && featureFlags.voucher_cliente ? (
         <div className="mt-5 rounded-2xl bg-amber-50/60 p-4 ring-1 ring-amber-200/70">
           <h3 className="font-black text-ischia-navy">Caparra e voucher cliente</h3>
           {confirmation.depositPaidAt ? (
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
-                ✓ Caparra ricevuta il {formatDateTime(confirmation.depositPaidAt)}
-              </p>
-              <a
-                className="rounded-full bg-ischia-mist px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20"
-                href={`/api/quote-confirmations/${confirmationId}/voucher-preview`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Anteprima voucher
-              </a>
-              <button
-                className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
-                disabled={Boolean(loadingAction)}
-                onClick={() => void postDepositReceived("Voucher reinviato al cliente.")}
-                type="button"
-              >
-                Invia voucher di nuovo
-              </button>
-            </div>
+            isInHotelBalance ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
+                  ✓ Caparra ricevuta il {formatDateTime(confirmation.depositPaidAt)}
+                </p>
+                <a
+                  className="rounded-full bg-ischia-mist px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20"
+                  href={`/api/quote-confirmations/${confirmationId}/voucher-preview`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Anteprima voucher
+                </a>
+                <button
+                  className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
+                  disabled={Boolean(loadingAction)}
+                  onClick={() => void postDepositReceived("Voucher reinviato al cliente.")}
+                  type="button"
+                >
+                  Invia voucher di nuovo
+                </button>
+              </div>
+            ) : confirmation.balancePaidAt ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
+                  ✓ Caparra ricevuta il {formatDateTime(confirmation.depositPaidAt)}
+                </p>
+                <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
+                  ✓ Saldo ricevuto il {formatDateTime(confirmation.balancePaidAt)}
+                </p>
+                <a
+                  className="rounded-full bg-ischia-mist px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20"
+                  href={`/api/quote-confirmations/${confirmationId}/voucher-preview`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Anteprima voucher
+                </a>
+                <button
+                  className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
+                  disabled={Boolean(loadingAction)}
+                  onClick={() => void postAction("balance-received", {}, "Voucher reinviato al cliente.")}
+                  type="button"
+                >
+                  Invia voucher di nuovo
+                </button>
+              </div>
+            ) : (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
+                  ✓ Caparra ricevuta il {formatDateTime(confirmation.depositPaidAt)}
+                </p>
+                <button
+                  className="rounded-full px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+                  style={{ backgroundColor: "#16A34A" }}
+                  disabled={Boolean(loadingAction)}
+                  onClick={() => void postAction("balance-received", {}, "Saldo registrato e voucher inviato al cliente.")}
+                  type="button"
+                >
+                  Saldo ricevuto
+                </button>
+              </div>
+            )
           ) : (
             <button
               className="mt-3 rounded-full px-4 py-2 text-sm font-black text-white disabled:opacity-60"

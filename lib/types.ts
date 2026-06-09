@@ -108,6 +108,7 @@ export type QuoteConfirmation = {
   availabilityStatus?: ConfirmationAvailabilityStatus;
   depositDueAt?: string;
   depositPaidAt?: string | null;
+  balancePaidAt?: string | null;
   finalConfirmationSentAt?: string;
   finalConfirmationNotes?: string;
   unavailableReason?: string;

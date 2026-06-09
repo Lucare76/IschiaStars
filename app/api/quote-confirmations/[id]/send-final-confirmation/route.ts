@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildPaymentReason, isPaymentSettingsConfigured, paymentSettingsToDbValue } from "@/lib/payment-settings";
-import { getQuoteConfirmationById, updateQuoteConfirmationAvailability } from "@/lib/repositories/quoteConfirmations";
+import { getQuoteConfirmationById, updateConfirmationAmounts, updateQuoteConfirmationAvailability } from "@/lib/repositories/quoteConfirmations";
 import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
 import { getQuoteById } from "@/lib/repositories/quotes";
 import { getPaymentSettings } from "@/lib/repositories/settings";
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const unauthorized = await requireAdminApiAccess(request);
   if (unauthorized) return unauthorized;
 
-  const body = await request.json().catch(() => null) as { depositDueAt?: string; notes?: string } | null;
+  const body = await request.json().catch(() => null) as { depositDueAt?: string; notes?: string; depositAmountOverride?: number } | null;
   if (!body?.depositDueAt) return NextResponse.json({ ok: false, error: "Scadenza caparra obbligatoria" }, { status: 400 });
 
   const confirmationResult = await getQuoteConfirmationById(params.id);
@@ -24,7 +24,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   if (!quoteResult.data?.confirmation) return NextResponse.json({ ok: false, error: "Preventivo non trovato" }, { status: 404 });
 
   const now = new Date().toISOString();
-  const snapshot = await resolvePaymentSnapshot(quoteResult.data, body.depositDueAt, now);
+  const depositAmountOverride = typeof body.depositAmountOverride === "number" && body.depositAmountOverride > 0 ? body.depositAmountOverride : undefined;
+  const snapshot = await resolvePaymentSnapshot(quoteResult.data, body.depositDueAt, now, depositAmountOverride);
   if (snapshot.configured !== true) {
     return NextResponse.json({ ok: false, error: "Coordinate pagamento non configurate. Completa le impostazioni prima di inviare la conferma definitiva." }, { status: 400 });
   }
@@ -43,6 +44,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     finalConfirmationNotes: body.notes ?? null,
     paymentSettingsSnapshot: snapshot
   });
+
+  if (depositAmountOverride !== undefined) {
+    const totalPrice = quoteResult.data.confirmation?.selectedPrice ?? quoteResult.data.totalPrice ?? 0;
+    await updateConfirmationAmounts(params.id, depositAmountOverride, totalPrice > depositAmountOverride ? totalPrice - depositAmountOverride : null);
+  }
   if (!update.data) return NextResponse.json({ ok: false, error: update.error ?? "Conferma non aggiornata" }, { status: 500 });
 
   await trackQuoteEvent(quoteResult.data.id, "deposit_due_at_set", {
@@ -62,15 +68,20 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   return NextResponse.json({ ok: true, source: update.source, data: update.data, quote: freshQuoteResult.data });
 }
 
-async function resolvePaymentSnapshot(quote: NonNullable<Awaited<ReturnType<typeof getQuoteById>>["data"]>, depositDueAt: string, emailSentAt: string) {
+async function resolvePaymentSnapshot(quote: NonNullable<Awaited<ReturnType<typeof getQuoteById>>["data"]>, depositDueAt: string, emailSentAt: string, depositAmountOverride?: number) {
   const settings = (await getPaymentSettings()).data;
   const firstName = quote.confirmation?.firstName ?? quote.customerFirstName;
   const lastName = quote.confirmation?.lastName ?? quote.customerLastName;
   const reason = buildPaymentReason(settings, quote.code, firstName, lastName);
+  const depositAmount = depositAmountOverride ?? quote.confirmation?.selectedDepositAmount ?? quote.deposit;
+  const totalPrice = quote.confirmation?.selectedPrice ?? quote.totalPrice ?? 0;
+  const balanceAmount = depositAmountOverride !== undefined
+    ? (totalPrice > depositAmountOverride ? totalPrice - depositAmountOverride : null)
+    : quote.confirmation?.selectedBalanceAmount;
   const base = {
     payment_reason: reason,
-    deposit_amount: quote.confirmation?.selectedDepositAmount ?? quote.deposit,
-    balance_amount: quote.confirmation?.selectedBalanceAmount,
+    deposit_amount: depositAmount,
+    balance_amount: balanceAmount,
     deposit_due_at: depositDueAt,
     email_sent_at: emailSentAt
   };

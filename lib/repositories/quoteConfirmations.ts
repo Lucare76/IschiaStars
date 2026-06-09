@@ -194,3 +194,30 @@ export async function markDepositPaid(id: string): Promise<RepositoryResult<Reco
 
   return getQuoteConfirmationById(id);
 }
+
+export async function updateConfirmationAmounts(id: string, depositAmount: number, balanceAmount: number | null): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return;
+  await supabase
+    .from("quote_confirmations")
+    .update({ selected_deposit_amount: depositAmount, selected_balance_amount: balanceAmount })
+    .eq("id", id);
+}
+
+export async function markBalancePaid(id: string): Promise<RepositoryResult<Record<string, unknown> | null>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(null);
+
+  const { data, error } = await supabase
+    .from("quote_confirmations")
+    .update({ balance_paid_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("balance_paid_at", null)
+    .select("*")
+    .maybeSingle();
+
+  if (error) return fallback(null, error);
+  if (data) return fromSupabase(data as Record<string, unknown>);
+
+  return getQuoteConfirmationById(id);
+}
