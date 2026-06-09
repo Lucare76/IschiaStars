@@ -123,6 +123,20 @@ function maskEmail(email: string): string {
   return `${visible}${"*".repeat(Math.max(1, local.length - visible.length))}@${domain}`;
 }
 
+function emailSharedStyles(): string {
+  return `<style>
+    @media only screen and (max-width: 480px) {
+      .email-wrapper { padding: 12px 0 !important; }
+      .email-container { width: 100% !important; }
+      .email-body { padding: 16px !important; }
+      .section-title { font-size: 18px !important; }
+      .cta-button { width: 100% !important; display: block !important; box-sizing: border-box; }
+      .header-padding { padding: 20px 16px !important; }
+      .footer-padding { padding: 14px 16px !important; }
+    }
+  </style>`;
+}
+
 export type SendQuoteEmailResult = { sent: boolean; skipReason?: string };
 
 export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEmailResult> {
@@ -180,23 +194,23 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${emailSharedStyles()}
 </head>
-<body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
-  <table width="100%" cellpadding="0" cellspacing="0">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f4f6f9;margin:0;padding:0;">
+  <div class="email-wrapper" style="padding:24px 16px;">
+  <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
 
         <tr>
-          <td style="background:#1a3a5c;padding:28px 32px;text-align:center;">
-            <p style="margin:0;color:#ffffff;font-size:24px;font-weight:bold;letter-spacing:1px;">IschiaStars</p>
+          <td class="header-padding" style="background:#1a3a5c;padding:28px 32px;text-align:center;">
+            <p class="section-title" style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;letter-spacing:1px;">IschiaStars</p>
             <p style="margin:6px 0 0;color:#a8c4e0;font-size:13px;">Soggiorni a Ischia</p>
           </td>
         </tr>
 
         <tr>
-          <td style="padding:32px 32px 24px;">
-            <p style="margin:0 0 18px;font-size:16px;color:#1a1a1a;">Ciao ${firstName},</p>
-            <p style="margin:0 0 28px;font-size:15px;color:#444444;line-height:1.7;">${introText}</p>
+          <td class="email-body" style="padding:28px 32px 24px;">
+            <p style="margin:0 0 18px;font-size:15px;color:#1F2937;line-height:1.6;">Ciao ${firstName},</p>
+            <p style="margin:0 0 28px;font-size:15px;color:#374151;line-height:1.6;">${introText}</p>
 
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f6ff;border-radius:6px;padding:20px 20px 12px;margin-bottom:28px;">
               <tr>
@@ -219,8 +233,8 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
             </table>
 
             <div style="text-align:center;margin:28px 0 20px;">
-              <a href="${quoteUrl}"
-                 style="background:#1a3a5c;color:#ffffff;text-decoration:none;padding:15px 36px;border-radius:6px;font-size:15px;font-weight:bold;display:inline-block;letter-spacing:0.5px;">
+              <a href="${quoteUrl}" class="cta-button"
+                 style="background:#1a3a5c;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block;letter-spacing:0.5px;">
                 ${hasMultiple ? "Vedi le proposte e conferma" : "Apri il preventivo"}
               </a>
             </div>
@@ -242,15 +256,14 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
         </tr>
 
         <tr>
-          <td style="background:#f0f6ff;padding:20px 32px;text-align:center;border-top:1px solid #e0e8f0;">
+          <td class="footer-padding" style="background:#f0f6ff;padding:20px 32px;text-align:center;border-top:1px solid #e0e8f0;">
             <p style="margin:0;font-size:13px;color:#666;">Il team IschiaStars</p>
             <p style="margin:4px 0 0;font-size:12px;color:#999;">info@ischiastars.it</p>
           </td>
         </tr>
 
-      </table>
-    </td></tr>
   </table>
+  </div>
 </body>
 </html>`;
 
@@ -423,21 +436,21 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${emailSharedStyles()}
 </head>
-<body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
-  <table width="100%" cellpadding="0" cellspacing="0">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f4f6f9;margin:0;padding:0;">
+  <div class="email-wrapper" style="padding:24px 16px;">
+  <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
 
         <tr>
-          <td style="background:#1a4a2a;padding:22px 32px;">
-            <p style="margin:0;color:#ffffff;font-size:18px;font-weight:bold;">IschiaStars — Preventivo confermato</p>
+          <td class="header-padding" style="background:#1a4a2a;padding:22px 32px;">
+            <p class="section-title" style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;">IschiaStars — Preventivo confermato</p>
           </td>
         </tr>
 
         <tr>
-          <td style="padding:28px 32px 24px;">
-            <p style="margin:0 0 24px;font-size:15px;color:#1a1a1a;line-height:1.6;">
+          <td class="email-body" style="padding:28px 32px 24px;">
+            <p style="margin:0 0 24px;font-size:15px;color:#1F2937;line-height:1.6;">
               Il cliente ha confermato il preventivo online.
             </p>
 
@@ -487,8 +500,8 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
             </table>
 
             <div style="text-align:center;">
-              <a href="${backofficeUrl}"
-                 style="background:#1a3a5c;color:#ffffff;text-decoration:none;padding:13px 30px;border-radius:6px;font-size:14px;font-weight:bold;display:inline-block;">
+              <a href="${backofficeUrl}" class="cta-button"
+                 style="background:#1a3a5c;color:#ffffff;text-decoration:none;padding:14px 30px;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block;">
                 Apri backoffice preventivi
               </a>
             </div>
@@ -496,14 +509,13 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
         </tr>
 
         <tr>
-          <td style="background:#f0f9f0;padding:16px 32px;text-align:center;border-top:1px solid #c8e8c8;">
+          <td class="footer-padding" style="background:#f0f9f0;padding:16px 32px;text-align:center;border-top:1px solid #c8e8c8;">
             <p style="margin:0;font-size:12px;color:#888;">Notifica automatica IschiaStars</p>
           </td>
         </tr>
 
-      </table>
-    </td></tr>
   </table>
+  </div>
 </body>
 </html>`;
 
@@ -592,12 +604,16 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
 
   return `<!DOCTYPE html>
 <html lang="it">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family:Arial,Helvetica,sans-serif;background:#F4F6F9;margin:0;padding:24px 16px;">
-  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  ${emailSharedStyles()}
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#F4F6F9;margin:0;padding:0;">
+  <div class="email-wrapper" style="padding:24px 16px;">
+  <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;">
     <tr><td style="background:#C9A84C;height:4px;border-radius:10px 10px 0 0;font-size:0;">&nbsp;</td></tr>
-    <tr><td style="background:#1B3A5C;padding:24px 32px;">
+    <tr><td class="header-padding" style="background:#1B3A5C;padding:24px 32px;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
           <td>
@@ -610,9 +626,9 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
         </tr>
       </table>
     </td></tr>
-    <tr><td style="background:#FFFFFF;padding:30px 32px;color:#374151;font-size:15px;line-height:1.7;">
-      <p style="margin:0 0 18px;">Ciao <strong>${firstName}</strong>,</p>
-      <p style="margin:0 0 22px;">la struttura ha confermato la disponibilita per la proposta selezionata. Per bloccare definitivamente il soggiorno e necessario versare la caparra entro <strong style="color:#1B3A5C;">${dueAt}</strong>.</p>
+    <tr><td class="email-body" style="background:#FFFFFF;padding:28px 32px;color:#374151;font-size:15px;line-height:1.6;">
+      <p style="margin:0 0 18px;font-size:15px;">Ciao <strong>${firstName}</strong>,</p>
+      <p style="margin:0 0 22px;font-size:15px;">la struttura ha confermato la disponibilita per la proposta selezionata. Per bloccare definitivamente il soggiorno e necessario versare la caparra entro <strong style="color:#1B3A5C;">${dueAt}</strong>.</p>
 
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D9E2EC;border-radius:10px;overflow:hidden;margin:0 0 22px;">
         <tr><td colspan="2" style="background:#1B3A5C;padding:12px 16px;">
@@ -643,14 +659,14 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
 
       <p style="margin:0;font-size:13px;color:#6B7280;">Per qualsiasi dubbio puoi rispondere a questa email o scriverci su WhatsApp.</p>
     </td></tr>
-    <tr><td style="background:#1B3A5C;padding:16px 32px;border-radius:0 0 10px 10px;">
+    <tr><td class="footer-padding" style="background:#1B3A5C;padding:16px 32px;border-radius:0 0 10px 10px;">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td><div style="font-size:12px;font-weight:bold;color:#FFFFFF;">IschiaStars</div><div style="font-size:11px;color:#94A3B8;margin-top:2px;">Il tuo specialista per Ischia</div></td>
         <td align="right"><span style="font-size:10px;color:#C9A84C;">Preventivo ${quote.code}</span></td>
       </tr></table>
     </td></tr>
   </table>
-  </td></tr></table>
+  </div>
 </body></html>`;
 }
 
@@ -772,20 +788,24 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
 
   const html = `<!DOCTYPE html>
 <html lang="it">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px 16px;">
-  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  ${emailSharedStyles()}
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f4f6f9;margin:0;padding:0;">
+  <div class="email-wrapper" style="padding:24px 16px;">
+  <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;">
 
     <!-- Gold top accent -->
     <tr><td style="background:#C9A84C;height:4px;border-radius:4px 4px 0 0;font-size:0;">&nbsp;</td></tr>
 
     <!-- Navy header -->
-    <tr><td style="background:#1B3A5C;padding:24px 32px;">
+    <tr><td class="header-padding" style="background:#1B3A5C;padding:24px 32px;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
           <td>
-            <div style="font-size:20px;font-weight:bold;color:#ffffff;letter-spacing:0.3px;">IschiaStars</div>
+            <div class="section-title" style="font-size:20px;font-weight:bold;color:#ffffff;letter-spacing:0.3px;">IschiaStars</div>
             <div style="font-size:13px;color:#C9A84C;margin-top:4px;letter-spacing:0.5px;">Voucher di Prenotazione</div>
           </td>
           <td align="right">
@@ -796,7 +816,7 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
     </td></tr>
 
     <!-- Body -->
-    <tr><td style="background:#ffffff;padding:28px 32px;">
+    <tr><td class="email-body" style="background:#ffffff;padding:28px 32px;">
       <p style="margin:0 0 18px;font-size:15px;color:#374151;">Ciao <strong>${firstName}</strong>,</p>
       <p style="margin:0 0 22px;font-size:14px;color:#4b5563;line-height:1.6;">
         abbiamo ricevuto la tua caparra. La prenotazione è confermata e il tuo soggiorno a Ischia è assicurato. In allegato trovi il voucher ufficiale da conservare.
@@ -842,7 +862,7 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
     </td></tr>
 
     <!-- Footer -->
-    <tr><td style="background:#1B3A5C;padding:16px 32px;border-radius:0 0 8px 8px;">
+    <tr><td class="footer-padding" style="background:#1B3A5C;padding:16px 32px;border-radius:0 0 8px 8px;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
           <td>
@@ -857,7 +877,7 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
     </td></tr>
 
   </table>
-  </td></tr></table>
+  </div>
 </body></html>`;
 
   const text = [
@@ -924,14 +944,21 @@ export async function sendSupplierConfirmationEmail(params: {
 
   const netPriceFormatted = formatPrice(netPrice);
 
-  const html = `<!DOCTYPE html><html lang="it"><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
-    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:8px;overflow:hidden;">
-        <tr><td style="background:#1B3A5C;padding:22px 32px;color:#fff;">
-          <div style="font-weight:bold;font-size:18px;">IschiaStars — Conferma Prenotazione</div>
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${emailSharedStyles()}
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f4f6f9;margin:0;padding:0;">
+  <div class="email-wrapper" style="padding:24px 16px;">
+  <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+        <tr><td class="header-padding" style="background:#1B3A5C;padding:22px 32px;color:#fff;">
+          <div class="section-title" style="font-weight:bold;font-size:22px;">IschiaStars — Conferma Prenotazione</div>
           <div style="margin-top:6px;font-size:13px;color:#dbe5f0;">Gentile fornitore, confermiamo la seguente prenotazione:</div>
         </td></tr>
-        <tr><td style="padding:24px 32px;color:#333;font-size:14px;line-height:1.6;">
+        <tr><td class="email-body" style="padding:24px 32px;color:#1F2937;font-size:14px;line-height:1.6;">
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
             <tr><td colspan="2" style="font-weight:bold;color:#1B3A5C;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">Dati cliente</td></tr>
             <tr><td style="padding:6px 0;color:#555;">Nome</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${fullName}</td></tr>
@@ -956,12 +983,12 @@ export async function sendSupplierConfirmationEmail(params: {
           </table>` : ""}
           <p style="color:#555;">Per conferma rispondere a questa email.</p>
         </td></tr>
-        <tr><td style="padding:18px 32px;border-top:1px solid #e5e7eb;color:#6B7280;font-size:12px;">
+        <tr><td class="footer-padding" style="padding:18px 32px;border-top:1px solid #e5e7eb;color:#6B7280;font-size:12px;">
           IschiaStars — WhatsApp +${whatsapp}
         </td></tr>
-      </table>
-    </td></tr></table>
-  </body></html>`;
+  </table>
+  </div>
+</body></html>`;
 
   const text = [
     "IschiaStars — Conferma Prenotazione",
@@ -1009,11 +1036,20 @@ export async function sendAvailabilityUnavailableEmailToClient(quote: Quote, det
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
   const messageHtml = details.message.split("\n").map((line) => line.trim() ? `<p>${line}</p>` : "").join("");
 
-  const html = `<!DOCTYPE html><html lang="it"><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
-    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:8px;overflow:hidden;">
-        <tr><td style="background:#1a3a5c;padding:22px 32px;color:#fff;font-weight:bold;font-size:18px;">Aggiornamento disponibilità struttura</td></tr>
-        <tr><td style="padding:28px 32px;color:#333;font-size:15px;line-height:1.7;">
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${emailSharedStyles()}
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f4f6f9;margin:0;padding:0;">
+  <div class="email-wrapper" style="padding:24px 16px;">
+  <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+        <tr><td class="header-padding" style="background:#1a3a5c;padding:22px 32px;color:#fff;">
+          <p class="section-title" style="margin:0;font-weight:bold;font-size:22px;">Aggiornamento disponibilità struttura</p>
+        </td></tr>
+        <tr><td class="email-body" style="padding:28px 32px;color:#1F2937;font-size:15px;line-height:1.6;">
           ${messageHtml}
           <p><strong>Preventivo:</strong> ${quote.code}<br>
           <strong>Hotel selezionato:</strong> ${quote.confirmation?.selectedHotelName ?? quote.proposedHotel.name}<br>
@@ -1021,9 +1057,9 @@ export async function sendAvailabilityUnavailableEmailToClient(quote: Quote, det
           <strong>Trattamento:</strong> ${quote.confirmation?.selectedTreatmentLabel ?? quote.treatment}</p>
           ${details.reason ? `<p><strong>Nota:</strong> ${details.reason}</p>` : ""}
         </td></tr>
-      </table>
-    </td></tr></table>
-  </body></html>`;
+  </table>
+  </div>
+</body></html>`;
 
   const text = [
     details.message,
