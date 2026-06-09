@@ -31,7 +31,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const confirmationId = confirmation?.id;
   const status = confirmation?.availabilityStatus ?? "availability_to_check";
   const canSendFinal = status === "availability_confirmed";
-  const isInHotelBalance = confirmation?.selectedBalanceMethod === "Saldo restante in struttura con carta o contanti.";
+  const isInHotelBalance = confirmation?.selectedBalanceMethod?.toLowerCase().includes("in struttura") ?? false;
   const selectedPrice = confirmation?.selectedPrice ?? quote.totalPrice;
   const depositAmount = confirmation?.selectedDepositAmount;
   const balanceAmount = confirmation?.selectedBalanceAmount;
