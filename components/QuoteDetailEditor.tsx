@@ -413,7 +413,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
         </div>
 
         {/* Cambia stato manuale */}
-        {!isQuoteSent && (
+        {!isQuoteSent && !isConfirmed && (
           <div className="rounded-2xl bg-white/90 p-5 text-center shadow-soft">
             <h3 className="font-black text-ischia-navy">Cambia stato</h3>
             <div className="mt-3 grid gap-2">
