@@ -98,7 +98,14 @@ export function dashboardStats() {
     lostQuotes: quotes.filter((quote) => quote.status === "perso_non_disponibile").length,
     conversionRate: quotes.length ? Math.round((confirmed.length / quotes.length) * 100) : 0,
     whatsappClicks: events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event)).length,
-    confirmedValue: confirmed.reduce((sum, quote) => sum + quote.totalPrice, 0)
+    confirmedValue: confirmed.reduce((sum, quote) => sum + quote.totalPrice, 0),
+    depositReceivedValue: quotes.reduce((sum, quote) => {
+      const c = quote.confirmation;
+      if (!c?.depositPaidAt) return sum;
+      const deposit = c.selectedDepositAmount ?? 0;
+      const balance = c.balancePaidAt ? (c.selectedBalanceAmount ?? 0) : 0;
+      return sum + deposit + balance;
+    }, 0)
   };
 }
 

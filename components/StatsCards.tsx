@@ -48,7 +48,7 @@ export function StatsCards({ stats: providedStats }: { stats?: DashboardStats })
     },
     {
       label: "Incassato",
-      value: formatCurrency(stats.confirmedValue),
+      value: formatCurrency(stats.depositReceivedValue),
       href: "/admin/preventivi?filter=confermati",
     },
     {

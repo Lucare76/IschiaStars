@@ -14,6 +14,7 @@ export type DashboardStats = {
   conversionRate: number;
   whatsappClicks: number;
   confirmedValue: number;
+  depositReceivedValue: number;
 };
 
 export async function getDashboardStats(): Promise<RepositoryResult<DashboardStats>> {
@@ -73,6 +74,13 @@ export function buildDashboardStats({
     lostQuotes: activeQuotes.filter((quote) => quote.status === "perso_non_disponibile").length,
     conversionRate: activeQuotes.length ? Math.round((confirmed.length / activeQuotes.length) * 100) : 0,
     whatsappClicks: activeWhatsappClicks,
-    confirmedValue: confirmed.reduce((sum, quote) => sum + quote.totalPrice, 0)
+    confirmedValue: confirmed.reduce((sum, quote) => sum + quote.totalPrice, 0),
+    depositReceivedValue: activeQuotes.reduce((sum, quote) => {
+      const c = quote.confirmation;
+      if (!c?.depositPaidAt) return sum;
+      const deposit = c.selectedDepositAmount ?? 0;
+      const balance = c.balancePaidAt ? (c.selectedBalanceAmount ?? 0) : 0;
+      return sum + deposit + balance;
+    }, 0)
   };
 }
