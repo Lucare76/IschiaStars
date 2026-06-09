@@ -197,6 +197,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     }
   }
 
+  const isConfirmed = !!currentQuote.confirmation;
   const activeHotels = hotels.filter((h) => h.active);
   const roomCapacitySuggestion = suggestedGuestsPerRoom(adultsCount + currentQuote.children.length, roomsCount);
   const isQuoteSent = sent || currentQuote.status === "preventivo_inviato";
@@ -245,6 +246,27 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_0.36fr]">
+      {isConfirmed ? (
+        <div className="space-y-5">
+          <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
+            <h2 className="text-xl font-black text-ischia-navy">Riepilogo prenotazione</h2>
+            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              <ReadInfo label="Nome" value={`${currentQuote.customerFirstName} ${currentQuote.customerLastName}`.trim() || "-"} />
+              <ReadInfo label="Telefono" value={currentQuote.customerPhone || "-"} />
+              <ReadInfo label="Email" value={currentQuote.customerEmail || "-"} />
+              <ReadInfo label="Hotel" value={currentQuote.confirmation!.selectedHotelName ?? currentQuote.proposedHotel?.name ?? "-"} />
+              <ReadInfo label="Trattamento" value={currentQuote.confirmation!.selectedTreatmentLabel ?? "-"} />
+              <ReadInfo label="Date" value={`${formatDate(currentQuote.arrivalDate)} → ${formatDate(currentQuote.departureDate)}`} />
+              <ReadInfo label="Adulti" value={String(currentQuote.adults)} />
+              <ReadInfo label="Prezzo totale" value={currentQuote.confirmation!.selectedPrice != null ? formatCurrency(currentQuote.confirmation!.selectedPrice) : formatCurrency(currentQuote.totalPrice)} />
+              <ReadInfo label="Caparra" value={currentQuote.confirmation!.selectedDepositAmount != null ? formatCurrency(currentQuote.confirmation!.selectedDepositAmount) : "-"} />
+              <ReadInfo label="Saldo" value={currentQuote.confirmation!.selectedBalanceAmount != null ? formatCurrency(currentQuote.confirmation!.selectedBalanceAmount) : "-"} />
+              <ReadInfo label="Modalità saldo" value={currentQuote.confirmation!.selectedBalanceMethod ?? "-"} />
+              <ReadInfo label="Policy cancellazione" value={currentQuote.confirmation!.selectedCancellationPolicy ?? "-"} />
+            </div>
+          </section>
+        </div>
+      ) : (
       <form className="space-y-5" onSubmit={save}>
         {message ? <p className="rounded-2xl bg-ischia-mist p-4 text-sm font-bold text-ischia-navy">{message}</p> : null}
 
@@ -313,6 +335,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
           {loading ? "Salvataggio..." : "Salva modifiche"}
         </button>
       </form>
+      )}
 
       <aside className="space-y-4">
         {currentQuote.confirmation ? (
@@ -440,6 +463,15 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
         </div>
       </aside>
     </div>
+    </div>
+  );
+}
+
+function ReadInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-ischia-mist p-3">
+      <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/75">{label}</p>
+      <p className="mt-1 font-semibold text-ischia-ink">{value}</p>
     </div>
   );
 }
