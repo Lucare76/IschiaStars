@@ -26,6 +26,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const depositAmount = confirmation.selectedDepositAmount ?? quote.deposit;
   const balanceAmount = confirmation.selectedBalanceAmount;
 
+  const selectedOption = quote.hotelOptions.find(o => o.id === confirmation.selectedHotelOptionId);
+  const includedServices = selectedOption?.includedServices
+    ? selectedOption.includedServices.split("\n").map(s => s.trim()).filter(Boolean)
+    : (quote.servicesIncluded ?? []);
+
   const pdfBuffer = await generateVoucherPdf({
     quoteCode: quote.code,
     clientFullName: formatClientName(confirmation.firstName ?? quote.customerFirstName, confirmation.lastName ?? quote.customerLastName),
@@ -36,7 +41,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     arrivalDate: quote.arrivalDate ? formatDate(quote.arrivalDate) : undefined,
     departureDate: quote.departureDate ? formatDate(quote.departureDate) : undefined,
     guestsLabel: guestsParts.length ? guestsParts.join(", ") : undefined,
-    includedServices: quote.servicesIncluded,
+    includedServices,
     depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
     depositPaidAtLabel: formatDateTime(depositPaidAt),
     balanceAmountLabel: typeof balanceAmount === "number" ? formatCurrency(balanceAmount) : undefined,
