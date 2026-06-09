@@ -597,11 +597,7 @@ function HotelCard({
   }, [reactionKey]);
 
   function handleReactionClick(value: "interested" | "too_expensive") {
-    if (reaction === value) {
-      setReaction(null);
-      sessionStorage.removeItem(reactionKey);
-      return;
-    }
+    if (reaction === value) return;
     setReaction(value);
     sessionStorage.setItem(reactionKey, value);
     trackQuoteEvent({ quoteCode, token }, value === "interested" ? "reaction_interested" : "reaction_too_expensive", {
