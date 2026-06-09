@@ -560,6 +560,100 @@ export type AvailabilityUnavailableEmailDetails = {
   message: string;
 };
 
+function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmationEmailDetails) {
+  const confirmation = quote.confirmation;
+  const snapshot = details.paymentSettingsSnapshot ?? confirmation?.paymentSettingsSnapshot ?? {};
+  const paymentReason = typeof snapshot.payment_reason === "string" ? snapshot.payment_reason : "";
+  const dueAt = formatDateTimeForEmail(details.depositDueAt);
+  const firstName = quote.customerFirstName || "Cliente";
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
+  const logoUrl = siteUrl ? `${siteUrl}/ischiastars-logo.png` : "";
+  const hotelName = confirmation?.selectedHotelName ?? quote.proposedHotel.name;
+  const treatmentLabel = confirmation?.selectedTreatmentLabel ?? quote.treatment;
+  const totalPriceLabel = confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice);
+  const depositLabel = confirmation?.selectedDepositAmount != null ? formatPrice(confirmation.selectedDepositAmount) : "";
+  const balanceLabel = confirmation?.selectedBalanceAmount != null ? formatPrice(confirmation.selectedBalanceAmount) : "";
+
+  const coordinatesHtml = snapshot.configured === true
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;">
+        <tr><td style="padding:16px 18px;">
+          <div style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#1B3A5C;text-transform:uppercase;letter-spacing:0.5px;">Coordinate caparra</div>
+          ${snapshot.bank_account_holder ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Intestatario:</strong> ${snapshot.bank_account_holder}</div>` : ""}
+          ${snapshot.bank_name ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Banca:</strong> ${snapshot.bank_name}</div>` : ""}
+          ${snapshot.iban ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>IBAN:</strong> ${snapshot.iban}</div>` : ""}
+          ${snapshot.bic_swift ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>BIC/SWIFT:</strong> ${snapshot.bic_swift}</div>` : ""}
+          ${paymentReason ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Causale:</strong> ${paymentReason}</div>` : ""}
+          ${snapshot.payment_instructions ? `<div style="margin:10px 0 0;font-size:13px;color:#6B7280;">${snapshot.payment_instructions}</div>` : ""}
+        </td></tr>
+      </table>`
+    : `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;">
+        <tr><td style="padding:16px 18px;font-size:14px;color:#374151;">Le modalita operative per il versamento della caparra saranno comunicate dallo staff IschiaStars.</td></tr>
+      </table>`;
+
+  return `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:Arial,Helvetica,sans-serif;background:#F4F6F9;margin:0;padding:24px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;">
+    <tr><td style="background:#C9A84C;height:4px;border-radius:10px 10px 0 0;font-size:0;">&nbsp;</td></tr>
+    <tr><td style="background:#1B3A5C;padding:24px 32px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td>
+            ${logoUrl ? `<img src="${logoUrl}" alt="IschiaStars" width="150" style="display:block;max-width:150px;height:auto;margin:0 0 8px;">` : `<div style="font-size:22px;font-weight:bold;color:#ffffff;letter-spacing:0.3px;">IschiaStars</div>`}
+            <div style="font-size:13px;color:#C9A84C;letter-spacing:0.5px;">Conferma definitiva</div>
+          </td>
+          <td align="right">
+            <span style="border:1.5px solid #C9A84C;border-radius:999px;padding:6px 12px;font-size:11px;font-weight:bold;color:#C9A84C;letter-spacing:0.8px;">DA SALDARE</span>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+    <tr><td style="background:#FFFFFF;padding:30px 32px;color:#374151;font-size:15px;line-height:1.7;">
+      <p style="margin:0 0 18px;">Ciao <strong>${firstName}</strong>,</p>
+      <p style="margin:0 0 22px;">la struttura ha confermato la disponibilita per la proposta selezionata. Per bloccare definitivamente il soggiorno e necessario versare la caparra entro <strong style="color:#1B3A5C;">${dueAt}</strong>.</p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D9E2EC;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <tr><td colspan="2" style="background:#1B3A5C;padding:12px 16px;">
+          <div style="font-size:16px;font-weight:bold;color:#FFFFFF;">${hotelName}</div>
+          <div style="font-size:12px;color:#C9A84C;margin-top:3px;">${treatmentLabel}</div>
+        </td></tr>
+        <tr>
+          <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Prezzo totale</td>
+          <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#1B3A5C;">${totalPriceLabel}</td>
+        </tr>
+        ${depositLabel ? `<tr>
+          <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Caparra</td>
+          <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#15803D;">${confirmation?.selectedDepositPercent != null ? `${confirmation.selectedDepositPercent}% pari a ` : ""}${depositLabel}</td>
+        </tr>` : ""}
+        ${balanceLabel ? `<tr>
+          <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Saldo restante</td>
+          <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#1B3A5C;">${balanceLabel}</td>
+        </tr>` : ""}
+        ${confirmation?.selectedBalanceMethod ? `<tr>
+          <td style="padding:12px 16px;font-size:13px;color:#6B7280;">Modalita saldo</td>
+          <td align="right" style="padding:12px 16px;font-size:13px;font-weight:bold;color:#374151;">${confirmation.selectedBalanceMethod}</td>
+        </tr>` : ""}
+      </table>
+
+      ${coordinatesHtml}
+      ${confirmation?.selectedCancellationPolicy ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#FBF5E6;border:1px solid #C9A84C;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#5F4B16;"><strong>Policy cancellazione</strong><br>${confirmation.selectedCancellationPolicy}</td></tr></table>` : ""}
+      ${details.notes ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#374151;"><strong>Note</strong><br>${details.notes}</td></tr></table>` : ""}
+
+      <p style="margin:0;font-size:13px;color:#6B7280;">Per qualsiasi dubbio puoi rispondere a questa email o scriverci su WhatsApp.</p>
+    </td></tr>
+    <tr><td style="background:#1B3A5C;padding:16px 32px;border-radius:0 0 10px 10px;">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td><div style="font-size:12px;font-weight:bold;color:#FFFFFF;">IschiaStars</div><div style="font-size:11px;color:#94A3B8;margin-top:2px;">Il tuo specialista per Ischia</div></td>
+        <td align="right"><span style="font-size:10px;color:#C9A84C;">Preventivo ${quote.code}</span></td>
+      </tr></table>
+    </td></tr>
+  </table>
+  </td></tr></table>
+</body></html>`;
+}
+
 export async function sendFinalConfirmationEmailToClient(quote: Quote, details: FinalConfirmationEmailDetails): Promise<boolean> {
   const missingEnvReason = brevoMissingEnvReason();
   if (missingEnvReason) {
@@ -639,7 +733,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
   return sendBrevoEmail({
     to: [{ email, name: `${quote.customerFirstName} ${quote.customerLastName}`.trim() }],
     subject: `Conferma definitiva soggiorno - ${quote.code}`,
-    html,
+    html: buildFinalConfirmationEmailHtml(quote, details),
     text,
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
   });
@@ -661,24 +755,124 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
   const firstName = quote.confirmation?.firstName ?? quote.customerFirstName ?? "Cliente";
   const fullName = `${quote.confirmation?.firstName ?? quote.customerFirstName} ${quote.confirmation?.lastName ?? quote.customerLastName}`.trim();
 
-  const html = `<!DOCTYPE html><html lang="it"><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
-    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:8px;overflow:hidden;">
-        <tr><td style="background:#1B3A5C;padding:22px 32px;color:#fff;font-weight:bold;font-size:18px;">Il tuo voucher IschiaStars</td></tr>
-        <tr><td style="padding:28px 32px;color:#333;font-size:15px;line-height:1.7;">
-          <p>Ciao ${firstName},</p>
-          <p>ti confermiamo la ricezione della caparra per il tuo soggiorno a Ischia. In allegato trovi il tuo voucher di prenotazione.</p>
-          <p>Per qualsiasi informazione siamo sempre disponibili su WhatsApp.</p>
-          <p>IschiaStars</p>
-        </td></tr>
+  const hotelName = quote.confirmation?.selectedHotelName ?? quote.proposedHotel?.name ?? "";
+  const treatmentLabel = quote.confirmation?.selectedTreatmentLabel ?? "";
+  const arrivalLabel = quote.arrivalDate ? formatDate(quote.arrivalDate) : "";
+  const departureLabel = quote.departureDate ? formatDate(quote.departureDate) : "";
+  const depositLabel = quote.confirmation?.selectedDepositAmount != null
+    ? formatPrice(quote.confirmation.selectedDepositAmount)
+    : "";
+  const balanceLabel = quote.confirmation?.selectedBalanceAmount != null
+    ? formatPrice(quote.confirmation.selectedBalanceAmount)
+    : "";
+
+  const bookingRowStyle = `padding:10px 14px;border-bottom:1px solid #e5e7eb;`;
+  const bookingLabelStyle = `font-size:12px;color:#6b7280;display:block;margin-bottom:2px;`;
+  const bookingValueStyle = `font-size:14px;font-weight:bold;color:#1B3A5C;`;
+
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+    <!-- Gold top accent -->
+    <tr><td style="background:#C9A84C;height:4px;border-radius:4px 4px 0 0;font-size:0;">&nbsp;</td></tr>
+
+    <!-- Navy header -->
+    <tr><td style="background:#1B3A5C;padding:24px 32px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td>
+            <div style="font-size:20px;font-weight:bold;color:#ffffff;letter-spacing:0.3px;">IschiaStars</div>
+            <div style="font-size:13px;color:#C9A84C;margin-top:4px;letter-spacing:0.5px;">Voucher di Prenotazione</div>
+          </td>
+          <td align="right">
+            <span style="border:1.5px solid #C9A84C;border-radius:4px;padding:5px 12px;font-size:11px;font-weight:bold;color:#C9A84C;letter-spacing:1px;">CONFERMATO</span>
+          </td>
+        </tr>
       </table>
-    </td></tr></table>
-  </body></html>`;
+    </td></tr>
+
+    <!-- Body -->
+    <tr><td style="background:#ffffff;padding:28px 32px;">
+      <p style="margin:0 0 18px;font-size:15px;color:#374151;">Ciao <strong>${firstName}</strong>,</p>
+      <p style="margin:0 0 22px;font-size:14px;color:#4b5563;line-height:1.6;">
+        abbiamo ricevuto la tua caparra. La prenotazione è confermata e il tuo soggiorno a Ischia è assicurato. In allegato trovi il voucher ufficiale da conservare.
+      </p>
+
+      <!-- Booking recap -->
+      ${hotelName ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #d9e2ec;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+        <tr><td style="background:#1B3A5C;padding:10px 14px;">
+          <span style="font-size:15px;font-weight:bold;color:#ffffff;">${hotelName}</span>
+          ${treatmentLabel ? `<span style="font-size:12px;color:#94a3b8;margin-left:10px;">${treatmentLabel}</span>` : ""}
+        </td></tr>
+        ${arrivalLabel || departureLabel ? `
+        <tr>
+          ${arrivalLabel ? `<td style="${bookingRowStyle}" width="50%">
+            <span style="${bookingLabelStyle}">Check-in</span>
+            <span style="${bookingValueStyle}">${arrivalLabel}</span>
+          </td>` : ""}
+          ${departureLabel ? `<td style="${bookingRowStyle}" width="50%">
+            <span style="${bookingLabelStyle}">Check-out</span>
+            <span style="${bookingValueStyle}">${departureLabel}</span>
+          </td>` : ""}
+        </tr>` : ""}
+        ${depositLabel ? `
+        <tr>
+          <td style="${bookingRowStyle}">
+            <span style="${bookingLabelStyle}">Caparra versata</span>
+            <span style="font-size:14px;font-weight:bold;color:#15803d;">${depositLabel} ✓</span>
+          </td>
+          ${balanceLabel ? `<td style="${bookingRowStyle}">
+            <span style="${bookingLabelStyle}">Saldo da versare in struttura</span>
+            <span style="${bookingValueStyle}">${balanceLabel}</span>
+          </td>` : "<td></td>"}
+        </tr>` : ""}
+        <tr><td colspan="2" style="padding:8px 14px;background:#f6f8fb;">
+          <span style="font-size:11px;color:#6b7280;">Rif. prenotazione: <strong style="color:#1B3A5C;">${quote.code}-V</strong></span>
+        </td></tr>
+      </table>` : ""}
+
+      <p style="margin:0 0 8px;font-size:13px;color:#6b7280;line-height:1.6;">
+        Per qualsiasi dubbio o informazione siamo sempre disponibili su WhatsApp.
+      </p>
+    </td></tr>
+
+    <!-- Footer -->
+    <tr><td style="background:#1B3A5C;padding:16px 32px;border-radius:0 0 8px 8px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td>
+            <div style="font-size:12px;font-weight:bold;color:#ffffff;">IschiaStars</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Il tuo specialista per Ischia</div>
+          </td>
+          <td align="right">
+            <span style="font-size:10px;color:#C9A84C;">N. ${quote.code}-V</span>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+
+  </table>
+  </td></tr></table>
+</body></html>`;
 
   const text = [
     `Ciao ${firstName},`,
     "",
-    "ti confermiamo la ricezione della caparra per il tuo soggiorno a Ischia. In allegato trovi il tuo voucher di prenotazione.",
+    "abbiamo ricevuto la tua caparra. La prenotazione è confermata e il tuo soggiorno a Ischia è assicurato. In allegato trovi il voucher ufficiale da conservare.",
+    "",
+    ...(hotelName ? [`Hotel: ${hotelName}`] : []),
+    ...(treatmentLabel ? [`Trattamento: ${treatmentLabel}`] : []),
+    ...(arrivalLabel ? [`Check-in: ${arrivalLabel}`] : []),
+    ...(departureLabel ? [`Check-out: ${departureLabel}`] : []),
+    ...(depositLabel ? [`Caparra versata: ${depositLabel}`] : []),
+    ...(balanceLabel ? [`Saldo da versare in struttura: ${balanceLabel}`] : []),
+    "",
+    `Riferimento prenotazione: ${quote.code}-V`,
     "",
     "Per qualsiasi informazione siamo sempre disponibili su WhatsApp.",
     "",
