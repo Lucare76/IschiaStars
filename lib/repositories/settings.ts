@@ -62,13 +62,19 @@ export async function updateFeatureFlag(flag: FeatureFlagKey, value: boolean): P
   if (!supabase) return fallback(emptyFeatureFlags);
 
   // Legge lo stato corrente direttamente dal DB (non da env var)
-  const { data: currentRow } = await supabase
+  const { data: currentRow, error: readError } = await supabase
     .from("settings")
     .select("value")
     .eq("key", FEATURE_FLAGS_KEY)
     .maybeSingle();
 
-  const merged = normalizeFeatureFlags({ ...(currentRow?.value ?? {}), [flag]: value });
+  console.log(`[updateFeatureFlag] READ: currentRow=${JSON.stringify(currentRow)} readError=${readError?.message ?? "null"}`);
+
+  const currentValue = currentRow?.value;
+  const currentParsed = currentValue && typeof currentValue === "object" ? currentValue as Record<string, unknown> : {};
+  const merged = normalizeFeatureFlags({ ...currentParsed, [flag]: value });
+
+  console.log(`[updateFeatureFlag] UPSERT: flag=${flag} value=${value} merged=${JSON.stringify(merged)}`);
 
   const { data, error } = await supabase
     .from("settings")
@@ -78,6 +84,8 @@ export async function updateFeatureFlag(flag: FeatureFlagKey, value: boolean): P
     }, { onConflict: "key" })
     .select("value")
     .single();
+
+  console.log(`[updateFeatureFlag] RESULT: data=${JSON.stringify(data)} error=${error?.message ?? "null"} source=${error ? "mock" : "supabase"}`);
 
   if (error) return fallback(merged, error);
   return fromSupabase(normalizeFeatureFlags(data?.value));

@@ -47,7 +47,11 @@ export function isFeatureFlagKey(value: unknown): value is FeatureFlagKey {
 }
 
 export function normalizeFeatureFlags(value: unknown): FeatureFlags {
-  const record = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  let parsed = value;
+  if (typeof value === "string") {
+    try { parsed = JSON.parse(value); } catch { parsed = {}; }
+  }
+  const record = parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : {};
   return {
     wow6_adaptive: Boolean(record.wow6_adaptive),
     instant_reaction: Boolean(record.instant_reaction),
