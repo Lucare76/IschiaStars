@@ -106,6 +106,13 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     return match ? match[1].trim() : null;
   };
 
+  // Cattura campi multiriga: tutto dalla riga del match fino alla riga vuota o al prossimo "Campo:"
+  const getMultiline = (field: string): string | null => {
+    const match = text.match(new RegExp(`${field}:\\s*([\\s\\S]*?)(?=\\n[A-Za-zÀ-ú][\\w\\s]*:|\\n\\n|$)`, 'i'));
+    if (!match) return null;
+    return match[1].trim() || null;
+  };
+
   const pageUrl = get('Page URL') ?? '';
   const utmSource = pageUrl.match(/utm_source=([^&]+)/)?.[1] ?? null;
   const utmCampaign = pageUrl.match(/utm_campaign=([^&]+)/)?.[1]?.replace(/\+/g, ' ') ?? null;
@@ -117,10 +124,16 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
   const checkOut = normalizeFormDate(rawCheckOut);
   const checkIn = normalizeFormDate(rawCheckIn, yearFromDate(checkOut));
 
-  const children =
+  const childAges =
     etaBambini && bambini > 0
-      ? etaBambini.split(',').map((eta: string) => ({ age: parseInt(eta.trim()), firstName: undefined }))
+      ? etaBambini.split(/[,\/;\s\-]+/).map((s) => s.trim()).filter(Boolean).map((eta) => parseInt(eta)).filter((n) => !isNaN(n))
       : [];
+
+  if (bambini > 0 && childAges.length < bambini) {
+    console.warn(`[mail-inbox] Attenzione: dichiarati ${bambini} bambini ma trovate solo ${childAges.length} età — verificare manualmente`);
+  }
+
+  const children = childAges.map((age) => ({ age, firstName: undefined }));
 
   return {
     firstName: get('Nome') ?? '',
@@ -133,7 +146,7 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     adults: parseInt(get('Adulti') ?? '2'),
     children,
     rooms: parseInt(get('Numero di Camere') ?? '1'),
-    message: get('Messaggio') ?? undefined,
+    message: getMultiline('Messaggio') ?? undefined,
     receivedAt: typeof metadata.email_date === 'string' ? metadata.email_date : undefined,
     metadata: {
       requested_hotel: hotel,
