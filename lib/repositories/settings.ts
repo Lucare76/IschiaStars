@@ -37,6 +37,16 @@ export async function updatePaymentSettings(settings: PaymentSettings): Promise<
 }
 
 export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>> {
+  // Fallback: variabile d'ambiente FEATURE_FLAGS_JSON (es. su Vercel)
+  const envJson = process.env.FEATURE_FLAGS_JSON;
+  if (envJson) {
+    try {
+      return fromSupabase(normalizeFeatureFlags(JSON.parse(envJson)));
+    } catch {
+      console.warn("[getFeatureFlags] FEATURE_FLAGS_JSON non è JSON valido, ignorato");
+    }
+  }
+
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(emptyFeatureFlags);
 
@@ -47,7 +57,7 @@ export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>>
     .maybeSingle();
 
   if (error) {
-    console.error("[getFeatureFlags] Supabase error:", error.message, "— tabella settings mancante?");
+    console.error("[getFeatureFlags] Supabase error:", error.message);
     return fallback(emptyFeatureFlags, error);
   }
   return fromSupabase(normalizeFeatureFlags(data?.value));
