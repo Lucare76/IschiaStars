@@ -5,7 +5,8 @@ import { getAdminSession } from "@/lib/server/auth-guard";
 
 export async function POST(request: NextRequest) {
   const session = await getAdminSession();
-  if (!session || session.role !== "supervisor") {
+  if (!session) return NextResponse.json({ ok: false, error: "Sessione scaduta" }, { status: 401 });
+  if (session.role !== "supervisor") {
     return NextResponse.json({ ok: false, error: "Accesso non autorizzato" }, { status: 403 });
   }
 
@@ -27,7 +28,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   const session = await getAdminSession();
-  if (!session || session.role !== "supervisor") {
+  if (!session) return NextResponse.json({ ok: false, error: "Sessione scaduta" }, { status: 401 });
+  if (session.role !== "supervisor") {
     return NextResponse.json({ ok: false, error: "Accesso non autorizzato" }, { status: 403 });
   }
 
