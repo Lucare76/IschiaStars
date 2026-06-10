@@ -26,8 +26,7 @@ export async function updatePaymentSettings(settings: PaymentSettings): Promise<
     .from("settings")
     .upsert({
       key: PAYMENT_SETTINGS_KEY,
-      value: paymentSettingsToDbValue(normalized),
-      updated_at: normalized.updatedAt
+      value: paymentSettingsToDbValue(normalized)
     }, { onConflict: "key" })
     .select("value")
     .single();
@@ -73,8 +72,7 @@ export async function updateFeatureFlag(flag: FeatureFlagKey, value: boolean): P
     .from("settings")
     .upsert({
       key: FEATURE_FLAGS_KEY,
-      value: merged,
-      updated_at: new Date().toISOString()
+      value: merged
     }, { onConflict: "key" })
     .select("value")
     .single();
