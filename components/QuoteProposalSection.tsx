@@ -774,13 +774,8 @@ function HotelCard({
                           <p className="font-black text-ischia-navy">{treatment.label}</p>
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
-                            {priceDelta != null ? (
-                              <span className="rounded-full bg-[#F0FDF4] px-2 py-0.5 text-xs font-medium text-[#16A34A]">
-                                +{formatCurrency(priceDelta)}
-                              </span>
-                            ) : null}
                           </div>
-                          {priceDelta != null && benefit ? (
+                          {benefit ? (
                             <p className="mt-0.5 text-xs italic text-gray-500">{benefit}</p>
                           ) : null}
                         </div>
