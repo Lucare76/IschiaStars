@@ -36,16 +36,6 @@ export async function updatePaymentSettings(settings: PaymentSettings): Promise<
 }
 
 export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>> {
-  // Fallback: variabile d'ambiente FEATURE_FLAGS_JSON (es. su Vercel)
-  const envJson = process.env.FEATURE_FLAGS_JSON;
-  if (envJson) {
-    try {
-      return fromSupabase(normalizeFeatureFlags(JSON.parse(envJson)));
-    } catch {
-      console.warn("[getFeatureFlags] FEATURE_FLAGS_JSON non è JSON valido, ignorato");
-    }
-  }
-
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(emptyFeatureFlags);
 
@@ -57,6 +47,11 @@ export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>>
 
   if (error) {
     console.error("[getFeatureFlags] Supabase error:", error.message);
+    // Fallback: variabile d'ambiente FEATURE_FLAGS_JSON (solo se DB non disponibile)
+    const envJson = process.env.FEATURE_FLAGS_JSON;
+    if (envJson) {
+      try { return fallback(normalizeFeatureFlags(JSON.parse(envJson))); } catch {}
+    }
     return fallback(emptyFeatureFlags, error);
   }
   return fromSupabase(normalizeFeatureFlags(data?.value));
@@ -64,9 +59,16 @@ export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>>
 
 export async function updateFeatureFlag(flag: FeatureFlagKey, value: boolean): Promise<RepositoryResult<FeatureFlags>> {
   const supabase = createSupabaseAdminClient();
-  const current = await getFeatureFlags();
-  const merged = normalizeFeatureFlags({ ...current.data, [flag]: value });
-  if (!supabase) return fallback(merged);
+  if (!supabase) return fallback(emptyFeatureFlags);
+
+  // Legge lo stato corrente direttamente dal DB (non da env var)
+  const { data: currentRow } = await supabase
+    .from("settings")
+    .select("value")
+    .eq("key", FEATURE_FLAGS_KEY)
+    .maybeSingle();
+
+  const merged = normalizeFeatureFlags({ ...(currentRow?.value ?? {}), [flag]: value });
 
   const { data, error } = await supabase
     .from("settings")
