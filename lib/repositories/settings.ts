@@ -46,7 +46,10 @@ export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>>
     .eq("key", FEATURE_FLAGS_KEY)
     .maybeSingle();
 
-  if (error) return fallback(emptyFeatureFlags, error);
+  if (error) {
+    console.error("[getFeatureFlags] Supabase error:", error.message, "— tabella settings mancante?");
+    return fallback(emptyFeatureFlags, error);
+  }
   return fromSupabase(normalizeFeatureFlags(data?.value));
 }
 

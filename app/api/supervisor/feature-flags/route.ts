@@ -17,8 +17,9 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await updateFeatureFlag(flag, value);
-  if (!result.data) {
-    return NextResponse.json({ ok: false, error: result.error ?? "Salvataggio non riuscito" }, { status: 503 });
+  if (result.source !== "supabase") {
+    const detail = result.error ? ` (${result.error})` : " — tabella settings mancante nel DB?";
+    return NextResponse.json({ ok: false, error: `Salvataggio non riuscito${detail}` }, { status: 503 });
   }
 
   return NextResponse.json({ ok: true, data: result.data });
