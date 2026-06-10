@@ -58,7 +58,8 @@ function FeatureFlagsSection({ initialFlags }: { initialFlags: FeatureFlags }) {
       return;
     }
 
-    setFlags(result.data);
+    // Mantieni lo stato ottimistico: aggiorna solo il flag toccato
+    setFlags((current) => ({ ...current, [flag]: value }));
     setSavedFlag(flag);
     setTimeout(() => setSavedFlag((current) => (current === flag ? null : current)), 2000);
   }
