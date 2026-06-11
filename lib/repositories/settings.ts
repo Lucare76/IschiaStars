@@ -9,7 +9,7 @@ export async function getPaymentSettings(): Promise<RepositoryResult<PaymentSett
 
   const { data, error } = await supabase
     .from("settings")
-    .select("value")
+    .select("key,value")
     .eq("key", PAYMENT_SETTINGS_KEY)
     .maybeSingle();
 
@@ -41,7 +41,7 @@ export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>>
 
   const { data, error } = await supabase
     .from("settings")
-    .select("value")
+    .select("key,value")
     .eq("key", FEATURE_FLAGS_KEY)
     .maybeSingle();
 
@@ -64,7 +64,7 @@ export async function updateFeatureFlag(flag: FeatureFlagKey, value: boolean): P
   // Legge lo stato corrente direttamente dal DB (non da env var)
   const { data: currentRow, error: readError } = await supabase
     .from("settings")
-    .select("value")
+    .select("key,value")
     .eq("key", FEATURE_FLAGS_KEY)
     .maybeSingle();
 
