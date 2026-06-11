@@ -1,41 +1,99 @@
-import { Quote } from "@/lib/types";
+import { Quote, QuoteHotelOption } from "@/lib/types";
+
+function formatWAPrice(price: number): string {
+  const rounded = Math.round(price);
+  if (Math.abs(price - rounded) < 0.005) {
+    return `€${new Intl.NumberFormat("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(rounded)}`;
+  }
+  return `€${new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price)}`;
+}
+
+function nightsCount(arrival: string, departure: string): number {
+  return Math.round((new Date(departure).getTime() - new Date(arrival).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function formatWADateRange(arrival: string, departure: string): string {
+  const ROME = "Europe/Rome";
+  const start = new Date(arrival);
+  const end = new Date(departure);
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const fmt = (date: Date, opts: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat("it-IT", { timeZone: ROME, ...opts }).format(date);
+  const startLabel = `${fmt(start, { day: "numeric" })} ${cap(fmt(start, { month: "long" }))}`;
+  const endLabel = `${fmt(end, { day: "numeric" })} ${cap(fmt(end, { month: "long" }))} ${fmt(end, { year: "numeric" })}`;
+  const nights = nightsCount(arrival, departure);
+  return `${startLabel} → ${endLabel} · ${nights} nott${nights === 1 ? "e" : "i"}`;
+}
 
 export function adminQuoteWhatsappMessage(input: {
   quote: Quote;
-  dates: string;
-  hotelBlock: string;
+  options: QuoteHotelOption[];
   quoteUrl: string;
-  hasMultipleOptions: boolean;
 }) {
-  const { quote, dates, hotelBlock, quoteUrl, hasMultipleOptions } = input;
+  const { quote, options, quoteUrl } = input;
 
-  const intro = hasMultipleOptions
-    ? "Abbiamo selezionato per te più soluzioni per il soggiorno a Ischia:"
-    : "Abbiamo selezionato per te una soluzione presso:";
+  const stayLine = formatWADateRange(quote.arrivalDate, quote.departureDate);
 
-  const linkLine = hasMultipleOptions
-    ? "Dal link potrai confrontare le opzioni e confermare direttamente online quella che preferisci."
-    : "Dal link potrai anche confermare direttamente online in modo semplice e veloce.";
+  const adultsLabel = `${quote.adults} adult${quote.adults === 1 ? "o" : "i"}`;
+  const childCount = quote.children.length;
+  const guestsLine = childCount > 0
+    ? `${adultsLabel}, ${childCount} bambin${childCount === 1 ? "o" : "i"}`
+    : adultsLabel;
+
+  const firstRoomType = options[0]?.roomTypeLabel?.trim();
+  const allSameRoomType = firstRoomType
+    ? options.every(o => (o.roomTypeLabel?.trim() || "") === firstRoomType)
+    : false;
+  const roomTypeLine = allSameRoomType ? firstRoomType : undefined;
+
+  // Group options by hotelGroup
+  const groups = new Map<number, QuoteHotelOption[]>();
+  for (const opt of options) {
+    if (!groups.has(opt.hotelGroup)) groups.set(opt.hotelGroup, []);
+    groups.get(opt.hotelGroup)!.push(opt);
+  }
+
+  const hotelEntries = Array.from(groups.values());
+
+  const hotelBlocks = hotelEntries.map(group => {
+    const first = group[0];
+    const starsStr = first.hotelStars && first.hotelStars > 0 ? " " + "⭐".repeat(first.hotelStars) : "";
+    const lines: string[] = [`🏨 ${first.hotelName}${starsStr}`];
+
+    const treatmentMap = new Map<string, number>();
+    for (const opt of group) {
+      for (const t of opt.treatments) {
+        if (!treatmentMap.has(t.label)) treatmentMap.set(t.label, t.price);
+      }
+    }
+    for (const [label, price] of Array.from(treatmentMap.entries())) {
+      lines.push(`   · ${label}: ${formatWAPrice(price)}`);
+    }
+    return lines.join("\n");
+  });
+
+  const hotelsBlock = hotelBlocks.join("\n─────────\n");
+
+  const stayLines = [
+    `📅 ${stayLine}`,
+    `👥 ${guestsLine}`,
+    ...(roomTypeLine ? [`🛏 ${roomTypeLine}`] : []),
+  ].join("\n");
 
   return `👋 Ciao ${quote.customerFirstName}!
-
 La tua proposta personalizzata per Ischia è pronta 🌊
 
-${intro}
+${stayLines}
 
-${hotelBlock}
-📅 ${dates}
-
-Puoi vedere subito il preventivo completo, con tutti i dettagli del soggiorno, cliccando qui:
+${hotelsBlock}
 
 👉 ${quoteUrl}
 
-${linkLine}
+Dal link puoi vedere tutti i dettagli e confermare direttamente online.
 
-⚠️ Per questo periodo le disponibilità sono limitate: se la soluzione è di tuo gradimento, ti consigliamo di bloccarla appena possibile per mantenere la tariffa proposta.
+⚠️ Le disponibilità per questo periodo sono limitate. Ti consigliamo di confermare appena possibile.
 
-Per dubbi, modifiche o richieste particolari puoi contattarci qui:
-
+Per dubbi o richieste:
 📞 081 90 54 81
 💬 WhatsApp 371 75 90 017
 

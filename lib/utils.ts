@@ -1,6 +1,7 @@
 ﻿import { allDemoQuoteRequests, allDemoQuotes, allQuoteEvents } from "@/lib/demo-store";
-import { formatDateRome, formatDateTimeRome, formatStayRangeRome } from "@/lib/date-format";
+import { formatDateRome, formatDateTimeRome } from "@/lib/date-format";
 import { adminQuoteWhatsappMessage } from "@/lib/message-templates";
+import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Quote } from "@/lib/types";
 
 export function formatCurrency(value: number) {
@@ -42,18 +43,11 @@ export function normalizeItalianPhone(phone: string) {
   return `39${digits}`;
 }
 export function whatsappQuoteMessage(quote: Quote) {
-  const hotelNames = Array.from(new Map(quote.hotelOptions.map((o) => [o.hotelGroup, o.hotelName])).values());
-  const hasMultipleOptions = hotelNames.length > 1;
-  const hotelBlock = hasMultipleOptions
-    ? hotelNames.map((name) => `🏨 ${name}`).join("\n")
-    : `🏨 ${hotelNames[0] ?? quote.proposedHotel.name}`;
-  const dates = formatStayRangeRome(quote.arrivalDate, quote.departureDate);
+  const options = getEffectiveHotelOptions(quote);
   return adminQuoteWhatsappMessage({
     quote,
-    dates,
-    hotelBlock,
+    options,
     quoteUrl: absolutePublicQuoteUrl(quote),
-    hasMultipleOptions
   });
 }
 

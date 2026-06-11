@@ -112,6 +112,29 @@ function formatDate(iso: string): string {
   }
 }
 
+function formatDateDayMonth(iso: string): string {
+  try {
+    const date = new Date(iso);
+    const day = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", day: "numeric" }).format(date);
+    const month = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", month: "long" }).format(date);
+    return `${day} ${month.charAt(0).toUpperCase()}${month.slice(1)}`;
+  } catch {
+    return iso;
+  }
+}
+
+function formatDateDayMonthYear(iso: string): string {
+  try {
+    const date = new Date(iso);
+    const day = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", day: "numeric" }).format(date);
+    const month = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", month: "long" }).format(date);
+    const year = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", year: "numeric" }).format(date);
+    return `${day} ${month.charAt(0).toUpperCase()}${month.slice(1)} ${year}`;
+  } catch {
+    return iso;
+  }
+}
+
 function formatPrice(amount: number): string {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(amount);
 }
@@ -189,6 +212,32 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     ? `Abbiamo preparato <strong>più proposte</strong> per il tuo soggiorno a Ischia. Confronta le opzioni e conferma quella che preferisci direttamente online.`
     : `Abbiamo preparato la tua proposta personalizzata per il soggiorno a Ischia.`;
 
+  const nights = Math.round((new Date(quote.departureDate).getTime() - new Date(quote.arrivalDate).getTime()) / (1000 * 60 * 60 * 24));
+  const adultsLabel = `${quote.adults} adult${quote.adults === 1 ? "o" : "i"}`;
+  const childCount = quote.children.length;
+  const guestsLabel = childCount > 0
+    ? `${adultsLabel}, ${childCount} bambin${childCount === 1 ? "o" : "i"}`
+    : adultsLabel;
+  const firstRoomType = options[0]?.roomTypeLabel?.trim() || "";
+  const uniqueGroups = new Set(options.map(o => o.hotelGroup));
+  const primaryHotelName = options[0]?.hotelName ?? "";
+  const hotelSummaryLabel = uniqueGroups.size > 1
+    ? `${primaryHotelName} + altri ${uniqueGroups.size - 1} hotel`
+    : primaryHotelName;
+
+  const staySummaryBoxHtml = `
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6;border:1px solid #E5E7EB;border-radius:6px;margin-bottom:24px;">
+              <tr><td style="padding:14px 18px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr><td style="padding:3px 0;font-size:14px;color:#374151;">📅 ${formatDateDayMonth(quote.arrivalDate)} → ${formatDateDayMonthYear(quote.departureDate)}</td></tr>
+                  <tr><td style="padding:3px 0;font-size:14px;color:#374151;">🌙 ${nights} nott${nights === 1 ? "e" : "i"}</td></tr>
+                  <tr><td style="padding:3px 0;font-size:14px;color:#374151;">👥 ${guestsLabel}</td></tr>
+                  ${firstRoomType ? `<tr><td style="padding:3px 0;font-size:14px;color:#374151;">🛏 ${firstRoomType}</td></tr>` : ""}
+                  ${hotelSummaryLabel ? `<tr><td style="padding:3px 0;font-size:14px;color:#374151;">🏨 ${hotelSummaryLabel}</td></tr>` : ""}
+                </table>
+              </td></tr>
+            </table>`;
+
   const html = `<!DOCTYPE html>
 <html lang="it">
 <head>
@@ -210,7 +259,9 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
         <tr>
           <td class="email-body" style="padding:28px 32px 24px;">
             <p style="margin:0 0 18px;font-size:15px;color:#1F2937;line-height:1.6;">Ciao ${firstName},</p>
-            <p style="margin:0 0 28px;font-size:15px;color:#374151;line-height:1.6;">${introText}</p>
+            <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">${introText}</p>
+
+            ${staySummaryBoxHtml}
 
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f6ff;border-radius:6px;padding:20px 20px 12px;margin-bottom:28px;">
               <tr>
