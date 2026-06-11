@@ -75,7 +75,7 @@ export function adminQuoteWhatsappMessage(input: {
   const hotelsBlock = hotelBlocks.join("\n─────────\n");
 
   const stayLines = [
-    `📅 ${stayLine}`,
+    `🗒 ${stayLine}`,
     `👥 ${guestsLine}`,
     ...(roomTypeLine ? [`🛏 ${roomTypeLine}`] : []),
   ].join("\n");

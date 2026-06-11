@@ -229,7 +229,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6;border:1px solid #E5E7EB;border-radius:6px;margin-bottom:24px;">
               <tr><td style="padding:14px 18px;">
                 <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr><td style="padding:3px 0;font-size:14px;color:#374151;">📅 ${formatDateDayMonth(quote.arrivalDate)} → ${formatDateDayMonthYear(quote.departureDate)}</td></tr>
+                  <tr><td style="padding:3px 0;font-size:14px;color:#374151;">🗓 ${formatDateDayMonth(quote.arrivalDate)} → ${formatDateDayMonthYear(quote.departureDate)}</td></tr>
                   <tr><td style="padding:3px 0;font-size:14px;color:#374151;">🌙 ${nights} nott${nights === 1 ? "e" : "i"}</td></tr>
                   <tr><td style="padding:3px 0;font-size:14px;color:#374151;">👥 ${guestsLabel}</td></tr>
                   ${firstRoomType ? `<tr><td style="padding:3px 0;font-size:14px;color:#374151;">🛏 ${firstRoomType}</td></tr>` : ""}
