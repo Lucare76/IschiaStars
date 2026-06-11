@@ -585,6 +585,9 @@ function HotelCard({
   featureFlags: FeatureFlags;
   onSelectTreatment: (option: QuoteHotelOption, treatment: TreatmentOption) => void;
 }) {
+  // TODO: wow6_adaptive — da implementare
+  // Quando featureFlags.wow6_adaptive === true, evidenziare l'hotel più visto dal cliente
+  // nelle sessioni precedenti (leggi quote_events con eventType "hotel_view" o simile).
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pendingSelection, setPendingSelection] = useState<{ option: QuoteHotelOption; treatment: TreatmentOption } | null>(null);
   const [reaction, setReaction] = useState<"interested" | "too_expensive" | null>(null);

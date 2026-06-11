@@ -115,7 +115,7 @@ export function PublicQuotePage({
       </section>
 
       <HesitantClientBanner
-        show={showHesitantBanner && quote.status !== "confermato"}
+        show={showHesitantBanner && quote.status !== "confermato" && featureFlags.alternative_proposal === true}
         quoteCode={quote.code}
         token={quote.token}
       />
