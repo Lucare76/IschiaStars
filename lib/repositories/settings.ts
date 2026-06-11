@@ -1,9 +1,11 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { emptyFeatureFlags, FEATURE_FLAGS_KEY, FeatureFlagKey, FeatureFlags, normalizeFeatureFlags } from "@/lib/feature-flags";
 import { emptyPaymentSettings, normalizePaymentSettings, PAYMENT_SETTINGS_KEY, PaymentSettings, paymentSettingsToDbValue } from "@/lib/payment-settings";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export async function getPaymentSettings(): Promise<RepositoryResult<PaymentSettings>> {
+  noStore();
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(emptyPaymentSettings);
 
@@ -18,6 +20,7 @@ export async function getPaymentSettings(): Promise<RepositoryResult<PaymentSett
 }
 
 export async function updatePaymentSettings(settings: PaymentSettings): Promise<RepositoryResult<PaymentSettings>> {
+  noStore();
   const supabase = createSupabaseAdminClient();
   const normalized = normalizePaymentSettings({ ...settings, updatedAt: new Date().toISOString() });
   if (!supabase) return fallback(normalized);
@@ -36,6 +39,7 @@ export async function updatePaymentSettings(settings: PaymentSettings): Promise<
 }
 
 export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>> {
+  noStore();
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(emptyFeatureFlags);
 
@@ -58,6 +62,7 @@ export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>>
 }
 
 export async function updateFeatureFlag(flag: FeatureFlagKey, value: boolean): Promise<RepositoryResult<FeatureFlags>> {
+  noStore();
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(emptyFeatureFlags);
 
