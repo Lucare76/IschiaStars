@@ -28,8 +28,6 @@ export default async function QuotePublicRoute({ params, searchParams }: { param
     getFeatureFlags(),
   ]);
 
-  console.log(`[public-quote] code=${params.code} featureFlags=${JSON.stringify(featureFlagsResult.data)} source=${featureFlagsResult.source}`);
-
   const openingsCount = eventStats.data?.openings ?? 0;
   const showHesitantBanner = openingsCount >= 3 && quote.status !== "confermato";
 
