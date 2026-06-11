@@ -365,8 +365,18 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
           {isQuoteSent ? (
             <div className="mt-5 grid gap-3 [&_a]:block [&_a]:text-center">
               <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                Preventivo già inviato. Puoi reinviare il link al cliente su WhatsApp.
+                Preventivo già inviato. Puoi reinviare il link al cliente su WhatsApp{currentQuote.isLabTest ? " oppure ripetere il test email." : "."}
               </div>
+              {currentQuote.isLabTest ? (
+                <button
+                  className="rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white disabled:opacity-60"
+                  disabled={sending}
+                  onClick={() => void sendQuote()}
+                  type="button"
+                >
+                  {sending ? "Invio email..." : "Reinvia email di test"}
+                </button>
+              ) : null}
               <WhatsAppSendButton quote={currentQuote} label="Invia link su WhatsApp" />
               <Link className="block rounded-full bg-ischia-navy px-4 py-2 text-center text-sm font-black text-white" href={publicQuoteUrl(currentQuote)} rel="noopener noreferrer" target="_blank">
                 Apri link cliente
