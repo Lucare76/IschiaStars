@@ -1,4 +1,4 @@
-export type FeatureFlagKey = "wow6_adaptive" | "instant_reaction" | "alternative_proposal" | "voucher_cliente" | "supplier_confirmation";
+export type FeatureFlagKey = "wow6_adaptive" | "instant_reaction" | "alternative_proposal" | "voucher_cliente" | "supplier_confirmation" | "emailTravelServicesBox";
 
 export type FeatureFlags = Record<FeatureFlagKey, boolean>;
 
@@ -29,6 +29,11 @@ export const FEATURE_FLAG_DEFINITIONS: { key: FeatureFlagKey; label: string; des
     key: "supplier_confirmation",
     label: "supplier_confirmation",
     description: "Conferma fornitore: bottone 'Invia conferma a hotel/agenzia' nel pannello conferma"
+  },
+  {
+    key: "emailTravelServicesBox",
+    label: "emailTravelServicesBox",
+    description: "Box commerciale collegamenti: mostra le voci attive in fondo alle email preventivo cliente"
   }
 ];
 
@@ -39,7 +44,8 @@ export const emptyFeatureFlags: FeatureFlags = {
   instant_reaction: false,
   alternative_proposal: false,
   voucher_cliente: false,
-  supplier_confirmation: false
+  supplier_confirmation: false,
+  emailTravelServicesBox: false
 };
 
 export function isFeatureFlagKey(value: unknown): value is FeatureFlagKey {
@@ -57,6 +63,7 @@ export function normalizeFeatureFlags(value: unknown): FeatureFlags {
     instant_reaction: Boolean(record.instant_reaction),
     alternative_proposal: Boolean(record.alternative_proposal),
     voucher_cliente: Boolean(record.voucher_cliente),
-    supplier_confirmation: Boolean(record.supplier_confirmation)
+    supplier_confirmation: Boolean(record.supplier_confirmation),
+    emailTravelServicesBox: Boolean(record.emailTravelServicesBox)
   };
 }

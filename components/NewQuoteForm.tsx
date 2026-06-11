@@ -9,7 +9,8 @@ import {
   HotelOptionsEditor,
   hotelOptionHasPrice,
   mapHotelOptionsToPayload,
-  suggestedGuestsPerRoom
+  suggestedGuestsPerRoom,
+  suggestedRoomTypeLabel
 } from "@/components/HotelOptionsEditor";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { adminApiHeaders } from "@/lib/admin-api-client";
@@ -136,7 +137,9 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
       return;
     }
 
-    const mappedOptions = mapHotelOptionsToPayload(hotelOptions);
+    const mappedOptions = mapHotelOptionsToPayload(hotelOptions, {
+      defaultRoomTypeLabel: suggestedRoomTypeLabel(roomCapacitySuggestion)
+    });
 
     const response = await adminApiFetch("/api/quotes", {
       method: "POST",

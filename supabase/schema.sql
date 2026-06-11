@@ -163,6 +163,18 @@ create table if not exists public.settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.extra_service_email_items (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  price_from numeric(10,2) not null check (price_from >= 0),
+  price_suffix text not null default 'a persona',
+  is_active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists quotes_code_idx on public.quotes(code);
 create index if not exists quotes_public_token_idx on public.quotes(public_token);
 create index if not exists quote_events_quote_id_idx on public.quote_events(quote_id);
@@ -179,6 +191,7 @@ create unique index if not exists quote_requests_imap_message_id_uidx
   where metadata->>'imap_message_id' is not null and deleted_at is null;
 create index if not exists quotes_status_idx on public.quotes(status);
 create index if not exists quote_confirmations_availability_status_idx on public.quote_confirmations(availability_status);
+create index if not exists extra_service_email_items_sort_order_idx on public.extra_service_email_items(sort_order, created_at);
 create unique index if not exists hotels_external_source_external_id_uidx on public.hotels(external_source, external_id) where external_source is not null and external_id is not null;
 create unique index if not exists hotels_slug_uidx on public.hotels(slug) where slug is not null;
 
@@ -191,6 +204,7 @@ alter table public.quote_events enable row level security;
 alter table public.quote_confirmations enable row level security;
 alter table public.quote_status_events enable row level security;
 alter table public.settings enable row level security;
+alter table public.extra_service_email_items enable row level security;
 
 drop policy if exists "operators manage hotels" on public.hotels;
 drop policy if exists "operators manage quote requests" on public.quote_requests;
@@ -203,6 +217,7 @@ drop policy if exists "operators manage confirmations" on public.quote_confirmat
 drop policy if exists "operators read status history" on public.quote_status_events;
 drop policy if exists "operators create status history" on public.quote_status_events;
 drop policy if exists "operators manage settings" on public.settings;
+drop policy if exists "service role only" on public.extra_service_email_items;
 
 create policy "operators manage hotels" on public.hotels for all to authenticated using (true) with check (true);
 create policy "operators manage quote requests" on public.quote_requests for all to authenticated using (true) with check (true);
@@ -215,6 +230,7 @@ create policy "operators manage confirmations" on public.quote_confirmations for
 create policy "operators read status history" on public.quote_status_events for select to authenticated using (true);
 create policy "operators create status history" on public.quote_status_events for insert to authenticated with check (true);
 create policy "operators manage settings" on public.settings for all to authenticated using (true) with check (true);
+create policy "service role only" on public.extra_service_email_items using (false) with check (false);
 
 grant usage on schema public to authenticated, service_role;
 
@@ -227,6 +243,7 @@ grant select, insert, update, delete on public.quote_events to authenticated, se
 grant select, insert, update, delete on public.quote_confirmations to authenticated, service_role;
 grant select, insert, update, delete on public.quote_status_events to authenticated, service_role;
 grant select, insert, update, delete on public.settings to authenticated, service_role;
+grant select, insert, update, delete on public.extra_service_email_items to service_role;
 
 -- Public pages must not select directly from these tables.
 -- Use an API route or Supabase RPC that validates quotes.code + quotes.public_token,

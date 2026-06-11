@@ -109,7 +109,7 @@ export function hotelOptionHasPrice(opt: HotelOptionState) {
   return opt.roomTypes.some(roomTypeHasPrice);
 }
 
-export function mapHotelOptionsToPayload(hotelOptions: HotelOptionState[], options: { preserveGroups?: boolean } = {}) {
+export function mapHotelOptionsToPayload(hotelOptions: HotelOptionState[], options: { preserveGroups?: boolean; defaultRoomTypeLabel?: string } = {}) {
   const mappedOptions: object[] = [];
   let globalPosition = 0;
 
@@ -127,7 +127,7 @@ export function mapHotelOptionsToPayload(hotelOptions: HotelOptionState[], optio
         breakfastDetails: opt.breakfastDetails || undefined,
         halfBoardDetails: opt.halfBoardDetails || undefined,
         fullBoardDetails: opt.fullBoardDetails || undefined,
-        roomTypeLabel: rt.label || undefined,
+        roomTypeLabel: rt.label.trim() || options.defaultRoomTypeLabel?.trim() || undefined,
         hotelName: opt.hotelName,
         hotelLocation: opt.hotelLocation || undefined,
         hotelStars: opt.hotelStars ? Number(opt.hotelStars) : undefined,
@@ -196,6 +196,11 @@ export function quoteOptionsToHotelOptionState(opts: QuoteHotelOption[]): HotelO
 
 export function suggestedGuestsPerRoom(totalGuests: number, rooms: number) {
   return Math.max(1, Math.ceil(Math.max(1, totalGuests) / Math.max(1, rooms)));
+}
+
+export function suggestedRoomTypeLabel(guestsPerRoom: number) {
+  const capacity = Math.min(4, Math.max(1, guestsPerRoom));
+  return ROOM_TYPE_PRESETS.find((preset) => preset.capacity === capacity)?.label ?? "Tipologia camera da confermare";
 }
 
 export function HotelOptionsEditor({

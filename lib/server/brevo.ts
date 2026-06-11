@@ -1,5 +1,7 @@
 import type { Quote, QuoteConfirmation } from "@/lib/types";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
+import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
+import { getFeatureFlags } from "@/lib/repositories/settings";
 import { ischiastarsWhatsappNumber } from "@/lib/utils";
 
 type BrevoRecipient = { email: string; name?: string };
@@ -139,6 +141,19 @@ function formatPrice(amount: number): string {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(amount);
 }
 
+function formatPriceFrom(amount: number): string {
+  return new Intl.NumberFormat("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount);
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!local || !domain) return "invalid";
@@ -156,6 +171,8 @@ function emailSharedStyles(): string {
       .cta-button { width: 100% !important; display: block !important; box-sizing: border-box; }
       .header-padding { padding: 20px 16px !important; }
       .footer-padding { padding: 14px 16px !important; }
+      .travel-service-name, .travel-service-price { display: block !important; width: auto !important; text-align: left !important; }
+      .travel-service-price { padding: 2px 0 10px 26px !important; }
     }
   </style>`;
 }
@@ -181,6 +198,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     return { sent: false, skipReason: "missing_site_url" };
   }
   const quoteUrl = `${siteUrl}/preventivi/${quote.code}?token=${quote.token}`;
+  const logoUrl = `${siteUrl}/ischiastars-logo.png`;
   const firstName = quote.customerFirstName || "Cliente";
   const clientName = `${quote.customerFirstName} ${quote.customerLastName}`.trim();
   const replyEmail = process.env.BREVO_FROM_EMAIL || "info@ischiastars.it";
@@ -188,6 +206,43 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
 
   const options = getEffectiveHotelOptions(quote);
   const hasMultiple = options.length > 1;
+  const featureFlags = (await getFeatureFlags()).data;
+  const travelServices = featureFlags.emailTravelServicesBox
+    ? (await listExtraServiceEmailItems(true)).data
+    : [];
+
+  const travelServicesBoxHtml = travelServices.length ? `
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f8fc;border:1px solid #d9e5ef;border-radius:10px;margin:28px 0 24px;">
+              <tr>
+                <td style="padding:22px 20px;">
+                  <p style="margin:0 0 6px;font-size:11px;font-weight:bold;letter-spacing:1.2px;text-transform:uppercase;color:#0b67a3;">Organizza anche il viaggio</p>
+                  <p class="section-title" style="margin:0 0 9px;font-size:19px;font-weight:bold;color:#1a3a5c;line-height:1.3;">Vuoi arrivare a Ischia senza pensieri?</p>
+                  <p style="margin:0 0 16px;font-size:14px;color:#4b5563;line-height:1.65;">Oltre al soggiorno, possiamo aiutarti a scegliere il collegamento più comodo per raggiungere la struttura.</p>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #d9e5ef;">
+                    ${travelServices.map((item, index) => `
+                    <tr>
+                      <td valign="top" style="width:20px;padding:11px 0;font-size:13px;color:#0b67a3;${index ? "border-top:1px solid #e4ecf3;" : ""}">&#10003;</td>
+                      <td class="travel-service-name" style="padding:11px 8px 11px 0;font-size:14px;font-weight:600;color:#374151;line-height:1.45;${index ? "border-top:1px solid #e4ecf3;" : ""}">
+                        ${escapeHtml(item.title)}
+                        ${item.description ? `<br><span style="font-size:12px;color:#6b7280;">${escapeHtml(item.description)}</span>` : ""}
+                      </td>
+                      <td class="travel-service-price" valign="top" style="padding:11px 0;font-size:14px;color:#1a3a5c;text-align:right;font-weight:bold;white-space:nowrap;${index ? "border-top:1px solid #e4ecf3;" : ""}">da € ${formatPriceFrom(item.priceFrom)} <span style="font-size:12px;font-weight:normal;color:#60758a;">${escapeHtml(item.priceSuffix)}</span></td>
+                    </tr>`).join("")}
+                  </table>
+                  <p style="margin:16px 0 0;padding-top:14px;border-top:1px solid #d9e5ef;font-size:12px;color:#66717d;line-height:1.65;">Le tariffe sono indicative e possono variare in base a data, disponibilità e orari.</p>
+                  <p style="margin:9px 0 0;font-size:13px;font-weight:600;color:#1a3a5c;line-height:1.55;">Rispondi a questa email o scrivici su WhatsApp: ti consiglieremo la soluzione più adatta al tuo viaggio.</p>
+                </td>
+              </tr>
+            </table>` : "";
+
+  const travelServicesBoxText = travelServices.length ? [
+    "Vuoi arrivare a Ischia senza pensieri?",
+    "",
+    "Oltre al soggiorno, possiamo aiutarti anche a organizzare il collegamento più comodo per raggiungere la struttura:",
+    ...travelServices.map((item) => `• ${item.title}: da € ${formatPriceFrom(item.priceFrom)} ${item.priceSuffix}${item.description ? ` — ${item.description}` : ""}`),
+    "",
+    "Le tariffe sono indicative e possono variare in base a data, disponibilità e orari. Per ricevere la soluzione più adatta al tuo viaggio, rispondi a questa email o contattaci su WhatsApp."
+  ].join("\n") : "";
 
   // Riepilogo opzioni per email
   const optionsSummaryHtml = options
@@ -251,7 +306,8 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
 
         <tr>
           <td class="header-padding" style="background:#1a3a5c;padding:28px 32px;text-align:center;">
-            <p class="section-title" style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;letter-spacing:1px;">IschiaStars</p>
+            <img src="${logoUrl}" alt="IschiaStars" width="120" style="display:block;width:120px;max-width:100%;height:auto;margin:0 auto 8px;">
+            <p class="section-title" style="margin:0;color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:1px;">Preventivi IschiaStars</p>
             <p style="margin:6px 0 0;color:#a8c4e0;font-size:13px;">Soggiorni a Ischia</p>
           </td>
         </tr>
@@ -297,6 +353,8 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
               <a href="${quoteUrl}" style="color:#1a3a5c;">${quoteUrl}</a>
             </p>
 
+            ${travelServicesBoxHtml}
+
             <p style="margin:0 0 12px;font-size:14px;color:#444444;line-height:1.7;">
               Dal preventivo potrai visualizzare i dettagli, confrontare le proposte e confermare direttamente online.
             </p>
@@ -338,6 +396,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     hasMultiple ? "Vedi le proposte e conferma:" : "Apri il preventivo:",
     quoteUrl,
     "",
+    ...(travelServicesBoxText ? [travelServicesBoxText, ""] : []),
     "Per domande puoi rispondere a questa email oppure scriverci su WhatsApp.",
     "",
     "Il team IschiaStars",
