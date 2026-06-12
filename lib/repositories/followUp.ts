@@ -58,19 +58,22 @@ export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuot
 function toFollowUpQuote(quote: Quote, events: QuoteEvent[]): FollowUpQuote | null {
   if (quote.deletedAt || quote.excludedFromStats || quote.status !== "preventivo_inviato" || quote.confirmation) return null;
 
-  if (events.some((event) => event.eventType === "quote_confirmed")) return null;
+  const sentAt = quote.sentAt ?? quote.createdAt;
+  const sentTimestamp = new Date(sentAt).getTime();
+  const customerEvents = events.filter((event) => new Date(event.createdAt).getTime() >= sentTimestamp);
 
-  const opened = events.filter((event) => event.eventType === "quote_opened");
-  const whatsappClicks = events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event));
-  const hotelLinkClicks = events.filter((event) => event.eventType === "hotel_link_clicked");
-  const printClicks = events.filter((event) => event.eventType === "print_clicked");
-  const confirmClicks = events.filter((event) => event.eventType === "confirm_clicked");
-  const detailsOpened = events.filter((event) => event.eventType === "details_opened");
-  const followUpEvents = events.filter((event) => event.eventType === "follow_up_whatsapp_click");
+  if (customerEvents.some((event) => event.eventType === "quote_confirmed")) return null;
+
+  const opened = customerEvents.filter((event) => event.eventType === "quote_opened");
+  const whatsappClicks = customerEvents.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event));
+  const hotelLinkClicks = customerEvents.filter((event) => event.eventType === "hotel_link_clicked");
+  const printClicks = customerEvents.filter((event) => event.eventType === "print_clicked");
+  const confirmClicks = customerEvents.filter((event) => event.eventType === "confirm_clicked");
+  const detailsOpened = customerEvents.filter((event) => event.eventType === "details_opened");
+  const followUpEvents = customerEvents.filter((event) => event.eventType === "follow_up_whatsapp_click");
   const lastFollowUp = latestEvent(followUpEvents);
   const snoozedUntil = latestSnoozeUntil(followUpEvents);
-  const lastEvent = latestEvent(events);
-  const sentAt = quote.sentAt ?? quote.createdAt;
+  const lastEvent = latestEvent(customerEvents);
   const publicUrl = absolutePublicQuoteUrl(quote);
   const segment = resolveSegment({
     sentAt,

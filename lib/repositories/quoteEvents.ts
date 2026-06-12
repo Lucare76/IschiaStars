@@ -13,6 +13,21 @@ export async function trackQuoteEvent(quoteId: string, eventType: QuoteEvent["ev
     return fallback(event);
   }
 
+  if (eventType === "quote_opened" && typeof metadata.visitor_id === "string") {
+    const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const { data: recentOpening } = await supabase
+      .from("quote_events")
+      .select("*")
+      .eq("quote_id", quoteId)
+      .eq("event_type", "quote_opened")
+      .eq("metadata->>visitor_id", metadata.visitor_id)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (recentOpening) return fromSupabase(mapEvent(recentOpening));
+  }
+
   const { data, error } = await supabase
     .from("quote_events")
     .insert({ quote_id: quoteId, event_type: eventType, metadata, user_agent: userAgent })
@@ -62,7 +77,7 @@ export async function getQuoteEvents(quoteId: string): Promise<RepositoryResult<
 
   const { data, error } = await supabase.from("quote_events").select("*").eq("quote_id", quoteId).order("created_at");
   if (error) return fallback(local, error);
-  return fromSupabase((data ?? []).map(mapEvent));
+  return fromSupabase(deduplicateEvents((data ?? []).map(mapEvent)));
 }
 
 export async function getQuoteEventsForQuoteIds(quoteIds: string[]): Promise<RepositoryResult<Record<string, QuoteEvent[]>>> {
@@ -148,11 +163,31 @@ function groupEventsByQuote(events: QuoteEvent[]) {
 function deduplicateEvents(events: QuoteEvent[]) {
   const seenIds = new Set<string>();
   const seenSignatures = new Set<string>();
+  const lastOpeningByVisitor = new Map<string, number>();
+  const latestLegacyOpeningId = new Map<string, string>();
+  for (const event of events) {
+    if (event.eventType === "quote_opened" && typeof event.metadata?.visitor_id !== "string") {
+      latestLegacyOpeningId.set(event.quoteId, event.id);
+    }
+  }
   return events.filter((event) => {
     const signature = JSON.stringify([event.quoteId, event.eventType, event.createdAt, event.userAgent ?? "", event.metadata ?? {}]);
     if (seenIds.has(event.id) || seenSignatures.has(signature)) return false;
     seenIds.add(event.id);
     seenSignatures.add(signature);
+
+    if (event.eventType === "quote_opened") {
+      const visitorId = typeof event.metadata?.visitor_id === "string" ? event.metadata.visitor_id : "";
+      if (!visitorId) {
+        return latestLegacyOpeningId.get(event.quoteId) === event.id;
+      }
+
+      const visitorKey = `${event.quoteId}:${visitorId}`;
+      const timestamp = new Date(event.createdAt).getTime();
+      const previous = lastOpeningByVisitor.get(visitorKey);
+      if (previous !== undefined && timestamp - previous < 30 * 60 * 1000) return false;
+      lastOpeningByVisitor.set(visitorKey, timestamp);
+    }
     return true;
   });
 }

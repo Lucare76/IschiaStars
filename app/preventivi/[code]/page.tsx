@@ -6,6 +6,7 @@ import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { getConfirmedHotelCounts } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
 import { getFeatureFlags } from "@/lib/repositories/settings";
+import { getAdminSession } from "@/lib/server/auth-guard";
 import { ischiastarsWhatsappNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -22,10 +23,11 @@ export default async function QuotePublicRoute({ params, searchParams }: { param
   const quote = result.data;
   if (!quote || quote.deletedAt) return <InvalidQuotePage />;
 
-  const [hotelPopularity, eventStats, featureFlagsResult] = await Promise.all([
+  const [hotelPopularity, eventStats, featureFlagsResult, adminSession] = await Promise.all([
     getConfirmedHotelCounts(),
     getQuoteEventStats(quote.id),
     getFeatureFlags(),
+    getAdminSession(),
   ]);
 
   const openingsCount = eventStats.data?.openings ?? 0;
@@ -37,6 +39,7 @@ export default async function QuotePublicRoute({ params, searchParams }: { param
       hotelPopularity={hotelPopularity}
       showHesitantBanner={showHesitantBanner}
       featureFlags={featureFlagsResult.data}
+      trackOpening={!adminSession}
     />
   );
 }
