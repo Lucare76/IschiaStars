@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiFetch } from "@/lib/admin-api-client";
 
-type NotificationType = "apertura" | "cliente_caldo" | "conferma";
+type NotificationType = "apertura" | "cliente_caldo" | "conferma" | "click" | "interesse";
 
 type NotificationItem = {
   id: string;
@@ -124,7 +124,9 @@ async function loadNotifications(setNotifications: (items: NotificationItem[]) =
 function notificationColor(type: NotificationType) {
   if (type === "apertura") return "bg-[#2563EB]";
   if (type === "cliente_caldo") return "bg-[#D97706]";
-  return "bg-[#16A34A]";
+  if (type === "conferma") return "bg-[#16A34A]";
+  if (type === "interesse") return "bg-[#7C3AED]";
+  return "bg-[#0891B2]";
 }
 
 function relativeTime(value: string) {

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getQuoteNotifications, markQuoteNotificationsSeen } from "@/lib/repositories/quoteNotifications";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
   const unauthorized = await requireAdminApiAccess(request);
   if (unauthorized) return unauthorized;
@@ -12,7 +15,10 @@ export async function GET(request: NextRequest) {
     source: result.source,
     data: result.data,
     error: result.error
-  }, { status: result.source === "supabase" ? 200 : 503 });
+  }, {
+    status: result.source === "supabase" ? 200 : 503,
+    headers: { "Cache-Control": "no-store, no-cache, must-revalidate" }
+  });
 }
 
 export async function PATCH(request: NextRequest) {

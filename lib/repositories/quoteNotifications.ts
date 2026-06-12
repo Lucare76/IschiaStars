@@ -2,13 +2,13 @@ import "server-only";
 
 import { allDemoQuotes, allQuoteEvents } from "@/lib/demo-store";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
-import { isExcludedTrackingEvent } from "@/lib/server/trackingFilters";
+import { CUSTOMER_ACTIVITY_EVENT_TYPES, isCustomerActivityEvent } from "@/lib/server/trackingFilters";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { QuoteEvent } from "@/lib/types";
 
 export const QUOTE_NOTIFICATIONS_SEEN_KEY = "quote_notifications_seen_at";
 
-export type QuoteNotificationType = "apertura" | "cliente_caldo" | "conferma";
+export type QuoteNotificationType = "apertura" | "cliente_caldo" | "conferma" | "click" | "interesse";
 
 export type QuoteNotification = {
   id: string;
@@ -25,6 +25,7 @@ type QuoteNotificationSource = {
   id: string;
   code: string;
   customerName: string;
+  isLabTest?: boolean;
 };
 
 export function deriveQuoteNotifications(
@@ -32,49 +33,27 @@ export function deriveQuoteNotifications(
   quotes: QuoteNotificationSource[],
   seenAt?: string
 ): QuoteNotification[] {
-  const quoteById = new Map(quotes.map((quote) => [quote.id, quote]));
+  const quoteById = new Map(quotes.filter((quote) => !quote.isLabTest).map((quote) => [quote.id, quote]));
   const seenTimestamp = seenAt ? Date.parse(seenAt) : Number.NaN;
-  const grouped = events
-    .filter((event) => !isExcludedTrackingEvent(event))
-    .filter((event) => event.eventType === "quote_opened" || event.eventType === "quote_confirmed")
+  const openingCountByQuote = new Map<string, number>();
+
+  return events
+    .filter(isCustomerActivityEvent)
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
-    .reduce<Record<string, QuoteEvent[]>>((result, event) => {
-      result[event.quoteId] = [...(result[event.quoteId] ?? []), event];
-      return result;
-    }, {});
+    .map((event) => {
+      const quote = quoteById.get(event.quoteId);
+      if (!quote) return null;
 
-  const notifications: QuoteNotification[] = [];
+      const openingCount = event.eventType === "quote_opened"
+        ? (openingCountByQuote.get(event.quoteId) ?? 0) + 1
+        : openingCountByQuote.get(event.quoteId) ?? 0;
+      if (event.eventType === "quote_opened") openingCountByQuote.set(event.quoteId, openingCount);
 
-  for (const [quoteId, quoteEvents] of Object.entries(grouped)) {
-    const quote = quoteById.get(quoteId);
-    if (!quote) continue;
-
-    const openings = quoteEvents.filter((event) => event.eventType === "quote_opened");
-    const firstOpening = openings[0];
-    const hotOpening = openings[2];
-    const confirmation = quoteEvents.find((event) => event.eventType === "quote_confirmed");
-
-    if (firstOpening) {
-      notifications.push(buildNotification(firstOpening, quote, "apertura", "ha aperto il preventivo", seenTimestamp));
-    }
-    if (hotOpening) {
-      notifications.push(buildNotification(hotOpening, quote, "cliente_caldo", "sta guardando di nuovo — cliente caldo", seenTimestamp));
-    }
-    if (confirmation) {
-      const selectedHotel = typeof confirmation.metadata?.selectedHotelName === "string"
-        ? confirmation.metadata.selectedHotelName.trim()
-        : "";
-      notifications.push(buildNotification(
-        confirmation,
-        quote,
-        "conferma",
-        selectedHotel ? `ha confermato ${selectedHotel}` : "ha confermato una proposta",
-        seenTimestamp
-      ));
-    }
-  }
-
-  return notifications.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+      const presentation = notificationPresentation(event, openingCount);
+      return buildNotification(event, quote, presentation.type, presentation.description, seenTimestamp);
+    })
+    .filter((notification): notification is QuoteNotification => Boolean(notification))
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
 export async function getQuoteNotifications(limit = 20): Promise<RepositoryResult<QuoteNotification[]>> {
@@ -83,14 +62,15 @@ export async function getQuoteNotifications(limit = 20): Promise<RepositoryResul
     const quotes = allDemoQuotes().map((quote) => ({
       id: quote.id,
       code: quote.code,
-      customerName: `${quote.customerFirstName} ${quote.customerLastName}`.trim()
+      customerName: `${quote.customerFirstName} ${quote.customerLastName}`.trim(),
+      isLabTest: quote.isLabTest
     }));
     return fallback(deriveQuoteNotifications(allQuoteEvents(), quotes).slice(0, limit));
   }
 
   const [{ data: eventRows, error: eventError }, { data: quoteRows, error: quoteError }, { data: settingRow, error: settingError }] = await Promise.all([
-    supabase.from("quote_events").select("*").in("event_type", ["quote_opened", "quote_confirmed"]).order("created_at"),
-    supabase.from("quotes").select("id,code,client_first_name,client_last_name"),
+    supabase.from("quote_events").select("*").in("event_type", CUSTOMER_ACTIVITY_EVENT_TYPES).order("created_at", { ascending: false }),
+    supabase.from("quotes").select("id,code,client_first_name,client_last_name,metadata"),
     supabase.from("settings").select("value").eq("key", QUOTE_NOTIFICATIONS_SEEN_KEY).maybeSingle()
   ]);
 
@@ -101,7 +81,8 @@ export async function getQuoteNotifications(limit = 20): Promise<RepositoryResul
   const quotes = (quoteRows ?? []).map((row) => ({
     id: String(row.id),
     code: String(row.code),
-    customerName: `${String(row.client_first_name ?? "")} ${String(row.client_last_name ?? "")}`.trim()
+    customerName: `${String(row.client_first_name ?? "")} ${String(row.client_last_name ?? "")}`.trim(),
+    isLabTest: row.metadata?.is_lab_test === true
   }));
   const seenAt = readSeenAt(settingRow?.value);
 
@@ -120,6 +101,34 @@ export async function markQuoteNotificationsSeen(seenAt = new Date().toISOString
 
   if (error) return fallback(seenAt, error);
   return fromSupabase(seenAt);
+}
+
+function notificationPresentation(event: QuoteEvent, openingCount: number): { type: QuoteNotificationType; description: string } {
+  if (event.eventType === "quote_opened") {
+    return openingCount >= 3
+      ? { type: "cliente_caldo", description: "sta guardando di nuovo - cliente caldo" }
+      : { type: "apertura", description: "ha aperto il preventivo" };
+  }
+  if (event.eventType === "quote_confirmed") {
+    const selectedHotel = typeof event.metadata?.selectedHotelName === "string" ? event.metadata.selectedHotelName.trim() : "";
+    return { type: "conferma", description: selectedHotel ? `ha confermato ${selectedHotel}` : "ha confermato una proposta" };
+  }
+  const descriptions: Partial<Record<QuoteEvent["eventType"], string>> = {
+    whatsapp_clicked: "ha cliccato WhatsApp",
+    hesitant_whatsapp_clicked: "ha chiesto aiuto su WhatsApp",
+    hotel_link_clicked: "ha aperto la pagina hotel",
+    print_clicked: "ha aperto stampa/PDF",
+    details_opened: "ha aperto i dettagli dell'offerta",
+    confirm_clicked: "ha cliccato conferma",
+    compare_opened: "ha confrontato le proposte",
+    reveal_options_clicked: "ha visualizzato altre proposte",
+    reaction_interested: "ha indicato interesse",
+    reaction_too_expensive: "ha indicato prezzo troppo alto"
+  };
+  return {
+    type: event.eventType.startsWith("reaction_") ? "interesse" : "click",
+    description: descriptions[event.eventType] ?? "ha interagito con il preventivo"
+  };
 }
 
 function buildNotification(
