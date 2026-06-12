@@ -34,6 +34,19 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const balanceAmount = confirmation.selectedBalanceAmount;
   const depositPaidAt = confirmation.depositPaidAt ?? balancePaidAt;
 
+  const selectedOption = quote.hotelOptions.find(o => o.id === confirmation.selectedHotelOptionId);
+  const includedServices = selectedOption?.includedServices
+    ? selectedOption.includedServices.split("\n").map(s => s.trim()).filter(Boolean)
+    : (quote.servicesIncluded ?? []);
+
+  let nightsCount: number | undefined;
+  if (quote.arrivalDate && quote.departureDate) {
+    const nights = Math.round(
+      (new Date(quote.departureDate).getTime() - new Date(quote.arrivalDate).getTime()) / 86400000
+    );
+    if (nights > 0) nightsCount = nights;
+  }
+
   try {
     const pdfBuffer = await generateVoucherPdf({
       quoteCode: quote.code,
@@ -41,11 +54,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       clientEmail: confirmation.email ?? quote.customerEmail,
       clientPhone: confirmation.phone ?? quote.customerPhone,
       hotelName: confirmation.selectedHotelName,
+      roomTypeLabel: selectedOption?.roomTypeLabel ?? undefined,
       treatmentLabel: confirmation.selectedTreatmentLabel,
       arrivalDate: quote.arrivalDate ? formatDate(quote.arrivalDate) : undefined,
       departureDate: quote.departureDate ? formatDate(quote.departureDate) : undefined,
+      nightsCount,
       guestsLabel: guestsParts.length ? guestsParts.join(", ") : undefined,
-      includedServices: quote.servicesIncluded,
+      includedServices,
       depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
       depositPaidAtLabel: formatDateTime(depositPaidAt),
       balanceAmountLabel: typeof balanceAmount === "number" ? formatCurrency(balanceAmount) : undefined,

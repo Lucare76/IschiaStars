@@ -8,6 +8,8 @@ const GRAY = "#6B7280";
 const DARK = "#111827";
 const BORDER = "#D9E2EC";
 const SOFT_BG = "#F6F8FB";
+const LIGHT_GOLD_BG = "#FFFBF0";
+const GOLD_BORDER = "#E8D5A0";
 
 const logoPath = path.join(process.cwd(), "public", "ischiastars-logo.png");
 const logoSrc = fs.existsSync(logoPath)
@@ -20,11 +22,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Helvetica",
     color: DARK,
-    backgroundColor: SOFT_BG
+    backgroundColor: SOFT_BG,
   },
   topAccent: {
     height: 5,
-    backgroundColor: GOLD
+    backgroundColor: GOLD,
   },
   headerBand: {
     backgroundColor: NAVY,
@@ -38,12 +40,12 @@ const styles = StyleSheet.create({
   logo: {
     width: 118,
     height: 46,
-    objectFit: "contain"
+    objectFit: "contain",
   },
   brandText: {
     fontSize: 20,
     fontFamily: "Helvetica-Bold",
-    color: "#FFFFFF"
+    color: "#FFFFFF",
   },
   headerCenter: {
     flex: 1,
@@ -82,82 +84,115 @@ const styles = StyleSheet.create({
   },
   body: {
     paddingHorizontal: 32,
-    paddingTop: 22,
-    paddingBottom: 90
+    paddingTop: 20,
+    paddingBottom: 90,
   },
+
+  // ─── BOOKING HERO CARD ───
   bookingCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 10,
     padding: 20,
-    marginBottom: 18,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: BORDER,
   },
   bookingCardAccent: {
     height: 3,
-    width: 36,
+    width: 40,
     backgroundColor: GOLD,
     borderRadius: 2,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   bookingCardHotel: {
-    fontSize: 20,
+    fontSize: 22,
     fontFamily: "Helvetica-Bold",
     color: NAVY,
-    marginBottom: 4
+    marginBottom: 8,
   },
-  bookingCardTreatment: {
-    fontSize: 10,
-    color: GRAY,
-    marginBottom: 16
+  bookingCardSubtitleRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 14,
+    flexWrap: "wrap",
+  },
+  bookingCardChipNavy: {
+    backgroundColor: "#EDF1F5",
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "#C8D5E0",
+  },
+  bookingCardChipNavyText: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: NAVY,
+  },
+  bookingCardChipGold: {
+    backgroundColor: LIGHT_GOLD_BG,
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: GOLD_BORDER,
+  },
+  bookingCardChipGoldText: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: "#7A5C10",
   },
   bookingCardRow: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 4
+    gap: 10,
+    marginBottom: 4,
   },
   bookingCardItem: {
-    flexDirection: "column",
     flex: 1,
     backgroundColor: NAVY,
     borderRadius: 8,
-    padding: 12
+    padding: 12,
+  },
+  bookingCardItemCompact: {
+    flex: 0.65,
   },
   bookingCardItemLabel: {
     fontSize: 7,
     color: GOLD,
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    marginBottom: 4
+    marginBottom: 5,
   },
   bookingCardItemValue: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "Helvetica-Bold",
-    color: "#FFFFFF"
+    color: "#FFFFFF",
   },
   bookingCardDivider: {
     height: 1,
     backgroundColor: BORDER,
-    marginVertical: 14
+    marginVertical: 12,
   },
   bookingCardRefRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center"
+    alignItems: "center",
   },
   bookingCardRefLabel: {
     fontSize: 8,
-    color: GRAY
+    color: GRAY,
   },
   bookingCardRefValue: {
     fontSize: 10,
     fontFamily: "Helvetica-Bold",
-    color: NAVY
+    color: NAVY,
   },
+
+  // ─── TWO COLUMN LAYOUT ───
   columnsRow: {
     flexDirection: "row",
-    gap: 18,
-    marginBottom: 18
+    gap: 16,
+    marginBottom: 16,
   },
   columnLeft: { flex: 1 },
   columnRight: { flex: 1 },
@@ -166,22 +201,22 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 16,
     borderWidth: 1,
-    borderColor: BORDER
+    borderColor: BORDER,
   },
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 11,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB"
+    borderBottomColor: "#E5E7EB",
   },
   sectionTitleBar: {
     width: 3,
     height: 10,
     backgroundColor: GOLD,
     borderRadius: 2,
-    marginRight: 7
+    marginRight: 7,
   },
   sectionTitle: {
     fontSize: 9,
@@ -192,23 +227,40 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    marginBottom: 5
+    marginBottom: 5,
   },
   label: {
     width: 110,
-    fontSize: 9,
-    color: GRAY
+    fontSize: 8,
+    color: GRAY,
   },
   value: {
     flex: 1,
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: "Helvetica-Bold",
-    color: DARK
+    color: DARK,
+  },
+
+  // ─── SERVICES SECTION ───
+  servicesSection: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    marginBottom: 16,
+  },
+  servicesGrid: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  servicesCol: {
+    flex: 1,
   },
   serviceItem: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 6
+    marginBottom: 5,
   },
   serviceCheck: {
     fontSize: 10,
@@ -217,17 +269,19 @@ const styles = StyleSheet.create({
     marginRight: 7,
   },
   serviceText: {
-    fontSize: 10,
+    fontSize: 9,
     color: DARK,
-    flex: 1
+    flex: 1,
   },
+
+  // ─── PAYMENT SECTION ───
   paymentSection: {
-    marginBottom: 18,
+    marginBottom: 16,
     backgroundColor: "#FFFFFF",
     borderRadius: 10,
     padding: 16,
     borderWidth: 1,
-    borderColor: BORDER
+    borderColor: BORDER,
   },
   paymentBody: {
     backgroundColor: SOFT_BG,
@@ -238,11 +292,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8
+    marginBottom: 8,
   },
   paymentLabel: {
     fontSize: 9,
-    color: GRAY
+    color: GRAY,
   },
   paymentPaidChip: {
     backgroundColor: "#DCFCE7",
@@ -258,7 +312,7 @@ const styles = StyleSheet.create({
   paymentDivider: {
     height: 1,
     backgroundColor: BORDER,
-    marginVertical: 8
+    marginVertical: 8,
   },
   paymentDateRow: {
     flexDirection: "row",
@@ -267,12 +321,12 @@ const styles = StyleSheet.create({
   },
   paymentDateLabel: {
     fontSize: 9,
-    color: GRAY
+    color: GRAY,
   },
   paymentDateValue: {
     fontSize: 9,
     fontFamily: "Helvetica-Bold",
-    color: DARK
+    color: DARK,
   },
   balanceDue: {
     marginTop: 10,
@@ -283,17 +337,46 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#FED7AA"
+    borderColor: "#FED7AA",
   },
   balanceDueLabel: {
     fontSize: 9,
-    color: "#92400E"
+    color: "#92400E",
   },
   balanceDueValue: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Helvetica-Bold",
-    color: "#B45309"
+    color: "#B45309",
   },
+
+  // ─── NOTES SECTION ───
+  notesSection: {
+    backgroundColor: LIGHT_GOLD_BG,
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: GOLD_BORDER,
+    marginBottom: 16,
+  },
+  noteItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 5,
+  },
+  noteBullet: {
+    fontSize: 10,
+    color: GOLD,
+    fontFamily: "Helvetica-Bold",
+    marginRight: 8,
+  },
+  noteText: {
+    fontSize: 8,
+    color: "#6B4E00",
+    flex: 1,
+    lineHeight: 1.5,
+  },
+
+  // ─── FOOTER ───
   footer: {
     position: "absolute",
     bottom: 0,
@@ -313,17 +396,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
-    marginBottom: 3
+    marginBottom: 3,
   },
   footerContact: {
     fontSize: 8,
-    color: "#94A3B8"
+    color: "#94A3B8",
   },
   footerDocNumber: {
     fontSize: 8,
     color: GOLD,
-    textAlign: "right"
-  }
+    textAlign: "right",
+  },
 });
 
 export type VoucherDocumentData = {
@@ -332,9 +415,11 @@ export type VoucherDocumentData = {
   clientEmail?: string;
   clientPhone?: string;
   hotelName?: string;
+  roomTypeLabel?: string;
   treatmentLabel?: string;
   arrivalDate?: string;
   departureDate?: string;
+  nightsCount?: number;
   guestsLabel?: string;
   includedServices?: string[];
   depositAmountLabel: string;
@@ -363,14 +448,27 @@ function SectionTitle({ children }: { children: string }) {
   );
 }
 
+function NoteItem({ children }: { children: string }) {
+  return (
+    <View style={styles.noteItem}>
+      <Text style={styles.noteBullet}>•</Text>
+      <Text style={styles.noteText}>{children}</Text>
+    </View>
+  );
+}
+
 export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
   const services = (data.includedServices ?? []).filter(Boolean);
+  const col1Services = services.filter((_, i) => i % 2 === 0);
+  const col2Services = services.filter((_, i) => i % 2 === 1);
+  const hasSubtitle = data.roomTypeLabel || data.treatmentLabel;
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.topAccent} />
 
+        {/* HEADER */}
         <View style={styles.headerBand}>
           {logoSrc ? (
             // eslint-disable-next-line jsx-a11y/alt-text
@@ -386,14 +484,31 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
             <Text style={styles.confirmedBadgeText}>CONFERMATO</Text>
           </View>
         </View>
-
         <View style={styles.headerGoldLine} />
 
         <View style={styles.body}>
+          {/* === BOOKING HERO CARD === */}
           <View style={styles.bookingCard}>
             <View style={styles.bookingCardAccent} />
             {data.hotelName ? <Text style={styles.bookingCardHotel}>{data.hotelName}</Text> : null}
-            {data.treatmentLabel ? <Text style={styles.bookingCardTreatment}>{data.treatmentLabel}</Text> : null}
+
+            {/* Chips: tipologia camera + trattamento */}
+            {hasSubtitle ? (
+              <View style={styles.bookingCardSubtitleRow}>
+                {data.roomTypeLabel ? (
+                  <View style={styles.bookingCardChipNavy}>
+                    <Text style={styles.bookingCardChipNavyText}>{data.roomTypeLabel}</Text>
+                  </View>
+                ) : null}
+                {data.treatmentLabel ? (
+                  <View style={styles.bookingCardChipGold}>
+                    <Text style={styles.bookingCardChipGoldText}>{data.treatmentLabel}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            {/* Date / Notti / Ospiti boxes */}
             <View style={styles.bookingCardRow}>
               {data.arrivalDate ? (
                 <View style={styles.bookingCardItem}>
@@ -407,6 +522,12 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
                   <Text style={styles.bookingCardItemValue}>{data.departureDate}</Text>
                 </View>
               ) : null}
+              {data.nightsCount ? (
+                <View style={[styles.bookingCardItem, styles.bookingCardItemCompact]}>
+                  <Text style={styles.bookingCardItemLabel}>Notti</Text>
+                  <Text style={styles.bookingCardItemValue}>{data.nightsCount}</Text>
+                </View>
+              ) : null}
               {data.guestsLabel ? (
                 <View style={styles.bookingCardItem}>
                   <Text style={styles.bookingCardItemLabel}>Ospiti</Text>
@@ -414,6 +535,7 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
                 </View>
               ) : null}
             </View>
+
             <View style={styles.bookingCardDivider} />
             <View style={styles.bookingCardRefRow}>
               <Text style={styles.bookingCardRefLabel}>Numero prenotazione</Text>
@@ -421,6 +543,7 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
             </View>
           </View>
 
+          {/* === DUE COLONNE: Dati Cliente + Dettagli Soggiorno === */}
           <View style={styles.columnsRow}>
             <View style={styles.columnLeft}>
               <View style={styles.section}>
@@ -430,12 +553,40 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
                 <Row label="Telefono" value={data.clientPhone} />
               </View>
             </View>
+            <View style={styles.columnRight}>
+              <View style={styles.section}>
+                <SectionTitle>Dettagli soggiorno</SectionTitle>
+                {data.hotelName ? <Row label="Struttura" value={data.hotelName} /> : null}
+                {data.roomTypeLabel ? <Row label="Tipologia camera" value={data.roomTypeLabel} /> : null}
+                {data.treatmentLabel ? <Row label="Trattamento" value={data.treatmentLabel} /> : null}
+                {data.arrivalDate ? <Row label="Arrivo" value={data.arrivalDate} /> : null}
+                {data.departureDate ? <Row label="Partenza" value={data.departureDate} /> : null}
+                {data.nightsCount ? (
+                  <Row
+                    label="Durata"
+                    value={`${data.nightsCount} ${data.nightsCount === 1 ? "notte" : "notti"}`}
+                  />
+                ) : null}
+                {data.guestsLabel ? <Row label="Ospiti" value={data.guestsLabel} /> : null}
+              </View>
+            </View>
+          </View>
 
-            {services.length > 0 ? (
-              <View style={styles.columnRight}>
-                <View style={styles.section}>
-                  <SectionTitle>Cosa include</SectionTitle>
-                  {services.map((service, index) => (
+          {/* === SERVIZI INCLUSI (griglia 2 colonne) === */}
+          {services.length > 0 ? (
+            <View style={styles.servicesSection}>
+              <SectionTitle>Servizi inclusi</SectionTitle>
+              <View style={styles.servicesGrid}>
+                <View style={styles.servicesCol}>
+                  {col1Services.map((service, index) => (
+                    <View key={index} style={styles.serviceItem}>
+                      <Text style={styles.serviceCheck}>✓</Text>
+                      <Text style={styles.serviceText}>{service}</Text>
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.servicesCol}>
+                  {col2Services.map((service, index) => (
                     <View key={index} style={styles.serviceItem}>
                       <Text style={styles.serviceCheck}>✓</Text>
                       <Text style={styles.serviceText}>{service}</Text>
@@ -443,9 +594,10 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
                   ))}
                 </View>
               </View>
-            ) : null}
-          </View>
+            </View>
+          ) : null}
 
+          {/* === PAGAMENTO === */}
           <View style={styles.paymentSection}>
             <SectionTitle>Pagamento</SectionTitle>
             <View style={styles.paymentBody}>
@@ -470,8 +622,23 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
               ) : null}
             </View>
           </View>
+
+          {/* === NOTE IMPORTANTI === */}
+          <View style={styles.notesSection}>
+            <SectionTitle>Note importanti</SectionTitle>
+            <NoteItem>
+              Il saldo indicato sarà versato direttamente in struttura al momento del check-in, salvo diverse indicazioni ricevute da IschiaStars.
+            </NoteItem>
+            <NoteItem>
+              Eventuali extra, tasse di soggiorno o servizi non espressamente indicati nel voucher sono esclusi dal prezzo confermato.
+            </NoteItem>
+            <NoteItem>
+              Il presente voucher è da esibire al check-in unitamente a un documento d&apos;identità valido.
+            </NoteItem>
+          </View>
         </View>
 
+        {/* FOOTER */}
         <View style={styles.footer} fixed>
           <View style={styles.footerLeft}>
             <Text style={styles.footerThanks}>Grazie per aver scelto IschiaStars</Text>

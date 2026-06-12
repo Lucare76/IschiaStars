@@ -31,15 +31,25 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     ? selectedOption.includedServices.split("\n").map(s => s.trim()).filter(Boolean)
     : (quote.servicesIncluded ?? []);
 
+  let nightsCount: number | undefined;
+  if (quote.arrivalDate && quote.departureDate) {
+    const nights = Math.round(
+      (new Date(quote.departureDate).getTime() - new Date(quote.arrivalDate).getTime()) / 86400000
+    );
+    if (nights > 0) nightsCount = nights;
+  }
+
   const pdfBuffer = await generateVoucherPdf({
     quoteCode: quote.code,
     clientFullName: formatClientName(confirmation.firstName ?? quote.customerFirstName, confirmation.lastName ?? quote.customerLastName),
     clientEmail: confirmation.email ?? quote.customerEmail,
     clientPhone: confirmation.phone ?? quote.customerPhone,
     hotelName: confirmation.selectedHotelName,
+    roomTypeLabel: selectedOption?.roomTypeLabel ?? undefined,
     treatmentLabel: confirmation.selectedTreatmentLabel,
     arrivalDate: quote.arrivalDate ? formatDate(quote.arrivalDate) : undefined,
     departureDate: quote.departureDate ? formatDate(quote.departureDate) : undefined,
+    nightsCount,
     guestsLabel: guestsParts.length ? guestsParts.join(", ") : undefined,
     includedServices,
     depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
