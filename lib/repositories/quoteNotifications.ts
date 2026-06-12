@@ -2,6 +2,7 @@ import "server-only";
 
 import { allDemoQuotes, allQuoteEvents } from "@/lib/demo-store";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
+import { isExcludedTrackingEvent } from "@/lib/server/trackingFilters";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { QuoteEvent } from "@/lib/types";
 
@@ -34,6 +35,7 @@ export function deriveQuoteNotifications(
   const quoteById = new Map(quotes.map((quote) => [quote.id, quote]));
   const seenTimestamp = seenAt ? Date.parse(seenAt) : Number.NaN;
   const grouped = events
+    .filter((event) => !isExcludedTrackingEvent(event))
     .filter((event) => event.eventType === "quote_opened" || event.eventType === "quote_confirmed")
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
     .reduce<Record<string, QuoteEvent[]>>((result, event) => {

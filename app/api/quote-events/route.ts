@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
 import { ADMIN_ACCESS_COOKIE, getAdminUserFromToken } from "@/lib/server/auth-guard";
+import { getRequestIp, isTrackingExcludedIp } from "@/lib/server/trackingFilters";
 import { QuoteEvent } from "@/lib/types";
 
 const allowedEvents: QuoteEvent["eventType"][] = [
@@ -34,6 +35,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Preventivo non disponibile" }, { status: 410 });
   }
 
+  const ip = getRequestIp(request.headers);
+  if (isTrackingExcludedIp(ip)) {
+    console.info(`[tracking] skipped excluded ip ${ip} event=${body.eventType}`);
+    return NextResponse.json({ ok: true, source: quoteResult.source, ignored: "excluded_ip" });
+  }
+
   if (body.eventType === "quote_opened") {
     const adminToken = request.cookies.get(ADMIN_ACCESS_COOKIE)?.value;
     if (adminToken && await getAdminUserFromToken(adminToken)) {
@@ -41,6 +48,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  await trackQuoteEvent(quoteResult.data.id, body.eventType, body.metadata ?? {}, request.headers.get("user-agent") ?? undefined);
+  const userAgent = request.headers.get("user-agent") ?? undefined;
+  await trackQuoteEvent(quoteResult.data.id, body.eventType, {
+    ...(body.metadata ?? {}),
+    ip,
+    user_agent: userAgent,
+    excluded_from_tracking: false
+  }, userAgent);
   return NextResponse.json({ ok: true, source: quoteResult.source });
 }

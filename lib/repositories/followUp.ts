@@ -1,4 +1,4 @@
-import { getQuoteEventsForQuoteIds } from "@/lib/repositories/quoteEvents";
+import { getQuoteEventsForQuoteIds, trackableEvents } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, getEffectiveHotelOptions, RepositoryResult } from "@/lib/repositories/shared";
 import { absolutePublicQuoteUrl, formatCurrency, normalizeItalianPhone } from "@/lib/utils";
@@ -60,7 +60,7 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[]): FollowUpQuote | nu
 
   const sentAt = quote.sentAt ?? quote.createdAt;
   const sentTimestamp = new Date(sentAt).getTime();
-  const customerEvents = events.filter((event) => new Date(event.createdAt).getTime() >= sentTimestamp);
+  const customerEvents = trackableEvents(events).filter((event) => new Date(event.createdAt).getTime() >= sentTimestamp);
 
   if (customerEvents.some((event) => event.eventType === "quote_confirmed")) return null;
 

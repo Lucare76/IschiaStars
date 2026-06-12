@@ -3,6 +3,7 @@ import { updateQuoteStatus } from "@/lib/repositories/quotes";
 import { createQuoteStatusEvent } from "@/lib/repositories/quoteStatusEvents";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getTrackingExcludedIps, isExcludedTrackingEvent } from "@/lib/server/trackingFilters";
 import { QuoteEvent } from "@/lib/types";
 
 export async function trackQuoteEvent(quoteId: string, eventType: QuoteEvent["eventType"], metadata: Record<string, unknown> = {}, userAgent?: string): Promise<RepositoryResult<QuoteEvent | null>> {
@@ -71,17 +72,17 @@ async function markQuoteOpenedInSupabase(quoteId: string) {
 }
 
 export async function getQuoteEvents(quoteId: string): Promise<RepositoryResult<QuoteEvent[]>> {
-  const local = allQuoteEvents().filter((event) => event.quoteId === quoteId);
+  const local = trackableEvents(allQuoteEvents().filter((event) => event.quoteId === quoteId));
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(local);
 
   const { data, error } = await supabase.from("quote_events").select("*").eq("quote_id", quoteId).order("created_at");
   if (error) return fallback(local, error);
-  return fromSupabase(deduplicateEvents((data ?? []).map(mapEvent)));
+  return fromSupabase(deduplicateEvents(trackableEvents((data ?? []).map(mapEvent))));
 }
 
 export async function getQuoteEventsForQuoteIds(quoteIds: string[]): Promise<RepositoryResult<Record<string, QuoteEvent[]>>> {
-  const local = groupEventsByQuote(allQuoteEvents().filter((event) => quoteIds.includes(event.quoteId)));
+  const local = groupEventsByQuote(trackableEvents(allQuoteEvents().filter((event) => quoteIds.includes(event.quoteId))));
   if (!quoteIds.length) return fromSupabase({});
 
   const supabase = createSupabaseAdminClient();
@@ -101,7 +102,7 @@ export async function getQuoteEventsForQuoteIds(quoteIds: string[]): Promise<Rep
     rows.push(...(data ?? []));
     if ((data ?? []).length < pageSize) break;
   }
-  return fromSupabase(groupEventsByQuote(deduplicateEvents(rows.map(mapEvent))));
+  return fromSupabase(groupEventsByQuote(deduplicateEvents(trackableEvents(rows.map(mapEvent)))));
 }
 
 export async function getQuoteEventStats(quoteId: string) {
@@ -123,10 +124,12 @@ export async function getQuoteEventStats(quoteId: string) {
 
 export async function getDashboardEventStats() {
   const supabase = createSupabaseAdminClient();
-  const localEvents = allQuoteEvents();
+  const localEvents = trackableEvents(allQuoteEvents());
   if (!supabase) return fallback(eventDashboard(localEvents));
 
-  const { data, error } = await supabase.rpc("get_dashboard_event_stats").maybeSingle();
+  const { data, error } = await supabase.rpc("get_dashboard_event_stats", {
+    p_excluded_ips: getTrackingExcludedIps()
+  }).maybeSingle();
   if (error) return fallback(eventDashboard(localEvents), error);
   return fromSupabase(mapDashboardEventAggregates(data));
 }
@@ -158,6 +161,10 @@ function groupEventsByQuote(events: QuoteEvent[]) {
     grouped[event.quoteId] = [...(grouped[event.quoteId] ?? []), event];
     return grouped;
   }, {});
+}
+
+export function trackableEvents(events: QuoteEvent[]) {
+  return events.filter((event) => !isExcludedTrackingEvent(event));
 }
 
 function deduplicateEvents(events: QuoteEvent[]) {

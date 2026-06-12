@@ -245,7 +245,13 @@ export async function createQuoteFromRequest(input: QuoteInput, _options: { acce
     return fallback(quote);
   }
 
-  const row = toQuoteRow(normalizedInput);
+  const row = {
+    ...toQuoteRow(normalizedInput),
+    ...(_options.isLabTest === true ? {
+      metadata: { is_lab_test: true },
+      excluded_from_stats: true
+    } : {})
+  };
   const { data, error } = await supabase.rpc("create_quote_with_options", {
     p_quote_data: row,
     p_children_data: (normalizedInput.children ?? []).map((child) => ({
@@ -268,14 +274,21 @@ async function nextQuoteCode(supabase?: ReturnType<typeof createSupabaseAdminCli
 
   if (isLabTest) {
     if (supabase) {
-      const { count } = await supabase
+      const { data } = await supabase
         .from("quotes")
-        .select("id", { count: "exact", head: true })
-        .like("code", "LAB-%");
-      return `LAB-${year}-${String((count ?? 0) + 1).padStart(3, "0")}`;
+        .select("code")
+        .like("code", `LAB-${year}-%`)
+        .order("code", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const match = (data as { code?: string } | null)?.code?.match(/^LAB-\d{4}-(\d+)$/);
+      return `LAB-${year}-${String((match ? Number(match[1]) : 0) + 1).padStart(3, "0")}`;
     }
-    const labCount = allDemoQuotes().filter((q) => q.code.startsWith("LAB-")).length;
-    return `LAB-${year}-${String(labCount + 1).padStart(3, "0")}`;
+    const max = allDemoQuotes().reduce((current, q) => {
+      const match = q.code.match(/^LAB-\d{4}-(\d+)$/);
+      return match ? Math.max(current, Number(match[1])) : current;
+    }, 0);
+    return `LAB-${year}-${String(max + 1).padStart(3, "0")}`;
   }
 
   if (supabase) {
@@ -411,6 +424,7 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
   const source = await getQuoteById(id);
   if (!source.data) return fallback(null, source.error ?? "Preventivo non trovato");
   const quote = source.data;
+  const isLabTest = quote.isLabTest === true || quote.code.startsWith("LAB-");
 
   const hotelOptions: QuoteHotelOptionInput[] = quote.hotelOptions
     .filter((o) => !o.id.startsWith("virtual-"))
@@ -469,7 +483,7 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
     publicNotes: quote.customerNotes,
     internalNotes: `Duplicato da ${quote.code}. ${quote.internalNotes}`.trim(),
     hotelOptions: hotelOptions.length > 0 ? hotelOptions : undefined
-  });
+  }, { isLabTest });
 }
 
 export async function excludeQuoteFromStats(id: string, excluded: boolean): Promise<RepositoryResult<Quote | null>> {
