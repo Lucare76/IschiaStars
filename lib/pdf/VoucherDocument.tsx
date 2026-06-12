@@ -19,394 +19,317 @@ const logoSrc = fs.existsSync(logoPath)
 const styles = StyleSheet.create({
   page: {
     padding: 0,
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: "Helvetica",
     color: DARK,
     backgroundColor: SOFT_BG,
   },
-  topAccent: {
-    height: 5,
-    backgroundColor: GOLD,
-  },
+
+  // ─── HEADER ───
+  topAccent: { height: 4, backgroundColor: GOLD },
   headerBand: {
     backgroundColor: NAVY,
-    paddingHorizontal: 32,
-    paddingTop: 20,
-    paddingBottom: 22,
+    paddingHorizontal: 28,
+    paddingVertical: 13,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  logo: {
-    width: 118,
-    height: 46,
-    objectFit: "contain",
-  },
-  brandText: {
-    fontSize: 20,
-    fontFamily: "Helvetica-Bold",
-    color: "#FFFFFF",
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-  },
+  logo: { width: 98, height: 38, objectFit: "contain" },
+  brandText: { fontSize: 17, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
+  headerCenter: { flex: 1, alignItems: "center" },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     textAlign: "center",
   },
   headerSub: {
-    fontSize: 8,
+    fontSize: 7,
     color: GOLD,
-    marginTop: 4,
-    letterSpacing: 1.2,
+    marginTop: 3,
+    letterSpacing: 1.0,
     textAlign: "center",
   },
   confirmedBadge: {
     borderWidth: 1.5,
     borderColor: GOLD,
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   confirmedBadgeText: {
-    fontSize: 9,
+    fontSize: 8,
     fontFamily: "Helvetica-Bold",
     color: GOLD,
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
   },
-  headerGoldLine: {
-    height: 2,
-    backgroundColor: GOLD,
-  },
+  headerGoldLine: { height: 2, backgroundColor: GOLD },
+
+  // ─── BODY ───
+  // paddingBottom = footer height (~44pt) + safe margin (14pt)
   body: {
-    paddingHorizontal: 32,
-    paddingTop: 20,
-    paddingBottom: 90,
+    paddingHorizontal: 28,
+    paddingTop: 13,
+    paddingBottom: 58,
   },
 
   // ─── BOOKING HERO CARD ───
   bookingCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 7,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: BORDER,
   },
   bookingCardAccent: {
     height: 3,
-    width: 40,
+    width: 32,
     backgroundColor: GOLD,
     borderRadius: 2,
-    marginBottom: 12,
+    marginBottom: 7,
   },
   bookingCardHotel: {
-    fontSize: 22,
+    fontSize: 18,
     fontFamily: "Helvetica-Bold",
     color: NAVY,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   bookingCardSubtitleRow: {
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 14,
+    gap: 6,
+    marginBottom: 10,
     flexWrap: "wrap",
   },
   bookingCardChipNavy: {
     backgroundColor: "#EDF1F5",
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderWidth: 1,
     borderColor: "#C8D5E0",
   },
   bookingCardChipNavyText: {
-    fontSize: 9,
+    fontSize: 8,
     fontFamily: "Helvetica-Bold",
     color: NAVY,
   },
   bookingCardChipGold: {
     backgroundColor: LIGHT_GOLD_BG,
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderWidth: 1,
     borderColor: GOLD_BORDER,
   },
   bookingCardChipGoldText: {
-    fontSize: 9,
+    fontSize: 8,
     fontFamily: "Helvetica-Bold",
     color: "#7A5C10",
   },
-  bookingCardRow: {
+  bookingCardBoxRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
     marginBottom: 4,
   },
-  bookingCardItem: {
+  bookingCardBox: {
     flex: 1,
     backgroundColor: NAVY,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
-  bookingCardItemCompact: {
-    flex: 0.65,
-  },
-  bookingCardItemLabel: {
-    fontSize: 7,
+  bookingCardBoxCompact: { flex: 0.6 },
+  bookingCardBoxLabel: {
+    fontSize: 6,
     color: GOLD,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 5,
+    letterSpacing: 0.7,
+    marginBottom: 3,
   },
-  bookingCardItemValue: {
-    fontSize: 12,
+  bookingCardBoxValue: {
+    fontSize: 11,
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
   },
   bookingCardDivider: {
     height: 1,
     backgroundColor: BORDER,
-    marginVertical: 12,
+    marginVertical: 8,
   },
   bookingCardRefRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  bookingCardRefLabel: {
-    fontSize: 8,
-    color: GRAY,
-  },
+  bookingCardRefLabel: { fontSize: 7, color: GRAY },
   bookingCardRefValue: {
-    fontSize: 10,
+    fontSize: 8.5,
     fontFamily: "Helvetica-Bold",
     color: NAVY,
   },
 
-  // ─── TWO COLUMN LAYOUT ───
+  // ─── SECTION SHARED ───
+  sectionTitle: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: NAVY,
+    textTransform: "uppercase",
+    letterSpacing: 0.9,
+    marginBottom: 7,
+    paddingBottom: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  sectionTitleGold: {
+    borderBottomColor: GOLD_BORDER,
+    color: "#7A5C10",
+  },
+
+  // ─── TWO COLUMNS ───
   columnsRow: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 10,
   },
   columnLeft: { flex: 1 },
   columnRight: { flex: 1 },
   section: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    padding: 16,
+    borderRadius: 7,
+    padding: 12,
     borderWidth: 1,
     borderColor: BORDER,
   },
-  sectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 11,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  sectionTitleBar: {
-    width: 3,
-    height: 10,
-    backgroundColor: GOLD,
-    borderRadius: 2,
-    marginRight: 7,
-  },
-  sectionTitle: {
-    fontSize: 9,
-    fontFamily: "Helvetica-Bold",
-    color: NAVY,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  row: {
-    flexDirection: "row",
-    marginBottom: 5,
-  },
-  label: {
-    width: 110,
-    fontSize: 8,
-    color: GRAY,
-  },
-  value: {
-    flex: 1,
-    fontSize: 9,
-    fontFamily: "Helvetica-Bold",
-    color: DARK,
-  },
+  row: { flexDirection: "row", marginBottom: 3 },
+  rowLabel: { width: 84, fontSize: 7, color: GRAY },
+  rowValue: { flex: 1, fontSize: 8, fontFamily: "Helvetica-Bold", color: DARK },
 
-  // ─── SERVICES SECTION ───
+  // ─── SERVICE PILLS ───
   servicesSection: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    padding: 16,
+    borderRadius: 7,
+    padding: 12,
     borderWidth: 1,
     borderColor: BORDER,
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  servicesGrid: {
+  pillsRow: {
     flexDirection: "row",
-    gap: 12,
+    flexWrap: "wrap",
+    gap: 6,
   },
-  servicesCol: {
-    flex: 1,
+  pill: {
+    backgroundColor: "#EEF2F7",
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "#C5D2DF",
   },
-  serviceItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 5,
-  },
-  serviceCheck: {
-    fontSize: 10,
-    color: GOLD,
+  pillText: {
+    fontSize: 7.5,
     fontFamily: "Helvetica-Bold",
-    marginRight: 7,
-  },
-  serviceText: {
-    fontSize: 9,
-    color: DARK,
-    flex: 1,
+    color: NAVY,
   },
 
-  // ─── PAYMENT SECTION ───
+  // ─── PAYMENT ───
   paymentSection: {
-    marginBottom: 16,
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    padding: 16,
+    borderRadius: 7,
+    padding: 12,
     borderWidth: 1,
     borderColor: BORDER,
+    marginBottom: 10,
   },
-  paymentBody: {
+  paymentInner: {
     backgroundColor: SOFT_BG,
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: 5,
+    padding: 10,
   },
   paymentRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 5,
   },
-  paymentLabel: {
-    fontSize: 9,
-    color: GRAY,
-  },
-  paymentPaidChip: {
+  paymentLabel: { fontSize: 7.5, color: GRAY },
+  paidChip: {
     backgroundColor: "#DCFCE7",
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderRadius: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
-  paymentPaidText: {
-    fontSize: 10,
+  paidChipText: {
+    fontSize: 8.5,
     fontFamily: "Helvetica-Bold",
     color: "#15803D",
-  },
-  paymentDivider: {
-    height: 1,
-    backgroundColor: BORDER,
-    marginVertical: 8,
   },
   paymentDateRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  paymentDateLabel: {
-    fontSize: 9,
-    color: GRAY,
-  },
-  paymentDateValue: {
-    fontSize: 9,
-    fontFamily: "Helvetica-Bold",
-    color: DARK,
-  },
+  paymentDateLabel: { fontSize: 7.5, color: GRAY },
+  paymentDateValue: { fontSize: 7.5, fontFamily: "Helvetica-Bold", color: DARK },
+  paymentDivider: { height: 1, backgroundColor: BORDER, marginVertical: 6 },
   balanceDue: {
-    marginTop: 10,
+    marginTop: 8,
     backgroundColor: "#FFF7ED",
-    borderRadius: 6,
-    padding: 12,
+    borderRadius: 5,
+    padding: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#FED7AA",
   },
-  balanceDueLabel: {
-    fontSize: 9,
-    color: "#92400E",
-  },
+  balanceDueLabel: { fontSize: 8, color: "#92400E" },
   balanceDueValue: {
     fontSize: 13,
     fontFamily: "Helvetica-Bold",
     color: "#B45309",
   },
 
-  // ─── NOTES SECTION ───
+  // ─── NOTES ───
   notesSection: {
     backgroundColor: LIGHT_GOLD_BG,
-    borderRadius: 10,
-    padding: 14,
+    borderRadius: 7,
+    padding: 10,
     borderWidth: 1,
     borderColor: GOLD_BORDER,
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  noteItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 5,
-  },
-  noteBullet: {
-    fontSize: 10,
-    color: GOLD,
-    fontFamily: "Helvetica-Bold",
-    marginRight: 8,
-  },
-  noteText: {
-    fontSize: 8,
+  notesText: {
+    fontSize: 7.5,
     color: "#6B4E00",
-    flex: 1,
-    lineHeight: 1.5,
+    lineHeight: 1.55,
   },
 
-  // ─── FOOTER ───
+  // ─── FOOTER (absolute, non-fixed: appare solo su pagina 1) ───
   footer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: NAVY,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
+    paddingVertical: 11,
+    paddingHorizontal: 28,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  footerLeft: {
-    flex: 1,
-  },
+  footerLeft: { flex: 1 },
   footerThanks: {
-    fontSize: 10,
+    fontSize: 8.5,
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
-    marginBottom: 3,
+    marginBottom: 2,
   },
-  footerContact: {
-    fontSize: 8,
-    color: "#94A3B8",
-  },
-  footerDocNumber: {
-    fontSize: 8,
-    color: GOLD,
-    textAlign: "right",
-  },
+  footerContact: { fontSize: 7, color: "#94A3B8" },
+  footerCode: { fontSize: 7, color: GOLD, textAlign: "right" },
 });
 
 export type VoucherDocumentData = {
@@ -429,46 +352,27 @@ export type VoucherDocumentData = {
   whatsappNumber: string;
 };
 
-function Row({ label, value }: { label: string; value?: string }) {
+function DataRow({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
     <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
-    </View>
-  );
-}
-
-function SectionTitle({ children }: { children: string }) {
-  return (
-    <View style={styles.sectionTitleRow}>
-      <View style={styles.sectionTitleBar} />
-      <Text style={styles.sectionTitle}>{children}</Text>
-    </View>
-  );
-}
-
-function NoteItem({ children }: { children: string }) {
-  return (
-    <View style={styles.noteItem}>
-      <Text style={styles.noteBullet}>•</Text>
-      <Text style={styles.noteText}>{children}</Text>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowValue}>{value}</Text>
     </View>
   );
 }
 
 export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
   const services = (data.includedServices ?? []).filter(Boolean);
-  const col1Services = services.filter((_, i) => i % 2 === 0);
-  const col2Services = services.filter((_, i) => i % 2 === 1);
   const hasSubtitle = data.roomTypeLabel || data.treatmentLabel;
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        {/* ── Top gold accent ── */}
         <View style={styles.topAccent} />
 
-        {/* HEADER */}
+        {/* ── Header navy ── */}
         <View style={styles.headerBand}>
           {logoSrc ? (
             // eslint-disable-next-line jsx-a11y/alt-text
@@ -486,13 +390,18 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
         </View>
         <View style={styles.headerGoldLine} />
 
+        {/* ── Body ── */}
         <View style={styles.body}>
+
           {/* === BOOKING HERO CARD === */}
           <View style={styles.bookingCard}>
             <View style={styles.bookingCardAccent} />
-            {data.hotelName ? <Text style={styles.bookingCardHotel}>{data.hotelName}</Text> : null}
 
-            {/* Chips: tipologia camera + trattamento */}
+            {data.hotelName ? (
+              <Text style={styles.bookingCardHotel}>{data.hotelName}</Text>
+            ) : null}
+
+            {/* Camera + Trattamento chips */}
             {hasSubtitle ? (
               <View style={styles.bookingCardSubtitleRow}>
                 {data.roomTypeLabel ? (
@@ -508,30 +417,30 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
               </View>
             ) : null}
 
-            {/* Date / Notti / Ospiti boxes */}
-            <View style={styles.bookingCardRow}>
+            {/* Arrivo / Partenza / Notti / Ospiti */}
+            <View style={styles.bookingCardBoxRow}>
               {data.arrivalDate ? (
-                <View style={styles.bookingCardItem}>
-                  <Text style={styles.bookingCardItemLabel}>Arrivo</Text>
-                  <Text style={styles.bookingCardItemValue}>{data.arrivalDate}</Text>
+                <View style={styles.bookingCardBox}>
+                  <Text style={styles.bookingCardBoxLabel}>Arrivo</Text>
+                  <Text style={styles.bookingCardBoxValue}>{data.arrivalDate}</Text>
                 </View>
               ) : null}
               {data.departureDate ? (
-                <View style={styles.bookingCardItem}>
-                  <Text style={styles.bookingCardItemLabel}>Partenza</Text>
-                  <Text style={styles.bookingCardItemValue}>{data.departureDate}</Text>
+                <View style={styles.bookingCardBox}>
+                  <Text style={styles.bookingCardBoxLabel}>Partenza</Text>
+                  <Text style={styles.bookingCardBoxValue}>{data.departureDate}</Text>
                 </View>
               ) : null}
               {data.nightsCount ? (
-                <View style={[styles.bookingCardItem, styles.bookingCardItemCompact]}>
-                  <Text style={styles.bookingCardItemLabel}>Notti</Text>
-                  <Text style={styles.bookingCardItemValue}>{data.nightsCount}</Text>
+                <View style={[styles.bookingCardBox, styles.bookingCardBoxCompact]}>
+                  <Text style={styles.bookingCardBoxLabel}>Notti</Text>
+                  <Text style={styles.bookingCardBoxValue}>{data.nightsCount}</Text>
                 </View>
               ) : null}
               {data.guestsLabel ? (
-                <View style={styles.bookingCardItem}>
-                  <Text style={styles.bookingCardItemLabel}>Ospiti</Text>
-                  <Text style={styles.bookingCardItemValue}>{data.guestsLabel}</Text>
+                <View style={styles.bookingCardBox}>
+                  <Text style={styles.bookingCardBoxLabel}>Ospiti</Text>
+                  <Text style={styles.bookingCardBoxValue}>{data.guestsLabel}</Text>
                 </View>
               ) : null}
             </View>
@@ -547,64 +456,53 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
           <View style={styles.columnsRow}>
             <View style={styles.columnLeft}>
               <View style={styles.section}>
-                <SectionTitle>Dati cliente</SectionTitle>
-                <Row label="Nome" value={data.clientFullName} />
-                <Row label="Email" value={data.clientEmail} />
-                <Row label="Telefono" value={data.clientPhone} />
+                <Text style={styles.sectionTitle}>Dati cliente</Text>
+                <DataRow label="Nome" value={data.clientFullName} />
+                <DataRow label="Email" value={data.clientEmail} />
+                <DataRow label="Telefono" value={data.clientPhone} />
               </View>
             </View>
             <View style={styles.columnRight}>
               <View style={styles.section}>
-                <SectionTitle>Dettagli soggiorno</SectionTitle>
-                {data.hotelName ? <Row label="Struttura" value={data.hotelName} /> : null}
-                {data.roomTypeLabel ? <Row label="Tipologia camera" value={data.roomTypeLabel} /> : null}
-                {data.treatmentLabel ? <Row label="Trattamento" value={data.treatmentLabel} /> : null}
-                {data.arrivalDate ? <Row label="Arrivo" value={data.arrivalDate} /> : null}
-                {data.departureDate ? <Row label="Partenza" value={data.departureDate} /> : null}
+                <Text style={styles.sectionTitle}>Dettagli soggiorno</Text>
+                <DataRow label="Struttura" value={data.hotelName} />
+                <DataRow label="Camera" value={data.roomTypeLabel} />
+                <DataRow label="Trattamento" value={data.treatmentLabel} />
+                <DataRow label="Arrivo" value={data.arrivalDate} />
+                <DataRow label="Partenza" value={data.departureDate} />
                 {data.nightsCount ? (
-                  <Row
+                  <DataRow
                     label="Durata"
                     value={`${data.nightsCount} ${data.nightsCount === 1 ? "notte" : "notti"}`}
                   />
                 ) : null}
-                {data.guestsLabel ? <Row label="Ospiti" value={data.guestsLabel} /> : null}
+                <DataRow label="Ospiti" value={data.guestsLabel} />
               </View>
             </View>
           </View>
 
-          {/* === SERVIZI INCLUSI (griglia 2 colonne) === */}
+          {/* === SERVIZI INCLUSI — pill badges === */}
           {services.length > 0 ? (
             <View style={styles.servicesSection}>
-              <SectionTitle>Servizi inclusi</SectionTitle>
-              <View style={styles.servicesGrid}>
-                <View style={styles.servicesCol}>
-                  {col1Services.map((service, index) => (
-                    <View key={index} style={styles.serviceItem}>
-                      <Text style={styles.serviceCheck}>✓</Text>
-                      <Text style={styles.serviceText}>{service}</Text>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.servicesCol}>
-                  {col2Services.map((service, index) => (
-                    <View key={index} style={styles.serviceItem}>
-                      <Text style={styles.serviceCheck}>✓</Text>
-                      <Text style={styles.serviceText}>{service}</Text>
-                    </View>
-                  ))}
-                </View>
+              <Text style={styles.sectionTitle}>Servizi inclusi</Text>
+              <View style={styles.pillsRow}>
+                {services.map((service, index) => (
+                  <View key={index} style={styles.pill}>
+                    <Text style={styles.pillText}>{service}</Text>
+                  </View>
+                ))}
               </View>
             </View>
           ) : null}
 
           {/* === PAGAMENTO === */}
           <View style={styles.paymentSection}>
-            <SectionTitle>Pagamento</SectionTitle>
-            <View style={styles.paymentBody}>
+            <Text style={styles.sectionTitle}>Pagamento</Text>
+            <View style={styles.paymentInner}>
               <View style={styles.paymentRow}>
                 <Text style={styles.paymentLabel}>Caparra versata</Text>
-                <View style={styles.paymentPaidChip}>
-                  <Text style={styles.paymentPaidText}>{data.depositAmountLabel} ✓</Text>
+                <View style={styles.paidChip}>
+                  <Text style={styles.paidChipText}>{data.depositAmountLabel} ✓</Text>
                 </View>
               </View>
               <View style={styles.paymentDateRow}>
@@ -623,28 +521,23 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
             </View>
           </View>
 
-          {/* === NOTE IMPORTANTI === */}
+          {/* === NOTE IMPORTANTI (compatte, una sola sezione) === */}
           <View style={styles.notesSection}>
-            <SectionTitle>Note importanti</SectionTitle>
-            <NoteItem>
-              Il saldo indicato sarà versato direttamente in struttura al momento del check-in, salvo diverse indicazioni ricevute da IschiaStars.
-            </NoteItem>
-            <NoteItem>
-              Eventuali extra, tasse di soggiorno o servizi non espressamente indicati nel voucher sono esclusi dal prezzo confermato.
-            </NoteItem>
-            <NoteItem>
-              Il presente voucher è da esibire al check-in unitamente a un documento d&apos;identità valido.
-            </NoteItem>
+            <Text style={[styles.sectionTitle, styles.sectionTitleGold]}>Note importanti</Text>
+            <Text style={styles.notesText}>
+              {"• Il saldo sarà versato direttamente in struttura al check-in, salvo diverse indicazioni di IschiaStars.\n• Extra, tasse di soggiorno e servizi non indicati nel voucher sono esclusi dal prezzo confermato.\n• Presentare il voucher al check-in con documento d’identità valido."}
+            </Text>
           </View>
+
         </View>
 
-        {/* FOOTER */}
-        <View style={styles.footer} fixed>
+        {/* ── Footer: position absolute, non fixed → solo pagina 1 ── */}
+        <View style={styles.footer}>
           <View style={styles.footerLeft}>
             <Text style={styles.footerThanks}>Grazie per aver scelto IschiaStars</Text>
             <Text style={styles.footerContact}>Per informazioni: WhatsApp +{data.whatsappNumber}</Text>
           </View>
-          <Text style={styles.footerDocNumber}>N. {data.quoteCode}-V</Text>
+          <Text style={styles.footerCode}>N. {data.quoteCode}-V</Text>
         </View>
       </Page>
     </Document>
