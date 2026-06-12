@@ -39,6 +39,8 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
   const effective = getEffectiveHotelOptions(quote);
   const [currentQuote, setCurrentQuote] = useState(quote);
   const [adultsCount, setAdultsCount] = useState(quote.adults);
+  const [hasChildren, setHasChildren] = useState(quote.children.length > 0);
+  const [childrenCount, setChildrenCount] = useState(quote.children.length);
   const [roomsCount, setRoomsCount] = useState(quote.rooms);
   const [checkIn, setCheckIn] = useState(quote.arrivalDate);
   const [checkOut, setCheckOut] = useState(quote.departureDate);
@@ -57,6 +59,18 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     const formData = new FormData(event.currentTarget);
 
     const mappedOptions = mapHotelOptionsToPayload(hotelOptions, { preserveGroups: true });
+    const children = hasChildren
+      ? Array.from({ length: childrenCount }, (_, index) => ({
+          age: Number(formData.get(`child-${index}`) ?? ""),
+          birthDate: currentQuote.children[index]?.birthDate || undefined
+        }))
+      : [];
+
+    if (children.some((child) => !Number.isInteger(child.age) || child.age < 0 || child.age > 17)) {
+      setMessage("Inserisci l'età (0-17 anni) per ogni bambino.");
+      setLoading(false);
+      return;
+    }
 
     const payload = {
       clientFirstName: formData.get("firstName"),
@@ -68,6 +82,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
       checkIn: formData.get("checkIn"),
       checkOut: formData.get("checkOut"),
       adults: Number(formData.get("adults") ?? 2),
+      children,
       rooms: Number(formData.get("rooms") ?? 1),
       totalPrice: Number(formData.get("totalPrice") ?? 0),
       depositAmount: Number(formData.get("depositAmount") ?? 0),
@@ -199,7 +214,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
 
   const isConfirmed = !!currentQuote.confirmation;
   const activeHotels = hotels.filter((h) => h.active);
-  const roomCapacitySuggestion = suggestedGuestsPerRoom(adultsCount + currentQuote.children.length, roomsCount);
+  const roomCapacitySuggestion = suggestedGuestsPerRoom(adultsCount + (hasChildren ? childrenCount : 0), roomsCount);
   const isQuoteSent = sent || currentQuote.status === "preventivo_inviato";
 
   // Struttura selezionata dal cliente (se confermata con opzione)
@@ -299,6 +314,42 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
               onChange={(e) => setCheckOut(e.target.value)}
             />
             <Input name="adults" label="Adulti" min="1" value={String(adultsCount)} onChange={(e) => setAdultsCount(Number(e.target.value) || 1)} required type="number" />
+            <label className="flex items-center gap-3 rounded-xl bg-ischia-mist px-3 py-2 text-sm font-semibold text-ischia-ink sm:col-span-2">
+              <input
+                checked={hasChildren}
+                className="h-4 w-4"
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setHasChildren(checked);
+                  if (checked && childrenCount === 0) setChildrenCount(1);
+                }}
+                type="checkbox"
+              />
+              Aggiungi bambini
+            </label>
+            {hasChildren ? (
+              <>
+                <Input
+                  label="Numero bambini"
+                  min="1"
+                  type="number"
+                  value={String(childrenCount)}
+                  onChange={(event) => setChildrenCount(Math.max(1, Number(event.target.value) || 1))}
+                />
+                {Array.from({ length: childrenCount }, (_, index) => (
+                  <Input
+                    key={index}
+                    defaultValue={childAgeForForm(currentQuote.children[index], currentQuote.arrivalDate)}
+                    label={`Età bambino ${index + 1}`}
+                    max="17"
+                    min="0"
+                    name={`child-${index}`}
+                    required
+                    type="number"
+                  />
+                ))}
+              </>
+            ) : null}
             <Input name="rooms" label="Camere" min="1" value={String(roomsCount)} onChange={(e) => setRoomsCount(Number(e.target.value) || 1)} required type="number" />
             <Input name="hotelRequested" label="Hotel richiesto dal cliente" defaultValue={currentQuote.requestedHotel} />
           </div>
@@ -556,6 +607,17 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Input({ label, ...props }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
   return <label className="text-sm font-semibold text-ischia-ink">{label}<input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" {...props} /></label>;
+}
+
+function childAgeForForm(child: Quote["children"][number] | undefined, arrivalDate: string) {
+  if (child?.age != null) return String(child.age);
+  if (!child?.birthDate || !arrivalDate) return "";
+  const birth = new Date(`${child.birthDate}T00:00:00`);
+  const arrival = new Date(`${arrivalDate}T00:00:00`);
+  if (!Number.isFinite(birth.getTime()) || !Number.isFinite(arrival.getTime())) return "";
+  let age = arrival.getFullYear() - birth.getFullYear();
+  if (arrival.getMonth() < birth.getMonth() || (arrival.getMonth() === birth.getMonth() && arrival.getDate() < birth.getDate())) age--;
+  return age >= 0 && age <= 17 ? String(age) : "";
 }
 
 function Textarea({ label, value, onChange, ...props }: { label: string; value?: string; onChange?: (value: string) => void } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange" | "value">) {

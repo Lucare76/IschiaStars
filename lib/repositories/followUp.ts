@@ -18,6 +18,7 @@ export type FollowUpQuote = {
   sentAt: string;
   lastEventAt?: string;
   lastEventLabel: string;
+  lastOpenedAt?: string;
   openedCount: number;
   whatsappClickCount: number;
   hotelLinkClickCount: number;
@@ -95,6 +96,7 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[]): FollowUpQuote | nu
     sentAt,
     lastEventAt: lastEvent?.createdAt,
     lastEventLabel: lastEvent ? eventLabel(lastEvent.eventType) : "Nessuna apertura tracciata",
+    lastOpenedAt: opened.at(-1)?.createdAt,
     openedCount: opened.length,
     whatsappClickCount: whatsappClicks.length,
     hotelLinkClickCount: hotelLinkClicks.length,

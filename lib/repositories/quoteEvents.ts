@@ -72,13 +72,21 @@ export async function getQuoteEventsForQuoteIds(quoteIds: string[]): Promise<Rep
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(local);
 
-  const { data, error } = await supabase
-    .from("quote_events")
-    .select("*")
-    .in("quote_id", quoteIds)
-    .order("created_at");
-  if (error) return fallback(local, error);
-  return fromSupabase(groupEventsByQuote((data ?? []).map(mapEvent)));
+  const pageSize = 1000;
+  const rows: Record<string, any>[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("quote_events")
+      .select("*")
+      .in("quote_id", quoteIds)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) return fallback(local, error);
+    rows.push(...(data ?? []));
+    if ((data ?? []).length < pageSize) break;
+  }
+  return fromSupabase(groupEventsByQuote(deduplicateEvents(rows.map(mapEvent))));
 }
 
 export async function getQuoteEventStats(quoteId: string) {
@@ -135,6 +143,18 @@ function groupEventsByQuote(events: QuoteEvent[]) {
     grouped[event.quoteId] = [...(grouped[event.quoteId] ?? []), event];
     return grouped;
   }, {});
+}
+
+function deduplicateEvents(events: QuoteEvent[]) {
+  const seenIds = new Set<string>();
+  const seenSignatures = new Set<string>();
+  return events.filter((event) => {
+    const signature = JSON.stringify([event.quoteId, event.eventType, event.createdAt, event.userAgent ?? "", event.metadata ?? {}]);
+    if (seenIds.has(event.id) || seenSignatures.has(signature)) return false;
+    seenIds.add(event.id);
+    seenSignatures.add(signature);
+    return true;
+  });
 }
 
 function mapEvent(row: Record<string, any>): QuoteEvent {

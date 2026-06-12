@@ -29,7 +29,11 @@ type FollowUpGroup = {
   totalPrints: number;
   totalConfirmClicks: number;
   engagementScore: number;
+  segment: FollowUpSegment;
+  segmentLabel: string;
+  priority: FollowUpQuote["priority"];
   lastEventAt?: string;
+  lastEventLabel: string;
   lastFollowUpAt?: string;
   snoozedUntil?: string;
   isSnoozed: boolean;
@@ -52,9 +56,9 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
   const visibleGroups = groups.filter((group) => matchesFilter(group, activeFilter));
 
   const stats = {
-    hot: groups.filter((group) => group.primary.priority === "alta" && !group.lastFollowUpAt && !group.isSnoozed).length,
-    toSolicit: groups.filter((group) => group.primary.segment === "da_sollecitare" && !group.lastFollowUpAt && !group.isSnoozed).length,
-    neverOpened: groups.filter((group) => group.primary.segment === "mai_aperto" && !group.lastFollowUpAt && !group.isSnoozed).length,
+    hot: groups.filter((group) => group.priority === "alta" && !group.lastFollowUpAt && !group.isSnoozed).length,
+    toSolicit: groups.filter((group) => group.segment === "da_sollecitare" && !group.lastFollowUpAt && !group.isSnoozed).length,
+    neverOpened: groups.filter((group) => group.segment === "mai_aperto" && !group.lastFollowUpAt && !group.isSnoozed).length,
     contacted: groups.filter((group) => Boolean(group.lastFollowUpAt)).length
   };
 
@@ -123,8 +127,8 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${segmentClass(quote.segment)}`}>{quote.segmentLabel}</span>
-            <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${priorityClass(quote.priority)}`}>Priorità {quote.priority}</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${segmentClass(group.segment)}`}>{group.segmentLabel}</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${priorityClass(group.priority)}`}>Priorità {group.priority}</span>
             {quote.expiresSoon ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black uppercase text-amber-800">Scadenza vicina</span> : null}
             {group.isSnoozed && group.snoozedUntil ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase text-slate-700">Rimandato a {formatDate(group.snoozedUntil)}</span> : null}
           </div>
@@ -150,7 +154,7 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
       </div>
 
       <div className="mt-5 grid gap-3 text-sm md:grid-cols-4">
-        <Info label="Ultimo evento" value={group.lastEventAt ? `${quote.lastEventLabel} · ${formatDateTime(group.lastEventAt)}` : quote.lastEventLabel} />
+        <Info label="Ultimo evento" value={group.lastEventAt ? `${group.lastEventLabel} · ${formatDateTime(group.lastEventAt)}` : group.lastEventLabel} />
         <Info label="Aperture" value={String(group.totalOpenings)} />
         <Info label="Click WhatsApp cliente" value={String(group.totalWhatsappClicks)} />
         <Info label="Click hotel / PDF" value={`${group.totalHotelClicks} / ${group.totalPrints}`} />
@@ -197,9 +201,9 @@ function matchesFilter(group: FollowUpGroup, filter: FollowUpFilter) {
   if (filter === "gia_richiamati") return Boolean(group.lastFollowUpAt);
   if (group.lastFollowUpAt) return false;
   if (group.isSnoozed) return false;
-  if (filter === "caldi") return group.primary.priority === "alta";
-  if (filter === "mai_aperti") return group.primary.segment === "mai_aperto";
-  return group.primary.segment === "da_sollecitare";
+  if (filter === "caldi") return group.priority === "alta";
+  if (filter === "mai_aperti") return group.segment === "mai_aperto";
+  return group.segment === "da_sollecitare";
 }
 
 function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
@@ -216,29 +220,65 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
       new Date(b.lastEventAt ?? b.sentAt).getTime() - new Date(a.lastEventAt ?? a.sentAt).getTime()
     );
     const primary = sorted[0];
-    const lastEventAt = sorted.map((quote) => quote.lastEventAt ?? quote.sentAt).sort().at(-1);
+    const lastEventQuote = sorted
+      .filter((quote) => quote.lastEventAt)
+      .sort((a, b) => new Date(b.lastEventAt!).getTime() - new Date(a.lastEventAt!).getTime())[0];
+    const lastEventAt = lastEventQuote?.lastEventAt;
     const lastFollowUpAt = sorted.map((quote) => quote.lastFollowUpAt).filter(Boolean).sort().at(-1);
     const snoozedUntil = sorted.map((quote) => quote.snoozedUntil).filter(Boolean).sort().at(-1);
+    const totalOpenings = sorted.reduce((sum, quote) => sum + quote.openedCount, 0);
+    const engagementScore = sorted.reduce((sum, quote) => sum + quote.engagementScore, 0);
+    const segment = aggregateSegment(sorted, totalOpenings, engagementScore);
+    const priority = priorityForSegment(segment);
     return {
       key,
       primary,
       quotes: sorted,
-      totalOpenings: sorted.reduce((sum, quote) => sum + quote.openedCount, 0),
+      totalOpenings,
       totalWhatsappClicks: sorted.reduce((sum, quote) => sum + quote.whatsappClickCount, 0),
       totalHotelClicks: sorted.reduce((sum, quote) => sum + quote.hotelLinkClickCount, 0),
       totalPrints: sorted.reduce((sum, quote) => sum + quote.printClickCount, 0),
       totalConfirmClicks: sorted.reduce((sum, quote) => sum + quote.confirmClickCount, 0),
-      engagementScore: sorted.reduce((sum, quote) => sum + quote.engagementScore, 0),
+      engagementScore,
+      segment,
+      segmentLabel: labelForSegment(segment),
+      priority,
       lastEventAt,
+      lastEventLabel: lastEventQuote?.lastEventLabel ?? "Nessuna apertura tracciata",
       lastFollowUpAt,
       snoozedUntil,
       isSnoozed: Boolean(snoozedUntil && new Date(snoozedUntil).getTime() > Date.now())
     };
   }).sort((a, b) =>
     b.engagementScore - a.engagementScore ||
-    priorityWeight(b.primary.priority) - priorityWeight(a.primary.priority) ||
+    priorityWeight(b.priority) - priorityWeight(a.priority) ||
     new Date(b.lastEventAt ?? b.primary.sentAt).getTime() - new Date(a.lastEventAt ?? a.primary.sentAt).getTime()
   );
+}
+
+function aggregateSegment(quotes: FollowUpQuote[], totalOpenings: number, engagementScore: number): FollowUpSegment {
+  if (totalOpenings > 1 || engagementScore > totalOpenings) return "molto_interessato";
+  const lastOpenedAt = quotes.map((quote) => quote.lastOpenedAt).filter((value): value is string => Boolean(value)).sort().at(-1);
+  if (lastOpenedAt && Date.now() - new Date(lastOpenedAt).getTime() >= 24 * 60 * 60 * 1000) return "da_sollecitare";
+  if (totalOpenings > 0) return "aperto_non_confermato";
+  return "mai_aperto";
+}
+
+function labelForSegment(segment: FollowUpSegment) {
+  const labels: Record<FollowUpSegment, string> = {
+    mai_aperto: "Mai aperto",
+    aperto_non_confermato: "Aperto non confermato",
+    molto_interessato: "Molto interessato",
+    da_sollecitare: "Da sollecitare",
+    recente: "Inviato da poco"
+  };
+  return labels[segment];
+}
+
+function priorityForSegment(segment: FollowUpSegment): FollowUpQuote["priority"] {
+  if (segment === "molto_interessato" || segment === "da_sollecitare") return "alta";
+  if (segment === "mai_aperto" || segment === "aperto_non_confermato") return "media";
+  return "bassa";
 }
 
 function groupKey(quote: FollowUpQuote) {

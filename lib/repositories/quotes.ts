@@ -321,6 +321,14 @@ export async function updateQuote(id: string, input: Partial<QuoteInput>): Promi
         arrivalDate: input.checkIn ?? quote.arrivalDate,
         departureDate: input.checkOut ?? quote.departureDate,
         adults: input.adults ?? quote.adults,
+        children: input.children !== undefined
+          ? input.children.map((child, index) => ({
+              id: quote.children[index]?.id ?? `child-local-${Date.now()}-${index}`,
+              firstName: `Bambino ${index + 1}`,
+              birthDate: child.birthDate ?? "",
+              age: child.age
+            }))
+          : quote.children,
         rooms: input.rooms ?? quote.rooms,
         treatment: input.treatment ?? quote.treatment,
         totalPrice: input.totalPrice ?? quote.totalPrice,
@@ -339,6 +347,17 @@ export async function updateQuote(id: string, input: Partial<QuoteInput>): Promi
 
   const { error } = await supabase.from("quotes").update({ ...toQuoteRow(input), updated_at: new Date().toISOString() }).eq("id", id);
   if (error) return fallback(null, error);
+
+  if (input.children !== undefined) {
+    const { error: childrenError } = await supabase.rpc("replace_quote_children", {
+      p_quote_id: id,
+      p_children_data: input.children.map((child) => ({
+        birth_date: child.birthDate || null,
+        age: child.age ?? null
+      }))
+    });
+    if (childrenError) return fallback(null, childrenError);
+  }
 
   if (input.hotelOptions?.length) {
     await upsertHotelOptions(id, input.hotelOptions);
@@ -437,7 +456,7 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
     checkIn: quote.arrivalDate,
     checkOut: quote.departureDate,
     adults: quote.adults,
-    children: quote.children.map((c) => ({ birthDate: c.birthDate })),
+    children: quote.children.map((c) => ({ birthDate: c.birthDate, age: c.age })),
     rooms: quote.rooms,
     treatment: quote.treatment,
     totalPrice: quote.totalPrice,

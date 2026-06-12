@@ -47,6 +47,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     checkIn: body.checkIn,
     checkOut: body.checkOut,
     adults: body.adults !== undefined ? Number(body.adults) : undefined,
+    children: Array.isArray(body.children) ? body.children : undefined,
     rooms: body.rooms !== undefined ? Number(body.rooms) : undefined,
     treatment: body.treatment,
     totalPrice: body.totalPrice !== undefined ? Number(body.totalPrice) : undefined,
