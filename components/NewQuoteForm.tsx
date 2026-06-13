@@ -86,7 +86,7 @@ function ClientSearch({ onSelect }: { onSelect: (c: ClientResult) => void }) {
   );
 }
 
-export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLabTest = false }: { hotels: Hotel[]; initialRequest?: QuoteRequest | null; requestedRequestId?: string; isLabTest?: boolean }) {
+export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLabTest = false, manualConfirmation = false }: { hotels: Hotel[]; initialRequest?: QuoteRequest | null; requestedRequestId?: string; isLabTest?: boolean; manualConfirmation?: boolean }) {
   const router = useRouter();
   const activeHotels = hotels.filter((h) => h.active);
   const requestedHotelName = initialRequest?.requestedHotel?.trim() ?? "";
@@ -122,6 +122,17 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
     setLoading(true);
     setError(null);
 
+    if (manualConfirmation && (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim())) {
+      setError("Per preparare il voucher inserisci nome, cognome, telefono ed email del cliente.");
+      setLoading(false);
+      return;
+    }
+    if (manualConfirmation && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Inserisci un indirizzo email valido.");
+      setLoading(false);
+      return;
+    }
+
     const hasAtLeastOnePrice = hotelOptions.some(hotelOptionHasPrice);
     if (!hasAtLeastOnePrice) {
       setError("Inserisci almeno un prezzo in almeno una struttura per generare il preventivo.");
@@ -140,6 +151,11 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
     const mappedOptions = mapHotelOptionsToPayload(hotelOptions, {
       defaultRoomTypeLabel: suggestedRoomTypeLabel(roomCapacitySuggestion)
     });
+    if (manualConfirmation && countPricedTreatments(hotelOptions) !== 1) {
+      setError("Per importare una conferma via email inserisci una sola struttura e un solo trattamento con prezzo.");
+      setLoading(false);
+      return;
+    }
 
     const response = await adminApiFetch("/api/quotes", {
       method: "POST",
@@ -174,6 +190,22 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
       return;
     }
 
+    if (manualConfirmation) {
+      const confirmationResponse = await adminApiFetch(`/api/quotes/${result.data.id}/manual-confirmation`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      const confirmationResult = await readAdminApiJson<{ ok?: boolean; quote?: Quote; error?: string }>(confirmationResponse);
+      if (!confirmationResponse.ok || !confirmationResult?.ok) {
+        setError(adminApiErrorMessage(confirmationResponse, confirmationResult, "Preventivo creato, ma conferma manuale non registrata."));
+        return;
+      }
+
+      router.push(`/admin/preventivi/${result.data.code}#verifica-disponibilita`);
+      router.refresh();
+      return;
+    }
+
     if (isLabTest) {
       const quoteId = result.data.id;
       await adminApiFetch(`/api/quotes/${quoteId}`, {
@@ -204,6 +236,11 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
         {isLabTest ? (
           <div className="rounded-2xl bg-[#4C1D95] px-4 py-3 text-sm font-semibold text-white">
             🔬 Modalità test — questo preventivo sarà invisibile a Diego e non conterrà nelle statistiche
+          </div>
+        ) : null}
+        {manualConfirmation ? (
+          <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900 ring-1 ring-emerald-200">
+            Importazione conferma ricevuta via email. Inserisci solo la struttura e il trattamento realmente confermati: la prenotazione sarà pronta per generare il voucher.
           </div>
         ) : null}
         {initialRequest ? (
@@ -266,8 +303,12 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
           </div>
         </Section>
 
-        <Section title="Proposte hotel">
-          <p className="text-sm text-ischia-ink/65">Inserisci fino a 3 strutture. Ogni struttura può avere uno o più trattamenti con prezzo. Solo i trattamenti con prezzo vengono mostrati al cliente.</p>
+        <Section title={manualConfirmation ? "Struttura e trattamento confermati" : "Proposte hotel"}>
+          <p className="text-sm text-ischia-ink/65">
+            {manualConfirmation
+              ? "Inserisci una sola struttura e assegna il prezzo a un solo trattamento: saranno riportati nel voucher."
+              : "Inserisci fino a 3 strutture. Ogni struttura può avere uno o più trattamenti con prezzo. Solo i trattamenti con prezzo vengono mostrati al cliente."}
+          </p>
           {requestedHotelName ? (
             <label className="flex gap-3 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-ischia-ink ring-1 ring-ischia-blue/10">
               <input checked={isAlternativeOffer} className="mt-1 h-4 w-4" onChange={(event) => setIsAlternativeOffer(event.target.checked)} type="checkbox" />
@@ -285,7 +326,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
 
         <Section title="Condizioni preventivo">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input name="validUntil" label="Validità offerta" required type="date" min={todayDateString()} />
+            <Input name="validUntil" label={manualConfirmation ? "Data registrazione" : "Validità offerta"} required type="date" min={todayDateString()} defaultValue={manualConfirmation ? todayDateString() : undefined} />
           </div>
           <Textarea name="publicNotes" label="Note visibili al cliente" />
           <Textarea name="internalNotes" label="Note interne" defaultValue={initialRequest?.message} />
@@ -296,22 +337,43 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
           disabled={loading}
           type="submit"
         >
-          {loading ? "Creo il preventivo..." : "Genera preventivo"}
+          {loading ? "Salvataggio..." : manualConfirmation ? "Crea prenotazione e prepara voucher" : "Genera preventivo"}
         </button>
       </form>
 
       <aside className="space-y-4">
         <div className="rounded-2xl bg-white/90 p-5 shadow-soft">
-          <h2 className="text-xl font-black text-ischia-navy">Come funziona</h2>
+          <h2 className="text-xl font-black text-ischia-navy">{manualConfirmation ? "Importazione via email" : "Come funziona"}</h2>
           <ul className="mt-3 space-y-2 text-sm text-ischia-ink/70">
-            <li>Aggiungi fino a 3 strutture hotel.</li>
-            <li>Per ogni struttura inserisci il prezzo dei trattamenti che vuoi proporre.</li>
-            <li>Il cliente vede solo i trattamenti con prezzo e sceglie quello preferito.</li>
-            <li>Se una struttura non ha prezzi, non viene mostrata.</li>
+            {manualConfirmation ? (
+              <>
+                <li>Inserisci i dati ricevuti nella vecchia email.</li>
+                <li>Indica una sola struttura e un solo trattamento con prezzo.</li>
+                <li>Il sistema registra la prenotazione come già confermata.</li>
+                <li>Dal dettaglio potrai registrare la caparra e inviare il voucher.</li>
+              </>
+            ) : (
+              <>
+                <li>Aggiungi fino a 3 strutture hotel.</li>
+                <li>Per ogni struttura inserisci il prezzo dei trattamenti che vuoi proporre.</li>
+                <li>Il cliente vede solo i trattamenti con prezzo e sceglie quello preferito.</li>
+                <li>Se una struttura non ha prezzi, non viene mostrata.</li>
+              </>
+            )}
           </ul>
         </div>
       </aside>
     </div>
+  );
+}
+
+function countPricedTreatments(hotelOptions: HotelOptionState[]) {
+  return hotelOptions.reduce(
+    (total, option) => total + option.roomTypes.reduce(
+      (roomTotal, room) => roomTotal + [room.breakfastPrice, room.halfBoardPrice, room.fullBoardPrice].filter((price) => Number(price) > 0).length,
+      0
+    ),
+    0
   );
 }
 

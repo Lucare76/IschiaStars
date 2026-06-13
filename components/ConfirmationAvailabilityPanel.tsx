@@ -44,6 +44,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
 
   const confirmationId = confirmation?.id;
   const status = confirmation?.availabilityStatus ?? "availability_to_check";
+  const isManualEmailImport = confirmation?.metadata?.source === "manual_email_import";
   const canSendFinal = status === "availability_confirmed";
   const isInHotelBalance = confirmation?.selectedBalanceMethod?.toLowerCase().includes("in struttura") ?? false;
   const selectedPrice = defaultSelectedPrice;
@@ -351,8 +352,10 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     <section id="verifica-disponibilita" className="rounded-2xl bg-white/90 p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black text-ischia-navy">Verifica disponibilità struttura</h2>
-          <p className="mt-1 text-sm text-ischia-ink/65">La conferma cliente non è ancora prenotazione definitiva.</p>
+          <h2 className="text-xl font-black text-ischia-navy">{isManualEmailImport ? "Prenotazione importata via email" : "Verifica disponibilità struttura"}</h2>
+          <p className="mt-1 text-sm text-ischia-ink/65">
+            {isManualEmailImport ? "Conferma registrata manualmente dall'operatore e pronta per il voucher." : "La conferma cliente non è ancora prenotazione definitiva."}
+          </p>
         </div>
         <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${(confirmation?.depositPaidAt || confirmation?.balancePaidAt) ? "bg-emerald-100 text-emerald-800 ring-emerald-200" : "bg-ischia-mist text-ischia-navy ring-ischia-blue/15"}`}>
           {confirmation?.balancePaidAt ? "✓ Saldo ricevuto" : confirmation?.depositPaidAt ? "✓ Caparra ricevuta" : availabilityStatusLabel(status)}

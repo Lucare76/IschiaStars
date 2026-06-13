@@ -33,6 +33,12 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
   return (
     <AdminShell title="Conferme cliente" subtitle="Verifica manuale disponibilità struttura e invio comunicazioni definitive.">
       <div className="mb-5 flex flex-wrap gap-2">
+        <Link
+          className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-sun/40"
+          href="/admin/preventivi/nuovo?manualConfirmation=true"
+        >
+          Importa conferma via email
+        </Link>
         {filters.map((filter) => (
           <Link
             key={filter}
