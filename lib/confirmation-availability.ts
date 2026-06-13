@@ -53,6 +53,7 @@ Per bloccare la prenotazione ti chiediamo un acconto di ${depositLabel}${balance
 💳 Coordinate per il bonifico:
 Intestatario: ${bankAccountHolder}
 ${bankName ? `Banca: ${bankName}\n` : ""}IBAN: ${iban}
+La quinta lettera è la I di Imola.
 ${bicSwift ? `BIC/SWIFT: ${bicSwift}\n` : ""}Causale: ${paymentReason}
 ${paymentInstructions ? `\n${paymentInstructions}` : ""}
 

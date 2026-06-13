@@ -138,6 +138,57 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     window.open(depositCoordinatesWhatsapp.chatUrl, "_blank", "noopener,noreferrer");
   }
 
+  async function handleSendVoucherWhatsapp() {
+    setLoadingAction("voucher-whatsapp");
+    setMessage(null);
+
+    const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/voucher-preview`, {
+      method: "GET"
+    });
+    if (!response.ok) {
+      const result = await readAdminApiJson<{ error?: string }>(response);
+      setLoadingAction(null);
+      setMessage(adminApiErrorMessage(response, result, "Non è stato possibile preparare il voucher."));
+      return;
+    }
+
+    const voucherBlob = await response.blob();
+    const voucherFile = new File([voucherBlob], `voucher-${quote.code}.pdf`, { type: "application/pdf" });
+    const firstName = confirmation?.firstName ?? quote.customerFirstName;
+    const whatsappMessage = `Ciao ${firstName}, ti invio il voucher della prenotazione ${quote.code}.`;
+
+    if (navigator.canShare?.({ files: [voucherFile] })) {
+      try {
+        await navigator.share({
+          files: [voucherFile],
+          title: `Voucher ${quote.code}`,
+          text: whatsappMessage
+        });
+        setMessage("Voucher condiviso.");
+        setLoadingAction(null);
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          setLoadingAction(null);
+          return;
+        }
+      }
+    }
+
+    const downloadUrl = URL.createObjectURL(voucherBlob);
+    const downloadLink = document.createElement("a");
+    downloadLink.href = downloadUrl;
+    downloadLink.download = voucherFile.name;
+    downloadLink.click();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+
+    await navigator.clipboard.writeText(whatsappMessage).catch(() => null);
+    const phone = confirmation?.phone ?? quote.customerPhone;
+    window.open(`https://wa.me/${normalizeItalianPhone(phone)}?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
+    setMessage("Voucher scaricato e chat WhatsApp aperta. Allega il PDF appena scaricato.");
+    setLoadingAction(null);
+  }
+
   useEffect(() => {
     if (!confirmationId || status !== "availability_confirmed" || !featureFlags.supplier_confirmation) return;
     let cancelled = false;
@@ -761,6 +812,16 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
           >
             Salva note voucher
           </button>
+          {confirmation.depositPaidAt ? (
+            <button
+              className="ml-3 mt-3 rounded-full border border-[#16A34A] bg-white px-4 py-2 text-sm font-black text-[#15803D] hover:bg-emerald-50 disabled:opacity-60"
+              disabled={Boolean(loadingAction)}
+              onClick={() => void handleSendVoucherWhatsapp()}
+              type="button"
+            >
+              {loadingAction === "voucher-whatsapp" ? "Preparo il voucher..." : "Invia voucher su WhatsApp"}
+            </button>
+          ) : null}
           {confirmation.depositPaidAt ? (
             isInHotelBalance ? (
               <div className="mt-3 flex flex-wrap items-center gap-3">

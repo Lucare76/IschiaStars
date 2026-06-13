@@ -708,6 +708,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
           ${snapshot.bank_account_holder ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Intestatario:</strong> ${snapshot.bank_account_holder}</div>` : ""}
           ${snapshot.bank_name ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Banca:</strong> ${snapshot.bank_name}</div>` : ""}
           ${snapshot.iban ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>IBAN:</strong> ${snapshot.iban}</div>` : ""}
+          ${snapshot.iban ? `<div style="margin:0 0 5px;font-size:13px;font-weight:bold;color:#1B3A5C;">La quinta lettera è la I di Imola.</div>` : ""}
           ${snapshot.bic_swift ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>BIC/SWIFT:</strong> ${snapshot.bic_swift}</div>` : ""}
           ${paymentReason ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Causale:</strong> ${paymentReason}</div>` : ""}
           ${snapshot.payment_instructions ? `<div style="margin:10px 0 0;font-size:13px;color:#6B7280;">${snapshot.payment_instructions}</div>` : ""}
@@ -808,6 +809,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
         ${snapshot.bank_account_holder ? `Intestatario: ${snapshot.bank_account_holder}<br>` : ""}
         ${snapshot.bank_name ? `Banca: ${snapshot.bank_name}<br>` : ""}
         ${snapshot.iban ? `IBAN: ${snapshot.iban}<br>` : ""}
+        ${snapshot.iban ? `La quinta lettera è la I di Imola.<br>` : ""}
         ${snapshot.bic_swift ? `BIC/SWIFT: ${snapshot.bic_swift}<br>` : ""}
         ${paymentReason ? `Causale: ${paymentReason}<br>` : ""}
         ${snapshot.payment_instructions ? `${snapshot.payment_instructions}<br>` : ""}
@@ -854,6 +856,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
       snapshot.bank_account_holder ? `Intestatario: ${snapshot.bank_account_holder}` : "",
       snapshot.bank_name ? `Banca: ${snapshot.bank_name}` : "",
       snapshot.iban ? `IBAN: ${snapshot.iban}` : "",
+      snapshot.iban ? "La quinta lettera è la I di Imola." : "",
       snapshot.bic_swift ? `BIC/SWIFT: ${snapshot.bic_swift}` : "",
       paymentReason ? `Causale: ${paymentReason}` : "",
       snapshot.payment_instructions ? `Istruzioni: ${snapshot.payment_instructions}` : ""
