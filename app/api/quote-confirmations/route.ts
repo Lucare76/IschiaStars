@@ -4,7 +4,7 @@ import { createQuoteConfirmation } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { sendQuoteConfirmedInternalEmail } from "@/lib/server/brevo";
 import { compareDeclaredAge } from "@/lib/age-utils";
-import type { ChildGuest } from "@/lib/types";
+import type { ChildGuest, QuoteRoomSelection } from "@/lib/types";
 
 type ConfirmationPayload = {
   quoteCode?: string;
@@ -21,8 +21,7 @@ type ConfirmationPayload = {
   acceptedTerms?: boolean;
   acceptedPrivacy?: boolean;
   children?: { id?: string; birthDate?: string }[];
-  selectedHotelOptionId?: string;
-  selectedTreatmentKey?: string;
+  selectedRooms?: Pick<QuoteRoomSelection, "optionId" | "treatmentKey">[];
 };
 
 const INVALID_SELECTION_MESSAGE = "Impossibile completare la conferma. Contattaci su WhatsApp.";
@@ -49,8 +48,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[confirmation] invalid commercial selection", {
       code: quoteResult.data.code,
-      selectedHotelOptionId: body!.selectedHotelOptionId,
-      selectedTreatmentKey: body!.selectedTreatmentKey,
+      selectedRooms: body!.selectedRooms,
       error: error instanceof Error ? error.message : String(error)
     });
     return NextResponse.json({ error: INVALID_SELECTION_MESSAGE }, { status: 400 });
@@ -85,6 +83,7 @@ export async function POST(request: NextRequest) {
       children: body!.children ?? [],
       children_age_comparison: ageComparison,
       has_age_mismatch: hasAgeMismatch,
+      selected_rooms: selection.selectedRooms,
       source: "public_quote_page"
     }
   });
@@ -165,29 +164,45 @@ function buildChildrenAgeComparison(
 }
 
 function resolveSelection(quote: NonNullable<Awaited<ReturnType<typeof getQuoteByCodeAndToken>>["data"]>, body: ConfirmationPayload) {
-  const option = quote.hotelOptions.find((item) => item.id === body.selectedHotelOptionId);
-  if (!option) {
-    throw new Error("Opzione hotel non valida per questo preventivo");
-  }
-
-  const treatment = option?.treatments.find((item) => item.key === body.selectedTreatmentKey);
-  if (!treatment || treatment.price <= 0) {
-    throw new Error("Trattamento non disponibile per questa opzione");
-  }
-
-  const breakdown = calculatePaymentBreakdown(treatment.price, option.depositPercent, option.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
+  if (!body.selectedRooms || body.selectedRooms.length !== quote.rooms) throw new Error("Seleziona tutte le camere");
+  const selectedRooms = body.selectedRooms.map((room, index) => {
+    const option = quote.hotelOptions.find((item) => item.id === room.optionId);
+    if (!option) throw new Error("Opzione hotel non valida per questo preventivo");
+    const treatment = option.treatments.find((item) => item.key === room.treatmentKey);
+    if (!treatment || treatment.price <= 0) throw new Error("Trattamento non disponibile per questa opzione");
+    const breakdown = calculatePaymentBreakdown(treatment.price, option.depositPercent, option.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
+    return {
+      roomNumber: index + 1,
+      optionId: option.id,
+      hotelGroup: option.hotelGroup ?? 1,
+      hotelName: option.hotelName,
+      roomTypeLabel: option.roomTypeLabel || "Camera standard",
+      treatmentKey: treatment.key,
+      treatmentLabel: treatment.label,
+      price: treatment.price,
+      depositAmount: breakdown.depositAmount,
+      balanceAmount: breakdown.balanceAmount
+    };
+  });
+  if (new Set(selectedRooms.map((room) => room.hotelGroup)).size !== 1) throw new Error("Le camere devono appartenere allo stesso hotel");
+  const option = quote.hotelOptions.find((item) => item.id === selectedRooms[0].optionId)!;
+  const selectedPrice = selectedRooms.reduce((sum, room) => sum + room.price, 0);
+  const selectedDepositAmount = selectedRooms.reduce((sum, room) => sum + room.depositAmount, 0);
+  const selectedBalanceAmount = selectedRooms.reduce((sum, room) => sum + room.balanceAmount, 0);
+  const compositionLabel = selectedRooms.map((room) => `Camera ${room.roomNumber}: ${room.roomTypeLabel}, ${room.treatmentLabel}`).join("; ");
 
   return {
     selectedHotelOptionId: option.id,
     selectedHotelName: option.hotelName,
-    selectedTreatmentKey: treatment.key,
-    selectedTreatmentLabel: treatment.label,
-    selectedPrice: treatment.price,
-    selectedDepositPercent: breakdown.depositPercent,
-    selectedDepositAmount: breakdown.depositAmount,
-    selectedBalanceAmount: breakdown.balanceAmount,
-    selectedBalanceMethod: breakdown.balanceMethod,
+    selectedTreatmentKey: quote.rooms === 1 ? selectedRooms[0].treatmentKey : "room_composition",
+    selectedTreatmentLabel: compositionLabel,
+    selectedPrice,
+    selectedDepositPercent: selectedPrice > 0 ? Math.round((selectedDepositAmount / selectedPrice) * 10000) / 100 : 0,
+    selectedDepositAmount,
+    selectedBalanceAmount,
+    selectedBalanceMethod: option.balanceMethod || BALANCE_METHOD_IN_STRUCTURE,
     selectedPaymentPolicy: option.paymentPolicy,
-    selectedCancellationPolicy: option.cancellationPolicy
+    selectedCancellationPolicy: option.cancellationPolicy,
+    selectedRooms
   };
 }

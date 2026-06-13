@@ -8,23 +8,9 @@ import type { ExtraServiceEmailItem } from "@/lib/extra-service-email-items";
 import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown } from "@/lib/hotel-policies";
 import { publicQuoteInfoWhatsappMessage } from "@/lib/message-templates";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
-import { Quote, QuoteHotelOption, TreatmentOption } from "@/lib/types";
+import { Quote, QuoteHotelOption, QuoteRoomSelection, TreatmentOption } from "@/lib/types";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
 import { formatCurrency, publicWhatsappLink } from "@/lib/utils";
-
-type SelectedOption = {
-  optionId: string;
-  hotelName: string;
-  treatmentKey: string;
-  treatmentLabel: string;
-  price: number;
-  depositPercent?: number;
-  depositAmount?: number;
-  balanceAmount?: number;
-  balanceMethod?: string;
-  paymentPolicy?: string;
-  cancellationPolicy?: string;
-};
 
 function hasDisplayablePrice(treatment: TreatmentOption) {
   return Number.isFinite(treatment.price) && treatment.price > 0;
@@ -184,7 +170,7 @@ export function QuoteProposalSection({
   featureFlags?: FeatureFlags;
   travelServices?: ExtraServiceEmailItem[];
 }) {
-  const [selected, setSelected] = useState<SelectedOption | null>(null);
+  const [selectedRooms, setSelectedRooms] = useState<QuoteRoomSelection[]>([]);
   const [compareMode, setCompareMode] = useState(false);
   const confirmRef = useRef<HTMLDivElement>(null);
 
@@ -217,9 +203,10 @@ export function QuoteProposalSection({
 
   function handleSelectTreatment(option: QuoteHotelOption, treatment: TreatmentOption) {
     const breakdown = calculatePaymentBreakdown(treatment.price, option.depositPercent, option.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
-    setSelected({
+    const roomSelection: QuoteRoomSelection = {
       optionId: option.id,
-      hotelName: option.hotelName + (option.roomTypeLabel ? ` — ${option.roomTypeLabel}` : ""),
+      hotelGroup: option.hotelGroup ?? 1,
+      hotelName: option.hotelName,
       treatmentKey: treatment.key,
       treatmentLabel: treatment.label,
       price: treatment.price,
@@ -228,15 +215,21 @@ export function QuoteProposalSection({
       balanceAmount: breakdown.balanceAmount,
       balanceMethod: breakdown.balanceMethod,
       paymentPolicy: option.paymentPolicy,
-      cancellationPolicy: option.cancellationPolicy
+      cancellationPolicy: option.cancellationPolicy,
+      roomTypeLabel: option.roomTypeLabel
+    };
+    setSelectedRooms((current) => {
+      const sameHotel = current.length === 0 || current[0].hotelGroup === roomSelection.hotelGroup;
+      const base = sameHotel && current.length < quote.rooms ? current : [];
+      return [...base, roomSelection].slice(0, quote.rooms);
     });
     trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "confirm_clicked", {
       optionId: option.id,
       treatmentKey: treatment.key
     });
-    setTimeout(() => {
-      confirmRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
+    if (selectedRooms.length + 1 >= quote.rooms) {
+      setTimeout(() => confirmRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    }
   }
 
   return (
@@ -291,6 +284,25 @@ export function QuoteProposalSection({
         </div>
       )}
 
+      {quote.rooms > 1 && selectedRooms.length > 0 ? (
+        <div className="no-print rounded-2xl bg-white p-5 shadow-soft ring-1 ring-ischia-blue/10">
+          <p className="text-sm font-black text-ischia-navy">Composizione camere: {selectedRooms.length} di {quote.rooms}</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {selectedRooms.map((room, index) => (
+              <div key={`${room.optionId}-${room.treatmentKey}-${index}`} className="rounded-xl bg-ischia-mist p-3 text-sm">
+                <p className="font-black text-ischia-navy">Camera {index + 1}</p>
+                <p>{room.roomTypeLabel || "Camera standard"}</p>
+                <p>{room.treatmentLabel} - {formatCurrency(room.price)}</p>
+                <button className="mt-2 text-xs font-bold text-rose-700" type="button" onClick={() => setSelectedRooms((rooms) => rooms.filter((_, roomIndex) => roomIndex !== index))}>
+                  Cambia questa camera
+                </button>
+              </div>
+            ))}
+          </div>
+          {selectedRooms.length < quote.rooms ? <p className="mt-3 text-sm font-semibold text-amber-800">Ora scegli tipologia e trattamento per la camera {selectedRooms.length + 1} nello stesso hotel.</p> : null}
+        </div>
+      ) : null}
+
       {/* WhatsApp link */}
       <div className="no-print rounded-2xl bg-white/90 p-5 shadow-soft">
         <a
@@ -335,7 +347,7 @@ export function QuoteProposalSection({
       <div ref={confirmRef} id="conferma" className="no-print">
         <ConfirmQuoteForm
           quote={quote}
-          selectedOption={selected}
+          selectedRooms={selectedRooms}
         />
       </div>
     </div>
@@ -841,7 +853,7 @@ function HotelCard({
                                 onClick={() => setPendingSelection({ option: opt, treatment })}
                                 type="button"
                               >
-                                Conferma questa opzione
+                                Scegli questa camera
                               </button>
                               <p className="mt-1 text-center text-xs leading-snug text-gray-400">Nessun pagamento online — ti ricontattiamo per finalizzare</p>
                             </div>
@@ -863,7 +875,7 @@ function HotelCard({
       {pendingSelection ? (
         <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5" role="dialog" aria-modal="true" aria-labelledby={`confirm-selection-${pendingSelection.option.id}`}>
           <div className="mx-auto w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-black text-ischia-navy" id={`confirm-selection-${pendingSelection.option.id}`}>Stai confermando la tua preferenza</h3>
+            <h3 className="text-xl font-black text-ischia-navy" id={`confirm-selection-${pendingSelection.option.id}`}>Aggiungi questa camera</h3>
             <p className="mt-3 text-sm leading-6 text-gray-600">
               Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà per completare la prenotazione.
             </p>
@@ -890,7 +902,7 @@ function HotelCard({
                 }}
                 type="button"
               >
-                Sì, confermo
+                Sì, aggiungi
               </button>
             </div>
           </div>

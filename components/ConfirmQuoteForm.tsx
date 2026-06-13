@@ -1,31 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Quote } from "@/lib/types";
+import { Quote, QuoteRoomSelection } from "@/lib/types";
 import { formatCurrency, ischiastarsWhatsappNumber } from "@/lib/utils";
 
-type SelectedOption = {
-  optionId: string;
-  hotelName: string;
-  treatmentKey: string;
-  treatmentLabel: string;
-  price: number;
-  depositPercent?: number;
-  depositAmount?: number;
-  balanceAmount?: number;
-  balanceMethod?: string;
-  paymentPolicy?: string;
-  cancellationPolicy?: string;
-};
-
-export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; selectedOption?: SelectedOption | null }) {
+export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: Quote; selectedRooms?: QuoteRoomSelection[] }) {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Se il preventivo ha opzioni hotel esplicite (sistema multi-proposta), la selezione è obbligatoria.
   const requiresSelection = quote.hotelOptions.length > 0;
-  const canSubmit = !requiresSelection || Boolean(selectedOption);
+  const canSubmit = !requiresSelection || selectedRooms.length === quote.rooms;
+  const selectedOption = selectedRooms[0];
+  const totalPrice = selectedRooms.reduce((sum, room) => sum + room.price, 0);
+  const totalDeposit = selectedRooms.reduce((sum, room) => sum + (room.depositAmount ?? 0), 0);
+  const totalBalance = selectedRooms.reduce((sum, room) => sum + (room.balanceAmount ?? 0), 0);
   const whatsappNumber = ischiastarsWhatsappNumber();
 
   if (confirmed) {
@@ -76,11 +66,7 @@ export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; sele
             acceptedTerms: formData.get("acceptedTerms") === "on",
             acceptedPrivacy: formData.get("acceptedPrivacy") === "on",
             children: quote.children.map((child) => ({ id: child.id, birthDate: String(formData.get(`child-${child.id}`) ?? "") })),
-            selectedHotelOptionId: selectedOption?.optionId,
-            selectedHotelName: selectedOption?.hotelName,
-            selectedTreatmentKey: selectedOption?.treatmentKey,
-            selectedTreatmentLabel: selectedOption?.treatmentLabel,
-            selectedPrice: selectedOption?.price
+            selectedRooms
           })
         })
           .then(async (response) => {
@@ -110,17 +96,25 @@ export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; sele
               Acconto {selectedOption.depositPercent}%: {formatCurrency(selectedOption.depositAmount ?? 0)} · Saldo {formatCurrency(selectedOption.balanceAmount ?? 0)}
             </p>
           ) : null}
+          {selectedRooms.length > 1 ? (
+            <div className="mt-3 space-y-1 border-t border-ischia-blue/10 pt-3 text-sm text-ischia-ink/80">
+              {selectedRooms.map((room, index) => (
+                <p key={`${room.optionId}-${index}`}><strong>Camera {index + 1}:</strong> {room.roomTypeLabel || "Camera standard"}, {room.treatmentLabel} - {formatCurrency(room.price)}</p>
+              ))}
+              <p className="pt-1 font-black text-ischia-navy">Totale: {formatCurrency(totalPrice)} - Acconto: {formatCurrency(totalDeposit)} - Saldo: {formatCurrency(totalBalance)}</p>
+            </div>
+          ) : null}
         </div>
       )}
 
       {selectedOption ? (
         <div className="rounded-xl bg-white p-4 text-sm leading-6 text-ischia-ink/78 ring-1 ring-ischia-blue/10">
           <p className="font-black text-ischia-navy">Riepilogo pagamento</p>
-          <p><strong>Prezzo totale:</strong> {formatCurrency(selectedOption.price)}</p>
+          <p><strong>Prezzo totale:</strong> {formatCurrency(totalPrice)}</p>
           {selectedOption.depositPercent != null && selectedOption.depositPercent > 0 ? (
             <>
-              <p><strong>Caparra richiesta:</strong> {selectedOption.depositPercent}% = {formatCurrency(selectedOption.depositAmount ?? 0)}</p>
-              <p><strong>Saldo restante:</strong> {formatCurrency(selectedOption.balanceAmount ?? 0)}</p>
+              <p><strong>Caparra richiesta:</strong> {formatCurrency(totalDeposit)}</p>
+              <p><strong>Saldo restante:</strong> {formatCurrency(totalBalance)}</p>
             </>
           ) : null}
           {selectedOption.balanceMethod ? <p><strong>Saldo:</strong> {selectedOption.balanceMethod}</p> : null}
@@ -131,9 +125,9 @@ export function ConfirmQuoteForm({ quote, selectedOption }: { quote: Quote; sele
         </div>
       ) : null}
 
-      {!selectedOption && requiresSelection && (
+      {!canSubmit && requiresSelection && (
         <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 ring-1 ring-rose-200">
-          Scorri su e clicca <strong>&quot;Conferma questa opzione&quot;</strong> sulla proposta che preferisci prima di procedere.
+          Seleziona tipologia e trattamento per tutte le camere: ne mancano <strong>{quote.rooms - selectedRooms.length}</strong>.
         </div>
       )}
       {!selectedOption && !requiresSelection && (

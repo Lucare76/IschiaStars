@@ -143,6 +143,22 @@ export type TreatmentOption = {
   price: number;
 };
 
+export type QuoteRoomSelection = {
+  optionId: string;
+  hotelGroup: number;
+  hotelName: string;
+  roomTypeLabel?: string;
+  treatmentKey: string;
+  treatmentLabel: string;
+  price: number;
+  depositPercent?: number;
+  depositAmount?: number;
+  balanceAmount?: number;
+  balanceMethod?: string;
+  paymentPolicy?: string;
+  cancellationPolicy?: string;
+};
+
 export type QuoteHotelOption = {
   id: string;
   quoteId: string;
