@@ -43,7 +43,10 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [customerPhone, setCustomerPhone] = useState(confirmation?.phone ?? quote.customerPhone);
 
   const confirmationId = confirmation?.id;
-  const status = confirmation?.availabilityStatus ?? "availability_to_check";
+  const storedStatus = confirmation?.availabilityStatus ?? "availability_to_check";
+  const status = storedStatus === "availability_confirmed" && confirmation?.finalConfirmationSentAt
+    ? "deposit_waiting"
+    : storedStatus;
   const isManualEmailImport = confirmation?.metadata?.source === "manual_email_import";
   const canSendFinal = status === "availability_confirmed";
   const isInHotelBalance = confirmation?.selectedBalanceMethod?.toLowerCase().includes("in struttura") ?? false;
@@ -728,7 +731,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
         </div>
       ) : null}
 
-      {status === "deposit_waiting" && featureFlags.voucher_cliente ? (
+      {status === "deposit_waiting" ? (
         <div className="mt-5 rounded-2xl bg-amber-50/60 p-4 ring-1 ring-amber-200/70">
           <h3 className="font-black text-ischia-navy">Caparra e voucher cliente</h3>
           <label className="mt-3 block text-sm font-semibold text-ischia-ink">

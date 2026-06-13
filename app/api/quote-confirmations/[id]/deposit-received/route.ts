@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateVoucherPdf } from "@/lib/pdf/generateVoucher";
-import { getQuoteConfirmationById, markDepositPaid } from "@/lib/repositories/quoteConfirmations";
+import { getQuoteConfirmationById, markDepositPaid, updateQuoteConfirmationAvailability } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteById } from "@/lib/repositories/quotes";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 import { sendVoucherEmailToClient } from "@/lib/server/brevo";
@@ -12,8 +12,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   const confirmationResult = await getQuoteConfirmationById(params.id);
   if (!confirmationResult.data) return NextResponse.json({ ok: false, error: "Conferma non trovata" }, { status: 404 });
-  if (confirmationResult.data.availability_status !== "deposit_waiting") {
+  const isLegacyFinalConfirmation = confirmationResult.data.availability_status === "availability_confirmed"
+    && Boolean(confirmationResult.data.final_confirmation_sent_at);
+  if (confirmationResult.data.availability_status !== "deposit_waiting" && !isLegacyFinalConfirmation) {
     return NextResponse.json({ ok: false, error: "La caparra può essere registrata solo dopo l'invio della conferma definitiva" }, { status: 409 });
+  }
+  if (isLegacyFinalConfirmation) {
+    const statusUpdate = await updateQuoteConfirmationAvailability(params.id, { status: "deposit_waiting" });
+    if (!statusUpdate.data) {
+      return NextResponse.json({ ok: false, error: statusUpdate.error ?? "Stato conferma non aggiornato" }, { status: 500 });
+    }
   }
 
   const quoteResult = await getQuoteById(String(confirmationResult.data.quote_id));
