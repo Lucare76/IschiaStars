@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
 import { getQuoteConfirmationById, updateConfirmationAmounts } from "@/lib/repositories/quoteConfirmations";
 import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
 import { getQuoteById } from "@/lib/repositories/quotes";
@@ -40,6 +41,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (serviceCost !== undefined && !Number.isFinite(serviceCost)) {
     return NextResponse.json({ success: false, error: "Costo aggiuntivo non valido" }, { status: 400 });
   }
+  if (serviceCost !== undefined && serviceCost < 0) {
+    return NextResponse.json({ success: false, error: "Costo aggiuntivo non valido" }, { status: 400 });
+  }
+  if (serviceLabel.length > 150) {
+    return NextResponse.json({ success: false, error: "Descrizione servizio troppo lunga" }, { status: 400 });
+  }
 
   const confirmationResult = await getQuoteConfirmationById(params.id);
   if (!confirmationResult.data) {
@@ -52,7 +59,18 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const quoteId = String(confirmationResult.data.quote_id);
   const updatedAt = new Date().toISOString();
 
-  await updateConfirmationAmounts(params.id, depositAmount, balanceAmount, newTotalPrice);
+  const currentMetadata = confirmationResult.data.metadata && typeof confirmationResult.data.metadata === "object"
+    ? confirmationResult.data.metadata as Record<string, unknown>
+    : {};
+  const additionalServices = getConfirmationAdditionalServices(currentMetadata);
+  const metadata = serviceLabel
+    ? {
+        ...currentMetadata,
+        additional_services: [...additionalServices, { label: serviceLabel, ...(serviceCost !== undefined ? { cost: serviceCost } : {}) }]
+      }
+    : undefined;
+
+  await updateConfirmationAmounts(params.id, depositAmount, balanceAmount, newTotalPrice, metadata);
 
   if (serviceLabel) {
     await trackQuoteEvent(quoteId, "amounts_updated", {

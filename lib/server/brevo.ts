@@ -1,4 +1,5 @@
 import type { Quote, QuoteConfirmation } from "@/lib/types";
+import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
 import { getFeatureFlags } from "@/lib/repositories/settings";
@@ -695,6 +696,10 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
   const totalPriceLabel = confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice);
   const depositLabel = confirmation?.selectedDepositAmount != null ? formatPrice(confirmation.selectedDepositAmount) : "";
   const balanceLabel = confirmation?.selectedBalanceAmount != null ? formatPrice(confirmation.selectedBalanceAmount) : "";
+  const additionalServices = getConfirmationAdditionalServices(confirmation?.metadata);
+  const additionalServicesHtml = additionalServices.length
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#374151;"><strong>Servizi aggiuntivi</strong><br>${additionalServices.map(formatConfirmationAdditionalService).join("<br>")}</td></tr></table>`
+    : "";
 
   const coordinatesHtml = snapshot.configured === true
     ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;">
@@ -763,6 +768,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
         </tr>` : ""}
       </table>
 
+      ${additionalServicesHtml}
       ${coordinatesHtml}
       ${confirmation?.selectedCancellationPolicy ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#FBF5E6;border:1px solid #C9A84C;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#5F4B16;"><strong>Policy cancellazione</strong><br>${confirmation.selectedCancellationPolicy}</td></tr></table>` : ""}
       ${details.notes ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#374151;"><strong>Note</strong><br>${details.notes}</td></tr></table>` : ""}
@@ -791,6 +797,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
 
   const confirmation = quote.confirmation;
+  const additionalServices = getConfirmationAdditionalServices(confirmation?.metadata);
   const snapshot = details.paymentSettingsSnapshot ?? confirmation?.paymentSettingsSnapshot ?? {};
   const paymentReason = typeof snapshot.payment_reason === "string" ? snapshot.payment_reason : "";
   const dueAt = formatDateTimeForEmail(details.depositDueAt);
@@ -842,6 +849,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     ...(confirmation?.selectedDepositPercent != null ? [`Caparra: ${confirmation.selectedDepositPercent}% pari a ${formatPrice(confirmation.selectedDepositAmount ?? 0)}`] : []),
     ...(confirmation?.selectedBalanceAmount != null ? [`Saldo restante: ${formatPrice(confirmation.selectedBalanceAmount)}`] : []),
     ...(confirmation?.selectedBalanceMethod ? [`Modalità saldo: ${confirmation.selectedBalanceMethod}`] : []),
+    ...(additionalServices.length ? ["", "Servizi aggiuntivi:", ...additionalServices.map((service) => `- ${formatConfirmationAdditionalService(service)}`)] : []),
     ...(snapshot.configured === true ? [
       snapshot.bank_account_holder ? `Intestatario: ${snapshot.bank_account_holder}` : "",
       snapshot.bank_name ? `Banca: ${snapshot.bank_name}` : "",

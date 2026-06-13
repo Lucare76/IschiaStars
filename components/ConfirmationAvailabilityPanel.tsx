@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
+import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
 import { availabilityStatusLabel, defaultUnavailabilityMessage, depositCoordinatesWhatsappMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
 import { FeatureFlags } from "@/lib/feature-flags";
 import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
@@ -64,6 +65,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const hasFinalCoordinates = finalPaymentSnapshot.configured === true;
   const hasCurrentCoordinates = isPaymentSettingsConfigured(paymentSettings);
   const confirmationChildren = getConfirmationChildren(confirmation?.metadata, quote.children);
+  const additionalServices = getConfirmationAdditionalServices(confirmation?.metadata);
   const confirmationName = `${confirmation?.firstName ?? quote.customerFirstName} ${confirmation?.lastName ?? quote.customerLastName}`.trim();
   const addressLine = [confirmation?.address, confirmation?.zip, confirmation?.city, confirmation?.province].filter(Boolean).join(" ");
   const currentPaymentReason = buildPaymentReason(
@@ -284,6 +286,8 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
 
     setMessage("\u2713 Importi aggiornati");
     if (result.quote) onConfirmationUpdated?.(result.quote);
+    setServiceLabel("");
+    setServiceCost("");
     setTotalManuallyEdited(false);
     router.refresh();
   }
@@ -382,6 +386,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
         <Info label="Coordinate" value={hasCurrentCoordinates ? "Configurate per invio definitivo" : "Non configurate"} />
         <Info label="Causale" value={currentPaymentReason || "-"} />
         <Info label="Policy cancellazione" value={confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy ?? "-"} />
+        {additionalServices.length ? <Info label="Servizi aggiuntivi" value={additionalServices.map(formatConfirmationAdditionalService).join(" · ")} /> : null}
         <Info label="Confermata il" value={formatDateTime(confirmation.confirmedAt)} />
         <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
       </div>

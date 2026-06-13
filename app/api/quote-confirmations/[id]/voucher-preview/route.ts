@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
 import { generateVoucherPdf } from "@/lib/pdf/generateVoucher";
 import { getQuoteConfirmationById } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteById } from "@/lib/repositories/quotes";
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const includedServices = selectedOption?.includedServices
     ? selectedOption.includedServices.split("\n").map(s => s.trim()).filter(Boolean)
     : (quote.servicesIncluded ?? []);
+  includedServices.push(...getConfirmationAdditionalServices(confirmation.metadata).map(formatConfirmationAdditionalService));
 
   let nightsCount: number | undefined;
   if (quote.arrivalDate && quote.departureDate) {
