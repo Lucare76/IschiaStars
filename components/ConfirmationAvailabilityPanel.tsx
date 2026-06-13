@@ -36,6 +36,11 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [newDepositAmount, setNewDepositAmount] = useState(formatAmountInput(defaultDepositAmount));
   const [totalManuallyEdited, setTotalManuallyEdited] = useState(false);
   const [voucherNotes, setVoucherNotes] = useState(confirmation?.voucherNotes ?? "");
+  const [editingCustomerDetails, setEditingCustomerDetails] = useState(false);
+  const [customerFirstName, setCustomerFirstName] = useState(confirmation?.firstName ?? quote.customerFirstName);
+  const [customerLastName, setCustomerLastName] = useState(confirmation?.lastName ?? quote.customerLastName);
+  const [customerEmail, setCustomerEmail] = useState(confirmation?.email ?? quote.customerEmail);
+  const [customerPhone, setCustomerPhone] = useState(confirmation?.phone ?? quote.customerPhone);
 
   const confirmationId = confirmation?.id;
   const status = confirmation?.availabilityStatus ?? "availability_to_check";
@@ -76,7 +81,24 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     setNewDepositAmount(formatAmountInput(defaultDepositAmount));
     setTotalManuallyEdited(false);
     setVoucherNotes(confirmation?.voucherNotes ?? "");
-  }, [confirmationId, confirmation?.voucherNotes, defaultSelectedPrice, defaultDepositAmount]);
+    setCustomerFirstName(confirmation?.firstName ?? quote.customerFirstName);
+    setCustomerLastName(confirmation?.lastName ?? quote.customerLastName);
+    setCustomerEmail(confirmation?.email ?? quote.customerEmail);
+    setCustomerPhone(confirmation?.phone ?? quote.customerPhone);
+  }, [
+    confirmationId,
+    confirmation?.voucherNotes,
+    confirmation?.firstName,
+    confirmation?.lastName,
+    confirmation?.email,
+    confirmation?.phone,
+    quote.customerFirstName,
+    quote.customerLastName,
+    quote.customerEmail,
+    quote.customerPhone,
+    defaultSelectedPrice,
+    defaultDepositAmount
+  ]);
 
   const depositCoordinatesWhatsapp = useMemo(() => {
     if (!hasCurrentCoordinates || depositAmount == null) return null;
@@ -282,6 +304,49 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     router.refresh();
   }
 
+  async function patchCustomerDetails() {
+    if (!customerFirstName.trim() || !customerLastName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
+      setMessage("Compila nome, cognome, email e telefono.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) {
+      setMessage("Inserisci un indirizzo email valido.");
+      return;
+    }
+
+    setLoadingAction("customer-details");
+    setMessage(null);
+    const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/customer-details`, {
+      method: "PATCH",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({
+        firstName: customerFirstName,
+        lastName: customerLastName,
+        email: customerEmail,
+        phone: customerPhone
+      })
+    });
+    const result = await readAdminApiJson<{ success?: boolean; error?: string; quote?: Quote }>(response);
+    setLoadingAction(null);
+    if (!response.ok || !result?.success) {
+      setMessage(adminApiErrorMessage(response, result));
+      return;
+    }
+
+    setMessage("Dati cliente aggiornati.");
+    setEditingCustomerDetails(false);
+    if (result.quote) onConfirmationUpdated?.(result.quote);
+    router.refresh();
+  }
+
+  function cancelCustomerDetailsEditing() {
+    setCustomerFirstName(confirmation?.firstName ?? quote.customerFirstName);
+    setCustomerLastName(confirmation?.lastName ?? quote.customerLastName);
+    setCustomerEmail(confirmation?.email ?? quote.customerEmail);
+    setCustomerPhone(confirmation?.phone ?? quote.customerPhone);
+    setEditingCustomerDetails(false);
+  }
+
   return (
     <section id="verifica-disponibilita" className="rounded-2xl bg-white/90 p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -313,6 +378,53 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
         <Info label="Policy cancellazione" value={confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy ?? "-"} />
         <Info label="Confermata il" value={formatDateTime(confirmation.confirmedAt)} />
         <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
+      </div>
+
+      <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-[#1B3A5C]/20">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-black text-ischia-navy">Dati cliente</h3>
+            <p className="mt-1 text-sm text-ischia-ink/65">Modifica i contatti usati per email, WhatsApp e voucher.</p>
+          </div>
+          {!editingCustomerDetails ? (
+            <button
+              className="rounded-full border border-[#1B3A5C] bg-white px-4 py-2 text-sm font-black text-[#1B3A5C] hover:bg-[#EFF6FF] disabled:opacity-60"
+              disabled={Boolean(loadingAction)}
+              onClick={() => setEditingCustomerDetails(true)}
+              type="button"
+            >
+              Modifica dati cliente
+            </button>
+          ) : null}
+        </div>
+        {editingCustomerDetails ? (
+          <>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <CustomerInput label="Nome" value={customerFirstName} onChange={setCustomerFirstName} />
+              <CustomerInput label="Cognome" value={customerLastName} onChange={setCustomerLastName} />
+              <CustomerInput label="Email" type="email" value={customerEmail} onChange={setCustomerEmail} />
+              <CustomerInput label="Telefono" type="tel" value={customerPhone} onChange={setCustomerPhone} />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                className="rounded-full bg-ischia-navy px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+                disabled={Boolean(loadingAction)}
+                onClick={() => void patchCustomerDetails()}
+                type="button"
+              >
+                {loadingAction === "customer-details" ? "Salvataggio..." : "Salva dati cliente"}
+              </button>
+              <button
+                className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
+                disabled={Boolean(loadingAction)}
+                onClick={cancelCustomerDetailsEditing}
+                type="button"
+              >
+                Annulla
+              </button>
+            </div>
+          </>
+        ) : null}
       </div>
 
       <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-[#1B3A5C]/20">
@@ -751,6 +863,20 @@ function Info({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/75">{label}</p>
       <p className="mt-1 font-semibold text-ischia-ink">{value}</p>
     </div>
+  );
+}
+
+function CustomerInput({ label, type = "text", value, onChange }: { label: string; type?: "text" | "email" | "tel"; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="text-sm font-semibold text-ischia-ink">
+      {label}
+      <input
+        className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
   );
 }
 
