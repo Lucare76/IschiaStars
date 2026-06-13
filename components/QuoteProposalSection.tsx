@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ConfirmQuoteForm } from "@/components/ConfirmQuoteForm";
 import { trackQuoteEvent } from "@/lib/client-tracking";
 import { emptyFeatureFlags, FeatureFlags } from "@/lib/feature-flags";
+import type { ExtraServiceEmailItem } from "@/lib/extra-service-email-items";
 import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown } from "@/lib/hotel-policies";
 import { publicQuoteInfoWhatsappMessage } from "@/lib/message-templates";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
@@ -175,11 +176,13 @@ function CommitmentNoteBadge({ note }: { note: string }) {
 export function QuoteProposalSection({
   quote,
   hotelPopularity = {},
-  featureFlags = emptyFeatureFlags
+  featureFlags = emptyFeatureFlags,
+  travelServices = []
 }: {
   quote: Quote;
   hotelPopularity?: Record<string, number>;
   featureFlags?: FeatureFlags;
+  travelServices?: ExtraServiceEmailItem[];
 }) {
   const [selected, setSelected] = useState<SelectedOption | null>(null);
   const [compareMode, setCompareMode] = useState(false);
@@ -298,6 +301,35 @@ export function QuoteProposalSection({
           Hai domande? Scrivici su WhatsApp
         </a>
       </div>
+
+      {travelServices.length > 0 ? (
+        <div className="no-print rounded-2xl bg-ischia-mist p-6 ring-1 ring-ischia-blue/15">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">Organizza anche il viaggio</p>
+          <h2 className="mt-1 text-2xl font-black text-ischia-navy">Vuoi arrivare a Ischia senza pensieri?</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-ischia-ink/70">
+            Oltre al soggiorno, possiamo aiutarti a scegliere il collegamento più comodo per raggiungere la struttura.
+          </p>
+          <div className="mt-4 divide-y divide-ischia-blue/10 rounded-2xl bg-white ring-1 ring-ischia-blue/10">
+            {travelServices.map((item) => (
+              <div key={item.id} className="flex items-start justify-between gap-4 px-5 py-4">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 text-ischia-blue">✓</span>
+                  <div>
+                    <p className="text-sm font-semibold text-ischia-navy">{item.title}</p>
+                    {item.description ? <p className="mt-0.5 text-xs text-ischia-ink/60">{item.description}</p> : null}
+                  </div>
+                </div>
+                <p className="shrink-0 text-sm font-black text-ischia-navy">
+                  da € {new Intl.NumberFormat("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(item.priceFrom)}{" "}
+                  <span className="text-xs font-normal text-ischia-ink/60">{item.priceSuffix}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-ischia-ink/55">Le tariffe sono indicative e possono variare in base a data, disponibilità e orari.</p>
+          <p className="mt-2 text-sm font-semibold text-ischia-navy">Rispondi a questa email o scrivici su WhatsApp: ti consiglieremo la soluzione più adatta al tuo viaggio.</p>
+        </div>
+      ) : null}
 
       {/* Conferma form */}
       <div ref={confirmRef} id="conferma" className="no-print">
