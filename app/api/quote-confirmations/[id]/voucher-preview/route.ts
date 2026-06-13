@@ -55,6 +55,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
     depositPaidAtLabel: formatDateTime(depositPaidAt),
     balanceAmountLabel: typeof balanceAmount === "number" ? formatCurrency(balanceAmount) : undefined,
+    balanceMethodLabel: confirmation.selectedBalanceMethod,
+    cancellationPolicy: confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy,
     voucherNotes: confirmation.voucherNotes,
     whatsappNumber: ischiastarsWhatsappNumber()
   });

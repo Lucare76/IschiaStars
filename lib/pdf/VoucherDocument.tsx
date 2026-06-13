@@ -382,6 +382,7 @@ export type VoucherDocumentData = {
   depositPaidAtLabel: string;
   balanceAmountLabel?: string;
   balanceMethodLabel?: string;
+  cancellationPolicy?: string;
   voucherNotes?: string;
   whatsappNumber: string;
 };
@@ -400,6 +401,7 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
   const services = (data.includedServices ?? []).filter(Boolean);
   const hasChips = Boolean(data.roomTypeLabel || data.treatmentLabel);
   const voucherNotes = data.voucherNotes?.trim();
+  const cancellationPolicy = data.cancellationPolicy?.trim();
 
   return (
     <Document>
@@ -532,6 +534,13 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
             <View style={[styles.card, styles.cardAccentGold, { marginBottom: 8 }]} wrap={false}>
               <Text style={styles.sectionTitle}>Note della prenotazione</Text>
               <Text style={styles.notesText}>{voucherNotes}</Text>
+            </View>
+          ) : null}
+
+          {cancellationPolicy ? (
+            <View style={[styles.card, styles.cardAccentNavy, { marginBottom: 8 }]}>
+              <Text style={styles.sectionTitle}>Policy di cancellazione</Text>
+              <Text style={styles.notesText}>{cancellationPolicy}</Text>
             </View>
           ) : null}
 
