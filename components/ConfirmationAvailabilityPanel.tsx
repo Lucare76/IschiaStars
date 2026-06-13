@@ -17,7 +17,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const defaultDepositAmount = confirmation?.selectedDepositAmount ?? quote.deposit;
   const [message, setMessage] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
-  const [depositDueAt, setDepositDueAt] = useState(formatDepositDueLocalInput());
+  const [depositDueAt, setDepositDueAt] = useState(() => confirmationDepositDueLocalInput(confirmation?.depositDueAt));
   const [finalNotes, setFinalNotes] = useState("");
   const [unavailableReason, setUnavailableReason] = useState("");
   const [alternativeToPropose, setAlternativeToPropose] = useState(false);
@@ -87,6 +87,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     setNewDepositAmount(formatAmountInput(defaultDepositAmount));
     setTotalManuallyEdited(false);
     setVoucherNotes(confirmation?.voucherNotes ?? "");
+    setDepositDueAt(confirmationDepositDueLocalInput(confirmation?.depositDueAt));
     setCustomerFirstName(confirmation?.firstName ?? quote.customerFirstName);
     setCustomerLastName(confirmation?.lastName ?? quote.customerLastName);
     setCustomerEmail(confirmation?.email ?? quote.customerEmail);
@@ -94,6 +95,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   }, [
     confirmationId,
     confirmation?.voucherNotes,
+    confirmation?.depositDueAt,
     confirmation?.firstName,
     confirmation?.lastName,
     confirmation?.email,
@@ -631,16 +633,17 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
             </button>
           )}
 
-          {depositCoordinatesWhatsapp ? (
-            <button
-              className="mt-3 inline-flex items-center justify-center gap-2 rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white"
-              onClick={() => void handleSendDepositCoordinatesWhatsapp()}
-              type="button"
-            >
-              {depositCoordinatesCopied ? "✓ Testo copiato — incolla su WhatsApp" : "📲 Invia coordinate acconto su WhatsApp"}
-            </button>
-          ) : null}
         </div>
+      ) : null}
+
+      {(status === "availability_confirmed" || status === "deposit_waiting") && depositCoordinatesWhatsapp ? (
+        <button
+          className="mt-3 inline-flex items-center justify-center gap-2 rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white"
+          onClick={() => void handleSendDepositCoordinatesWhatsapp()}
+          type="button"
+        >
+          {depositCoordinatesCopied ? "✓ Testo copiato — incolla su WhatsApp" : "📲 Invia coordinate acconto su WhatsApp"}
+        </button>
       ) : null}
 
       {status === "availability_confirmed" && featureFlags.supplier_confirmation ? (
@@ -866,6 +869,12 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
 function formatAmountInput(value: number | undefined) {
   if (value == null || !Number.isFinite(value)) return "";
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+function confirmationDepositDueLocalInput(value: string | undefined) {
+  if (!value) return formatDepositDueLocalInput();
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? formatDepositDueLocalInput() : formatDepositDueLocalInput(date);
 }
 
 function Info({ label, value }: { label: string; value: string }) {
