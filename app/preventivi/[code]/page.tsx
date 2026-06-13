@@ -6,6 +6,7 @@ import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { getConfirmedHotelCounts } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
 import { getFeatureFlags } from "@/lib/repositories/settings";
+import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
 import { getAdminSession } from "@/lib/server/auth-guard";
 import { ischiastarsWhatsappNumber } from "@/lib/utils";
 
@@ -30,6 +31,10 @@ export default async function QuotePublicRoute({ params, searchParams }: { param
     getAdminSession(),
   ]);
 
+  const travelServices = featureFlagsResult.data.emailTravelServicesBox
+    ? (await listExtraServiceEmailItems(true)).data
+    : [];
+
   const openingsCount = eventStats.data?.openings ?? 0;
   const showHesitantBanner = openingsCount >= 3 && quote.status !== "confermato";
 
@@ -39,6 +44,7 @@ export default async function QuotePublicRoute({ params, searchParams }: { param
       hotelPopularity={hotelPopularity}
       showHesitantBanner={showHesitantBanner}
       featureFlags={featureFlagsResult.data}
+      travelServices={travelServices}
       trackOpening={!adminSession}
     />
   );
