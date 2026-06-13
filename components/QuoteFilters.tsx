@@ -114,12 +114,14 @@ export function QuoteFilters({
   }), [filter, query, quotes, statsByQuote]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
-    if (sort === "date_asc") return a.createdAt.localeCompare(b.createdAt);
+    const aDate = filter === "confermati" ? a.confirmation?.confirmedAt ?? a.createdAt : a.createdAt;
+    const bDate = filter === "confermati" ? b.confirmation?.confirmedAt ?? b.createdAt : b.createdAt;
+    if (sort === "date_asc") return aDate.localeCompare(bDate);
     if (sort === "lastname") return a.customerLastName.localeCompare(b.customerLastName, "it");
     if (sort === "price") return b.totalPrice - a.totalPrice;
     if (sort === "arrival") return a.arrivalDate.localeCompare(b.arrivalDate);
-    return b.createdAt.localeCompare(a.createdAt); // date_desc default
-  }), [filtered, sort]);
+    return bDate.localeCompare(aDate); // date_desc default
+  }), [filter, filtered, sort]);
 
   const exactCodeSearch = /^is-\d{4}-\d+$/i.test(query.trim()) ? query.trim().toUpperCase() : null;
 

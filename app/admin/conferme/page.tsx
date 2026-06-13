@@ -28,7 +28,8 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
   const missingPaymentSettings = !isPaymentSettingsConfigured(paymentSettings.data);
   const confirmations = result.data
     .filter((quote) => quote.confirmation && !quote.deletedAt && (!quote.excludedFromStats || quote.isLabTest))
-    .filter((quote) => selectedFilter === "tutte" || (quote.confirmation?.availabilityStatus ?? "availability_to_check") === selectedFilter);
+    .filter((quote) => selectedFilter === "tutte" || (quote.confirmation?.availabilityStatus ?? "availability_to_check") === selectedFilter)
+    .sort((a, b) => confirmationTimestamp(b.confirmation?.confirmedAt) - confirmationTimestamp(a.confirmation?.confirmedAt));
 
   return (
     <AdminShell title="Conferme cliente" subtitle="Verifica manuale disponibilità struttura e invio comunicazioni definitive.">
@@ -114,6 +115,11 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
       </div>
     </AdminShell>
   );
+}
+
+function confirmationTimestamp(value: string | undefined) {
+  const timestamp = value ? new Date(value).getTime() : 0;
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 function Info({ label, value }: { label: string; value: string }) {
