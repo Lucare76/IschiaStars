@@ -129,12 +129,16 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
   const checkOut = normalizeFormDate(rawCheckOut);
   const checkIn = normalizeFormDate(rawCheckIn, yearFromDate(checkOut));
 
-  const children = etaBambini && bambini > 0
-    ? etaBambini.split(',').map((eta: string) => ({
-        age: parseInt(eta.trim()),
-        firstName: undefined
-      }))
+  const parsedAges = etaBambini && bambini > 0
+    ? etaBambini.split(',').map((eta: string) => parseInt(eta.trim())).filter((n) => !isNaN(n))
     : [];
+
+  // Una sola età con più bambini dichiarati = gemelli (stessa età per tutti)
+  const childAges = parsedAges.length === 1 && bambini > 1
+    ? Array(bambini).fill(parsedAges[0])
+    : parsedAges;
+
+  const children = childAges.map((age: number) => ({ age, firstName: undefined }));
 
   return {
     firstName: get('Nome') ?? '',

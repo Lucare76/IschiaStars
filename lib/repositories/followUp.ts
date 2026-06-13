@@ -58,6 +58,11 @@ export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuot
 function toFollowUpQuote(quote: Quote, events: QuoteEvent[]): FollowUpQuote | null {
   if (quote.deletedAt || quote.excludedFromStats || quote.status !== "preventivo_inviato" || quote.confirmation) return null;
 
+  const nights = Math.round((new Date(quote.departureDate).getTime() - new Date(quote.arrivalDate).getTime()) / DAY_MS);
+  if (nights < 4) return null;
+
+  if (new Date(quote.arrivalDate).getTime() < Date.now()) return null;
+
   const sentAt = quote.sentAt ?? quote.createdAt;
   const sentTimestamp = new Date(sentAt).getTime();
   const customerEvents = trackableEvents(events).filter((event) => new Date(event.createdAt).getTime() >= sentTimestamp);

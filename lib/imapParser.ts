@@ -124,10 +124,15 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
   const checkOut = normalizeFormDate(rawCheckOut);
   const checkIn = normalizeFormDate(rawCheckIn, yearFromDate(checkOut));
 
-  const childAges =
+  const parsedAges =
     etaBambini && bambini > 0
       ? etaBambini.split(/[,\/;\s\-]+/).map((s) => s.trim()).filter(Boolean).map((eta) => parseInt(eta)).filter((n) => !isNaN(n))
       : [];
+
+  // Una sola età con più bambini dichiarati = gemelli (stessa età per tutti)
+  const childAges = parsedAges.length === 1 && bambini > 1
+    ? Array(bambini).fill(parsedAges[0])
+    : parsedAges;
 
   if (bambini > 0 && childAges.length < bambini) {
     console.warn(`[mail-inbox] Attenzione: dichiarati ${bambini} bambini ma trovate solo ${childAges.length} età — verificare manualmente`);
