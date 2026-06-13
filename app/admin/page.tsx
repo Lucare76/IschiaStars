@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
 import { StatsCards } from "@/components/StatsCards";
-import { QuoteCard, RequestCard } from "@/components/QuoteCard";
+import { QuoteCard } from "@/components/QuoteCard";
+import { PendingRequestCard } from "@/components/PendingRequestCard";
 import { getDashboardEventStats } from "@/lib/repositories/quoteEvents";
 import { listPendingQuoteRequests } from "@/lib/repositories/quoteRequests";
 import { listQuotes } from "@/lib/repositories/quotes";
@@ -54,7 +55,7 @@ export default async function AdminDashboardPage() {
             </div>
             <div className="grid gap-4">
               {quoteRequests.length
-                ? quoteRequests.slice(0, 2).map((request) => <RequestCard key={request.id} request={request} />)
+                ? quoteRequests.slice(0, 2).map((request) => <PendingRequestCard key={request.id} request={request} />)
                 : <EmptyState text="Nessuna richiesta in attesa" />}
             </div>
           </div>
