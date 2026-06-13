@@ -13,7 +13,10 @@ const SOFT_BG = "#F4F7FA";
 const LIGHT_GOLD_BG = "#FFFBF0";
 const GOLD_BORDER = "#E8D5A0";
 
-const logoPath = path.join(process.cwd(), "public", "ischiastars-logo.png");
+const optimizedLogoPath = path.join(process.cwd(), "public", "ischiastars-logo-pdf.png");
+const logoPath = fs.existsSync(optimizedLogoPath)
+  ? optimizedLogoPath
+  : path.join(process.cwd(), "public", "ischiastars-logo.png");
 const logoSrc = fs.existsSync(logoPath)
   ? `data:image/png;base64,${fs.readFileSync(logoPath).toString("base64")}`
   : null;
@@ -40,12 +43,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   brandRow: {
+    width: 130,
     flexDirection: "row",
     alignItems: "center",
   },
   logo: {
-    width: 92,
-    height: 34,
+    width: 62,
+    height: 62,
     objectFit: "contain",
   },
   brandFallback: {
@@ -61,29 +65,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 5,
   },
+  badgeColumn: {
+    width: 130,
+    alignItems: "flex-end",
+  },
   badgeText: {
     fontSize: 7,
     fontFamily: "Helvetica-Bold",
     color: GOLD,
     letterSpacing: 1.3,
   },
-  headerTitleRow: {
-    marginTop: 11,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
+  headerTitleColumn: {
+    flex: 1,
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 20,
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
     letterSpacing: 0.8,
-  },
-  headerSubtitle: {
-    fontSize: 6.5,
-    color: GOLD,
-    letterSpacing: 1.5,
-    marginTop: 3,
+    textAlign: "center",
   },
   headerCodeLabel: {
     fontSize: 6,
@@ -97,6 +98,10 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
     textAlign: "right",
+  },
+  headerCodeBlock: {
+    marginTop: 7,
+    alignItems: "flex-end",
   },
   body: {
     paddingHorizontal: 26,
@@ -377,6 +382,7 @@ export type VoucherDocumentData = {
   depositPaidAtLabel: string;
   balanceAmountLabel?: string;
   balanceMethodLabel?: string;
+  voucherNotes?: string;
   whatsappNumber: string;
 };
 
@@ -393,6 +399,7 @@ function ClientDetail({ label, value }: { label: string; value?: string }) {
 export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
   const services = (data.includedServices ?? []).filter(Boolean);
   const hasChips = Boolean(data.roomTypeLabel || data.treatmentLabel);
+  const voucherNotes = data.voucherNotes?.trim();
 
   return (
     <Document>
@@ -407,20 +414,19 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
                 <Text style={styles.brandFallback}>IschiaStars</Text>
               )}
             </View>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>CONFERMATO</Text>
+            <View style={styles.headerTitleColumn}>
+              <Text style={styles.headerTitle}>Voucher di Prenotazione</Text>
+            </View>
+            <View style={styles.badgeColumn}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>CONFERMATO</Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.headerTitleRow}>
-            <View>
-              <Text style={styles.headerTitle}>Voucher di Prenotazione</Text>
-              <Text style={styles.headerSubtitle}>DOCUMENTO UFFICIALE ISCHIASTARS</Text>
-            </View>
-            <View>
-              <Text style={styles.headerCodeLabel}>CODICE VOUCHER</Text>
-              <Text style={styles.headerCode}>{data.quoteCode}-V</Text>
-            </View>
+          <View style={styles.headerCodeBlock}>
+            <Text style={styles.headerCodeLabel}>CODICE VOUCHER</Text>
+            <Text style={styles.headerCode}>{data.quoteCode}-V</Text>
           </View>
         </View>
 
@@ -521,6 +527,13 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
               ) : null}
             </View>
           </View>
+
+          {voucherNotes ? (
+            <View style={[styles.card, styles.cardAccentGold, { marginBottom: 8 }]} wrap={false}>
+              <Text style={styles.sectionTitle}>Note della prenotazione</Text>
+              <Text style={styles.notesText}>{voucherNotes}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.notes} wrap={false}>
             <Text style={styles.notesTitle}>Note importanti</Text>

@@ -110,6 +110,7 @@ export type QuoteConfirmation = {
   depositDueAt?: string;
   depositPaidAt?: string | null;
   balancePaidAt?: string | null;
+  voucherNotes?: string;
   finalConfirmationSentAt?: string;
   finalConfirmationNotes?: string;
   unavailableReason?: string;

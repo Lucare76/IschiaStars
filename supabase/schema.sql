@@ -141,6 +141,7 @@ create table if not exists public.quote_confirmations (
   deposit_due_at timestamptz,
   final_confirmation_sent_at timestamptz,
   final_confirmation_notes text,
+  voucher_notes text,
   unavailable_reason text,
   unavailability_email_sent_at timestamptz,
   availability_updated_at timestamptz,
@@ -314,6 +315,7 @@ alter table public.quote_confirmations add column if not exists availability_sta
 alter table public.quote_confirmations add column if not exists deposit_due_at timestamptz;
 alter table public.quote_confirmations add column if not exists final_confirmation_sent_at timestamptz;
 alter table public.quote_confirmations add column if not exists final_confirmation_notes text;
+alter table public.quote_confirmations add column if not exists voucher_notes text;
 alter table public.quote_confirmations add column if not exists unavailable_reason text;
 alter table public.quote_confirmations add column if not exists unavailability_email_sent_at timestamptz;
 alter table public.quote_confirmations add column if not exists availability_updated_at timestamptz;

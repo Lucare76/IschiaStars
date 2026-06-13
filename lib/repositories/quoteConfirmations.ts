@@ -208,6 +208,21 @@ export async function updateConfirmationAmounts(id: string, depositAmount: numbe
     .eq("id", id);
 }
 
+export async function updateVoucherNotes(id: string, voucherNotes: string | null): Promise<RepositoryResult<Record<string, unknown> | null>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(null);
+
+  const { data, error } = await supabase
+    .from("quote_confirmations")
+    .update({ voucher_notes: voucherNotes })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) return fallback(null, error);
+  return fromSupabase(data as Record<string, unknown>);
+}
+
 export async function markBalancePaid(id: string): Promise<RepositoryResult<Record<string, unknown> | null>> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(null);

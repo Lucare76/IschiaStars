@@ -35,6 +35,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [newTotalPrice, setNewTotalPrice] = useState(formatAmountInput(defaultSelectedPrice));
   const [newDepositAmount, setNewDepositAmount] = useState(formatAmountInput(defaultDepositAmount));
   const [totalManuallyEdited, setTotalManuallyEdited] = useState(false);
+  const [voucherNotes, setVoucherNotes] = useState(confirmation?.voucherNotes ?? "");
 
   const confirmationId = confirmation?.id;
   const status = confirmation?.availabilityStatus ?? "availability_to_check";
@@ -74,7 +75,8 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     setNewTotalPrice(formatAmountInput(defaultSelectedPrice));
     setNewDepositAmount(formatAmountInput(defaultDepositAmount));
     setTotalManuallyEdited(false);
-  }, [confirmationId, defaultSelectedPrice, defaultDepositAmount]);
+    setVoucherNotes(confirmation?.voucherNotes ?? "");
+  }, [confirmationId, confirmation?.voucherNotes, defaultSelectedPrice, defaultDepositAmount]);
 
   const depositCoordinatesWhatsapp = useMemo(() => {
     if (!hasCurrentCoordinates || depositAmount == null) return null;
@@ -257,6 +259,26 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     setMessage("\u2713 Importi aggiornati");
     if (result.quote) onConfirmationUpdated?.(result.quote);
     setTotalManuallyEdited(false);
+    router.refresh();
+  }
+
+  async function patchVoucherNotes() {
+    setLoadingAction("voucher-notes");
+    setMessage(null);
+    const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/voucher-notes`, {
+      method: "PATCH",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({ voucherNotes })
+    });
+    const result = await readAdminApiJson<{ success?: boolean; error?: string; quote?: Quote }>(response);
+    setLoadingAction(null);
+    if (!response.ok || !result?.success) {
+      setMessage(adminApiErrorMessage(response, result));
+      return;
+    }
+
+    setMessage("Note voucher salvate.");
+    if (result.quote) onConfirmationUpdated?.(result.quote);
     router.refresh();
   }
 
@@ -594,6 +616,25 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
       {status === "deposit_waiting" && featureFlags.voucher_cliente ? (
         <div className="mt-5 rounded-2xl bg-amber-50/60 p-4 ring-1 ring-amber-200/70">
           <h3 className="font-black text-ischia-navy">Caparra e voucher cliente</h3>
+          <label className="mt-3 block text-sm font-semibold text-ischia-ink">
+            Note voucher
+            <textarea
+              className="mt-1 min-h-20 w-full rounded-xl border border-ischia-blue/20 bg-white px-3 py-2"
+              maxLength={500}
+              placeholder="Scrivi eventuali note da mostrare nel voucher…"
+              value={voucherNotes}
+              onChange={(event) => setVoucherNotes(event.target.value)}
+            />
+            <span className="mt-1 block text-xs font-normal text-ischia-ink/65">Queste note compariranno nel voucher inviato al cliente.</span>
+          </label>
+          <button
+            className="mt-3 rounded-full border border-[#1B3A5C] bg-white px-4 py-2 text-sm font-black text-[#1B3A5C] hover:bg-[#EFF6FF] disabled:opacity-60"
+            disabled={Boolean(loadingAction)}
+            onClick={() => void patchVoucherNotes()}
+            type="button"
+          >
+            Salva note voucher
+          </button>
           {confirmation.depositPaidAt ? (
             isInHotelBalance ? (
               <div className="mt-3 flex flex-wrap items-center gap-3">

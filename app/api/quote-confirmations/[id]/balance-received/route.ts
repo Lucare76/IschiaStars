@@ -64,6 +64,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
       depositPaidAtLabel: formatDateTime(depositPaidAt),
       balanceAmountLabel: typeof balanceAmount === "number" ? formatCurrency(balanceAmount) : undefined,
+      voucherNotes: confirmation.voucherNotes,
       whatsappNumber: ischiastarsWhatsappNumber()
     });
 

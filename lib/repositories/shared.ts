@@ -167,6 +167,7 @@ export function mapQuote(
           depositDueAt: confirmationRow?.deposit_due_at ? String(confirmationRow.deposit_due_at) : undefined,
           depositPaidAt: confirmationRow?.deposit_paid_at ? String(confirmationRow.deposit_paid_at) : null,
           balancePaidAt: confirmationRow?.balance_paid_at ? String(confirmationRow.balance_paid_at) : null,
+          voucherNotes: confirmationRow?.voucher_notes ? String(confirmationRow.voucher_notes) : undefined,
           finalConfirmationSentAt: confirmationRow?.final_confirmation_sent_at ? String(confirmationRow.final_confirmation_sent_at) : undefined,
           finalConfirmationNotes: confirmationRow?.final_confirmation_notes ? String(confirmationRow.final_confirmation_notes) : undefined,
           unavailableReason: confirmationRow?.unavailable_reason ? String(confirmationRow.unavailable_reason) : undefined,

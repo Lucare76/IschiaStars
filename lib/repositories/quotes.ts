@@ -171,7 +171,7 @@ async function fetchConfirmationsForQuotes(quoteIds: string[]): Promise<Record<s
 
   const { data } = await supabase
     .from("quote_confirmations")
-    .select("id,quote_id,created_at,first_name,last_name,phone,email,fiscal_code,address,city,postal_code,province,accepted_terms,accepted_privacy,selected_hotel_option_id,selected_hotel_name,selected_treatment_key,selected_treatment_label,selected_price,selected_deposit_percent,selected_deposit_amount,selected_balance_amount,selected_balance_method,selected_payment_policy,selected_cancellation_policy,payment_settings_snapshot,metadata,availability_status,deposit_due_at,deposit_paid_at,balance_paid_at,final_confirmation_sent_at,final_confirmation_notes,unavailable_reason,unavailability_email_sent_at,availability_updated_at")
+    .select("id,quote_id,created_at,first_name,last_name,phone,email,fiscal_code,address,city,postal_code,province,accepted_terms,accepted_privacy,selected_hotel_option_id,selected_hotel_name,selected_treatment_key,selected_treatment_label,selected_price,selected_deposit_percent,selected_deposit_amount,selected_balance_amount,selected_balance_method,selected_payment_policy,selected_cancellation_policy,payment_settings_snapshot,metadata,availability_status,deposit_due_at,deposit_paid_at,balance_paid_at,voucher_notes,final_confirmation_sent_at,final_confirmation_notes,unavailable_reason,unavailability_email_sent_at,availability_updated_at")
     .in("quote_id", quoteIds);
 
   const result: Record<string, Record<string, unknown>> = {};
