@@ -62,7 +62,7 @@ export function buildDashboardStats({
 
   const confirmed = activeQuotes.filter((quote) => quote.status === "confermato" || Boolean(quote.confirmation) || activeConfirmedIds.has(quote.id));
   const confirmedIds = new Set(confirmed.map((quote) => quote.id));
-  const evaded = activeQuotes.filter((quote) => !confirmedIds.has(quote.id) && quote.status !== "perso_non_disponibile");
+  const evaded = activeQuotes.filter((quote) => quote.status === "preventivo_inviato" && !confirmedIds.has(quote.id));
   const opened = activeQuotes.filter((quote) => quote.status === "preventivo_inviato" && activeOpenedIds.has(quote.id));
 
   return {

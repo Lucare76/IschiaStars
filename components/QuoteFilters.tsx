@@ -99,14 +99,14 @@ export function QuoteFilters({
     const isDeleted = Boolean(quote.deletedAt);
 
     const matchesFilter =
-      ((filter === "evasi" || filter === "attivi") && !isDeleted && !quote.excludedFromStats && !isConfirmed && quote.status !== "perso_non_disponibile") ||
+      ((filter === "evasi" || filter === "attivi") && !isDeleted && !quote.excludedFromStats && !isConfirmed && quote.status === "preventivo_inviato") ||
       (filter === "tutti" && !isDeleted) ||
       (filter === "cancellati" && isDeleted) ||
       (filter === "esclusi" && quote.excludedFromStats && !isDeleted) ||
       (filter === "preventivo_inviato" && !isDeleted && !quote.excludedFromStats && quote.status === filter) ||
       (filter === "alternative" && !isDeleted && !quote.excludedFromStats && quote.isAlternative) ||
       (filter === "confermati" && !isDeleted && !quote.excludedFromStats && isConfirmed) ||
-      (filter === "aperti" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.openings) && !isConfirmed) ||
+      (filter === "aperti" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.openings) && !isConfirmed && quote.status === "preventivo_inviato") ||
       (filter === "click_whatsapp" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.whatsappClicks)) ||
       (filter === "perso_non_disponibile" && !isDeleted && !quote.excludedFromStats && quote.status === filter);
 
