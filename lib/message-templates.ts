@@ -61,8 +61,12 @@ export function adminQuoteWhatsappMessage(input: {
     const lines: string[] = [`🏨 ${first.hotelName}${starsStr}`];
 
     if (group.length === 1) {
+      const optionLabel = first.roomTypeLabel?.trim();
+      if (optionLabel && !roomTypeLine) {
+        lines.push(`   🛏 ${optionLabel}`);
+      }
       for (const treatment of first.treatments) {
-        lines.push(`   · ${treatment.label}: ${formatWAPrice(treatment.price)}`);
+        lines.push(`${optionLabel && !roomTypeLine ? "      " : "   "}· ${treatment.label}: ${formatWAPrice(treatment.price)}`);
       }
     } else {
       for (let index = 0; index < group.length; index++) {
