@@ -60,14 +60,19 @@ export function adminQuoteWhatsappMessage(input: {
     const starsStr = first.hotelStars && first.hotelStars > 0 ? " " + "⭐".repeat(first.hotelStars) : "";
     const lines: string[] = [`🏨 ${first.hotelName}${starsStr}`];
 
-    const treatmentMap = new Map<string, number>();
-    for (const opt of group) {
-      for (const t of opt.treatments) {
-        if (!treatmentMap.has(t.label)) treatmentMap.set(t.label, t.price);
+    if (group.length === 1) {
+      for (const treatment of first.treatments) {
+        lines.push(`   · ${treatment.label}: ${formatWAPrice(treatment.price)}`);
       }
-    }
-    for (const [label, price] of Array.from(treatmentMap.entries())) {
-      lines.push(`   · ${label}: ${formatWAPrice(price)}`);
+    } else {
+      for (let index = 0; index < group.length; index++) {
+        const option = group[index];
+        const optionLabel = option.roomTypeLabel?.trim() || `Soluzione ${index + 1}`;
+        lines.push(`   🛏 ${optionLabel}`);
+        for (const treatment of option.treatments) {
+          lines.push(`      · ${treatment.label}: ${formatWAPrice(treatment.price)}`);
+        }
+      }
     }
     return lines.join("\n");
   });
