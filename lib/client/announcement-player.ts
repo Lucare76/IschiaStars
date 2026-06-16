@@ -4,12 +4,76 @@ export async function playStationAnnouncement(settings: AnnouncementSettings): P
   if (settings.notificationAnnouncementJingle) {
     await playJingle(settings.notificationAnnouncementVolume);
   }
-  speakText(
+  await speakText(
     settings.notificationAnnouncementMessage,
     settings.notificationAnnouncementRate,
     settings.notificationAnnouncementPitch,
     settings.notificationAnnouncementVolume
   );
+}
+
+// Waits for speechSynthesis.onvoiceschanged with a hard timeout fallback.
+// Clears the timeout as soon as the event fires to prevent double execution.
+function waitForVoices(timeoutMs = 1500): Promise<SpeechSynthesisVoice[]> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      resolve(window.speechSynthesis.getVoices());
+    }, timeoutMs);
+
+    window.speechSynthesis.addEventListener(
+      "voiceschanged",
+      () => {
+        clearTimeout(timer);
+        resolve(window.speechSynthesis.getVoices());
+      },
+      { once: true }
+    );
+  });
+}
+
+// Priority order:
+//   1. name contains "google italiano" (case-insensitive)
+//   2. lang === "it-IT"
+//   3. lang starts with "it" (e.g. "it-CH")
+//   4. browser default voice
+//   5. null (browser picks whatever it wants)
+async function getPreferredItalianVoice(): Promise<SpeechSynthesisVoice | null> {
+  let voices = window.speechSynthesis.getVoices();
+  if (!voices.length) {
+    voices = await waitForVoices();
+  }
+
+  const voice =
+    voices.find((v) => v.name.toLowerCase().includes("google italiano")) ??
+    voices.find((v) => v.lang === "it-IT") ??
+    voices.find((v) => v.lang.toLowerCase().startsWith("it")) ??
+    voices.find((v) => v.default) ??
+    null;
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[announcement] selected voice", voice?.name, voice?.lang);
+  }
+
+  return voice;
+}
+
+async function speakText(text: string, rate: number, pitch: number, volume: number): Promise<void> {
+  try {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+
+    const voice = await getPreferredItalianVoice();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "it-IT";
+    utterance.rate = rate;
+    utterance.pitch = pitch;
+    utterance.volume = volume;
+    if (voice) utterance.voice = voice;
+
+    window.speechSynthesis.speak(utterance);
+  } catch {
+    console.debug("[announcement-player] speechSynthesis non disponibile o bloccato");
+  }
 }
 
 // Two-tone station-style ding-dong: E5 (880Hz) then E4 (659Hz)
@@ -52,37 +116,4 @@ async function playJingle(volume: number): Promise<void> {
       resolve();
     }
   });
-}
-
-function speakText(text: string, rate: number, pitch: number, volume: number): void {
-  try {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "it-IT";
-    utterance.rate = rate;
-    utterance.pitch = pitch;
-    utterance.volume = volume;
-
-    const pickVoice = () => {
-      const voices = window.speechSynthesis.getVoices();
-      const italianVoice =
-        voices.find((v) => v.lang === "it-IT") ??
-        voices.find((v) => v.lang.startsWith("it-"));
-      if (italianVoice) utterance.voice = italianVoice;
-      window.speechSynthesis.speak(utterance);
-    };
-
-    // Voices may not be loaded yet on first call
-    if (window.speechSynthesis.getVoices().length > 0) {
-      pickVoice();
-    } else {
-      window.speechSynthesis.addEventListener("voiceschanged", pickVoice, { once: true });
-      // Fallback if voiceschanged never fires
-      setTimeout(pickVoice, 300);
-    }
-  } catch {
-    // Browser blocked speech; fail silently
-    console.debug("[announcement-player] speechSynthesis non disponibile o bloccato");
-  }
 }
