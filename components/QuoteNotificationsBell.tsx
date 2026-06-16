@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiFetch } from "@/lib/admin-api-client";
+import { AnnouncementSettings, defaultAnnouncementSettings } from "@/lib/announcement-settings";
+import { playStationAnnouncement } from "@/lib/client/announcement-player";
 
 type NotificationType = "apertura" | "cliente_caldo" | "conferma" | "click" | "interesse";
 
@@ -22,17 +24,57 @@ export function QuoteNotificationsBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // IDs seen at first load — never trigger announcement for these
+  const knownIdsRef = useRef<Set<string>>(new Set());
+  // True after the first successful fetch; prevents first-load announcements
+  const firstLoadDoneRef = useRef(false);
+  // Latest announcement settings (fetched once, re-read on next poll cycle)
+  const announcementRef = useRef<AnnouncementSettings>(defaultAnnouncementSettings);
+
   const unreadCount = notifications.filter((notification) => !notification.isRead).length;
 
+  // Load announcement settings once (readable by any authenticated admin)
   useEffect(() => {
-    void loadNotifications(setNotifications);
+    adminApiFetch("/api/admin/announcement-settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((payload: { ok?: boolean; data?: AnnouncementSettings } | null) => {
+        if (payload?.data) announcementRef.current = payload.data;
+      })
+      .catch(() => null);
+  }, []);
+
+  useEffect(() => {
+    async function poll() {
+      const items = await fetchNotifications();
+      if (!items) return;
+
+      if (!firstLoadDoneRef.current) {
+        // First load: record all existing IDs so we never announce them
+        for (const item of items) knownIdsRef.current.add(item.id);
+        firstLoadDoneRef.current = true;
+        setNotifications(items);
+        return;
+      }
+
+      // Subsequent polls: detect IDs not previously seen
+      const newIds = items.filter((item) => !knownIdsRef.current.has(item.id));
+      for (const item of items) knownIdsRef.current.add(item.id);
+      setNotifications(items);
+
+      if (newIds.length > 0 && announcementRef.current.notificationVoiceAnnouncement) {
+        playStationAnnouncement(announcementRef.current).catch(() => null);
+      }
+    }
+
+    void poll();
 
     const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") void loadNotifications(setNotifications);
+      if (document.visibilityState === "visible") void poll();
     }, 30_000);
 
     function handleVisibilityChange() {
-      if (document.visibilityState === "visible") void loadNotifications(setNotifications);
+      if (document.visibilityState === "visible") void poll();
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -114,11 +156,12 @@ export function QuoteNotificationsBell() {
   );
 }
 
-async function loadNotifications(setNotifications: (items: NotificationItem[]) => void) {
+async function fetchNotifications(): Promise<NotificationItem[] | null> {
   const response = await adminApiFetch("/api/quote-notifications").catch(() => null);
-  if (!response?.ok) return;
+  if (!response?.ok) return null;
   const payload = await response.json().catch(() => null) as { data?: NotificationItem[] } | null;
-  if (Array.isArray(payload?.data)) setNotifications(payload.data);
+  if (Array.isArray(payload?.data)) return payload.data;
+  return null;
 }
 
 function notificationColor(type: NotificationType) {

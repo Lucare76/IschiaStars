@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { LabPageClient } from "@/components/lab/LabPageClient";
-import { getFeatureFlags } from "@/lib/repositories/settings";
+import { getAnnouncementSettings, getFeatureFlags } from "@/lib/repositories/settings";
 import { listLabTestQuotes } from "@/lib/repositories/quotes";
 import { getAdminSession } from "@/lib/server/auth-guard";
 
@@ -12,15 +12,17 @@ export default async function SupervisorLabPage() {
     redirect("/admin");
   }
 
-  const [featureFlagsResult, testQuotes] = await Promise.all([
+  const [featureFlagsResult, testQuotes, announcementResult] = await Promise.all([
     getFeatureFlags(),
-    listLabTestQuotes()
+    listLabTestQuotes(),
+    getAnnouncementSettings()
   ]);
 
   return (
     <LabPageClient
       initialFlags={featureFlagsResult.data}
       initialTestQuotes={testQuotes}
+      initialAnnouncementSettings={announcementResult.data}
     />
   );
 }

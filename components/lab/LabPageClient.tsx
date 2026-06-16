@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { FEATURE_FLAG_DEFINITIONS, FeatureFlagKey, FeatureFlags } from "@/lib/feature-flags";
+import { AnnouncementSettings, defaultAnnouncementSettings } from "@/lib/announcement-settings";
+import { playStationAnnouncement } from "@/lib/client/announcement-player";
 import { formatDateTime } from "@/lib/utils";
 
 type LabTestQuote = {
@@ -17,10 +19,12 @@ type LabTestQuote = {
 
 export function LabPageClient({
   initialFlags,
-  initialTestQuotes
+  initialTestQuotes,
+  initialAnnouncementSettings
 }: {
   initialFlags: FeatureFlags;
   initialTestQuotes: LabTestQuote[];
+  initialAnnouncementSettings: AnnouncementSettings;
 }) {
   return (
     <div className="grid gap-6">
@@ -29,6 +33,7 @@ export function LabPageClient({
       </div>
 
       <FeatureFlagsSection initialFlags={initialFlags} />
+      <AnnouncementSection initialSettings={initialAnnouncementSettings} />
       <TestQuotesSection initialTestQuotes={initialTestQuotes} />
     </div>
   );
@@ -58,7 +63,6 @@ function FeatureFlagsSection({ initialFlags }: { initialFlags: FeatureFlags }) {
       return;
     }
 
-    // Mantieni lo stato ottimistico: aggiorna solo il flag toccato
     setFlags((current) => ({ ...current, [flag]: value }));
     setSavedFlag(flag);
     setTimeout(() => setSavedFlag((current) => (current === flag ? null : current)), 2000);
@@ -94,6 +98,178 @@ function FeatureFlagsSection({ initialFlags }: { initialFlags: FeatureFlags }) {
             </div>
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function AnnouncementSection({ initialSettings }: { initialSettings: AnnouncementSettings }) {
+  const [settings, setSettings] = useState<AnnouncementSettings>(initialSettings);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function update<K extends keyof AnnouncementSettings>(key: K, value: AnnouncementSettings[K]) {
+    setSettings((current) => ({ ...current, [key]: value }));
+    setSaved(false);
+  }
+
+  async function handleSave() {
+    setError(null);
+    setSaving(true);
+    const response = await adminApiFetch("/api/admin/announcement-settings", {
+      method: "POST",
+      body: JSON.stringify(settings)
+    });
+    const result = await readAdminApiJson<{ ok?: boolean; data?: AnnouncementSettings; error?: string }>(response);
+    setSaving(false);
+
+    if (!response.ok || !result?.ok) {
+      setError(adminApiErrorMessage(response, result, "Salvataggio non riuscito. Riprova."));
+      return;
+    }
+
+    if (result.data) setSettings(result.data);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  async function handleTest() {
+    setTesting(true);
+    await playStationAnnouncement(settings);
+    setTimeout(() => setTesting(false), 1200);
+  }
+
+  const labelClass = "block text-sm font-semibold text-ischia-navy";
+  const rangeClass = "w-full accent-[#1B3A5C]";
+  const toggleClass = "relative inline-flex cursor-pointer items-center";
+
+  return (
+    <section className="rounded-2xl bg-white/90 p-6 shadow-soft">
+      <h2 className="text-xl font-black text-ischia-navy">Annuncio notifiche</h2>
+      <p className="mt-1 text-sm text-ischia-ink/60">
+        Gestisce il suono o l&apos;annuncio vocale quando arriva una nuova attività cliente.
+      </p>
+
+      {error ? <p className="mt-3 text-sm font-semibold text-red-600">{error}</p> : null}
+
+      <div className="mt-5 grid gap-5">
+        {/* Attiva annuncio */}
+        <div className="flex items-center justify-between gap-4 rounded-xl bg-ischia-mist p-4">
+          <div>
+            <p className="font-semibold text-ischia-navy">Attiva annuncio notifiche</p>
+            <p className="mt-0.5 text-xs text-ischia-ink/60">Riproduce un annuncio vocale alla campanella quando arriva una nuova notifica.</p>
+          </div>
+          <label className={toggleClass}>
+            <input
+              type="checkbox"
+              className="peer sr-only"
+              checked={settings.notificationVoiceAnnouncement}
+              onChange={(e) => update("notificationVoiceAnnouncement", e.currentTarget.checked)}
+            />
+            <span className="h-6 w-11 rounded-full bg-slate-300 transition peer-checked:bg-emerald-500" />
+            <span className="absolute left-1 h-4 w-4 rounded-full bg-white transition peer-checked:translate-x-5" />
+          </label>
+        </div>
+
+        {/* Testo annuncio */}
+        <div className="grid gap-1.5">
+          <label className={labelClass} htmlFor="ann-message">Testo annuncio</label>
+          <textarea
+            id="ann-message"
+            rows={3}
+            className="w-full rounded-xl border border-slate-200 bg-ischia-mist px-3 py-2 text-sm text-ischia-ink focus:outline-none focus:ring-2 focus:ring-ischia-blue/40"
+            value={settings.notificationAnnouncementMessage}
+            onChange={(e) => update("notificationAnnouncementMessage", e.currentTarget.value)}
+          />
+        </div>
+
+        {/* Jingle */}
+        <div className="flex items-center justify-between gap-4 rounded-xl bg-ischia-mist p-4">
+          <div>
+            <p className="font-semibold text-ischia-navy">Usa jingle stazione prima della voce</p>
+            <p className="mt-0.5 text-xs text-ischia-ink/60">Riproduce due note stile stazione ferroviaria prima dell&apos;annuncio vocale.</p>
+          </div>
+          <label className={toggleClass}>
+            <input
+              type="checkbox"
+              className="peer sr-only"
+              checked={settings.notificationAnnouncementJingle}
+              onChange={(e) => update("notificationAnnouncementJingle", e.currentTarget.checked)}
+            />
+            <span className="h-6 w-11 rounded-full bg-slate-300 transition peer-checked:bg-emerald-500" />
+            <span className="absolute left-1 h-4 w-4 rounded-full bg-white transition peer-checked:translate-x-5" />
+          </label>
+        </div>
+
+        {/* Volume / Rate / Pitch */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-1.5">
+            <label className={labelClass} htmlFor="ann-volume">
+              Volume — <span className="font-mono text-ischia-blue">{settings.notificationAnnouncementVolume.toFixed(2)}</span>
+            </label>
+            <input
+              id="ann-volume"
+              type="range"
+              className={rangeClass}
+              min={0.1} max={1} step={0.05}
+              value={settings.notificationAnnouncementVolume}
+              onChange={(e) => update("notificationAnnouncementVolume", parseFloat(e.currentTarget.value))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className={labelClass} htmlFor="ann-rate">
+              Velocità voce — <span className="font-mono text-ischia-blue">{settings.notificationAnnouncementRate.toFixed(2)}</span>
+            </label>
+            <input
+              id="ann-rate"
+              type="range"
+              className={rangeClass}
+              min={0.6} max={1.3} step={0.05}
+              value={settings.notificationAnnouncementRate}
+              onChange={(e) => update("notificationAnnouncementRate", parseFloat(e.currentTarget.value))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className={labelClass} htmlFor="ann-pitch">
+              Tono voce — <span className="font-mono text-ischia-blue">{settings.notificationAnnouncementPitch.toFixed(2)}</span>
+            </label>
+            <input
+              id="ann-pitch"
+              type="range"
+              className={rangeClass}
+              min={0.6} max={1.4} step={0.05}
+              value={settings.notificationAnnouncementPitch}
+              onChange={(e) => update("notificationAnnouncementPitch", parseFloat(e.currentTarget.value))}
+            />
+          </div>
+        </div>
+
+        {/* Pulsanti */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="rounded-full bg-[#1B3A5C] px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {saving ? "Salvataggio…" : "Salva impostazioni"}
+          </button>
+          <button
+            type="button"
+            onClick={handleTest}
+            disabled={testing}
+            className="rounded-full bg-ischia-mist px-5 py-2 text-sm font-semibold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
+          >
+            {testing ? "In riproduzione…" : "Prova annuncio"}
+          </button>
+          {saved ? <span className="text-sm font-bold text-emerald-600">✓ Salvato</span> : null}
+        </div>
+
+        <p className="text-xs text-ischia-ink/50">
+          L&apos;annuncio funziona solo quando il gestionale è aperto e il browser consente la riproduzione audio.
+        </p>
       </div>
     </section>
   );
@@ -197,3 +373,6 @@ function TestQuotesSection({ initialTestQuotes }: { initialTestQuotes: LabTestQu
     </section>
   );
 }
+
+// Re-export default announcement settings for external use without importing the lib directly
+export { defaultAnnouncementSettings };

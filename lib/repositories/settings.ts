@@ -1,4 +1,5 @@
 import { unstable_noStore as noStore } from "next/cache";
+import { ANNOUNCEMENT_SETTINGS_KEY, AnnouncementSettings, normalizeAnnouncementSettings } from "@/lib/announcement-settings";
 import { emptyFeatureFlags, FEATURE_FLAGS_KEY, FeatureFlagKey, FeatureFlags, normalizeFeatureFlags } from "@/lib/feature-flags";
 import { emptyPaymentSettings, normalizePaymentSettings, PAYMENT_SETTINGS_KEY, PaymentSettings, paymentSettingsToDbValue } from "@/lib/payment-settings";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
@@ -59,6 +60,37 @@ export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>>
     return fallback(emptyFeatureFlags, error);
   }
   return fromSupabase(normalizeFeatureFlags(data?.value));
+}
+
+export async function getAnnouncementSettings(): Promise<RepositoryResult<AnnouncementSettings>> {
+  noStore();
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(normalizeAnnouncementSettings({}));
+
+  const { data, error } = await supabase
+    .from("settings")
+    .select("key,value")
+    .eq("key", ANNOUNCEMENT_SETTINGS_KEY)
+    .maybeSingle();
+
+  if (error) return fallback(normalizeAnnouncementSettings({}), error);
+  return fromSupabase(normalizeAnnouncementSettings(data?.value));
+}
+
+export async function updateAnnouncementSettings(settings: AnnouncementSettings): Promise<RepositoryResult<AnnouncementSettings>> {
+  noStore();
+  const supabase = createSupabaseAdminClient();
+  const normalized = normalizeAnnouncementSettings(settings);
+  if (!supabase) return fallback(normalized);
+
+  const { data, error } = await supabase
+    .from("settings")
+    .upsert({ key: ANNOUNCEMENT_SETTINGS_KEY, value: normalized }, { onConflict: "key" })
+    .select("value")
+    .single();
+
+  if (error) return fallback(normalized, error);
+  return fromSupabase(normalizeAnnouncementSettings(data?.value));
 }
 
 export async function updateFeatureFlag(flag: FeatureFlagKey, value: boolean): Promise<RepositoryResult<FeatureFlags>> {
