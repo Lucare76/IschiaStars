@@ -46,7 +46,8 @@ const HOTEL_REASON_QUICK_PHRASES = [
   "Vista mare garantita",
   "Struttura tranquilla, lontana dal caos",
   "Consigliato per coppie",
-  "Uno dei più richiesti della stagione"
+  "Uno dei più richiesti della stagione",
+  "Struttura confortevole a 5 minuti dal centro"
 ] as const;
 
 const TREATMENT_DETAIL_QUICK_PHRASES = [
