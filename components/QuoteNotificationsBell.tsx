@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiFetch } from "@/lib/admin-api-client";
 import { AnnouncementSettings, defaultAnnouncementSettings } from "@/lib/announcement-settings";
-import { playStationAnnouncement } from "@/lib/client/announcement-player";
+import { playConfirmaSound, playStationAnnouncement } from "@/lib/client/announcement-player";
 
 type NotificationType = "apertura" | "cliente_caldo" | "conferma" | "click" | "interesse";
 
@@ -63,7 +63,15 @@ export function QuoteNotificationsBell() {
       setNotifications(items);
 
       if (newIds.length > 0 && announcementRef.current.notificationVoiceAnnouncement) {
-        playStationAnnouncement(announcementRef.current).catch(() => null);
+        const hasConferma = newIds.some((item) => item.type === "conferma");
+        if (hasConferma) {
+          playConfirmaSound(
+            announcementRef.current.notificationAnnouncementVolume,
+            announcementRef.current.notificationConfermaAudioUrl || undefined
+          ).catch(() => null);
+        } else {
+          playStationAnnouncement(announcementRef.current).catch(() => null);
+        }
       }
     }
 

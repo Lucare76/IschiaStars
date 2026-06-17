@@ -7,6 +7,7 @@ export type AnnouncementSettings = {
   notificationAnnouncementVolume: number;
   notificationAnnouncementRate: number;
   notificationAnnouncementPitch: number;
+  notificationConfermaAudioUrl: string;
 };
 
 export const defaultAnnouncementSettings: AnnouncementSettings = {
@@ -16,6 +17,7 @@ export const defaultAnnouncementSettings: AnnouncementSettings = {
   notificationAnnouncementVolume: 0.9,
   notificationAnnouncementRate: 0.88,
   notificationAnnouncementPitch: 0.88,
+  notificationConfermaAudioUrl: "",
 };
 
 export function normalizeAnnouncementSettings(value: unknown): AnnouncementSettings {
@@ -43,6 +45,9 @@ export function normalizeAnnouncementSettings(value: unknown): AnnouncementSetti
     notificationAnnouncementPitch: typeof r.notificationAnnouncementPitch === "number"
       ? clamp(r.notificationAnnouncementPitch, 0.6, 1.4)
       : defaultAnnouncementSettings.notificationAnnouncementPitch,
+    notificationConfermaAudioUrl: typeof r.notificationConfermaAudioUrl === "string"
+      ? r.notificationConfermaAudioUrl
+      : defaultAnnouncementSettings.notificationConfermaAudioUrl,
   };
 }
 

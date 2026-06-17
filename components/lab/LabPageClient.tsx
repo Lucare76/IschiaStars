@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { FEATURE_FLAG_DEFINITIONS, FeatureFlagKey, FeatureFlags } from "@/lib/feature-flags";
 import { AnnouncementSettings, defaultAnnouncementSettings } from "@/lib/announcement-settings";
-import { playStationAnnouncement } from "@/lib/client/announcement-player";
+import { playConfirmaSound, playStationAnnouncement } from "@/lib/client/announcement-player";
 import { formatDateTime } from "@/lib/utils";
 
 type LabTestQuote = {
@@ -109,6 +109,8 @@ function AnnouncementSection({ initialSettings }: { initialSettings: Announcemen
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
 
   function update<K extends keyof AnnouncementSettings>(key: K, value: AnnouncementSettings[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -139,6 +141,46 @@ function AnnouncementSection({ initialSettings }: { initialSettings: Announcemen
     setTesting(true);
     await playStationAnnouncement(settings);
     setTimeout(() => setTesting(false), 1200);
+  }
+
+  async function handleAudioUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    event.currentTarget.value = "";
+    setAudioError(null);
+    setUploadingAudio(true);
+
+    const body = new FormData();
+    body.append("file", file);
+
+    const response = await fetch("/api/supervisor/announcement-audio", {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+      body,
+    }).catch(() => null);
+
+    const result = await response?.json().catch(() => null) as { ok?: boolean; data?: { url: string }; error?: string } | null;
+    setUploadingAudio(false);
+
+    if (!response?.ok || !result?.ok || !result.data?.url) {
+      setAudioError(result?.error ?? "Upload non riuscito. Riprova.");
+      return;
+    }
+
+    update("notificationConfermaAudioUrl", result.data.url);
+  }
+
+  async function handleRemoveAudio() {
+    setAudioError(null);
+    setUploadingAudio(true);
+    await fetch("/api/supervisor/announcement-audio", {
+      method: "DELETE",
+      credentials: "include",
+      cache: "no-store",
+    }).catch(() => null);
+    setUploadingAudio(false);
+    update("notificationConfermaAudioUrl", "");
   }
 
   const labelClass = "block text-sm font-semibold text-ischia-navy";
@@ -243,6 +285,58 @@ function AnnouncementSection({ initialSettings }: { initialSettings: Announcemen
               value={settings.notificationAnnouncementPitch}
               onChange={(e) => update("notificationAnnouncementPitch", parseFloat(e.currentTarget.value))}
             />
+          </div>
+        </div>
+
+        {/* Canzone prenotazione confermata */}
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 grid gap-3">
+          <div>
+            <p className="font-semibold text-ischia-navy">Canzone — prenotazione confermata</p>
+            <p className="mt-0.5 text-xs text-ischia-ink/60">
+              Viene riprodotta al posto della fanfara sintetizzata quando arriva una conferma prenotazione.
+              Formati supportati: MP3, WAV, OGG, M4A — max 10 MB.
+            </p>
+          </div>
+
+          {settings.notificationConfermaAudioUrl ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <audio
+                controls
+                src={settings.notificationConfermaAudioUrl}
+                className="h-9 max-w-xs rounded"
+              />
+              <button
+                type="button"
+                onClick={() => playConfirmaSound(settings.notificationAnnouncementVolume, settings.notificationConfermaAudioUrl).catch(() => null)}
+                className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ischia-navy ring-1 ring-ischia-blue/20"
+              >
+                Prova
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveAudio}
+                disabled={uploadingAudio}
+                className="rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 disabled:opacity-60"
+              >
+                Rimuovi
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-ischia-ink/50 italic">Nessuna canzone caricata — verrà suonata la fanfara di default.</p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <label className={`cursor-pointer rounded-full bg-white px-4 py-2 text-sm font-semibold text-ischia-navy ring-1 ring-ischia-blue/20 ${uploadingAudio ? "opacity-60 pointer-events-none" : ""}`}>
+              {uploadingAudio ? "Caricamento…" : settings.notificationConfermaAudioUrl ? "Sostituisci canzone" : "Carica canzone"}
+              <input
+                type="file"
+                accept="audio/*"
+                className="sr-only"
+                onChange={handleAudioUpload}
+                disabled={uploadingAudio}
+              />
+            </label>
+            {audioError ? <p className="text-xs font-semibold text-red-600">{audioError}</p> : null}
           </div>
         </div>
 
