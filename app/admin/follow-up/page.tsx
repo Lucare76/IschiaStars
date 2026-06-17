@@ -15,7 +15,7 @@ const filters: { value: FollowUpFilter; label: string }[] = [
   { value: "caldi", label: "Caldi" },
   { value: "da_sollecitare", label: "Da sollecitare" },
   { value: "mai_aperti", label: "Mai aperti" },
-  { value: "gia_richiamati", label: "Gia richiamati" },
+  { value: "gia_richiamati", label: "Già richiamati" },
   { value: "tutti", label: "Tutti" }
 ];
 
@@ -68,7 +68,7 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
         <Kpi label="Clienti caldi" value={stats.hot} />
         <Kpi label="Da sollecitare" value={stats.toSolicit} />
         <Kpi label="Mai aperti" value={stats.neverOpened} />
-        <Kpi label="Gia richiamati" value={stats.contacted} />
+        <Kpi label="Già richiamati" value={stats.contacted} />
       </section>
 
       <nav className="mt-6 flex flex-wrap gap-2">
@@ -104,7 +104,7 @@ function DataUnavailable({ error }: { error?: string }) {
     <div className="rounded-2xl bg-red-50 p-5 text-sm font-semibold text-red-800 shadow-soft ring-1 ring-red-200">
       <p className="text-base font-black">Follow-up non disponibile</p>
       <p className="mt-2">
-        Connessione al database eventi non riuscita. Per evitare liste parziali o dati non reali, il follow-up resta nascosto finche Supabase non risponde correttamente.
+        Connessione al database eventi non riuscita. Per evitare liste parziali o dati non reali, il follow-up resta nascosto finché Supabase non risponde correttamente.
       </p>
       {error ? <p className="mt-3 break-words text-xs text-red-700/80">Dettaglio tecnico: {error}</p> : null}
     </div>

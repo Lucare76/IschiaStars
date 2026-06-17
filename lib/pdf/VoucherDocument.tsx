@@ -547,7 +547,7 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
           <View style={styles.notes} wrap={false}>
             <Text style={styles.notesTitle}>Note importanti</Text>
             <Text style={styles.notesText}>
-              Il saldo sara versato direttamente in struttura, salvo diverse indicazioni. Extra, tasse di soggiorno e servizi non indicati nel voucher sono esclusi. Presentare il voucher al check-in con documento valido.
+              Il saldo sarà versato direttamente in struttura, salvo diverse indicazioni. Extra, tasse di soggiorno e servizi non indicati nel voucher sono esclusi. Presentare il voucher al check-in con documento valido.
             </Text>
           </View>
         </View>

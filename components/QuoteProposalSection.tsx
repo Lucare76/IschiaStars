@@ -951,7 +951,7 @@ function TreatmentDetails({ option, treatment, details, className }: { option: Q
         <p className="mt-3">I dettagli completi verranno confermati dal nostro staff in fase di prenotazione.</p>
       ) : null}
       <p className="mt-3 text-xs font-semibold text-ischia-ink/65">
-        La proposta e soggetta a disponibilita al momento della conferma definitiva.
+        La proposta è soggetta a disponibilità al momento della conferma definitiva.
       </p>
     </div>
   );

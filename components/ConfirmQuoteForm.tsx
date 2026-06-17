@@ -83,7 +83,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: Quote; 
       }}
     >
       <h3 className="text-2xl font-black text-ischia-navy">Conferma il preventivo</h3>
-      <p className="text-sm leading-6 text-ischia-ink/70">Completa i dati per confermare questa proposta. IschiaStars verifichera la disponibilita con la struttura prima dei passaggi definitivi.</p>
+      <p className="text-sm leading-6 text-ischia-ink/70">Completa i dati per confermare questa proposta. IschiaStars verificherà la disponibilità con la struttura prima dei passaggi definitivi.</p>
 
       {/* Riepilogo selezione */}
       {selectedOption && (
@@ -120,7 +120,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: Quote; 
           {selectedOption.balanceMethod ? <p><strong>Saldo:</strong> {selectedOption.balanceMethod}</p> : null}
           {selectedOption.cancellationPolicy ? <p><strong>Policy cancellazione:</strong> {selectedOption.cancellationPolicy}</p> : null}
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 font-semibold text-amber-900">
-            Le coordinate per il versamento della caparra saranno inviate solo dopo la verifica della disponibilita con la struttura.
+            Le coordinate per il versamento della caparra saranno inviate solo dopo la verifica della disponibilità con la struttura.
           </p>
         </div>
       ) : null}
@@ -145,7 +145,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: Quote; 
         <Input required name="email" label="Email" type="email" defaultValue={quote.customerEmail} />
         <Input name="fiscalCode" label="Codice fiscale (facoltativo)" minLength={11} />
         <Input name="address" label="Indirizzo di residenza (facoltativo)" />
-        <Input name="city" label="Citta (facoltativo)" />
+        <Input name="city" label="Città (facoltativo)" />
         <Input name="postalCode" label="CAP (facoltativo)" pattern="[0-9]{5}" />
         <Input name="province" label="Provincia (facoltativo)" />
       </div>

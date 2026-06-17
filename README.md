@@ -42,7 +42,7 @@ Il file `supabase/.env` non viene letto da Next.js. In locale usa `.env.local`; 
 
 ## Accesso backoffice
 
-Supabase Auth e necessario per accedere al backoffice.
+Supabase Auth è necessario per accedere al backoffice.
 
 1. Apri Supabase Dashboard.
 2. Vai in **Authentication** -> **Users**.
@@ -52,7 +52,7 @@ Supabase Auth e necessario per accedere al backoffice.
 
 Non esiste registrazione pubblica dal sito.
 
-Le pagine `/admin` e `/admin/*` sono protette. Se l'utente non e autenticato viene reindirizzato a `/login`; se un utente gia autenticato apre `/login`, viene riportato a `/admin`.
+Le pagine `/admin` e `/admin/*` sono protette. Se l'utente non è autenticato viene reindirizzato a `/login`; se un utente già autenticato apre `/login`, viene riportato a `/admin`.
 
 La pagina preventivo cliente resta pubblica solo tramite link sicuro `code + token` e non richiede login:
 
@@ -128,7 +128,7 @@ Il seed inserisce hotel, richieste clienti, preventivi di partenza, tracking, st
 
 Il backoffice legge gli hotel da Supabase. Il sito pubblico `ischiastars.it` non viene interrogato a ogni apertura del backoffice: serve solo come sorgente per una sincronizzazione manuale e protetta.
 
-Da `/admin/hotel`, il pulsante **Sincronizza hotel dal sito** importa o aggiorna le strutture presenti nella pagina pubblica degli hotel IschiaStars. La sincronizzazione aggiorna i dati ricavati dal sito, come nome, localita, stelle, immagine, URL sorgente e data ultimo rilevamento.
+Da `/admin/hotel`, il pulsante **Sincronizza hotel dal sito** importa o aggiorna le strutture presenti nella pagina pubblica degli hotel IschiaStars. La sincronizzazione aggiorna i dati ricavati dal sito, come nome, località, stelle, immagine, URL sorgente e data ultimo rilevamento.
 
 Servizi inclusi, policy pagamento, policy cancellazione e note operative restano modificabili dal backoffice e non vengono sovrascritti dalla sincronizzazione. La sync non usa WhatsApp API, Resend o servizi esterni a pagamento.
 
@@ -298,7 +298,7 @@ Con `BREVO_ENABLED=false` (default in `.env.example`):
 
 ## Sicurezza
 
-- La `SUPABASE_SERVICE_ROLE_KEY` e usata solo lato server.
+- La `SUPABASE_SERVICE_ROLE_KEY` è usata solo lato server.
 - Le pagine pubbliche validano `code + token`.
 - Le note interne non vengono esposte nella pagina cliente.
 - I token preventivo sono generati con `crypto.randomUUID()`.

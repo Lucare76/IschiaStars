@@ -313,7 +313,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
       return;
     }
     if (balance < 0) {
-      setMessage("La caparra non puo superare il nuovo totale.");
+      setMessage("La caparra non può superare il nuovo totale.");
       return;
     }
 

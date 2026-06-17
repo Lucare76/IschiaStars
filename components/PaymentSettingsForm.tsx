@@ -41,7 +41,7 @@ export function PaymentSettingsForm({ initialSettings }: { initialSettings: Paym
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-black text-ischia-navy">Coordinate pagamento</h2>
-          <p className="mt-1 text-sm text-ischia-ink/68">Dati inviati al cliente solo nella conferma definitiva dopo la verifica disponibilita.</p>
+          <p className="mt-1 text-sm text-ischia-ink/68">Dati inviati al cliente solo nella conferma definitiva dopo la verifica disponibilità.</p>
         </div>
         {!isPaymentSettingsConfigured(form) ? (
           <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800 ring-1 ring-amber-200">Coordinate non configurate</span>
@@ -56,7 +56,7 @@ export function PaymentSettingsForm({ initialSettings }: { initialSettings: Paym
         <Input label="IBAN" value={form.iban} onChange={(value) => setForm({ ...form, iban: value })} />
         <Input label="BIC/SWIFT" value={form.bicSwift} onChange={(value) => setForm({ ...form, bicSwift: value })} />
         <Input label="Causale bonifico" value={form.paymentReasonPrefix} onChange={(value) => setForm({ ...form, paymentReasonPrefix: value })} />
-        <Input label="Modalita saldo" value={form.acceptedBalanceMethodsText} onChange={(value) => setForm({ ...form, acceptedBalanceMethodsText: value })} />
+        <Input label="Modalità saldo" value={form.acceptedBalanceMethodsText} onChange={(value) => setForm({ ...form, acceptedBalanceMethodsText: value })} />
         <Textarea label="Istruzioni per il cliente" value={form.paymentInstructions} onChange={(value) => setForm({ ...form, paymentInstructions: value })} />
       </div>
 

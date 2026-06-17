@@ -553,7 +553,7 @@ function HotelOptionBlock({
         <Textarea label="Servizi inclusi" value={opt.includedServices} onChange={(value) => onChange({ includedServices: value })} />
         <div className="grid gap-2 sm:grid-cols-2">
           <Input label="Acconto (%)" min="0" step="0.01" type="number" value={opt.depositPercent} onChange={(e) => onChange({ depositPercent: e.target.value })} />
-          <Input label="Modalita saldo" value={opt.balanceMethod} onChange={(e) => onChange({ balanceMethod: e.target.value })} />
+          <Input label="Modalità saldo" value={opt.balanceMethod} onChange={(e) => onChange({ balanceMethod: e.target.value })} />
         </div>
         <Textarea label="Policy pagamento" value={opt.paymentPolicy} onChange={(value) => onChange({ paymentPolicy: value })} />
         <Textarea label="Policy cancellazione" value={opt.cancellationPolicy} onChange={(value) => onChange({ cancellationPolicy: value })} />

@@ -54,14 +54,14 @@ export function HotelCreateForm() {
       {message ? <p className="mt-3 rounded-xl bg-ischia-mist p-3 text-sm font-semibold text-ischia-navy">{message}</p> : null}
       <div className="mt-4 grid gap-3 lg:grid-cols-3">
         <Input name="name" label="Nome hotel" required />
-        <Input name="location" label="Localita" required />
+        <Input name="location" label="Località" required />
         <Input name="stars" label="Stelle" type="number" required defaultValue="4" />
       </div>
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <Textarea name="standardServices" label="Servizi inclusi standard" defaultValue={"Assistenza IschiaStars\nWi-Fi\nPiscina o area relax"} />
         <Textarea name="shortDescription" label="Descrizione breve" />
         <Input name="defaultDepositPercent" label="Acconto standard (%)" type="number" />
-        <Textarea name="defaultBalanceMethod" label="Modalita saldo" />
+        <Textarea name="defaultBalanceMethod" label="Modalità saldo" />
         <Textarea name="paymentPolicy" label="Policy pagamento" />
         <Textarea name="cancellationPolicy" label="Policy cancellazione" />
         <Textarea name="defaultPaymentNotes" label="Note pagamento" />

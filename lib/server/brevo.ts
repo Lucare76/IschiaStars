@@ -715,7 +715,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
         </td></tr>
       </table>`
     : `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;">
-        <tr><td style="padding:16px 18px;font-size:14px;color:#374151;">Le modalita operative per il versamento della caparra saranno comunicate dallo staff IschiaStars.</td></tr>
+        <tr><td style="padding:16px 18px;font-size:14px;color:#374151;">Le modalità operative per il versamento della caparra saranno comunicate dallo staff IschiaStars.</td></tr>
       </table>`;
 
   return `<!DOCTYPE html>
@@ -744,7 +744,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
     </td></tr>
     <tr><td class="email-body" style="background:#FFFFFF;padding:28px 32px;color:#374151;font-size:15px;line-height:1.6;">
       <p style="margin:0 0 18px;font-size:15px;">Ciao <strong>${firstName}</strong>,</p>
-      <p style="margin:0 0 22px;font-size:15px;">la struttura ha confermato la disponibilita per la proposta selezionata. Per bloccare definitivamente il soggiorno e necessario versare la caparra entro <strong style="color:#1B3A5C;">${dueAt}</strong>.</p>
+      <p style="margin:0 0 22px;font-size:15px;">la struttura ha confermato la disponibilità per la proposta selezionata. Per bloccare definitivamente il soggiorno è necessario versare la caparra entro <strong style="color:#1B3A5C;">${dueAt}</strong>.</p>
 
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D9E2EC;border-radius:10px;overflow:hidden;margin:0 0 22px;">
         <tr><td colspan="2" style="background:#1B3A5C;padding:12px 16px;">
@@ -764,7 +764,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
           <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#1B3A5C;">${balanceLabel}</td>
         </tr>` : ""}
         ${confirmation?.selectedBalanceMethod ? `<tr>
-          <td style="padding:12px 16px;font-size:13px;color:#6B7280;">Modalita saldo</td>
+          <td style="padding:12px 16px;font-size:13px;color:#6B7280;">Modalità saldo</td>
           <td align="right" style="padding:12px 16px;font-size:13px;font-weight:bold;color:#374151;">${confirmation.selectedBalanceMethod}</td>
         </tr>` : ""}
       </table>

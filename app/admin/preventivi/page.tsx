@@ -41,7 +41,7 @@ export default async function QuotesPage({ searchParams }: { searchParams?: { fi
   );
 
   return (
-    <AdminShell title="Preventivi evasi" subtitle="Preventivi gia elaborati, non cancellati e non ancora confermati dal cliente.">
+    <AdminShell title="Preventivi evasi" subtitle="Preventivi già elaborati, non cancellati e non ancora confermati dal cliente.">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-semibold text-ischia-ink/70">Crea preventivi manuali, cerca per codice o cliente e invia il link cliente su WhatsApp.</p>
         <Link className="rounded-full bg-ischia-sun px-5 py-3 text-sm font-black text-ischia-navy shadow-sm" href="/admin/preventivi/nuovo">

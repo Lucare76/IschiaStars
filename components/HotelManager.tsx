@@ -285,7 +285,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
         </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           <Input label="Nome hotel" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
-          <Input label="Localita / zona" value={form.location} onChange={(value) => setForm({ ...form, location: value })} />
+          <Input label="Località / zona" value={form.location} onChange={(value) => setForm({ ...form, location: value })} />
           <Input label="Stelle" type="number" value={String(form.stars)} onChange={(value) => setForm({ ...form, stars: Number(value) })} />
         </div>
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
@@ -294,7 +294,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
           <Input label="URL pagina hotel su IschiaStars.it (visibile sul preventivo cliente)" value={form.sourceUrl} onChange={(value) => setForm({ ...form, sourceUrl: value })} />
           <Textarea label="Servizi inclusi standard" value={form.standardServices} onChange={(value) => setForm({ ...form, standardServices: value })} />
           <Input label="Acconto standard (%)" type="number" value={form.defaultDepositPercent} onChange={(value) => setForm({ ...form, defaultDepositPercent: value })} />
-          <Textarea label="Modalita saldo standard" value={form.defaultBalanceMethod} onChange={(value) => setForm({ ...form, defaultBalanceMethod: value })} />
+          <Textarea label="Modalità saldo standard" value={form.defaultBalanceMethod} onChange={(value) => setForm({ ...form, defaultBalanceMethod: value })} />
           <Textarea label="Policy pagamento standard" value={form.paymentPolicy} onChange={(value) => setForm({ ...form, paymentPolicy: value })} />
           <Textarea label="Policy cancellazione standard" value={form.cancellationPolicy} onChange={(value) => setForm({ ...form, cancellationPolicy: value })} />
           <Textarea label="Note pagamento standard" value={form.defaultPaymentNotes} onChange={(value) => setForm({ ...form, defaultPaymentNotes: value })} />

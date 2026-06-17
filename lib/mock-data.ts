@@ -25,7 +25,7 @@ export const hotels: Hotel[] = [
     description: "Struttura elegante in zona Lacco Ameno, adatta a soggiorni relax e benessere.",
     imageUrl: "https://ischiastars.it/wp-content/uploads/2026/05/hotel-san-lorenzo-ischia.jpg",
     standardServices: ["Prima colazione", "Area relax", "Percorso benessere", "Assistenza WhatsApp"],
-    paymentPolicy: "Acconto del 30% alla conferma, saldo secondo disponibilita struttura.",
+    paymentPolicy: "Acconto del 30% alla conferma, saldo secondo disponibilità struttura.",
     cancellationPolicy: "Penali variabili in base alla tariffa confermata.",
     internalNotes: "Verificare camere superior nei periodi di alta stagione.",
     active: true
@@ -42,7 +42,7 @@ export const hotels: Hotel[] = [
     defaultBalanceMethod: BALANCE_METHOD_IN_STRUCTURE,
     paymentPolicy: "Acconto 15% alla conferma. Saldo restante in struttura con carta o contanti.",
     cancellationPolicy: CANCELLATION_POLICY_14_DAYS,
-    internalNotes: "Ottima alternativa quando San Lorenzo non ha disponibilita.",
+    internalNotes: "Ottima alternativa quando San Lorenzo non ha disponibilità.",
     active: true
   },
   {
@@ -50,7 +50,7 @@ export const hotels: Hotel[] = [
     name: "Formula Roulette 4 Stelle",
     zone: "Ischia",
     stars: 4,
-    description: "Formula flessibile su hotel 4 stelle selezionati, pensata per ottimizzare qualita e prezzo.",
+    description: "Formula flessibile su hotel 4 stelle selezionati, pensata per ottimizzare qualità e prezzo.",
     imageUrl: "https://ischiastars.it/wp-content/uploads/2026/05/ischia-hotel-4-stelle.jpg",
     standardServices: ["Hotel 4 stelle selezionato", "Trattamento indicato nel preventivo", "Assistenza diretta", "Soluzione su misura"],
     paymentPolicy: "Acconto alla conferma, saldo secondo struttura assegnata.",
@@ -226,12 +226,12 @@ export const quotes: Quote[] = [
         title: "Traghetto famiglia per Ischia",
         description: "Opzione indicata per famiglie, bagagli e possibile auto al seguito.",
         price: 132,
-        notes: "Preventivo trasporto da confermare con eta bambini e porto scelto."
+        notes: "Preventivo trasporto da confermare con età bambini e porto scelto."
       }
     ],
     paymentPolicy: hotels[3].paymentPolicy,
     cancellationPolicy: hotels[3].cancellationPolicy,
-    internalNotes: "Esempio gia confermato per statistiche base.",
+    internalNotes: "Esempio già confermato per statistiche base.",
     customerNotes: "Formula flessibile per famiglia su hotel 4 stelle selezionati con assistenza IschiaStars.",
     status: "confermato",
     createdAt: "2026-05-08T12:00:00+02:00",

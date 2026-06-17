@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
   if (!body?.name || !body?.location || !body?.stars) {
-    return NextResponse.json({ ok: false, error: "Nome, localita e stelle sono obbligatori" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "Nome, località e stelle sono obbligatori" }, { status: 400 });
   }
 
   const result = await createHotel({
