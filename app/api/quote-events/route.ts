@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get("user-agent") ?? undefined;
   const ip = getRequestIp(request.headers);
 
-  if (!userAgent || !ip) {
+  if (body.eventType === "quote_opened" && (!userAgent || !ip)) {
     return NextResponse.json({ ok: true, source: quoteResult.source, ignored: "missing_identity" });
   }
 
