@@ -27,16 +27,27 @@ export function ResetPasswordForm() {
       const accessToken = hash.get("access_token");
       const refreshToken = hash.get("refresh_token");
 
+      let sessionOk = false;
       if (code) {
         const { error: exchangeError } = await supabase!.auth.exchangeCodeForSession(code);
-        if (exchangeError) setError("Link di reset non valido o scaduto.");
+        if (exchangeError) {
+          setError("Link di reset non valido o scaduto. Richiedi un nuovo link.");
+        } else {
+          sessionOk = true;
+        }
       } else if (accessToken && refreshToken) {
         const { error: sessionError } = await supabase!.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        if (sessionError) setError("Link di reset non valido o scaduto.");
+        if (sessionError) {
+          setError("Link di reset non valido o scaduto. Richiedi un nuovo link.");
+        } else {
+          sessionOk = true;
+        }
+      } else {
+        setError("Link di reset mancante o già utilizzato. Richiedi un nuovo link.");
       }
 
       window.history.replaceState({}, "", "/reset-password");
-      setReady(true);
+      if (sessionOk) setReady(true);
     }
 
     void prepareSession();

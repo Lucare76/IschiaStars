@@ -99,6 +99,7 @@ ${hotelsBlock}
 👉 ${quoteUrl}
 
 Dal link puoi vedere tutti i dettagli e confermare direttamente online.
+📱 Se il link non si apre, tieni premuto e scegli "Apri in Safari".
 
 ⚠️ Le disponibilità per questo periodo sono limitate. Ti consigliamo di confermare appena possibile.
 
