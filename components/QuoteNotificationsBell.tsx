@@ -17,6 +17,7 @@ type NotificationItem = {
   createdAt: string;
   description: string;
   isRead: boolean;
+  shouldPlaySound?: boolean;
 };
 
 export function QuoteNotificationsBell() {
@@ -62,8 +63,9 @@ export function QuoteNotificationsBell() {
       for (const item of items) knownIdsRef.current.add(item.id);
       setNotifications(items);
 
-      if (newIds.length > 0 && announcementRef.current.notificationVoiceAnnouncement) {
-        const hasConferma = newIds.some((item) => item.type === "conferma");
+      const soundableNewIds = newIds.filter((item) => item.shouldPlaySound);
+      if (soundableNewIds.length > 0 && announcementRef.current.notificationVoiceAnnouncement) {
+        const hasConferma = soundableNewIds.some((item) => item.type === "conferma");
         if (hasConferma) {
           playConfirmaSound(
             announcementRef.current.notificationAnnouncementVolume,

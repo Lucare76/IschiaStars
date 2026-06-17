@@ -19,6 +19,7 @@ export type QuoteNotification = {
   createdAt: string;
   description: string;
   isRead: boolean;
+  shouldPlaySound: boolean;
 };
 
 type QuoteNotificationSource = {
@@ -50,7 +51,7 @@ export function deriveQuoteNotifications(
       if (event.eventType === "quote_opened") openingCountByQuote.set(event.quoteId, openingCount);
 
       const presentation = notificationPresentation(event, openingCount);
-      return buildNotification(event, quote, presentation.type, presentation.description, seenTimestamp);
+      return buildNotification(event, quote, presentation.type, presentation.description, seenTimestamp, presentation.shouldPlaySound);
     })
     .filter((notification): notification is QuoteNotification => Boolean(notification))
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
@@ -103,15 +104,16 @@ export async function markQuoteNotificationsSeen(seenAt = new Date().toISOString
   return fromSupabase(seenAt);
 }
 
-function notificationPresentation(event: QuoteEvent, openingCount: number): { type: QuoteNotificationType; description: string } {
+function notificationPresentation(event: QuoteEvent, openingCount: number): { type: QuoteNotificationType; description: string; shouldPlaySound: boolean } {
   if (event.eventType === "quote_opened") {
-    return openingCount >= 3
-      ? { type: "cliente_caldo", description: "sta guardando di nuovo - cliente caldo" }
-      : { type: "apertura", description: "ha aperto il preventivo" };
+    if (openingCount >= 3) {
+      return { type: "cliente_caldo", description: "sta guardando di nuovo - cliente caldo", shouldPlaySound: false };
+    }
+    return { type: "apertura", description: "ha aperto il preventivo", shouldPlaySound: openingCount === 1 };
   }
   if (event.eventType === "quote_confirmed") {
     const selectedHotel = typeof event.metadata?.selectedHotelName === "string" ? event.metadata.selectedHotelName.trim() : "";
-    return { type: "conferma", description: selectedHotel ? `ha confermato ${selectedHotel}` : "ha confermato una proposta" };
+    return { type: "conferma", description: selectedHotel ? `ha confermato ${selectedHotel}` : "ha confermato una proposta", shouldPlaySound: true };
   }
   const descriptions: Partial<Record<QuoteEvent["eventType"], string>> = {
     whatsapp_clicked: "ha cliccato WhatsApp",
@@ -127,7 +129,8 @@ function notificationPresentation(event: QuoteEvent, openingCount: number): { ty
   };
   return {
     type: event.eventType.startsWith("reaction_") ? "interesse" : "click",
-    description: descriptions[event.eventType] ?? "ha interagito con il preventivo"
+    description: descriptions[event.eventType] ?? "ha interagito con il preventivo",
+    shouldPlaySound: false
   };
 }
 
@@ -136,7 +139,8 @@ function buildNotification(
   quote: QuoteNotificationSource,
   type: QuoteNotificationType,
   description: string,
-  seenTimestamp: number
+  seenTimestamp: number,
+  shouldPlaySound: boolean
 ): QuoteNotification {
   const createdTimestamp = Date.parse(event.createdAt);
   return {
@@ -147,7 +151,8 @@ function buildNotification(
     type,
     createdAt: event.createdAt,
     description,
-    isRead: Number.isFinite(seenTimestamp) && createdTimestamp <= seenTimestamp
+    isRead: Number.isFinite(seenTimestamp) && createdTimestamp <= seenTimestamp,
+    shouldPlaySound
   };
 }
 
