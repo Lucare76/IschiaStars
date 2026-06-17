@@ -1,5 +1,6 @@
 -- Exclude ghost events (null IP) from dashboard stats.
--- These are bot/crawler requests that bypass normal browser headers.
+-- Before 2026-06-12 the API did not record IP, so all events are trusted.
+-- After that date, null-IP events are bot/crawler noise.
 
 create or replace function public.get_dashboard_event_stats(
   p_excluded_ips text[] default array['93.148.93.103']::text[]
@@ -17,7 +18,10 @@ as $$
     select *
     from public.quote_events
     where coalesce(metadata->>'excluded_from_tracking', 'false') <> 'true'
-      and metadata->>'ip' is not null
+      and (
+        created_at < '2026-06-12T15:20:14Z'
+        or metadata->>'ip' is not null
+      )
       and not (coalesce(metadata->>'ip', '') = any(p_excluded_ips))
   )
   select
