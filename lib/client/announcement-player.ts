@@ -76,21 +76,36 @@ async function speakText(text: string, rate: number, pitch: number, volume: numb
   }
 }
 
-export async function playConfirmaSound(volume: number, audioUrl?: string): Promise<void> {
+export async function playConfirmaSound(volume: number, audioUrl?: string, start = 0, end = 0): Promise<void> {
   if (audioUrl) {
-    return playAudioUrl(audioUrl, volume);
+    return playAudioUrl(audioUrl, volume, start, end);
   }
   return playConfirmaFanfare(volume);
 }
 
-async function playAudioUrl(url: string, volume: number): Promise<void> {
+async function playAudioUrl(url: string, volume: number, start: number, end: number): Promise<void> {
   return new Promise((resolve) => {
     try {
       const audio = new Audio(url);
       audio.volume = Math.max(0, Math.min(1, volume));
+      audio.preload = "auto";
+
+      audio.onloadedmetadata = () => {
+        if (start > 0) audio.currentTime = start;
+        audio.play().catch(() => resolve());
+      };
+
+      if (end > 0) {
+        audio.ontimeupdate = () => {
+          if (audio.currentTime >= end) {
+            audio.pause();
+            resolve();
+          }
+        };
+      }
+
       audio.onended = () => resolve();
       audio.onerror = () => resolve();
-      audio.play().catch(() => resolve());
     } catch {
       resolve();
     }

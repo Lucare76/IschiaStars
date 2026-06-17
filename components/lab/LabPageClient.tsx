@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
@@ -111,6 +111,15 @@ function AnnouncementSection({ initialSettings }: { initialSettings: Announcemen
   const [error, setError] = useState<string | null>(null);
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [audioDuration, setAudioDuration] = useState(0);
+
+  useEffect(() => {
+    const url = settings.notificationConfermaAudioUrl;
+    if (!url) { setAudioDuration(0); return; }
+    const audio = new Audio(url);
+    audio.onloadedmetadata = () => setAudioDuration(audio.duration);
+    audio.onerror = () => setAudioDuration(0);
+  }, [settings.notificationConfermaAudioUrl]);
 
   function update<K extends keyof AnnouncementSettings>(key: K, value: AnnouncementSettings[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -307,10 +316,10 @@ function AnnouncementSection({ initialSettings }: { initialSettings: Announcemen
               />
               <button
                 type="button"
-                onClick={() => playConfirmaSound(settings.notificationAnnouncementVolume, settings.notificationConfermaAudioUrl).catch(() => null)}
+                onClick={() => playConfirmaSound(settings.notificationAnnouncementVolume, settings.notificationConfermaAudioUrl, settings.notificationConfermaAudioStart, settings.notificationConfermaAudioEnd).catch(() => null)}
                 className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ischia-navy ring-1 ring-ischia-blue/20"
               >
-                Prova
+                Prova segmento
               </button>
               <button
                 type="button"
@@ -324,6 +333,58 @@ function AnnouncementSection({ initialSettings }: { initialSettings: Announcemen
           ) : (
             <p className="text-xs text-ischia-ink/50 italic">Nessuna canzone caricata — verrà suonata la fanfara di default.</p>
           )}
+
+          {settings.notificationConfermaAudioUrl && audioDuration > 0 ? (
+            <div className="grid gap-3 border-t border-emerald-200/60 pt-3">
+              <p className="text-xs font-semibold text-ischia-navy">Ritaglia segmento</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-1">
+                  <label className={labelClass} htmlFor="conferma-start">
+                    Inizio — <span className="font-mono text-ischia-blue">{fmtTime(settings.notificationConfermaAudioStart)}</span>
+                  </label>
+                  <input
+                    id="conferma-start"
+                    type="range"
+                    className={rangeClass}
+                    min={0}
+                    max={audioDuration}
+                    step={0.1}
+                    value={settings.notificationConfermaAudioStart}
+                    onChange={(e) => {
+                      const v = parseFloat(e.currentTarget.value);
+                      update("notificationConfermaAudioStart", v);
+                      const curEnd = settings.notificationConfermaAudioEnd === 0 ? audioDuration : settings.notificationConfermaAudioEnd;
+                      if (v >= curEnd) update("notificationConfermaAudioEnd", Math.min(v + 1, audioDuration) === audioDuration ? 0 : Math.min(v + 1, audioDuration));
+                    }}
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className={labelClass} htmlFor="conferma-end">
+                    Fine — <span className="font-mono text-ischia-blue">
+                      {settings.notificationConfermaAudioEnd === 0 ? "fine canzone" : fmtTime(settings.notificationConfermaAudioEnd)}
+                    </span>
+                  </label>
+                  <input
+                    id="conferma-end"
+                    type="range"
+                    className={rangeClass}
+                    min={0}
+                    max={audioDuration}
+                    step={0.1}
+                    value={settings.notificationConfermaAudioEnd === 0 ? audioDuration : settings.notificationConfermaAudioEnd}
+                    onChange={(e) => {
+                      const v = parseFloat(e.currentTarget.value);
+                      update("notificationConfermaAudioEnd", v >= audioDuration - 0.05 ? 0 : v);
+                    }}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-ischia-ink/50">
+                Segmento: {fmtTime(settings.notificationConfermaAudioStart)} → {settings.notificationConfermaAudioEnd === 0 ? fmtTime(audioDuration) : fmtTime(settings.notificationConfermaAudioEnd)}
+                {" "}({fmtDuration((settings.notificationConfermaAudioEnd === 0 ? audioDuration : settings.notificationConfermaAudioEnd) - settings.notificationConfermaAudioStart)})
+              </p>
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap items-center gap-2">
             <label className={`cursor-pointer rounded-full bg-white px-4 py-2 text-sm font-semibold text-ischia-navy ring-1 ring-ischia-blue/20 ${uploadingAudio ? "opacity-60 pointer-events-none" : ""}`}>
@@ -470,3 +531,18 @@ function TestQuotesSection({ initialTestQuotes }: { initialTestQuotes: LabTestQu
 
 // Re-export default announcement settings for external use without importing the lib directly
 export { defaultAnnouncementSettings };
+
+function fmtTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  const tenth = Math.round((seconds % 1) * 10);
+  return `${m}:${String(s).padStart(2, "0")}.${tenth}`;
+}
+
+function fmtDuration(seconds: number): string {
+  if (seconds <= 0) return "0 sec";
+  if (seconds < 60) return `${Math.round(seconds)} sec`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return s > 0 ? `${m} min ${s} sec` : `${m} min`;
+}

@@ -67,7 +67,9 @@ export function QuoteNotificationsBell() {
         if (hasConferma) {
           playConfirmaSound(
             announcementRef.current.notificationAnnouncementVolume,
-            announcementRef.current.notificationConfermaAudioUrl || undefined
+            announcementRef.current.notificationConfermaAudioUrl || undefined,
+            announcementRef.current.notificationConfermaAudioStart,
+            announcementRef.current.notificationConfermaAudioEnd,
           ).catch(() => null);
         } else {
           playStationAnnouncement(announcementRef.current).catch(() => null);
