@@ -96,7 +96,7 @@ export async function listLabTestQuotes(): Promise<LabTestQuote[]> {
     code: String(row.code),
     clientName: [row.client_first_name, row.client_last_name].filter(Boolean).join(" ").trim(),
     createdAt: String(row.created_at),
-    publicUrl: `/preventivi/${row.code}?token=${row.public_token}`
+    publicUrl: `/preventivi/${row.code}/${row.public_token}`
   }));
 }
 

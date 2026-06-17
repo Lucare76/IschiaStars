@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       code: quote.code,
       clientName: [quote.customerFirstName, quote.customerLastName].filter(Boolean).join(" ").trim(),
       createdAt: quote.createdAt,
-      publicUrl: `/preventivi/${quote.code}?token=${quote.token}`
+      publicUrl: `/preventivi/${quote.code}/${quote.token}`
     }
   });
 }

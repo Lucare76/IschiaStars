@@ -25,7 +25,7 @@ export function formatDateTime(value: string) {
 }
 
 export function publicQuoteUrl(quote: Quote) {
-  return `/preventivi/${quote.code}?token=${quote.token}`;
+  return `/preventivi/${quote.code}/${quote.token}`;
 }
 
 export function siteBaseUrl() {
