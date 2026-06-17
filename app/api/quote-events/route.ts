@@ -35,7 +35,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Preventivo non disponibile" }, { status: 410 });
   }
 
+  const userAgent = request.headers.get("user-agent") ?? undefined;
   const ip = getRequestIp(request.headers);
+
+  if (!userAgent || !ip) {
+    return NextResponse.json({ ok: true, source: quoteResult.source, ignored: "missing_identity" });
+  }
+
   if (isTrackingExcludedIp(ip)) {
     console.info(`[tracking] skipped excluded ip ${ip} event=${body.eventType}`);
     return NextResponse.json({ ok: true, source: quoteResult.source, ignored: "excluded_ip" });
@@ -48,7 +54,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const userAgent = request.headers.get("user-agent") ?? undefined;
   await trackQuoteEvent(quoteResult.data.id, body.eventType, {
     ...(body.metadata ?? {}),
     ip,
