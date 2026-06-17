@@ -154,7 +154,8 @@ export async function fetchHotelOptionsForQuotes(quoteIds: string[]): Promise<Re
     .in("quote_id", quoteIds)
     .order("position");
   if (error) {
-    throw new Error(`Impossibile caricare le opzioni hotel: ${error.message}`);
+    console.warn("[quote-hotel-options] unable to load hotel options", error);
+    return {};
   }
 
   const result: Record<string, QuoteHotelOption[]> = {};

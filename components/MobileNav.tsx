@@ -9,6 +9,7 @@ const nav = [
   { href: "/admin/follow-up", label: "Follow-up" },
   { href: "/admin/preventivi", label: "Preventivi evasi" },
   { href: "/admin/conferme", label: "Confermati" },
+  { href: "/admin/voucher", label: "Voucher" },
   { href: "/admin/preventivi/nuovo", label: "+ Nuovo preventivo" },
   { href: "/admin/hotel", label: "Hotel" },
   { href: "/admin/servizi-extra", label: "Servizi extra" },
