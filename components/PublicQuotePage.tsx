@@ -106,9 +106,10 @@ export function PublicQuotePage({
 
           {quote.customerNotes && (
             <div className="mt-4">
-              <ContentBlock title="Note per te">
-                <p>{quote.customerNotes}</p>
-              </ContentBlock>
+              <section className="rounded-2xl bg-ischia-navy p-5 shadow-sm">
+                <h3 className="text-xl font-black text-white">Note per te</h3>
+                <div className="mt-3 text-sm leading-6 text-white/90">{quote.customerNotes}</div>
+              </section>
             </div>
           )}
 

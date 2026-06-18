@@ -944,9 +944,9 @@ function TreatmentDetails({ option, treatment, details, className }: { option: Q
         </div>
       ) : null}
       {option.paymentPolicy ? <p className="mt-3"><strong>Condizioni di pagamento:</strong> {option.paymentPolicy}</p> : null}
-      {option.paymentNotes ? <p className="mt-2"><strong>Note pagamento:</strong> {option.paymentNotes}</p> : null}
+      {option.paymentNotes ? <p className="mt-2 rounded-lg bg-ischia-navy px-3 py-2 text-white"><strong>Note pagamento:</strong> {option.paymentNotes}</p> : null}
       {option.cancellationPolicy ? <p className="mt-2"><strong>Politiche di cancellazione:</strong> {option.cancellationPolicy}</p> : null}
-      {option.notes ? <p className="mt-2"><strong>Note:</strong> {option.notes}</p> : null}
+      {option.notes ? <p className="mt-2 rounded-lg bg-ischia-navy px-3 py-2 text-white"><strong>Note:</strong> {option.notes}</p> : null}
       {!hasDetails ? (
         <p className="mt-3">I dettagli completi verranno confermati dal nostro staff in fase di prenotazione.</p>
       ) : null}
