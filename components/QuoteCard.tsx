@@ -77,6 +77,9 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
   const isDeleted = Boolean(quote.deletedAt);
   const hasConfirmation = Boolean(quote.confirmation);
   const expiresSoon = !isDeleted && !hasConfirmation && isExpiresSoon(quote.offerExpiresAt);
+  const guestCount = quote.adults + quote.children.length;
+  const guestLabel = `${guestCount} ${guestCount === 1 ? "persona" : "persone"} (${quote.adults} ${quote.adults === 1 ? "adulto" : "adulti"}${quote.children.length ? `, ${quote.children.length} ${quote.children.length === 1 ? "bambino" : "bambini"}` : ""})`;
+  const priceLabel = getQuotePriceLabel(quote);
 
   return (
     <article className={`min-w-0 rounded-2xl border border-white p-4 shadow-soft sm:p-5 ${isDeleted ? "bg-rose-50/60 opacity-75" : "bg-white/90"}`}>
@@ -123,7 +126,8 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
           );
         })()}
         <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} numeric />
-        <Info label="Totale" value={quote.totalPrice > 0 ? formatCurrency(quote.totalPrice) : "vedi proposte"} numeric />
+        <Info label="Persone" value={guestLabel} numeric />
+        <Info label="Prezzo" value={priceLabel} numeric />
         {!isDeleted ? <Info label="Aperture" value={`${stats.openings}`} numeric /> : null}
       </div>
       <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -188,6 +192,26 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
       ) : null}
     </article>
   );
+}
+
+function getQuotePriceLabel(quote: Quote): string {
+  if (quote.confirmation?.selectedPrice != null && quote.confirmation.selectedPrice > 0) {
+    return formatCurrency(quote.confirmation.selectedPrice);
+  }
+
+  if (quote.totalPrice > 0) {
+    return formatCurrency(quote.totalPrice);
+  }
+
+  const prices = Array.from(new Set(
+    getEffectiveHotelOptions(quote)
+      .flatMap((option) => option.treatments.map((treatment) => treatment.price))
+      .filter((price) => price > 0)
+  )).sort((a, b) => a - b);
+
+  if (prices.length === 0) return "Non indicato";
+  if (prices.length === 1) return formatCurrency(prices[0]);
+  return `${formatCurrency(prices[0])} - ${formatCurrency(prices[prices.length - 1])}`;
 }
 
 function Info({ label, value, className = "", numeric = false }: { label: string; value: string; className?: string; numeric?: boolean }) {
