@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 
 const TRATTAMENTI = ["B&B", "Mezza pensione", "Pensione completa", "All inclusive", "Solo alloggio"];
@@ -39,6 +39,11 @@ export default function RichiestaPreventivo() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const messageTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    resizeTextarea(messageTextareaRef.current);
+  }, [form.message]);
 
   function set<K extends keyof Form>(key: K, value: Form[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -206,10 +211,13 @@ export default function RichiestaPreventivo() {
                 <label className="flex flex-col gap-1 text-sm font-semibold text-ischia-ink">
                   Note aggiuntive
                   <textarea
-                    className="min-h-24 rounded-xl border border-ischia-blue/20 px-3 py-2 text-sm font-normal"
+                    className="min-h-24 resize-y overflow-hidden whitespace-pre-wrap break-words rounded-xl border border-ischia-blue/20 px-3 py-2 text-sm font-normal leading-6"
                     value={form.message}
                     onChange={(e) => set("message", e.target.value)}
+                    onInput={(event) => resizeTextarea(event.currentTarget)}
                     placeholder="Richieste speciali, allergie, esigenze particolari..."
+                    ref={messageTextareaRef}
+                    wrap="soft"
                   />
                 </label>
               </div>
@@ -240,6 +248,12 @@ export default function RichiestaPreventivo() {
       </div>
     </main>
   );
+}
+
+function resizeTextarea(element: HTMLTextAreaElement | null) {
+  if (!element) return;
+  element.style.height = "auto";
+  element.style.height = `${Math.max(element.scrollHeight, 96)}px`;
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {

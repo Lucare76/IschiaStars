@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CloneQuoteButton } from "@/components/CloneQuoteButton";
 import { ConfirmationAvailabilityPanel } from "@/components/ConfirmationAvailabilityPanel";
 import {
@@ -620,8 +620,36 @@ function childAgeForForm(child: Quote["children"][number] | undefined, arrivalDa
   return age >= 0 && age <= 17 ? String(age) : "";
 }
 
-function Textarea({ label, value, onChange, ...props }: { label: string; value?: string; onChange?: (value: string) => void } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange" | "value">) {
-  return <label className="block text-sm font-semibold text-ischia-ink">{label}<textarea className="mt-1 min-h-20 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" value={value} onChange={onChange ? (e) => onChange(e.target.value) : undefined} {...props} /></label>;
+function Textarea({ label, value, onChange, onInput, ...props }: { label: string; value?: string; onChange?: (value: string) => void } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange" | "value">) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    resizeTextarea(ref.current);
+  }, [value, props.defaultValue]);
+
+  return (
+    <label className="block text-sm font-semibold text-ischia-ink">
+      {label}
+      <textarea
+        className="mt-1 min-h-24 w-full resize-y overflow-hidden whitespace-pre-wrap break-words rounded-xl border border-ischia-blue/20 px-3 py-2 leading-6"
+        ref={ref}
+        value={value}
+        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+        onInput={(event) => {
+          resizeTextarea(event.currentTarget);
+          onInput?.(event);
+        }}
+        wrap="soft"
+        {...props}
+      />
+    </label>
+  );
+}
+
+function resizeTextarea(element: HTMLTextAreaElement | null) {
+  if (!element) return;
+  element.style.height = "auto";
+  element.style.height = `${Math.max(element.scrollHeight, 96)}px`;
 }
 
 function withDefaultTransportOffers(offers: TransportOffer[] = []): TransportOffer[] {

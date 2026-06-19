@@ -118,6 +118,12 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     return match ? match[1].trim() : null;
   };
 
+  const getMultiline = (field: string): string | null => {
+    const match = text.match(new RegExp(`${field}:\\s*([\\s\\S]*?)(?=\\n[A-Za-zÀ-ú][\\w\\s]*:|\\n\\n|$)`, 'i'));
+    if (!match) return null;
+    return match[1].trim() || null;
+  };
+
   const pageUrl = get('Page URL') ?? '';
   const utmSource = pageUrl.match(/utm_source=([^&]+)/)?.[1] ?? null;
   const utmCampaign = pageUrl.match(/utm_campaign=([^&]+)/)?.[1]?.replace(/\+/g, ' ') ?? null;
@@ -151,7 +157,7 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     adults: parseInt(get('Adulti') ?? '2'),
     children,
     rooms: parseInt(get('Numero di Camere') ?? '1'),
-    message: get('Messaggio') ?? undefined,
+    message: getMultiline('Messaggio') ?? undefined,
     receivedAt: typeof metadata.email_date === "string" ? metadata.email_date : undefined,
     metadata: {
       requested_hotel: hotel,
