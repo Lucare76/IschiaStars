@@ -17,6 +17,7 @@ type QuoteFilter =
   | "alternative"
   | "confermati"
   | "aperti"
+  | "non_aperti"
   | "click_whatsapp"
   | "perso_non_disponibile";
 
@@ -107,6 +108,7 @@ export function QuoteFilters({
       (filter === "alternative" && !isDeleted && !quote.excludedFromStats && quote.isAlternative) ||
       (filter === "confermati" && !isDeleted && !quote.excludedFromStats && isConfirmed) ||
       (filter === "aperti" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.openings) && !isConfirmed && quote.status === "preventivo_inviato") ||
+      (filter === "non_aperti" && !isDeleted && !quote.excludedFromStats && !stats?.openings && !isConfirmed && quote.status === "preventivo_inviato") ||
       (filter === "click_whatsapp" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.whatsappClicks)) ||
       (filter === "perso_non_disponibile" && !isDeleted && !quote.excludedFromStats && quote.status === filter);
 
@@ -227,6 +229,7 @@ export function QuoteFilters({
             <option value="alternative">Alternative</option>
             <option value="confermati">Confermati</option>
             <option value="aperti">Aperti</option>
+            <option value="non_aperti">Mai aperti</option>
             <option value="click_whatsapp">Click WhatsApp</option>
             <option value="perso_non_disponibile">Persi</option>
             <option value="esclusi">Esclusi dalle statistiche</option>

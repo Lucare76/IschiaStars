@@ -24,16 +24,21 @@ export function formatDateTime(value: string) {
   return formatDateTimeRome(value);
 }
 
-export function publicQuoteUrl(quote: Quote) {
-  return `/preventivi/${quote.code}/${quote.token}`;
+export function publicQuoteUrl(quote: Quote, params: Record<string, string | undefined> = {}) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) query.set(key, value);
+  }
+  const suffix = query.toString();
+  return `/preventivi/${quote.code}/${quote.token}${suffix ? `?${suffix}` : ""}`;
 }
 
 export function siteBaseUrl() {
   return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:4000").replace(/\/+$/, "");
 }
 
-export function absolutePublicQuoteUrl(quote: Quote) {
-  return `${siteBaseUrl()}${publicQuoteUrl(quote)}`;
+export function absolutePublicQuoteUrl(quote: Quote, params: Record<string, string | undefined> = {}) {
+  return `${siteBaseUrl()}${publicQuoteUrl(quote, params)}`;
 }
 
 export function normalizeItalianPhone(phone: string) {
@@ -47,7 +52,7 @@ export function whatsappQuoteMessage(quote: Quote) {
   return adminQuoteWhatsappMessage({
     quote,
     options,
-    quoteUrl: absolutePublicQuoteUrl(quote),
+    quoteUrl: absolutePublicQuoteUrl(quote, { source: "whatsapp" }),
   });
 }
 
@@ -88,6 +93,7 @@ export function dashboardStats() {
     pendingRequests: quoteRequests.filter((request) => request.status === "da_evadere").length,
     sentQuotes: evaded.length,
     openedQuotes: evaded.filter((quote) => openedQuoteIds.has(quote.id)).length,
+    unopenedQuotes: evaded.filter((quote) => !openedQuoteIds.has(quote.id)).length,
     confirmedQuotes: confirmed.length,
     lostQuotes: quotes.filter((quote) => quote.status === "perso_non_disponibile").length,
     conversionRate: quotes.length ? Math.round((confirmed.length / quotes.length) * 100) : 0,

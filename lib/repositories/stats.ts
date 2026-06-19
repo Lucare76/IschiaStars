@@ -9,6 +9,7 @@ export type DashboardStats = {
   pendingRequests: number;
   sentQuotes: number;
   openedQuotes: number;
+  unopenedQuotes: number;
   confirmedQuotes: number;
   lostQuotes: number;
   conversionRate: number;
@@ -63,13 +64,15 @@ export function buildDashboardStats({
   const confirmed = activeQuotes.filter((quote) => quote.status === "confermato" || Boolean(quote.confirmation) || activeConfirmedIds.has(quote.id));
   const confirmedIds = new Set(confirmed.map((quote) => quote.id));
   const evaded = activeQuotes.filter((quote) => quote.status === "preventivo_inviato" && !confirmedIds.has(quote.id));
-  const opened = activeQuotes.filter((quote) => quote.status === "preventivo_inviato" && activeOpenedIds.has(quote.id));
+  const opened = evaded.filter((quote) => activeOpenedIds.has(quote.id));
+  const unopened = evaded.filter((quote) => !activeOpenedIds.has(quote.id));
 
   return {
     createdQuotes: activeQuotes.length,
     pendingRequests: pendingRequests.length,
     sentQuotes: evaded.length,
     openedQuotes: opened.length,
+    unopenedQuotes: unopened.length,
     confirmedQuotes: confirmed.length,
     lostQuotes: activeQuotes.filter((quote) => quote.status === "perso_non_disponibile").length,
     conversionRate: activeQuotes.length ? Math.round((confirmed.length / activeQuotes.length) * 100) : 0,

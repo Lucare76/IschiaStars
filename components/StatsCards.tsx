@@ -38,6 +38,15 @@ export function StatsCards({ stats: providedStats }: { stats?: DashboardStats })
       style: "bg-white/90 ring-white hover:bg-white text-ischia-navy",
       valueStyle: "text-ischia-navy",
     },
+    {
+      label: "Mai aperti",
+      value: stats.unopenedQuotes,
+      href: "/admin/preventivi?filter=non_aperti",
+      style: stats.unopenedQuotes > 0
+        ? "bg-rose-50 ring-rose-100 hover:bg-rose-100 text-rose-900"
+        : "bg-white/90 ring-white hover:bg-white text-ischia-navy",
+      valueStyle: stats.unopenedQuotes > 0 ? "text-rose-700" : "text-ischia-navy",
+    },
   ];
 
   const secondary = [
@@ -60,7 +69,7 @@ export function StatsCards({ stats: providedStats }: { stats?: DashboardStats })
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5 sm:gap-3">
         {primary.map(({ label, value, href, style, valueStyle }) => (
           <Link
             key={label}
