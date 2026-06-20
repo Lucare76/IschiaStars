@@ -50,7 +50,13 @@ export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuot
   const quotesResult = await listQuotes({ includeDeleted: false });
   const quoteIds = quotesResult.data.map((quote) => quote.id);
   const eventsResult = await getQuoteEventsForQuoteIds(quoteIds);
-  const mapped = quotesResult.data.map((quote) => toFollowUpQuote(quote, eventsResult.data[quote.id] ?? []));
+  const confirmedCustomerKeys = new Set(
+    quotesResult.data
+      .filter(hasActiveConfirmedBooking)
+      .map(customerFollowUpKey)
+      .filter(Boolean)
+  );
+  const mapped = quotesResult.data.map((quote) => toFollowUpQuote(quote, eventsResult.data[quote.id] ?? [], confirmedCustomerKeys));
   const data = mapped
     .filter((quote): quote is FollowUpQuote => Boolean(quote))
     .sort(compareFollowUpQuotes);
@@ -61,8 +67,10 @@ export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuot
     : fallback(data, error);
 }
 
-function toFollowUpQuote(quote: Quote, events: QuoteEvent[]): FollowUpQuote | null {
+function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKeys: Set<string>): FollowUpQuote | null {
   if (quote.deletedAt || quote.excludedFromStats || quote.status !== "preventivo_inviato" || quote.confirmation) return null;
+  const customerKey = customerFollowUpKey(quote);
+  if (customerKey && confirmedCustomerKeys.has(customerKey)) return null;
 
   const nights = Math.round((new Date(quote.departureDate).getTime() - new Date(quote.arrivalDate).getTime()) / DAY_MS);
   if (nights < 4) return null;
@@ -311,4 +319,23 @@ function compareFollowUpQuotes(a: FollowUpQuote, b: FollowUpQuote) {
   return b.engagementScore - a.engagementScore ||
     priorityWeight(b.priority) - priorityWeight(a.priority) ||
     new Date(b.lastEventAt ?? b.sentAt).getTime() - new Date(a.lastEventAt ?? a.sentAt).getTime();
+}
+
+function hasActiveConfirmedBooking(quote: Quote) {
+  if (quote.deletedAt || quote.excludedFromStats) return false;
+  if (quote.status !== "confermato" && !quote.confirmation) return false;
+  return new Date(quote.departureDate).getTime() >= Date.now();
+}
+
+function customerFollowUpKey(quote: Quote) {
+  const phone = quote.customerPhone.replace(/\D/g, "");
+  if (phone.length >= 8) return `phone:${phone}`;
+  const email = quote.customerEmail.trim().toLowerCase();
+  if (email && !isGenericContactEmail(email)) return `email:${email}`;
+  const name = [quote.customerFirstName, quote.customerLastName].filter(Boolean).join(" ").trim().toLowerCase();
+  return name ? `name:${name}` : "";
+}
+
+function isGenericContactEmail(email: string) {
+  return ["info@ischiastars.it", "preventivi@ischiastars.it"].includes(email);
 }
