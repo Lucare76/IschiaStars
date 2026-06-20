@@ -109,7 +109,10 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
           const confirmedOption = quote.confirmation?.selectedHotelOptionId
             ? options.find((o) => o.id === quote.confirmation?.selectedHotelOptionId)
             : selectedOption;
-          const hotelLabel = options.length > 1 ? `${options.length} strutture proposte` : (options[0]?.hotelName ?? quote.proposedHotel.name);
+          const hotelNames = Array.from(new Set(options.map((option) => option.hotelName).filter(Boolean)));
+          const hotelLabel = hotelNames.length > 1
+            ? `${hotelNames.length} strutture: ${hotelNames.join(" · ")}`
+            : (hotelNames[0] ?? quote.proposedHotel.name);
           const confirmedDetails = [
             quote.confirmation?.selectedHotelName ?? confirmedOption?.hotelName,
             confirmedOption?.roomTypeLabel,
