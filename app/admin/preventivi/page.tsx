@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const quoteFilters = [
   "evasi",
   "attivi",
+  "scaduti",
   "tutti",
   "cancellati",
   "esclusi",
@@ -16,6 +17,7 @@ const quoteFilters = [
   "alternative",
   "confermati",
   "aperti",
+  "non_aperti",
   "click_whatsapp",
   "perso_non_disponibile"
 ] as const;

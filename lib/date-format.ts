@@ -47,3 +47,19 @@ export function formatDateTimeRome(value: string | Date) {
     minute: "2-digit"
   }).format(date);
 }
+
+export function isStayExpiredRome(departureDate: string, now = new Date()) {
+  const departureDay = departureDate.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(departureDay)) return false;
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ROME_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(now);
+  const value = (type: "year" | "month" | "day") => parts.find((part) => part.type === type)?.value ?? "";
+  const today = `${value("year")}-${value("month")}-${value("day")}`;
+
+  return departureDay < today;
+}

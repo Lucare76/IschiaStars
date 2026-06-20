@@ -1,5 +1,5 @@
 ﻿import { allDemoQuoteRequests, allDemoQuotes, allQuoteEvents } from "@/lib/demo-store";
-import { formatDateRome, formatDateTimeRome } from "@/lib/date-format";
+import { formatDateRome, formatDateTimeRome, isStayExpiredRome } from "@/lib/date-format";
 import { adminQuoteWhatsappMessage } from "@/lib/message-templates";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Quote } from "@/lib/types";
@@ -86,12 +86,15 @@ export function dashboardStats() {
   const localConfirmedIds = new Set(events.filter((event) => event.eventType === "quote_confirmed").map((event) => event.quoteId));
   const confirmed = quotes.filter((quote) => quote.status === "confermato" || Boolean(quote.confirmation) || localConfirmedIds.has(quote.id));
   const confirmedIds = new Set(confirmed.map((quote) => quote.id));
-  const evaded = quotes.filter((quote) => quote.status === "preventivo_inviato" && !confirmedIds.has(quote.id));
+  const sentUnconfirmed = quotes.filter((quote) => quote.status === "preventivo_inviato" && !confirmedIds.has(quote.id));
+  const expired = sentUnconfirmed.filter((quote) => isStayExpiredRome(quote.departureDate));
+  const evaded = sentUnconfirmed.filter((quote) => !isStayExpiredRome(quote.departureDate));
   const openedQuoteIds = new Set(events.filter((event) => event.eventType === "quote_opened").map((event) => event.quoteId));
   return {
     createdQuotes: quotes.length,
     pendingRequests: quoteRequests.filter((request) => request.status === "da_evadere").length,
     sentQuotes: evaded.length,
+    expiredQuotes: expired.length,
     openedQuotes: evaded.filter((quote) => openedQuoteIds.has(quote.id)).length,
     unopenedQuotes: evaded.filter((quote) => !openedQuoteIds.has(quote.id)).length,
     confirmedQuotes: confirmed.length,

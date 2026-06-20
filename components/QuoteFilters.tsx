@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { useBackofficePolling } from "@/hooks/useBackofficePolling";
 import { QuoteCard, QuoteCardActions, QuoteStats } from "@/components/QuoteCard";
+import { isStayExpiredRome } from "@/lib/date-format";
 import { Quote } from "@/lib/types";
 
 type QuoteFilter =
   | "evasi"
   | "attivi"
+  | "scaduti"
   | "tutti"
   | "cancellati"
   | "esclusi"
@@ -98,9 +100,11 @@ export function QuoteFilters({
     const normalizedQuery = query.trim().toLowerCase();
     const matchesSearch = !normalizedQuery || haystack.includes(normalizedQuery);
     const isDeleted = Boolean(quote.deletedAt);
+    const isExpired = isStayExpiredRome(quote.departureDate);
 
     const matchesFilter =
-      ((filter === "evasi" || filter === "attivi") && !isDeleted && !quote.excludedFromStats && !isConfirmed && quote.status === "preventivo_inviato") ||
+      ((filter === "evasi" || filter === "attivi") && !isDeleted && !quote.excludedFromStats && !isConfirmed && !isExpired && quote.status === "preventivo_inviato") ||
+      (filter === "scaduti" && !isDeleted && !quote.excludedFromStats && !isConfirmed && isExpired && quote.status === "preventivo_inviato") ||
       (filter === "tutti" && !isDeleted) ||
       (filter === "cancellati" && isDeleted) ||
       (filter === "esclusi" && quote.excludedFromStats && !isDeleted) ||
@@ -224,6 +228,7 @@ export function QuoteFilters({
             onChange={(event) => setFilter(event.target.value as QuoteFilter)}
           >
             <option value="evasi">Evasi</option>
+            <option value="scaduti">Scaduti</option>
             <option value="tutti">Tutti (non cancellati)</option>
             <option value="preventivo_inviato">Inviati</option>
             <option value="alternative">Alternative</option>

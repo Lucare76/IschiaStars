@@ -23,6 +23,15 @@ export function StatsCards({ stats: providedStats }: { stats?: DashboardStats })
       valueStyle: "text-ischia-navy",
     },
     {
+      label: "Scaduti",
+      value: stats.expiredQuotes,
+      href: "/admin/preventivi?filter=scaduti",
+      style: stats.expiredQuotes > 0
+        ? "bg-slate-100 ring-slate-200 hover:bg-slate-200 text-slate-900"
+        : "bg-white/90 ring-white hover:bg-white text-ischia-navy",
+      valueStyle: stats.expiredQuotes > 0 ? "text-slate-700" : "text-ischia-navy",
+    },
+    {
       label: "Confermati",
       value: stats.confirmedQuotes,
       href: "/admin/preventivi?filter=confermati",
@@ -69,7 +78,7 @@ export function StatsCards({ stats: providedStats }: { stats?: DashboardStats })
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6">
         {primary.map(({ label, value, href, style, valueStyle }) => (
           <Link
             key={label}

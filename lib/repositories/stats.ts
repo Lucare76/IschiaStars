@@ -2,12 +2,14 @@ import { listPendingQuoteRequests } from "@/lib/repositories/quoteRequests";
 import { getDashboardEventStats } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
+import { isStayExpiredRome } from "@/lib/date-format";
 import type { Quote, QuoteRequest } from "@/lib/types";
 
 export type DashboardStats = {
   createdQuotes: number;
   pendingRequests: number;
   sentQuotes: number;
+  expiredQuotes: number;
   openedQuotes: number;
   unopenedQuotes: number;
   confirmedQuotes: number;
@@ -63,7 +65,9 @@ export function buildDashboardStats({
 
   const confirmed = activeQuotes.filter((quote) => quote.status === "confermato" || Boolean(quote.confirmation) || activeConfirmedIds.has(quote.id));
   const confirmedIds = new Set(confirmed.map((quote) => quote.id));
-  const evaded = activeQuotes.filter((quote) => quote.status === "preventivo_inviato" && !confirmedIds.has(quote.id));
+  const sentUnconfirmed = activeQuotes.filter((quote) => quote.status === "preventivo_inviato" && !confirmedIds.has(quote.id));
+  const expired = sentUnconfirmed.filter((quote) => isStayExpiredRome(quote.departureDate));
+  const evaded = sentUnconfirmed.filter((quote) => !isStayExpiredRome(quote.departureDate));
   const opened = evaded.filter((quote) => activeOpenedIds.has(quote.id));
   const unopened = evaded.filter((quote) => !activeOpenedIds.has(quote.id));
 
@@ -71,6 +75,7 @@ export function buildDashboardStats({
     createdQuotes: activeQuotes.length,
     pendingRequests: pendingRequests.length,
     sentQuotes: evaded.length,
+    expiredQuotes: expired.length,
     openedQuotes: opened.length,
     unopenedQuotes: unopened.length,
     confirmedQuotes: confirmed.length,
