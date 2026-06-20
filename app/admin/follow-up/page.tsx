@@ -38,6 +38,7 @@ type FollowUpGroup = {
   lastEventLabel: string;
   lastFollowUpAt?: string;
   snoozedUntil?: string;
+  staySummary: string;
   isSnoozed: boolean;
 };
 
@@ -169,6 +170,7 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
         <Info label="Ultimo follow-up" value={group.lastFollowUpAt ? formatDateTime(group.lastFollowUpAt) : "Non ancora registrato"} />
       </div>
       <div className="mt-4 grid gap-3 text-sm">
+        <Info label="Date soggiorno" value={group.staySummary} />
         <Info label="Hotel proposti" value={quote.hotelsSummary || "Non indicati"} />
       </div>
       {group.quotes.length > 1 ? (
@@ -237,6 +239,7 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
     const engagementScore = sorted.reduce((sum, quote) => sum + quote.engagementScore, 0);
     const segment = aggregateSegment(sorted, totalOpenings, engagementScore);
     const priority = priorityForSegment(segment);
+    const staySummary = summarizeStayDates(sorted);
     return {
       key,
       primary,
@@ -254,6 +257,7 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
       lastEventLabel: lastEventQuote?.lastEventLabel ?? "Nessuna visualizzazione tracciata",
       lastFollowUpAt,
       snoozedUntil,
+      staySummary,
       isSnoozed: Boolean(snoozedUntil && new Date(snoozedUntil).getTime() > Date.now())
     };
   }).sort((a, b) =>
@@ -324,4 +328,30 @@ function priorityClass(priority: FollowUpQuote["priority"]) {
 
 function priorityWeight(priority: FollowUpQuote["priority"]) {
   return priority === "alta" ? 3 : priority === "media" ? 2 : 1;
+}
+
+function summarizeStayDates(quotes: FollowUpQuote[]) {
+  const ranges = Array.from(new Map(
+    quotes.map((quote) => [
+      `${quote.arrivalDate}|${quote.departureDate}`,
+      {
+        arrivalDate: quote.arrivalDate,
+        departureDate: quote.departureDate,
+        codes: [quote.code]
+      }
+    ])
+  ).values());
+
+  for (const quote of quotes) {
+    const key = `${quote.arrivalDate}|${quote.departureDate}`;
+    const range = ranges.find((item) => `${item.arrivalDate}|${item.departureDate}` === key);
+    if (range && !range.codes.includes(quote.code)) range.codes.push(quote.code);
+  }
+
+  return ranges
+    .map((range) => {
+      const label = `${formatDate(range.arrivalDate)} - ${formatDate(range.departureDate)}`;
+      return ranges.length > 1 ? `${range.codes.join(", ")}: ${label}` : label;
+    })
+    .join(" · ");
 }

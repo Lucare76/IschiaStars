@@ -17,6 +17,8 @@ export type FollowUpQuote = {
   clientEmail: string;
   createdAt: string;
   sentAt: string;
+  arrivalDate: string;
+  departureDate: string;
   lastEventAt?: string;
   lastEventLabel: string;
   lastOpenedAt?: string;
@@ -121,6 +123,8 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
     clientEmail: quote.customerEmail,
     createdAt: quote.createdAt,
     sentAt,
+    arrivalDate: quote.arrivalDate,
+    departureDate: quote.departureDate,
     lastEventAt: lastEvent?.createdAt,
     lastEventLabel: lastEvent ? eventLabel(lastEvent.eventType) : "Nessuna visualizzazione tracciata",
     lastOpenedAt: opened.at(-1)?.createdAt,
