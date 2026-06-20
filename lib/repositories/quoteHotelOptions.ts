@@ -148,21 +148,25 @@ export async function fetchHotelOptionsForQuotes(quoteIds: string[]): Promise<Re
   const supabase = createSupabaseAdminClient();
   if (!supabase) return {};
 
-  const { data, error } = await supabase
-    .from("quote_hotel_options")
-    .select("*")
-    .in("quote_id", quoteIds)
-    .order("position");
-  if (error) {
-    console.warn("[quote-hotel-options] unable to load hotel options", error);
-    return {};
+  const rows: Record<string, unknown>[] = [];
+  for (const chunk of chunkArray(quoteIds, 100)) {
+    const { data, error } = await supabase
+      .from("quote_hotel_options")
+      .select("*")
+      .in("quote_id", chunk)
+      .order("position");
+    if (error) {
+      console.warn("[quote-hotel-options] unable to load hotel options", error);
+      continue;
+    }
+    rows.push(...(data as Record<string, unknown>[] ?? []));
   }
 
   const result: Record<string, QuoteHotelOption[]> = {};
-  for (const row of data ?? []) {
+  for (const row of rows) {
     const qid = String(row.quote_id);
     if (!result[qid]) result[qid] = [];
-    result[qid].push(mapHotelOptionRow(row as Record<string, unknown>));
+    result[qid].push(mapHotelOptionRow(row));
   }
   return result;
 }
@@ -185,4 +189,12 @@ export async function markHotelOptionSelected(optionId: string, quoteId: string)
 
 function isUuid(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
 }

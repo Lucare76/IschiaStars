@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
   const unauthorized = await requireAdminApiKey(request);
   if (unauthorized) return unauthorized;
 
-  const result = await listQuotes();
+  const includeDeleted = request.nextUrl.searchParams.get("include_deleted") === "true";
+  const result = await listQuotes({ includeDeleted });
   return NextResponse.json(
     { ok: true, source: result.source, data: result.data, error: result.error },
     { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
