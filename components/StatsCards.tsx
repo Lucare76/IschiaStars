@@ -41,20 +41,29 @@ export function StatsCards({ stats: providedStats }: { stats?: DashboardStats })
       valueStyle: stats.confirmedQuotes > 0 ? "text-emerald-700" : "text-ischia-navy",
     },
     {
-      label: "Aperti",
+      label: "Visualizzati",
       value: stats.openedQuotes,
       href: "/admin/preventivi?filter=aperti",
       style: "bg-white/90 ring-white hover:bg-white text-ischia-navy",
       valueStyle: "text-ischia-navy",
     },
     {
-      label: "Mai aperti",
+      label: "Non visualizzati",
       value: stats.unopenedQuotes,
       href: "/admin/preventivi?filter=non_aperti",
       style: stats.unopenedQuotes > 0
         ? "bg-rose-50 ring-rose-100 hover:bg-rose-100 text-rose-900"
         : "bg-white/90 ring-white hover:bg-white text-ischia-navy",
       valueStyle: stats.unopenedQuotes > 0 ? "text-rose-700" : "text-ischia-navy",
+    },
+    {
+      label: "Da contattare oggi",
+      value: stats.toContactToday,
+      href: "/admin/follow-up?filter=non_visualizzati",
+      style: stats.toContactToday > 0
+        ? "bg-amber-50 ring-amber-200 hover:bg-amber-100 text-amber-900"
+        : "bg-white/90 ring-white hover:bg-white text-ischia-navy",
+      valueStyle: stats.toContactToday > 0 ? "text-amber-700" : "text-ischia-navy",
     },
   ];
 
@@ -78,7 +87,7 @@ export function StatsCards({ stats: providedStats }: { stats?: DashboardStats })
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-7">
         {primary.map(({ label, value, href, style, valueStyle }) => (
           <Link
             key={label}

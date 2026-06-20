@@ -198,7 +198,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     console.warn(`[brevo] skipped quote email code=${quote.code} reason=missing_site_url`);
     return { sent: false, skipReason: "missing_site_url" };
   }
-  const quoteUrl = `${siteUrl}/preventivi/${quote.code}/${quote.token}`;
+  const quoteUrl = `${siteUrl}/preventivi/${quote.code}/${quote.token}?source=email`;
   const logoUrl = `${siteUrl}/ischiastars-logo.png`;
   const firstName = quote.customerFirstName || "Cliente";
   const clientName = `${quote.customerFirstName} ${quote.customerLastName}`.trim();

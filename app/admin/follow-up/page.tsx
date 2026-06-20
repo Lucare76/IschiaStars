@@ -9,13 +9,15 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-type FollowUpFilter = "caldi" | "da_sollecitare" | "mai_aperti" | "gia_richiamati" | "tutti";
+type FollowUpFilter = "caldi" | "da_sollecitare" | "non_visualizzati" | "gia_richiamati" | "storici" | "chiusi" | "tutti";
 
 const filters: { value: FollowUpFilter; label: string }[] = [
   { value: "caldi", label: "Caldi" },
   { value: "da_sollecitare", label: "Da sollecitare" },
-  { value: "mai_aperti", label: "Mai aperti" },
-  { value: "gia_richiamati", label: "Già richiamati" },
+  { value: "non_visualizzati", label: "Non visualizzati" },
+  { value: "gia_richiamati", label: "Già sollecitati" },
+  { value: "storici", label: "Tracking storico" },
+  { value: "chiusi", label: "Chiusi" },
   { value: "tutti", label: "Tutti" }
 ];
 
@@ -58,7 +60,7 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
   const stats = {
     hot: groups.filter((group) => group.priority === "alta" && !group.lastFollowUpAt && !group.isSnoozed).length,
     toSolicit: groups.filter((group) => group.segment === "da_sollecitare" && !group.lastFollowUpAt && !group.isSnoozed).length,
-    neverOpened: groups.filter((group) => group.segment === "mai_aperto" && !group.lastFollowUpAt && !group.isSnoozed).length,
+    neverOpened: groups.filter((group) => group.segment === "non_visualizzato" && !group.lastFollowUpAt && !group.isSnoozed).length,
     contacted: groups.filter((group) => Boolean(group.lastFollowUpAt)).length
   };
 
@@ -67,8 +69,8 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi label="Clienti caldi" value={stats.hot} />
         <Kpi label="Da sollecitare" value={stats.toSolicit} />
-        <Kpi label="Mai aperti" value={stats.neverOpened} />
-        <Kpi label="Già richiamati" value={stats.contacted} />
+        <Kpi label="Non visualizzati" value={stats.neverOpened} />
+        <Kpi label="Già sollecitati" value={stats.contacted} />
       </section>
 
       <nav className="mt-6 flex flex-wrap gap-2">
@@ -130,6 +132,7 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
             <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${segmentClass(group.segment)}`}>{group.segmentLabel}</span>
             <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${priorityClass(group.priority)}`}>Priorità {group.priority}</span>
             {quote.expiresSoon ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black uppercase text-amber-800">Scadenza vicina</span> : null}
+            {quote.segment === "non_visualizzato" ? <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black uppercase text-violet-800">{quote.stageLabel}</span> : null}
             {group.isSnoozed && group.snoozedUntil ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase text-slate-700">Rimandato a {formatDate(group.snoozedUntil)}</span> : null}
           </div>
           <h2 className="mt-3 text-2xl font-black text-ischia-navy">{quote.clientName}</h2>
@@ -145,17 +148,18 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
           <a className="inline-flex h-9 items-center justify-center rounded-full bg-ischia-navy px-3.5 text-center text-xs font-black text-white transition hover:bg-ischia-blue" href={quote.publicUrl} rel="noreferrer" target="_blank">
             Apri preventivo
           </a>
-          <FollowUpWhatsAppButton href={quote.whatsappHref} quoteCode={quote.code} token={quote.token} segment={quote.segment} clientPhone={quote.clientPhone} />
+          {!quote.isClosed && quote.isTrackingReliable ? <FollowUpWhatsAppButton href={quote.whatsappHref} quoteCode={quote.code} token={quote.token} segment={quote.segment} clientPhone={quote.clientPhone} /> : null}
           <a className="inline-flex h-9 items-center justify-center rounded-full bg-white px-3.5 text-center text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/20" href={`tel:${quote.clientPhone.replace(/\D/g, "")}`}>
             Chiama
           </a>
-          <FollowUpActionButtons quoteId={quote.id} />
+          <FollowUpActionButtons quoteId={quote.id} isClosed={quote.isClosed} />
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 text-sm md:grid-cols-4">
+      <div className="mt-5 grid gap-3 text-sm md:grid-cols-5">
         <Info label="Ultimo evento" value={group.lastEventAt ? `${group.lastEventLabel} · ${formatDateTime(group.lastEventAt)}` : group.lastEventLabel} />
-        <Info label="Aperture" value={String(group.totalOpenings)} />
+        <Info label="Visualizzazioni" value={String(group.totalOpenings)} />
+        <Info label="Provenienza" value={quote.openingSources.length ? quote.openingSources.join(", ") : "Non visualizzato"} />
         <Info label="Click WhatsApp cliente" value={String(group.totalWhatsappClicks)} />
         <Info label="Click hotel / PDF" value={`${group.totalHotelClicks} / ${group.totalPrints}`} />
       </div>
@@ -198,11 +202,14 @@ function normalizeFilter(value?: string): FollowUpFilter {
 
 function matchesFilter(group: FollowUpGroup, filter: FollowUpFilter) {
   if (filter === "tutti") return true;
-  if (filter === "gia_richiamati") return Boolean(group.lastFollowUpAt);
+  if (filter === "gia_richiamati") return Boolean(group.lastFollowUpAt) && !group.primary.isClosed;
+  if (filter === "storici") return group.segment === "storico_non_affidabile";
+  if (filter === "chiusi") return group.primary.isClosed;
+  if (group.primary.isClosed || group.segment === "storico_non_affidabile") return false;
   if (group.lastFollowUpAt) return false;
   if (group.isSnoozed) return false;
   if (filter === "caldi") return group.priority === "alta";
-  if (filter === "mai_aperti") return group.segment === "mai_aperto";
+  if (filter === "non_visualizzati") return group.segment === "non_visualizzato";
   return group.segment === "da_sollecitare";
 }
 
@@ -244,7 +251,7 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
       segmentLabel: labelForSegment(segment),
       priority,
       lastEventAt,
-      lastEventLabel: lastEventQuote?.lastEventLabel ?? "Nessuna apertura tracciata",
+      lastEventLabel: lastEventQuote?.lastEventLabel ?? "Nessuna visualizzazione tracciata",
       lastFollowUpAt,
       snoozedUntil,
       isSnoozed: Boolean(snoozedUntil && new Date(snoozedUntil).getTime() > Date.now())
@@ -257,27 +264,32 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
 }
 
 function aggregateSegment(quotes: FollowUpQuote[], totalOpenings: number, engagementScore: number): FollowUpSegment {
+  if (quotes.every((quote) => quote.isClosed)) return "chiuso";
   if (totalOpenings > 1 || engagementScore > totalOpenings) return "molto_interessato";
   const lastOpenedAt = quotes.map((quote) => quote.lastOpenedAt).filter((value): value is string => Boolean(value)).sort().at(-1);
   if (lastOpenedAt && Date.now() - new Date(lastOpenedAt).getTime() >= 24 * 60 * 60 * 1000) return "da_sollecitare";
   if (totalOpenings > 0) return "aperto_non_confermato";
-  return "mai_aperto";
+  if (quotes.every((quote) => !quote.isTrackingReliable)) return "storico_non_affidabile";
+  if (quotes.every((quote) => quote.segment === "recente")) return "recente";
+  return "non_visualizzato";
 }
 
 function labelForSegment(segment: FollowUpSegment) {
   const labels: Record<FollowUpSegment, string> = {
-    mai_aperto: "Mai aperto",
+    non_visualizzato: "Preventivo non visualizzato",
     aperto_non_confermato: "Aperto non confermato",
     molto_interessato: "Molto interessato",
     da_sollecitare: "Da sollecitare",
-    recente: "Inviato da poco"
+    recente: "Inviato da poco",
+    storico_non_affidabile: "Tracking storico non affidabile",
+    chiuso: "Follow-up chiuso"
   };
   return labels[segment];
 }
 
 function priorityForSegment(segment: FollowUpSegment): FollowUpQuote["priority"] {
   if (segment === "molto_interessato" || segment === "da_sollecitare") return "alta";
-  if (segment === "mai_aperto" || segment === "aperto_non_confermato") return "media";
+  if (segment === "non_visualizzato" || segment === "aperto_non_confermato") return "media";
   return "bassa";
 }
 
@@ -295,11 +307,13 @@ function isGenericContactEmail(email: string) {
 
 function segmentClass(segment: FollowUpSegment) {
   const classes: Record<FollowUpSegment, string> = {
-    mai_aperto: "bg-slate-100 text-slate-700",
+    non_visualizzato: "bg-slate-100 text-slate-700",
     aperto_non_confermato: "bg-sky-100 text-sky-800",
     molto_interessato: "bg-emerald-100 text-emerald-800",
     da_sollecitare: "bg-amber-100 text-amber-800",
-    recente: "bg-indigo-100 text-indigo-800"
+    recente: "bg-indigo-100 text-indigo-800",
+    storico_non_affidabile: "bg-stone-100 text-stone-700",
+    chiuso: "bg-zinc-200 text-zinc-700"
   };
   return classes[segment];
 }

@@ -127,11 +127,23 @@ export async function getDashboardEventStats() {
   const localEvents = trackableEvents(allQuoteEvents());
   if (!supabase) return fallback(eventDashboard(localEvents));
 
-  const { data, error } = await supabase.rpc("get_dashboard_event_stats", {
-    p_excluded_ips: getTrackingExcludedIps()
-  }).maybeSingle();
-  if (error) return fallback(eventDashboard(localEvents), error);
-  return fromSupabase(mapDashboardEventAggregates(data));
+  const [aggregateResult, followUpResult] = await Promise.all([
+    supabase.rpc("get_dashboard_event_stats", {
+      p_excluded_ips: getTrackingExcludedIps()
+    }).maybeSingle(),
+    supabase
+      .from("quote_events")
+      .select("*")
+      .eq("event_type", "follow_up_whatsapp_click")
+      .order("created_at", { ascending: true })
+  ]);
+  if (aggregateResult.error || followUpResult.error) {
+    return fallback(eventDashboard(localEvents), aggregateResult.error ?? followUpResult.error);
+  }
+  return fromSupabase({
+    ...mapDashboardEventAggregates(aggregateResult.data),
+    ...followUpDashboard((followUpResult.data ?? []).map(mapEvent))
+  });
 }
 
 function mapDashboardEventAggregates(row: unknown) {
@@ -147,8 +159,30 @@ function eventDashboard(events: QuoteEvent[]) {
   return {
     openedQuoteIds: new Set(events.filter((event) => event.eventType === "quote_opened").map((event) => event.quoteId)),
     whatsappClickQuoteIds: events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event)).map((event) => event.quoteId),
-    confirmedEventIds: new Set(events.filter((event) => event.eventType === "quote_confirmed").map((event) => event.quoteId))
+    confirmedEventIds: new Set(events.filter((event) => event.eventType === "quote_confirmed").map((event) => event.quoteId)),
+    ...followUpDashboard(events.filter((event) => event.eventType === "follow_up_whatsapp_click"))
   };
+}
+
+function followUpDashboard(events: QuoteEvent[]) {
+  const contactedQuoteIds = new Set<string>();
+  const closedFollowUpQuoteIds = new Set<string>();
+  const snoozedUntilByQuote: Record<string, string> = {};
+  const lastContactAtByQuote: Record<string, string> = {};
+
+  for (const event of events) {
+    const action = String(event.metadata?.action ?? "");
+    if (["whatsapp", "called", "solicited"].includes(action)) {
+      contactedQuoteIds.add(event.quoteId);
+      lastContactAtByQuote[event.quoteId] = event.createdAt;
+    }
+    if (action === "closed") closedFollowUpQuoteIds.add(event.quoteId);
+    if (action === "snoozed" && typeof event.metadata?.snoozed_until === "string") {
+      snoozedUntilByQuote[event.quoteId] = event.metadata.snoozed_until;
+    }
+  }
+
+  return { contactedQuoteIds, closedFollowUpQuoteIds, snoozedUntilByQuote, lastContactAtByQuote };
 }
 
 function isCustomerWhatsappEvent(event: QuoteEvent) {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
 
-const actions = ["called", "snoozed"] as const;
+const actions = ["called", "solicited", "snoozed", "closed"] as const;
 type FollowUpAction = (typeof actions)[number];
 
 export async function POST(request: NextRequest) {

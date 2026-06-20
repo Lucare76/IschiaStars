@@ -29,7 +29,10 @@ export default async function AdminDashboardPage() {
     pendingRequests: quoteRequests,
     openedQuoteIds: eventsResult.data.openedQuoteIds,
     confirmedEventIds: eventsResult.data.confirmedEventIds,
-    whatsappClickQuoteIds: eventsResult.data.whatsappClickQuoteIds
+    whatsappClickQuoteIds: eventsResult.data.whatsappClickQuoteIds,
+    closedFollowUpQuoteIds: eventsResult.data.closedFollowUpQuoteIds,
+    snoozedUntilByQuote: eventsResult.data.snoozedUntilByQuote,
+    lastContactAtByQuote: eventsResult.data.lastContactAtByQuote
   });
   const featuredQuote = activeQuotes[0];
 

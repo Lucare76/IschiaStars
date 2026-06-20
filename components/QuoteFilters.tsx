@@ -6,6 +6,7 @@ import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson 
 import { useBackofficePolling } from "@/hooks/useBackofficePolling";
 import { QuoteCard, QuoteCardActions, QuoteStats } from "@/components/QuoteCard";
 import { isStayExpiredRome } from "@/lib/date-format";
+import { hasReliableQuoteTracking } from "@/lib/follow-up-policy";
 import { Quote } from "@/lib/types";
 
 type QuoteFilter =
@@ -101,6 +102,7 @@ export function QuoteFilters({
     const matchesSearch = !normalizedQuery || haystack.includes(normalizedQuery);
     const isDeleted = Boolean(quote.deletedAt);
     const isExpired = isStayExpiredRome(quote.departureDate);
+    const hasReliableTracking = hasReliableQuoteTracking(quote.sentAt ?? quote.createdAt);
 
     const matchesFilter =
       ((filter === "evasi" || filter === "attivi") && !isDeleted && !quote.excludedFromStats && !isConfirmed && !isExpired && quote.status === "preventivo_inviato") ||
@@ -112,7 +114,7 @@ export function QuoteFilters({
       (filter === "alternative" && !isDeleted && !quote.excludedFromStats && quote.isAlternative) ||
       (filter === "confermati" && !isDeleted && !quote.excludedFromStats && isConfirmed) ||
       (filter === "aperti" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.openings) && !isConfirmed && quote.status === "preventivo_inviato") ||
-      (filter === "non_aperti" && !isDeleted && !quote.excludedFromStats && !stats?.openings && !isConfirmed && quote.status === "preventivo_inviato") ||
+      (filter === "non_aperti" && !isDeleted && !quote.excludedFromStats && hasReliableTracking && !stats?.openings && !isConfirmed && quote.status === "preventivo_inviato") ||
       (filter === "click_whatsapp" && !isDeleted && !quote.excludedFromStats && Boolean(stats?.whatsappClicks)) ||
       (filter === "perso_non_disponibile" && !isDeleted && !quote.excludedFromStats && quote.status === filter);
 
@@ -233,8 +235,8 @@ export function QuoteFilters({
             <option value="preventivo_inviato">Inviati</option>
             <option value="alternative">Alternative</option>
             <option value="confermati">Confermati</option>
-            <option value="aperti">Aperti</option>
-            <option value="non_aperti">Mai aperti</option>
+            <option value="aperti">Preventivo visualizzato</option>
+            <option value="non_aperti">Preventivo non visualizzato</option>
             <option value="click_whatsapp">Click WhatsApp</option>
             <option value="perso_non_disponibile">Persi</option>
             <option value="esclusi">Esclusi dalle statistiche</option>

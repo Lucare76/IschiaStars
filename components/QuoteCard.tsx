@@ -190,7 +190,7 @@ export function QuoteCard({ quote, stats: providedStats, actions }: { quote: Quo
       </div>
       {!isDeleted ? (
         <p className="mt-4 text-xs leading-relaxed text-ischia-ink/58">
-          Ultima apertura: {stats.lastOpening ? formatDateTime(stats.lastOpening) : "non ancora aperto"} - Click WhatsApp: <span className="tabular-nums">{stats.whatsappClicks}</span>
+          Ultima visualizzazione: {stats.lastOpening ? formatDateTime(stats.lastOpening) : "non ancora visualizzato"} - Click WhatsApp: <span className="tabular-nums">{stats.whatsappClicks}</span>
         </p>
       ) : null}
     </article>

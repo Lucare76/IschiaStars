@@ -1,5 +1,6 @@
 ﻿import { allDemoQuoteRequests, allDemoQuotes, allQuoteEvents } from "@/lib/demo-store";
 import { formatDateRome, formatDateTimeRome, isStayExpiredRome } from "@/lib/date-format";
+import { hasReliableQuoteTracking } from "@/lib/follow-up-policy";
 import { adminQuoteWhatsappMessage } from "@/lib/message-templates";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Quote } from "@/lib/types";
@@ -90,13 +91,15 @@ export function dashboardStats() {
   const expired = sentUnconfirmed.filter((quote) => isStayExpiredRome(quote.departureDate));
   const evaded = sentUnconfirmed.filter((quote) => !isStayExpiredRome(quote.departureDate));
   const openedQuoteIds = new Set(events.filter((event) => event.eventType === "quote_opened").map((event) => event.quoteId));
+  const unopened = evaded.filter((quote) => hasReliableQuoteTracking(quote.sentAt ?? quote.createdAt) && !openedQuoteIds.has(quote.id));
   return {
     createdQuotes: quotes.length,
     pendingRequests: quoteRequests.filter((request) => request.status === "da_evadere").length,
     sentQuotes: evaded.length,
     expiredQuotes: expired.length,
     openedQuotes: evaded.filter((quote) => openedQuoteIds.has(quote.id)).length,
-    unopenedQuotes: evaded.filter((quote) => !openedQuoteIds.has(quote.id)).length,
+    unopenedQuotes: unopened.length,
+    toContactToday: unopened.filter((quote) => Date.now() - new Date(quote.sentAt ?? quote.createdAt).getTime() >= 24 * 60 * 60 * 1000).length,
     confirmedQuotes: confirmed.length,
     lostQuotes: quotes.filter((quote) => quote.status === "perso_non_disponibile").length,
     conversionRate: quotes.length ? Math.round((confirmed.length / quotes.length) * 100) : 0,

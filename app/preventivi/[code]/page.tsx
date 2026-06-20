@@ -117,6 +117,7 @@ export default async function QuotePublicRoute({ params, searchParams }: { param
       featureFlags={featureFlagsResult.data}
       travelServices={travelServices}
       trackOpening={trackOpening && searchParams.source !== "whatsapp"}
+      openingSource={searchParams.source}
     />
   );
 }

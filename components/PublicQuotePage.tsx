@@ -19,7 +19,8 @@ export function PublicQuotePage({
   showHesitantBanner = false,
   featureFlags = emptyFeatureFlags,
   travelServices = [],
-  trackOpening = true
+  trackOpening = true,
+  openingSource
 }: {
   quote: Quote;
   hotelPopularity?: Record<string, number>;
@@ -27,6 +28,7 @@ export function PublicQuotePage({
   featureFlags?: FeatureFlags;
   travelServices?: ExtraServiceEmailItem[];
   trackOpening?: boolean;
+  openingSource?: string;
 }) {
   const guests = `${quote.adults} adulti${quote.children.length ? `, ${quote.children.length} bambini` : ""}`;
   const options = getEffectiveHotelOptions(quote);
@@ -35,7 +37,7 @@ export function PublicQuotePage({
   return (
     <QuotePageWrapper customerFirstName={quote.customerFirstName} quoteCode={quote.code}>
     <main className="print-page mx-auto max-w-5xl px-5 py-6">
-      {trackOpening ? <PublicEventTracker quoteCode={quote.code} token={quote.token} /> : null}
+      {trackOpening ? <PublicEventTracker quoteCode={quote.code} token={quote.token} source={openingSource} /> : null}
 
       <header className="no-print mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/90 p-4 shadow-soft">
         <IschiaStarsLogo />
