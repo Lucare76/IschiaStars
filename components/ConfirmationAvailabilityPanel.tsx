@@ -345,6 +345,41 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     router.refresh();
   }
 
+  async function removeAdditionalService(index: number) {
+    const service = additionalServices[index];
+    if (!service) return;
+
+    const costMessage = service.cost != null
+      ? ` Verranno sottratti ${formatCurrency(service.cost)} dal totale.`
+      : " Il totale resterà invariato perché per questo servizio non è stato registrato un costo.";
+    if (!window.confirm(`Vuoi rimuovere "${service.label}"?${costMessage}`)) return;
+
+    setLoadingAction(`remove-service-${index}`);
+    setMessage(null);
+    const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/update-amounts`, {
+      method: "PATCH",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({ removeServiceIndex: index })
+    });
+    const result = await readAdminApiJson<{
+      success?: boolean;
+      error?: string;
+      quote?: Quote;
+      totalAdjusted?: boolean;
+    }>(response);
+    setLoadingAction(null);
+    if (!response.ok || !result?.success) {
+      setMessage(adminApiErrorMessage(response, result));
+      return;
+    }
+
+    setMessage(result.totalAdjusted
+      ? `✓ ${service.label} rimosso e totale ricalcolato`
+      : `✓ ${service.label} rimosso; totale invariato`);
+    if (result.quote) onConfirmationUpdated?.(result.quote);
+    router.refresh();
+  }
+
   async function patchVoucherNotes() {
     setLoadingAction("voucher-notes");
     setMessage(null);
@@ -494,6 +529,24 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
       <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-[#1B3A5C]/20">
         <h3 className="font-black text-ischia-navy">Modifica importi</h3>
         <p className="mt-1 text-sm text-ischia-ink/65">Aggiungi un servizio extra o modifica manualmente totale e caparra.</p>
+        {additionalServices.length ? (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/75">Servizi aggiunti</p>
+            {additionalServices.map((service, index) => (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-ischia-mist px-3 py-2" key={`${service.label}-${service.cost ?? "no-cost"}-${index}`}>
+                <span className="text-sm font-bold text-ischia-navy">{formatConfirmationAdditionalService(service)}</span>
+                <button
+                  className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-rose-700 ring-1 ring-rose-200 disabled:opacity-60"
+                  disabled={Boolean(loadingAction)}
+                  onClick={() => void removeAdditionalService(index)}
+                  type="button"
+                >
+                  {loadingAction === `remove-service-${index}` ? "Rimozione..." : "Rimuovi"}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="text-sm font-semibold text-ischia-ink">
             Servizio aggiuntivo
