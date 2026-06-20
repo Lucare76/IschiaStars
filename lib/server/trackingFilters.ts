@@ -2,6 +2,12 @@ import { isIP } from "node:net";
 import type { QuoteEvent } from "@/lib/types";
 
 const DEFAULT_EXCLUDED_IPS = ["93.148.93.103"];
+const BOT_USER_AGENT_PATTERN = [
+  "bot", "crawler", "spider", "preview", "facebookexternalhit", "whatsapp",
+  "slackbot", "telegrambot", "twitterbot", "linkedinbot", "googlebot",
+  "bingbot", "headlesschrome", "vercel-screenshot"
+].join("|");
+const BOT_USER_AGENT_REGEX = new RegExp(BOT_USER_AGENT_PATTERN, "i");
 
 export const CUSTOMER_ACTIVITY_EVENT_TYPES: QuoteEvent["eventType"][] = [
   "quote_opened", "whatsapp_clicked", "confirm_clicked", "quote_confirmed",
@@ -40,6 +46,10 @@ export function isTrackingExcludedIp(ip: string | undefined) {
   return Boolean(ip && getTrackingExcludedIps().includes(ip));
 }
 
+export function isLikelyBotUserAgent(userAgent: string | undefined) {
+  return Boolean(userAgent && BOT_USER_AGENT_REGEX.test(userAgent));
+}
+
 export function isExcludedTrackingEvent(event: Pick<QuoteEvent, "metadata">) {
   const metadata = event.metadata ?? {};
   const ip = typeof metadata.ip === "string" ? normalizeIp(metadata.ip) : undefined;
@@ -48,6 +58,10 @@ export function isExcludedTrackingEvent(event: Pick<QuoteEvent, "metadata">) {
 
 export function isCustomerActivityEvent(event: QuoteEvent) {
   if (!CUSTOMER_ACTIVITY_EVENT_TYPES.includes(event.eventType) || isExcludedTrackingEvent(event)) return false;
+  const metadata = event.metadata ?? {};
+  const userAgent = event.userAgent
+    ?? (typeof metadata.user_agent === "string" ? metadata.user_agent : undefined);
+  if (metadata.seed === true || metadata.seed === "true" || isLikelyBotUserAgent(userAgent)) return false;
   const placement = typeof event.metadata?.placement === "string" ? event.metadata.placement : "";
   const source = typeof event.metadata?.source === "string" ? event.metadata.source : "";
   return placement !== "admin_quote_card" && !source.startsWith("admin_") && !source.startsWith("supervisor_");

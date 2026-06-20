@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
 import { ADMIN_ACCESS_COOKIE, getAdminUserFromToken } from "@/lib/server/auth-guard";
-import { getRequestIp, isTrackingExcludedIp } from "@/lib/server/trackingFilters";
+import { getRequestIp, isLikelyBotUserAgent, isTrackingExcludedIp } from "@/lib/server/trackingFilters";
 import { QuoteEvent } from "@/lib/types";
 
 const allowedEvents: QuoteEvent["eventType"][] = [
@@ -37,6 +37,10 @@ export async function POST(request: NextRequest) {
 
   const userAgent = request.headers.get("user-agent") ?? undefined;
   const ip = getRequestIp(request.headers);
+
+  if (isLikelyBotUserAgent(userAgent)) {
+    return NextResponse.json({ ok: true, source: quoteResult.source, ignored: "bot" });
+  }
 
   if (body.eventType === "quote_opened" && (!userAgent || !ip)) {
     return NextResponse.json({ ok: true, source: quoteResult.source, ignored: "missing_identity" });

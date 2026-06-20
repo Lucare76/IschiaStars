@@ -1,15 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 import { PublicQuotePage } from "@/components/PublicQuotePage";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { getConfirmedHotelCounts } from "@/lib/repositories/quoteConfirmations";
-import { getQuoteEventStats, trackQuoteEvent } from "@/lib/repositories/quoteEvents";
+import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
 import { getFeatureFlags } from "@/lib/repositories/settings";
 import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
 import { getAdminSession } from "@/lib/server/auth-guard";
-import { getRequestIp, isTrackingExcludedIp } from "@/lib/server/trackingFilters";
 import { ischiastarsWhatsappNumber, siteBaseUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -105,10 +103,6 @@ export default async function QuotePublicRoute({ params, searchParams }: { param
   const showHesitantBanner = openingsCount >= 3 && quote.status !== "confermato";
   const trackOpening = !adminSession;
 
-  if (trackOpening && searchParams.source === "whatsapp") {
-    await trackWhatsAppQuoteOpening(quote.id);
-  }
-
   return (
     <PublicQuotePage
       quote={quote}
@@ -116,24 +110,10 @@ export default async function QuotePublicRoute({ params, searchParams }: { param
       showHesitantBanner={showHesitantBanner}
       featureFlags={featureFlagsResult.data}
       travelServices={travelServices}
-      trackOpening={trackOpening && searchParams.source !== "whatsapp"}
+      trackOpening={trackOpening}
       openingSource={searchParams.source}
     />
   );
-}
-
-async function trackWhatsAppQuoteOpening(quoteId: string) {
-  const requestHeaders = headers();
-  const userAgent = requestHeaders.get("user-agent") ?? undefined;
-  const ip = getRequestIp(requestHeaders);
-  if (!userAgent || !ip || isTrackingExcludedIp(ip)) return;
-
-  await trackQuoteEvent(quoteId, "quote_opened", {
-    source: "whatsapp_quote_link",
-    ip,
-    user_agent: userAgent,
-    excluded_from_tracking: false
-  }, userAgent);
 }
 
 function absoluteUrl(value: string) {
