@@ -101,7 +101,7 @@ Ecco il tuo preventivo personalizzato:
 ${quoteUrl}
 
 Dal link puoi vedere tutti i dettagli e confermare direttamente online.
-Se il link non si apre, tienilo premuto e scegli “Apri con Chrome” o “Apri con Safari”.
+Se il link non si apre, tienilo premuto e scegli “Apri il link”.
 
 ⚠️ Le disponibilità per questo periodo sono limitate. Ti consigliamo di confermare appena possibile.
 

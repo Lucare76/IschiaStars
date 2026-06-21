@@ -26,7 +26,8 @@ const message = adminQuoteWhatsappMessage({
 });
 const linkLine = message.split("\n").find((line) => line.startsWith("https://"));
 assert.equal(linkLine, "https://preventivi.ischiastars.it/p/a1b2c3d4e5f60718");
-assert.ok(message.includes("Apri con Chrome"));
-assert.ok(message.includes("Apri con Safari"));
+assert.ok(message.includes("Apri il link"));
+assert.ok(!message.includes("Apri con Chrome"));
+assert.ok(!message.includes("Apri con Safari"));
 
 console.log("short quote link checks passed");
