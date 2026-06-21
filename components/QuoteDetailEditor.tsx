@@ -19,6 +19,7 @@ import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/adm
 import { FeatureFlags } from "@/lib/feature-flags";
 import { PaymentSettings } from "@/lib/payment-settings";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
+import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { Hotel, Quote, QuoteEvent, QuoteStatus, TransportOffer } from "@/lib/types";
 import { formatCurrency, formatDate, publicQuoteUrl } from "@/lib/utils";
 
@@ -277,6 +278,10 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
               <ReadInfo label="Caparra" value={currentQuote.confirmation!.selectedDepositAmount != null ? formatCurrency(currentQuote.confirmation!.selectedDepositAmount) : "-"} />
               <ReadInfo label="Saldo" value={currentQuote.confirmation!.selectedBalanceAmount != null ? formatCurrency(currentQuote.confirmation!.selectedBalanceAmount) : "-"} />
               <ReadInfo label="Modalità saldo" value={currentQuote.confirmation!.selectedBalanceMethod ?? "-"} />
+              {(() => {
+                const schedule = getBalancePaymentSchedule(currentQuote.confirmation!.selectedBalanceMethod, currentQuote.arrivalDate);
+                return schedule.dueDate ? <ReadInfo label="Scadenza saldo" value={formatDate(schedule.dueDate)} /> : null;
+              })()}
               <ReadInfo label="Policy cancellazione" value={currentQuote.confirmation!.selectedCancellationPolicy ?? "-"} />
             </div>
           </section>
@@ -390,7 +395,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
 
       <aside className="space-y-4">
         {currentQuote.confirmation ? (
-          <ConfirmationStatusCard confirmation={currentQuote.confirmation} />
+          <ConfirmationStatusCard confirmation={currentQuote.confirmation} arrivalDate={currentQuote.arrivalDate} />
         ) : null}
 
         {/* Card principale: codice + stato + azioni chiave */}
@@ -520,9 +525,10 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
   );
 }
 
-function ConfirmationStatusCard({ confirmation }: { confirmation: NonNullable<Quote["confirmation"]> }) {
+function ConfirmationStatusCard({ confirmation, arrivalDate }: { confirmation: NonNullable<Quote["confirmation"]>; arrivalDate: string }) {
   const status = confirmation.availabilityStatus ?? "availability_to_check";
   const isInHotelBalance = confirmation.selectedBalanceMethod?.toLowerCase().includes("in struttura") ?? false;
+  const balanceSchedule = getBalancePaymentSchedule(confirmation.selectedBalanceMethod, arrivalDate);
   const allDone = confirmation.balancePaidAt || (isInHotelBalance && confirmation.depositPaidAt);
 
   if (allDone) {
@@ -540,7 +546,9 @@ function ConfirmationStatusCard({ confirmation }: { confirmation: NonNullable<Qu
     return (
       <div className="rounded-2xl bg-emerald-50/80 p-5 shadow-soft ring-1 ring-emerald-200">
         <h3 className="font-black text-ischia-navy">✓ Caparra ricevuta</h3>
-        <p className="mt-2 text-sm font-semibold text-emerald-800">In attesa del saldo dal cliente.</p>
+        <p className="mt-2 text-sm font-semibold text-emerald-800">
+          {balanceSchedule.dueDate ? `Saldo da ricevere entro il ${formatDate(balanceSchedule.dueDate)}.` : "In attesa del saldo dal cliente."}
+        </p>
         <a className="mt-4 block rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white" href="#verifica-disponibilita">
           Gestisci saldo e voucher
         </a>

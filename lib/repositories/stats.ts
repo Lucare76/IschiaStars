@@ -3,7 +3,7 @@ import { getDashboardEventStats } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
 import { isStayExpiredRome } from "@/lib/date-format";
-import { followUpStage, hasReliableQuoteTracking } from "@/lib/follow-up-policy";
+import { followUpCustomerKey, hasReliableQuoteTracking, isFollowUpStageDue } from "@/lib/follow-up-policy";
 import type { Quote, QuoteRequest } from "@/lib/types";
 
 export type DashboardStats = {
@@ -82,19 +82,40 @@ export function buildDashboardStats({
   const opened = evaded.filter((quote) => activeOpenedIds.has(quote.id));
   const unopened = evaded.filter((quote) => hasReliableQuoteTracking(quote.sentAt ?? quote.createdAt) && !activeOpenedIds.has(quote.id));
   const now = Date.now();
-  const toContactToday = unopened.filter((quote) => {
+  const confirmedCustomerKeys = new Set(
+    confirmed
+      .filter((quote) => new Date(quote.departureDate).getTime() >= now)
+      .map(followUpCustomerKey)
+      .filter(Boolean)
+  );
+  const followUpGroups = new Map<string, Quote[]>();
+  for (const quote of evaded) {
     const nights = Math.round((new Date(quote.departureDate).getTime() - new Date(quote.arrivalDate).getTime()) / (24 * 60 * 60 * 1000));
-    if (nights < 4 || new Date(quote.arrivalDate).getTime() < now) return false;
-    if (closedFollowUpQuoteIds.has(quote.id)) return false;
-    const snoozedUntil = snoozedUntilByQuote[quote.id];
+    const customerKey = followUpCustomerKey(quote);
+    if (
+      nights < 4 ||
+      new Date(quote.arrivalDate).getTime() < now ||
+      !hasReliableQuoteTracking(quote.sentAt ?? quote.createdAt) ||
+      !customerKey ||
+      confirmedCustomerKeys.has(customerKey)
+    ) continue;
+    followUpGroups.set(customerKey, [...(followUpGroups.get(customerKey) ?? []), quote]);
+  }
+  const toContactToday = Array.from(followUpGroups.values()).filter((group) => {
+    if (group.some((quote) => activeOpenedIds.has(quote.id))) return false;
+    if (group.some((quote) => closedFollowUpQuoteIds.has(quote.id))) return false;
+    const snoozedUntil = group
+      .map((quote) => snoozedUntilByQuote[quote.id])
+      .filter(Boolean)
+      .sort()
+      .at(-1);
     if (snoozedUntil && new Date(snoozedUntil).getTime() > now) return false;
-    const sentAt = new Date(quote.sentAt ?? quote.createdAt).getTime();
-    const stage = followUpStage(quote.sentAt ?? quote.createdAt, now);
-    if (stage === "recente") return false;
-    const stageOffset = stage === "primo_sollecito" ? 24 : stage === "secondo_sollecito" ? 72 : 168;
-    const stageStartedAt = sentAt + stageOffset * 60 * 60 * 1000;
-    const lastContactAt = lastContactAtByQuote[quote.id] ? new Date(lastContactAtByQuote[quote.id]).getTime() : 0;
-    return lastContactAt < stageStartedAt;
+    const lastContactAt = group
+      .map((quote) => lastContactAtByQuote[quote.id])
+      .filter(Boolean)
+      .sort()
+      .at(-1);
+    return group.some((quote) => isFollowUpStageDue(quote.sentAt ?? quote.createdAt, lastContactAt, now));
   });
 
   return {

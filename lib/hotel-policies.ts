@@ -18,6 +18,28 @@ export const BALANCE_METHOD_IN_STRUCTURE = "Saldo restante in struttura con cart
 
 export const BALANCE_METHOD_BONIFICO_14 = "Saldo entro 14 giorni dall’arrivo tramite bonifico bancario.";
 
+export type BalancePaymentSchedule = {
+  type: "in_structure" | "before_arrival" | "other";
+  dueDate?: string;
+  title: string;
+};
+
+export function getBalancePaymentSchedule(balanceMethod: string | undefined, arrivalDate: string): BalancePaymentSchedule {
+  const method = balanceMethod?.trim() ?? "";
+  const normalized = method.toLowerCase().replace(/[’']/g, "'");
+  if (normalized.includes("in struttura")) {
+    return { type: "in_structure", title: "Saldo da versare in struttura" };
+  }
+  if ((normalized.includes("14 giorni") || normalized.includes("14gg")) && normalized.includes("arrivo")) {
+    return {
+      type: "before_arrival",
+      dueDate: subtractDaysFromDate(arrivalDate, 14),
+      title: "Saldo da versare tramite bonifico"
+    };
+  }
+  return { type: "other", title: "Saldo restante" };
+}
+
 export const CANCELLATION_POLICY_7_DAYS =
   "La cancellazione o modifica della prenotazione è consentita senza penale entro 7 giorni prima della data di arrivo. L’eventuale acconto versato resterà valido come credito utilizzabile entro 12 mesi. Oltre tale termine e in caso di no-show, verrà applicata una penale pari al 100% del totale prenotato. In caso di arrivo posticipato, partenza anticipata o riduzione del numero di persone rispetto a quanto prenotato, l’intero importo della prenotazione resta dovuto. I pasti non fruiti non danno diritto a rimborso.";
 
@@ -135,4 +157,13 @@ function buildDefaults(depositPercent: number, cancellationDays: 7 | 14): HotelP
 
 function roundCurrency(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function subtractDaysFromDate(value: string, days: number) {
+  const datePart = value.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return undefined;
+  const [year, month, day] = datePart.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
 }

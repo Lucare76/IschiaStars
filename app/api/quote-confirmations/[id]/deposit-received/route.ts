@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
 import { generateVoucherPdf } from "@/lib/pdf/generateVoucher";
+import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { getQuoteConfirmationById, markDepositPaid, updateQuoteConfirmationAvailability } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteById } from "@/lib/repositories/quotes";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
@@ -49,6 +50,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   includedServices.push(...getConfirmationAdditionalServices(confirmation.metadata).map(formatConfirmationAdditionalService));
 
   let nightsCount: number | undefined;
+  const balanceSchedule = getBalancePaymentSchedule(confirmation.selectedBalanceMethod, quote.arrivalDate);
   if (quote.arrivalDate && quote.departureDate) {
     const nights = Math.round(
       (new Date(quote.departureDate).getTime() - new Date(quote.arrivalDate).getTime()) / 86400000
@@ -73,6 +75,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
       depositPaidAtLabel: formatDateTime(depositPaidAt),
       balanceAmountLabel: typeof balanceAmount === "number" ? formatCurrency(balanceAmount) : undefined,
+      balanceTitleLabel: balanceSchedule.title,
+      balanceDueDateLabel: balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : undefined,
       balanceMethodLabel: confirmation.selectedBalanceMethod,
       cancellationPolicy: confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy,
       voucherNotes: confirmation.voucherNotes,

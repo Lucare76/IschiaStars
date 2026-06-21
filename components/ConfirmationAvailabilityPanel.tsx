@@ -6,6 +6,7 @@ import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson 
 import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
 import { availabilityStatusLabel, defaultUnavailabilityMessage, depositCoordinatesWhatsappMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
 import { FeatureFlags } from "@/lib/feature-flags";
+import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
 import { Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime, normalizeItalianPhone } from "@/lib/utils";
@@ -54,6 +55,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const selectedPrice = defaultSelectedPrice;
   const depositAmount = confirmation?.selectedDepositAmount;
   const balanceAmount = confirmation?.selectedBalanceAmount;
+  const balanceSchedule = getBalancePaymentSchedule(confirmation?.selectedBalanceMethod, quote.arrivalDate);
   const parsedNewTotalPrice = Number(newTotalPrice);
   const parsedNewDepositAmount = Number(newDepositAmount);
   const editedBalanceAmount = Number.isFinite(parsedNewTotalPrice) && Number.isFinite(parsedNewDepositAmount)
@@ -471,6 +473,8 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
         <Info label="Prezzo" value={selectedPrice > 0 ? formatCurrency(selectedPrice) : "-"} />
         <Info label="Caparra" value={depositAmount != null ? `${confirmation.selectedDepositPercent ?? 0}% = ${formatCurrency(depositAmount)}` : "-"} />
         <Info label="Saldo" value={balanceAmount != null ? formatCurrency(balanceAmount) : "-"} />
+        <Info label="Modalità saldo" value={confirmation.selectedBalanceMethod ?? "-"} />
+        {balanceSchedule.dueDate ? <Info label="Scadenza saldo" value={formatDate(balanceSchedule.dueDate)} /> : null}
         <Info label="Coordinate" value={hasCurrentCoordinates ? "Configurate per invio definitivo" : "Non configurate"} />
         <Info label="Causale" value={currentPaymentReason || "-"} />
         <Info label="Policy cancellazione" value={confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy ?? "-"} />

@@ -3,6 +3,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { FollowUpActionButtons } from "@/components/FollowUpActionButtons";
 import { FollowUpWhatsAppButton } from "@/components/FollowUpWhatsAppButton";
 import { getFollowUpQuotes, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
+import { followUpCustomerKey, isFollowUpStageDue } from "@/lib/follow-up-policy";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,7 @@ type FollowUpGroup = {
   snoozedUntil?: string;
   staySummary: string;
   isSnoozed: boolean;
+  isContactDue: boolean;
 };
 
 export default async function FollowUpPage({ searchParams }: { searchParams?: { filter?: string } }) {
@@ -61,7 +63,7 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
   const stats = {
     hot: groups.filter((group) => group.priority === "alta" && !group.lastFollowUpAt && !group.isSnoozed).length,
     toSolicit: groups.filter((group) => group.segment === "da_sollecitare" && !group.lastFollowUpAt && !group.isSnoozed).length,
-    neverOpened: groups.filter((group) => group.segment === "non_visualizzato" && !group.lastFollowUpAt && !group.isSnoozed).length,
+    neverOpened: groups.filter((group) => group.segment === "non_visualizzato" && group.isContactDue && !group.isSnoozed).length,
     contacted: groups.filter((group) => Boolean(group.lastFollowUpAt)).length
   };
 
@@ -208,17 +210,17 @@ function matchesFilter(group: FollowUpGroup, filter: FollowUpFilter) {
   if (filter === "storici") return group.segment === "storico_non_affidabile";
   if (filter === "chiusi") return group.primary.isClosed;
   if (group.primary.isClosed || group.segment === "storico_non_affidabile") return false;
-  if (group.lastFollowUpAt) return false;
   if (group.isSnoozed) return false;
+  if (group.lastFollowUpAt && filter !== "non_visualizzati") return false;
   if (filter === "caldi") return group.priority === "alta";
-  if (filter === "non_visualizzati") return group.segment === "non_visualizzato";
+  if (filter === "non_visualizzati") return group.segment === "non_visualizzato" && group.isContactDue;
   return group.segment === "da_sollecitare";
 }
 
 function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
   const map = new Map<string, FollowUpQuote[]>();
   for (const quote of quotes) {
-    const key = groupKey(quote);
+    const key = followUpCustomerKey(quote);
     map.set(key, [...(map.get(key) ?? []), quote]);
   }
 
@@ -258,7 +260,8 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
       lastFollowUpAt,
       snoozedUntil,
       staySummary,
-      isSnoozed: Boolean(snoozedUntil && new Date(snoozedUntil).getTime() > Date.now())
+      isSnoozed: Boolean(snoozedUntil && new Date(snoozedUntil).getTime() > Date.now()),
+      isContactDue: sorted.some((quote) => isFollowUpStageDue(quote.sentAt, lastFollowUpAt))
     };
   }).sort((a, b) =>
     b.engagementScore - a.engagementScore ||
@@ -295,18 +298,6 @@ function priorityForSegment(segment: FollowUpSegment): FollowUpQuote["priority"]
   if (segment === "molto_interessato" || segment === "da_sollecitare") return "alta";
   if (segment === "non_visualizzato" || segment === "aperto_non_confermato") return "media";
   return "bassa";
-}
-
-function groupKey(quote: FollowUpQuote) {
-  const phone = quote.clientPhone.replace(/\D/g, "");
-  if (phone.length >= 8) return `phone:${phone}`;
-  const email = quote.clientEmail.trim().toLowerCase();
-  if (email && !isGenericContactEmail(email)) return `email:${email}`;
-  return `name:${quote.clientName.trim().toLowerCase()}`;
-}
-
-function isGenericContactEmail(email: string) {
-  return ["info@ischiastars.it", "preventivi@ischiastars.it"].includes(email);
 }
 
 function segmentClass(segment: FollowUpSegment) {

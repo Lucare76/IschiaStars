@@ -381,6 +381,8 @@ export type VoucherDocumentData = {
   depositAmountLabel: string;
   depositPaidAtLabel: string;
   balanceAmountLabel?: string;
+  balanceTitleLabel?: string;
+  balanceDueDateLabel?: string;
   balanceMethodLabel?: string;
   cancellationPolicy?: string;
   voucherNotes?: string;
@@ -518,8 +520,11 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
               </View>
               {data.balanceAmountLabel ? (
                 <View style={styles.paymentBalance}>
-                  <Text style={styles.paymentEyebrow}>Saldo da versare in struttura</Text>
+                  <Text style={styles.paymentEyebrow}>{data.balanceTitleLabel ?? "Saldo restante"}</Text>
                   <Text style={styles.balanceAmount}>{data.balanceAmountLabel}</Text>
+                  {data.balanceDueDateLabel ? (
+                    <Text style={styles.paymentMeta}>Da versare entro il {data.balanceDueDateLabel}</Text>
+                  ) : null}
                   {data.balanceMethodLabel ? (
                     <Text style={styles.paymentMeta}>{data.balanceMethodLabel}</Text>
                   ) : (

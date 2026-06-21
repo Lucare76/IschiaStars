@@ -26,3 +26,32 @@ export function followUpStageLabel(stage: FollowUpStage) {
   };
   return labels[stage];
 }
+
+export function isFollowUpStageDue(sentAt: string, lastContactAt?: string, now = Date.now()) {
+  const sentTimestamp = new Date(sentAt).getTime();
+  if (!Number.isFinite(sentTimestamp)) return false;
+  const stage = followUpStage(sentAt, now);
+  if (stage === "recente") return false;
+  const stageOffsetHours = stage === "primo_sollecito" ? 24 : stage === "secondo_sollecito" ? 72 : 168;
+  const stageStartedAt = sentTimestamp + stageOffsetHours * HOUR_MS;
+  const lastContactTimestamp = lastContactAt ? new Date(lastContactAt).getTime() : 0;
+  return !Number.isFinite(lastContactTimestamp) || lastContactTimestamp < stageStartedAt;
+}
+
+export function followUpCustomerKey(customer: {
+  customerPhone?: string;
+  customerEmail?: string;
+  customerFirstName?: string;
+  customerLastName?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  clientName?: string;
+}) {
+  const phone = (customer.customerPhone ?? customer.clientPhone ?? "").replace(/\D/g, "");
+  if (phone.length >= 8) return `phone:${phone}`;
+  const email = (customer.customerEmail ?? customer.clientEmail ?? "").trim().toLowerCase();
+  if (email && !["info@ischiastars.it", "preventivi@ischiastars.it"].includes(email)) return `email:${email}`;
+  const name = customer.clientName
+    ?? [customer.customerFirstName, customer.customerLastName].filter(Boolean).join(" ");
+  return name.trim().toLowerCase() ? `name:${name.trim().toLowerCase()}` : "";
+}

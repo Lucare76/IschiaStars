@@ -3,6 +3,7 @@ import { formatConfirmationAdditionalService, getConfirmationAdditionalServices 
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
 import { getFeatureFlags } from "@/lib/repositories/settings";
+import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { ischiastarsWhatsappNumber } from "@/lib/utils";
 
 type BrevoRecipient = { email: string; name?: string };
@@ -902,6 +903,8 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
   const balanceLabel = quote.confirmation?.selectedBalanceAmount != null
     ? formatPrice(quote.confirmation.selectedBalanceAmount)
     : "";
+  const balanceSchedule = getBalancePaymentSchedule(quote.confirmation?.selectedBalanceMethod, quote.arrivalDate);
+  const balanceDueLabel = balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : "";
 
   const bookingRowStyle = `padding:10px 14px;border-bottom:1px solid #e5e7eb;`;
   const bookingLabelStyle = `font-size:12px;color:#6b7280;display:block;margin-bottom:2px;`;
@@ -968,7 +971,7 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
             <span style="font-size:14px;font-weight:bold;color:#15803d;">${depositLabel} ✓</span>
           </td>
           ${balanceLabel ? `<td style="${bookingRowStyle}">
-            <span style="${bookingLabelStyle}">Saldo da versare in struttura</span>
+            <span style="${bookingLabelStyle}">${balanceSchedule.title}${balanceDueLabel ? ` entro il ${balanceDueLabel}` : ""}</span>
             <span style="${bookingValueStyle}">${balanceLabel}</span>
           </td>` : "<td></td>"}
         </tr>` : ""}
@@ -1011,7 +1014,7 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
     ...(arrivalLabel ? [`Check-in: ${arrivalLabel}`] : []),
     ...(departureLabel ? [`Check-out: ${departureLabel}`] : []),
     ...(depositLabel ? [`Caparra versata: ${depositLabel}`] : []),
-    ...(balanceLabel ? [`Saldo da versare in struttura: ${balanceLabel}`] : []),
+    ...(balanceLabel ? [`${balanceSchedule.title}${balanceDueLabel ? ` entro il ${balanceDueLabel}` : ""}: ${balanceLabel}`] : []),
     "",
     `Riferimento prenotazione: ${quote.code}-V`,
     "",

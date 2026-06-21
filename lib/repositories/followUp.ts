@@ -1,7 +1,7 @@
 import { getQuoteEventsForQuoteIds, trackableEvents } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, getEffectiveHotelOptions, RepositoryResult } from "@/lib/repositories/shared";
-import { followUpStage, followUpStageLabel, FollowUpStage, hasReliableQuoteTracking } from "@/lib/follow-up-policy";
+import { followUpCustomerKey, followUpStage, followUpStageLabel, FollowUpStage, hasReliableQuoteTracking } from "@/lib/follow-up-policy";
 import { absolutePublicQuoteUrl, formatCurrency, normalizeItalianPhone } from "@/lib/utils";
 import type { Quote, QuoteEvent } from "@/lib/types";
 
@@ -55,7 +55,7 @@ export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuot
   const confirmedCustomerKeys = new Set(
     quotesResult.data
       .filter(hasActiveConfirmedBooking)
-      .map(customerFollowUpKey)
+      .map(followUpCustomerKey)
       .filter(Boolean)
   );
   const mapped = quotesResult.data.map((quote) => toFollowUpQuote(quote, eventsResult.data[quote.id] ?? [], confirmedCustomerKeys));
@@ -71,7 +71,7 @@ export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuot
 
 function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKeys: Set<string>): FollowUpQuote | null {
   if (quote.deletedAt || quote.excludedFromStats || quote.status !== "preventivo_inviato" || quote.confirmation) return null;
-  const customerKey = customerFollowUpKey(quote);
+  const customerKey = followUpCustomerKey(quote);
   if (customerKey && confirmedCustomerKeys.has(customerKey)) return null;
 
   const nights = Math.round((new Date(quote.departureDate).getTime() - new Date(quote.arrivalDate).getTime()) / DAY_MS);
@@ -329,17 +329,4 @@ function hasActiveConfirmedBooking(quote: Quote) {
   if (quote.deletedAt || quote.excludedFromStats) return false;
   if (quote.status !== "confermato" && !quote.confirmation) return false;
   return new Date(quote.departureDate).getTime() >= Date.now();
-}
-
-function customerFollowUpKey(quote: Quote) {
-  const phone = quote.customerPhone.replace(/\D/g, "");
-  if (phone.length >= 8) return `phone:${phone}`;
-  const email = quote.customerEmail.trim().toLowerCase();
-  if (email && !isGenericContactEmail(email)) return `email:${email}`;
-  const name = [quote.customerFirstName, quote.customerLastName].filter(Boolean).join(" ").trim().toLowerCase();
-  return name ? `name:${name}` : "";
-}
-
-function isGenericContactEmail(email: string) {
-  return ["info@ischiastars.it", "preventivi@ischiastars.it"].includes(email);
 }

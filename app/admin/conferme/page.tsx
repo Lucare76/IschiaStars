@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
 import { availabilityStatusLabel, availabilityStatusLabels } from "@/lib/confirmation-availability";
 import { isPaymentSettingsConfigured } from "@/lib/payment-settings";
+import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { getPaymentSettings } from "@/lib/repositories/settings";
 import { ConfirmationAvailabilityStatus } from "@/lib/types";
@@ -61,6 +62,7 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
         {confirmations.map((quote) => {
           const confirmation = quote.confirmation!;
           const status = (confirmation.availabilityStatus ?? "availability_to_check") as ConfirmationAvailabilityStatus;
+          const balanceSchedule = getBalancePaymentSchedule(confirmation.selectedBalanceMethod, quote.arrivalDate);
           return (
             <article key={quote.id} className="rounded-2xl bg-white/90 p-5 shadow-soft">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -79,6 +81,9 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
                 <Info label="Trattamento" value={confirmation.selectedTreatmentLabel ?? (quote.treatment || "-")} />
                 <Info label="Prezzo" value={confirmation.selectedPrice != null ? formatCurrency(confirmation.selectedPrice) : "vedi preventivo"} />
                 <Info label="Caparra" value={confirmation.selectedDepositAmount != null ? formatCurrency(confirmation.selectedDepositAmount) : "-"} />
+                <Info label="Saldo" value={confirmation.selectedBalanceAmount != null ? formatCurrency(confirmation.selectedBalanceAmount) : "-"} />
+                <Info label="Modalità saldo" value={confirmation.selectedBalanceMethod ?? "-"} />
+                {balanceSchedule.dueDate ? <Info label="Scadenza saldo" value={formatDate(balanceSchedule.dueDate)} /> : null}
                 <Info label="Confermata il" value={formatDateTime(confirmation.confirmedAt)} />
                 <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
               </div>

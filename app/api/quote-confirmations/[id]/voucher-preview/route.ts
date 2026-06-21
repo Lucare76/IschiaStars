@@ -4,6 +4,7 @@ import { generateVoucherPdf } from "@/lib/pdf/generateVoucher";
 import { getQuoteConfirmationById } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteById } from "@/lib/repositories/quotes";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
+import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { formatClientName, formatCurrency, formatDate, formatDateTime, ischiastarsWhatsappNumber } from "@/lib/utils";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
   const depositAmount = confirmation.selectedDepositAmount ?? quote.deposit;
   const balanceAmount = confirmation.selectedBalanceAmount;
+  const balanceSchedule = getBalancePaymentSchedule(confirmation.selectedBalanceMethod, quote.arrivalDate);
 
   const selectedOption = quote.hotelOptions.find(o => o.id === confirmation.selectedHotelOptionId);
   const includedServices = selectedOption?.includedServices
@@ -57,6 +59,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
     depositPaidAtLabel: formatDateTime(depositPaidAt),
     balanceAmountLabel: typeof balanceAmount === "number" ? formatCurrency(balanceAmount) : undefined,
+    balanceTitleLabel: balanceSchedule.title,
+    balanceDueDateLabel: balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : undefined,
     balanceMethodLabel: confirmation.selectedBalanceMethod,
     cancellationPolicy: confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy,
     voucherNotes: confirmation.voucherNotes,
