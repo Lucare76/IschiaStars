@@ -26,6 +26,7 @@ export type FollowUpQuote = {
   openedCount: number;
   whatsappClickCount: number;
   hotelLinkClickCount: number;
+  hotelLinkClicks: FollowUpHotelClick[];
   printClickCount: number;
   confirmClickCount: number;
   followUpCount: number;
@@ -44,6 +45,13 @@ export type FollowUpQuote = {
   mainOffer: string;
   publicUrl: string;
   whatsappHref?: string;
+};
+
+export type FollowUpHotelClick = {
+  hotelName: string;
+  quoteCode: string;
+  clickedAt: string;
+  sourceUrl?: string;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -132,6 +140,12 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
     openedCount: opened.length,
     whatsappClickCount: whatsappClicks.length,
     hotelLinkClickCount: hotelLinkClicks.length,
+    hotelLinkClicks: hotelLinkClicks.map((event) => ({
+      hotelName: typeof event.metadata?.hotelName === "string" ? event.metadata.hotelName : "Hotel non identificato",
+      quoteCode: quote.code,
+      clickedAt: event.createdAt,
+      sourceUrl: typeof event.metadata?.sourceUrl === "string" ? event.metadata.sourceUrl : undefined
+    })),
     printClickCount: printClicks.length,
     confirmClickCount: confirmClicks.length,
     followUpCount: followUpEvents.length,

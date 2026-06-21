@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
 import { FollowUpActionButtons } from "@/components/FollowUpActionButtons";
 import { FollowUpWhatsAppButton } from "@/components/FollowUpWhatsAppButton";
-import { followUpGroupSegment, getDueFollowUpCustomerKeys, getFollowUpQuotes, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
+import { followUpGroupSegment, getDueFollowUpCustomerKeys, getFollowUpQuotes, FollowUpHotelClick, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
 import { followUpCustomerKey, isFollowUpStageDue } from "@/lib/follow-up-policy";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
@@ -31,6 +31,7 @@ type FollowUpGroup = {
   totalHotelClicks: number;
   totalPrints: number;
   totalConfirmClicks: number;
+  hotelClicks: FollowUpHotelClick[];
   engagementScore: number;
   segment: FollowUpSegment;
   segmentLabel: string;
@@ -175,6 +176,7 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
       <div className="mt-4 grid gap-3 text-sm">
         <Info label="Date soggiorno" value={group.staySummary} />
         <Info label="Hotel proposti" value={quote.hotelsSummary || "Non indicati"} />
+        {group.hotelClicks.length ? <Info label="Hotel cliccati" value={summarizeHotelClicks(group.hotelClicks)} /> : null}
       </div>
       {group.quotes.length > 1 ? (
         <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
@@ -199,6 +201,22 @@ function Info({ label, value }: { label: string; value: string }) {
       <p className="mt-1 font-bold text-ischia-navy">{value}</p>
     </div>
   );
+}
+
+function summarizeHotelClicks(clicks: FollowUpHotelClick[]) {
+  const grouped = new Map<string, { hotelName: string; quoteCode: string; count: number }>();
+  for (const click of clicks) {
+    const key = `${click.quoteCode}:${click.hotelName}`;
+    const current = grouped.get(key);
+    grouped.set(key, {
+      hotelName: click.hotelName,
+      quoteCode: click.quoteCode,
+      count: (current?.count ?? 0) + 1
+    });
+  }
+  return Array.from(grouped.values())
+    .map((item) => `${item.hotelName} (${item.quoteCode}${item.count > 1 ? `, ${item.count} clic` : ""})`)
+    .join(" · ");
 }
 
 function normalizeFilter(value?: string): FollowUpFilter {
@@ -250,6 +268,7 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
       totalOpenings,
       totalWhatsappClicks: sorted.reduce((sum, quote) => sum + quote.whatsappClickCount, 0),
       totalHotelClicks: sorted.reduce((sum, quote) => sum + quote.hotelLinkClickCount, 0),
+      hotelClicks: sorted.flatMap((quote) => quote.hotelLinkClicks),
       totalPrints: sorted.reduce((sum, quote) => sum + quote.printClickCount, 0),
       totalConfirmClicks: sorted.reduce((sum, quote) => sum + quote.confirmClickCount, 0),
       engagementScore,
