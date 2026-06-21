@@ -1,7 +1,7 @@
 import { getQuoteEventsForQuoteIds, trackableEvents } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, getEffectiveHotelOptions, RepositoryResult } from "@/lib/repositories/shared";
-import { followUpCustomerKey, followUpStage, followUpStageLabel, FollowUpStage, hasReliableQuoteTracking } from "@/lib/follow-up-policy";
+import { followUpCustomerKey, followUpStage, followUpStageLabel, FollowUpStage, hasReliableQuoteTracking, isFollowUpStageDue } from "@/lib/follow-up-policy";
 import { absolutePublicQuoteUrl, formatCurrency, normalizeItalianPhone } from "@/lib/utils";
 import type { Quote, QuoteEvent } from "@/lib/types";
 
@@ -329,4 +329,43 @@ function hasActiveConfirmedBooking(quote: Quote) {
   if (quote.deletedAt || quote.excludedFromStats) return false;
   if (quote.status !== "confermato" && !quote.confirmation) return false;
   return new Date(quote.departureDate).getTime() >= Date.now();
+}
+
+export function getDueFollowUpCustomerKeys(quotes: FollowUpQuote[], now = Date.now()) {
+  const grouped = new Map<string, FollowUpQuote[]>();
+  for (const quote of quotes) {
+    const key = followUpCustomerKey(quote);
+    if (!key) continue;
+    grouped.set(key, [...(grouped.get(key) ?? []), quote]);
+  }
+
+  const dueKeys = new Set<string>();
+  for (const [key, group] of Array.from(grouped.entries())) {
+    const totalOpenings = group.reduce((sum, quote) => sum + quote.openedCount, 0);
+    const engagementScore = group.reduce((sum, quote) => sum + quote.engagementScore, 0);
+    if (followUpGroupSegment(group, totalOpenings, engagementScore, now) !== "non_visualizzato") continue;
+
+    const snoozedUntil = group.map((quote) => quote.snoozedUntil).filter(Boolean).sort().at(-1);
+    if (snoozedUntil && new Date(snoozedUntil).getTime() > now) continue;
+
+    const lastFollowUpAt = group.map((quote) => quote.lastFollowUpAt).filter(Boolean).sort().at(-1);
+    if (group.some((quote) => isFollowUpStageDue(quote.sentAt, lastFollowUpAt, now))) dueKeys.add(key);
+  }
+  return dueKeys;
+}
+
+export function followUpGroupSegment(
+  quotes: FollowUpQuote[],
+  totalOpenings: number,
+  engagementScore: number,
+  now = Date.now()
+): FollowUpSegment {
+  if (quotes.every((quote) => quote.isClosed)) return "chiuso";
+  if (totalOpenings > 1 || engagementScore > totalOpenings) return "molto_interessato";
+  const lastOpenedAt = quotes.map((quote) => quote.lastOpenedAt).filter((value): value is string => Boolean(value)).sort().at(-1);
+  if (lastOpenedAt && now - new Date(lastOpenedAt).getTime() >= DAY_MS) return "da_sollecitare";
+  if (totalOpenings > 0) return "aperto_non_confermato";
+  if (quotes.every((quote) => !quote.isTrackingReliable)) return "storico_non_affidabile";
+  if (quotes.every((quote) => quote.segment === "recente")) return "recente";
+  return "non_visualizzato";
 }

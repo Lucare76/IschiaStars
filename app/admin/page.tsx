@@ -4,6 +4,7 @@ import { StatsCards } from "@/components/StatsCards";
 import { QuoteCard } from "@/components/QuoteCard";
 import { PendingRequestCard } from "@/components/PendingRequestCard";
 import { getDashboardEventStats } from "@/lib/repositories/quoteEvents";
+import { getDueFollowUpCustomerKeys, getFollowUpQuotes } from "@/lib/repositories/followUp";
 import { listPendingQuoteRequests } from "@/lib/repositories/quoteRequests";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { buildDashboardStats } from "@/lib/repositories/stats";
@@ -11,10 +12,15 @@ import { buildDashboardStats } from "@/lib/repositories/stats";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const [requestResult, quoteResult, eventsResult] = await Promise.all([listPendingQuoteRequests(), listQuotes(), getDashboardEventStats()]);
+  const [requestResult, quoteResult, eventsResult, followUpResult] = await Promise.all([
+    listPendingQuoteRequests(),
+    listQuotes(),
+    getDashboardEventStats(),
+    getFollowUpQuotes()
+  ]);
 
-  if (requestResult.source !== "supabase" || quoteResult.source !== "supabase" || eventsResult.source !== "supabase") {
-    const error = [requestResult.error, quoteResult.error, eventsResult.error].filter(Boolean).join(" | ");
+  if (requestResult.source !== "supabase" || quoteResult.source !== "supabase" || eventsResult.source !== "supabase" || followUpResult.source !== "supabase") {
+    const error = [requestResult.error, quoteResult.error, eventsResult.error, followUpResult.error].filter(Boolean).join(" | ");
     return (
       <AdminShell title="Dashboard preventivi" subtitle="Panoramica delle richieste, dei preventivi inviati e delle conferme cliente.">
         <DataUnavailable error={error} />
@@ -32,7 +38,8 @@ export default async function AdminDashboardPage() {
     whatsappClickQuoteIds: eventsResult.data.whatsappClickQuoteIds,
     closedFollowUpQuoteIds: eventsResult.data.closedFollowUpQuoteIds,
     snoozedUntilByQuote: eventsResult.data.snoozedUntilByQuote,
-    lastContactAtByQuote: eventsResult.data.lastContactAtByQuote
+    lastContactAtByQuote: eventsResult.data.lastContactAtByQuote,
+    toContactTodayOverride: getDueFollowUpCustomerKeys(followUpResult.data).size
   });
   const featuredQuote = activeQuotes[0];
 

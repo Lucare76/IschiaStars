@@ -1,5 +1,6 @@
 import { listPendingQuoteRequests } from "@/lib/repositories/quoteRequests";
 import { getDashboardEventStats } from "@/lib/repositories/quoteEvents";
+import { getDueFollowUpCustomerKeys, getFollowUpQuotes } from "@/lib/repositories/followUp";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
 import { isStayExpiredRome } from "@/lib/date-format";
@@ -23,10 +24,11 @@ export type DashboardStats = {
 };
 
 export async function getDashboardStats(): Promise<RepositoryResult<DashboardStats>> {
-  const [quotesResult, requestsResult, eventsResult] = await Promise.all([
+  const [quotesResult, requestsResult, eventsResult, followUpResult] = await Promise.all([
     listQuotes({ includeDeleted: false }),
     listPendingQuoteRequests(),
-    getDashboardEventStats()
+    getDashboardEventStats(),
+    getFollowUpQuotes()
   ]);
 
   const stats = buildDashboardStats({
@@ -37,11 +39,12 @@ export async function getDashboardStats(): Promise<RepositoryResult<DashboardSta
     whatsappClickQuoteIds: eventsResult.data.whatsappClickQuoteIds,
     closedFollowUpQuoteIds: eventsResult.data.closedFollowUpQuoteIds,
     snoozedUntilByQuote: eventsResult.data.snoozedUntilByQuote,
-    lastContactAtByQuote: eventsResult.data.lastContactAtByQuote
+    lastContactAtByQuote: eventsResult.data.lastContactAtByQuote,
+    toContactTodayOverride: getDueFollowUpCustomerKeys(followUpResult.data).size
   });
 
-  const error = [quotesResult.error, requestsResult.error, eventsResult.error].filter(Boolean).join(" | ") || undefined;
-  return quotesResult.source === "supabase" && requestsResult.source === "supabase" && eventsResult.source === "supabase"
+  const error = [quotesResult.error, requestsResult.error, eventsResult.error, followUpResult.error].filter(Boolean).join(" | ") || undefined;
+  return quotesResult.source === "supabase" && requestsResult.source === "supabase" && eventsResult.source === "supabase" && followUpResult.source === "supabase"
     ? fromSupabase(stats)
     : fallback(stats, error);
 }
@@ -54,7 +57,8 @@ export function buildDashboardStats({
   whatsappClickQuoteIds,
   closedFollowUpQuoteIds = new Set<string>(),
   snoozedUntilByQuote = {},
-  lastContactAtByQuote = {}
+  lastContactAtByQuote = {},
+  toContactTodayOverride
 }: {
   quotes: Quote[];
   pendingRequests: QuoteRequest[];
@@ -64,6 +68,7 @@ export function buildDashboardStats({
   closedFollowUpQuoteIds?: Set<string>;
   snoozedUntilByQuote?: Record<string, string>;
   lastContactAtByQuote?: Record<string, string>;
+  toContactTodayOverride?: number;
 }): DashboardStats {
   // Solo preventivi attivi nelle statistiche: non cancellati e non esclusi
   const activeQuotes = quotes.filter((quote) => !quote.deletedAt && !quote.excludedFromStats);
@@ -125,7 +130,7 @@ export function buildDashboardStats({
     expiredQuotes: expired.length,
     openedQuotes: opened.length,
     unopenedQuotes: unopened.length,
-    toContactToday: toContactToday.length,
+    toContactToday: toContactTodayOverride ?? toContactToday.length,
     confirmedQuotes: confirmed.length,
     lostQuotes: activeQuotes.filter((quote) => quote.status === "perso_non_disponibile").length,
     conversionRate: activeQuotes.length ? Math.round((confirmed.length / activeQuotes.length) * 100) : 0,

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
 import { FollowUpActionButtons } from "@/components/FollowUpActionButtons";
 import { FollowUpWhatsAppButton } from "@/components/FollowUpWhatsAppButton";
-import { getFollowUpQuotes, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
+import { followUpGroupSegment, getDueFollowUpCustomerKeys, getFollowUpQuotes, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
 import { followUpCustomerKey, isFollowUpStageDue } from "@/lib/follow-up-policy";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
@@ -57,13 +57,14 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
   }
 
   const quotes = followUpResult.data;
+  const dueCustomerKeys = getDueFollowUpCustomerKeys(quotes);
   const groups = groupFollowUps(quotes);
-  const visibleGroups = groups.filter((group) => matchesFilter(group, activeFilter));
+  const visibleGroups = groups.filter((group) => matchesFilter(group, activeFilter, dueCustomerKeys));
 
   const stats = {
     hot: groups.filter((group) => group.priority === "alta" && !group.lastFollowUpAt && !group.isSnoozed).length,
     toSolicit: groups.filter((group) => group.segment === "da_sollecitare" && !group.lastFollowUpAt && !group.isSnoozed).length,
-    neverOpened: groups.filter((group) => group.segment === "non_visualizzato" && group.isContactDue && !group.isSnoozed).length,
+    neverOpened: dueCustomerKeys.size,
     contacted: groups.filter((group) => Boolean(group.lastFollowUpAt)).length
   };
 
@@ -204,7 +205,7 @@ function normalizeFilter(value?: string): FollowUpFilter {
   return filters.some((filter) => filter.value === value) ? value as FollowUpFilter : "caldi";
 }
 
-function matchesFilter(group: FollowUpGroup, filter: FollowUpFilter) {
+function matchesFilter(group: FollowUpGroup, filter: FollowUpFilter, dueCustomerKeys: Set<string>) {
   if (filter === "tutti") return true;
   if (filter === "gia_richiamati") return Boolean(group.lastFollowUpAt) && !group.primary.isClosed;
   if (filter === "storici") return group.segment === "storico_non_affidabile";
@@ -213,7 +214,7 @@ function matchesFilter(group: FollowUpGroup, filter: FollowUpFilter) {
   if (group.isSnoozed) return false;
   if (group.lastFollowUpAt && filter !== "non_visualizzati") return false;
   if (filter === "caldi") return group.priority === "alta";
-  if (filter === "non_visualizzati") return group.segment === "non_visualizzato" && group.isContactDue;
+  if (filter === "non_visualizzati") return dueCustomerKeys.has(group.key);
   return group.segment === "da_sollecitare";
 }
 
@@ -239,7 +240,7 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
     const snoozedUntil = sorted.map((quote) => quote.snoozedUntil).filter(Boolean).sort().at(-1);
     const totalOpenings = sorted.reduce((sum, quote) => sum + quote.openedCount, 0);
     const engagementScore = sorted.reduce((sum, quote) => sum + quote.engagementScore, 0);
-    const segment = aggregateSegment(sorted, totalOpenings, engagementScore);
+    const segment = followUpGroupSegment(sorted, totalOpenings, engagementScore);
     const priority = priorityForSegment(segment);
     const staySummary = summarizeStayDates(sorted);
     return {
@@ -268,17 +269,6 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
     priorityWeight(b.priority) - priorityWeight(a.priority) ||
     new Date(b.lastEventAt ?? b.primary.sentAt).getTime() - new Date(a.lastEventAt ?? a.primary.sentAt).getTime()
   );
-}
-
-function aggregateSegment(quotes: FollowUpQuote[], totalOpenings: number, engagementScore: number): FollowUpSegment {
-  if (quotes.every((quote) => quote.isClosed)) return "chiuso";
-  if (totalOpenings > 1 || engagementScore > totalOpenings) return "molto_interessato";
-  const lastOpenedAt = quotes.map((quote) => quote.lastOpenedAt).filter((value): value is string => Boolean(value)).sort().at(-1);
-  if (lastOpenedAt && Date.now() - new Date(lastOpenedAt).getTime() >= 24 * 60 * 60 * 1000) return "da_sollecitare";
-  if (totalOpenings > 0) return "aperto_non_confermato";
-  if (quotes.every((quote) => !quote.isTrackingReliable)) return "storico_non_affidabile";
-  if (quotes.every((quote) => quote.segment === "recente")) return "recente";
-  return "non_visualizzato";
 }
 
 function labelForSegment(segment: FollowUpSegment) {
