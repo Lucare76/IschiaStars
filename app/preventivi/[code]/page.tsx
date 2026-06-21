@@ -1,14 +1,14 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 import { PublicQuotePage } from "@/components/PublicQuotePage";
+import { PublicQuoteLinkError } from "@/components/PublicQuoteLinkError";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { getConfirmedHotelCounts } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
 import { getFeatureFlags } from "@/lib/repositories/settings";
 import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
 import { getAdminSession } from "@/lib/server/auth-guard";
-import { ischiastarsWhatsappNumber, siteBaseUrl } from "@/lib/utils";
+import { siteBaseUrl } from "@/lib/utils";
+import type { Quote } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +71,7 @@ export async function generateQuoteMetadata(code: string, token?: string): Promi
       ...defaultMetadata.openGraph,
       title,
       description,
-      url: absoluteUrl(`/preventivi/${quote.code}?token=${quote.token}`),
+      url: absoluteUrl(quote.publicShortCode ? `/p/${quote.publicShortCode}` : `/preventivi/${quote.code}/${quote.token}`),
       images: [{ url: imageUrl, alt: hotelName ?? "IschiaStars" }]
     },
     twitter: {
@@ -86,8 +86,11 @@ export async function generateQuoteMetadata(code: string, token?: string): Promi
 export default async function QuotePublicRoute({ params, searchParams }: { params: { code: string }; searchParams: { token?: string; source?: string } }) {
   const result = await getQuoteByCodeAndToken(params.code, searchParams.token);
   const quote = result.data;
-  if (!quote || quote.deletedAt) return <InvalidQuotePage />;
+  if (!quote || quote.deletedAt) return <PublicQuoteLinkError />;
+  return renderPublicQuote(quote, searchParams.source);
+}
 
+export async function renderPublicQuote(quote: Quote, openingSource?: string) {
   const [hotelPopularity, eventStats, featureFlagsResult, adminSession] = await Promise.all([
     getConfirmedHotelCounts(),
     getQuoteEventStats(quote.id),
@@ -111,7 +114,7 @@ export default async function QuotePublicRoute({ params, searchParams }: { param
       featureFlags={featureFlagsResult.data}
       travelServices={travelServices}
       trackOpening={trackOpening}
-      openingSource={searchParams.source}
+      openingSource={openingSource}
     />
   );
 }
@@ -119,21 +122,4 @@ export default async function QuotePublicRoute({ params, searchParams }: { param
 function absoluteUrl(value: string) {
   if (/^https?:\/\//i.test(value)) return value;
   return `${siteBaseUrl()}${value.startsWith("/") ? value : `/${value}`}`;
-}
-
-function InvalidQuotePage() {
-  return (
-    <main className="grid min-h-screen place-items-center px-5 py-10">
-      <section className="max-w-xl rounded-[28px] bg-white p-8 text-center shadow-soft">
-        <div className="flex justify-center">
-          <IschiaStarsLogo />
-        </div>
-        <h1 className="mt-8 text-3xl font-black text-ischia-navy">Preventivo non disponibile o link non valido</h1>
-        <p className="mt-3 text-ischia-ink/70">Controlla il link ricevuto oppure scrivi a IschiaStars su WhatsApp per ricevere di nuovo la tua proposta.</p>
-        <Link className="mt-6 inline-flex rounded-full bg-ischia-leaf px-5 py-3 font-black text-white" href={`https://wa.me/${ischiastarsWhatsappNumber()}`}>
-          Scrivi su WhatsApp
-        </Link>
-      </section>
-    </main>
-  );
 }

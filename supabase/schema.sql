@@ -76,6 +76,8 @@ create table if not exists public.quotes (
   quote_request_id uuid references public.quote_requests(id) on delete set null,
   code text not null unique,
   public_token text not null unique default encode(gen_random_bytes(32), 'hex'),
+  public_short_code text not null unique default encode(gen_random_bytes(8), 'hex')
+    check (public_short_code ~ '^[0-9a-f]{16}$'),
   client_first_name text not null,
   client_last_name text not null,
   client_email text not null,

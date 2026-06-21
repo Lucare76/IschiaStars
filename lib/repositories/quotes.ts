@@ -121,6 +121,36 @@ export async function getQuoteByCodeAndToken(code: string, token?: string): Prom
   return fromSupabase(withDemoStatus(mapQuote(data as Record<string, unknown>, allHotels, childRowsResult.data as Record<string, unknown>[] ?? [], hotelOpts, confirmationsMap[quoteId])));
 }
 
+export async function getQuoteByShortCode(shortCode: string): Promise<RepositoryResult<Quote | null>> {
+  const normalized = shortCode.trim().toLowerCase();
+  const local = allDemoQuotes().find((quote) => (quote.publicShortCode ?? quote.token.slice(-16)).toLowerCase() === normalized) ?? null;
+  const supabase = createSupabaseAdminClient();
+  if (!supabase || !/^[0-9a-f]{16}$/.test(normalized)) return fallback(local);
+
+  const { data, error } = await supabase
+    .from("quotes")
+    .select("*")
+    .eq("public_short_code", normalized)
+    .maybeSingle();
+  if (error || !data) return error ? fallback(local, error) : fromSupabase(null);
+
+  const quoteId = String(data.id);
+  const hotelResult = await listHotels();
+  const [childRowsResult, hotelOptionsMap, confirmationsMap] = await Promise.all([
+    supabase.from("quote_children").select("*").eq("quote_id", quoteId),
+    fetchHotelOptionsForQuotes([quoteId]),
+    fetchConfirmationsForQuotes([quoteId])
+  ]);
+  const allHotels = hotelResult.data.length ? hotelResult.data : hotels;
+  return fromSupabase(withDemoStatus(mapQuote(
+    data as Record<string, unknown>,
+    allHotels,
+    childRowsResult.data as Record<string, unknown>[] ?? [],
+    hotelOptionsMap[quoteId] ?? [],
+    confirmationsMap[quoteId]
+  )));
+}
+
 export async function getQuoteByCode(code: string): Promise<RepositoryResult<Quote | null>> {
   const local = allDemoQuotes().find((q) => q.code === code) ?? null;
   const supabase = createSupabaseAdminClient();
@@ -203,6 +233,7 @@ export async function createQuoteFromRequest(input: QuoteInput, _options: { acce
       id: `quote-local-${Date.now()}`,
       code: normalizedInput.code,
       token: normalizedInput.publicToken,
+      publicShortCode: secureShortCode(),
       requestId: normalizedInput.quoteRequestId ?? "",
       customerFirstName: normalizedInput.clientFirstName,
       customerLastName: normalizedInput.clientLastName,
@@ -311,6 +342,10 @@ async function nextQuoteCode(supabase?: ReturnType<typeof createSupabaseAdminCli
 
 function secureToken() {
   return `tok-${crypto.randomUUID().replace(/-/g, "")}`;
+}
+
+function secureShortCode() {
+  return crypto.randomUUID().replace(/-/g, "").slice(0, 16);
 }
 
 export async function updateQuote(id: string, input: Partial<QuoteInput>): Promise<RepositoryResult<Quote | null>> {

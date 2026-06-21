@@ -14,7 +14,7 @@ export function PublicEventTracker({ quoteCode, token, source }: { quoteCode: st
     localStorage.setItem(visitorKey, visitorId);
     localStorage.setItem(key, String(Date.now()));
     trackQuoteEvent({ quoteCode, token }, "quote_opened", {
-      source: source === "email" ? "email_quote_link" : "public_quote_page",
+      source: source === "email" ? "email_quote_link" : source === "whatsapp" ? "whatsapp_quote_link" : "public_quote_page",
       visitor_id: visitorId
     });
   }, [quoteCode, source, token]);

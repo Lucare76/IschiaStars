@@ -32,7 +32,8 @@ NEXT_PUBLIC_ISCHIASTARS_WHATSAPP=393717590017
 ADMIN_API_KEY=
 ```
 
-`NEXT_PUBLIC_SITE_URL` genera i link assoluti dei preventivi inseriti nei messaggi WhatsApp.
+`NEXT_PUBLIC_SITE_URL` è l'URL pubblico generale del gestionale.
+`NEXT_PUBLIC_WHATSAPP_QUOTE_BASE_URL` genera i link brevi WhatsApp e in produzione deve essere `https://preventivi.ischiastars.it`.
 
 `NEXT_PUBLIC_ISCHIASTARS_WHATSAPP` imposta il numero IschiaStars usato nella pagina cliente pubblica. Il bottone backoffice usa invece il numero del cliente.
 
@@ -68,6 +69,7 @@ Configura queste variabili su Vercel:
 
 ```env
 NEXT_PUBLIC_SITE_URL=https://preventivi.ischiastars.it
+NEXT_PUBLIC_WHATSAPP_QUOTE_BASE_URL=https://preventivi.ischiastars.it
 NEXT_PUBLIC_ISCHIASTARS_WHATSAPP=393717590017
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=xxxxx
@@ -156,7 +158,11 @@ Con i dati iniziali, un link cliente utilizzabile in ambiente locale e:
 /preventivi/IS-2026-001?token=preview-token-ischiastars
 ```
 
-In produzione i link vengono generati dal sistema usando `NEXT_PUBLIC_SITE_URL`, codice preventivo e token sicuro.
+In produzione:
+
+- i nuovi messaggi WhatsApp usano `https://preventivi.ischiastars.it/p/<public_short_code>`;
+- i vecchi link con codice e token continuano a funzionare;
+- `public_short_code` è un identificatore casuale stabile di 16 caratteri esadecimali.
 
 ## API Admin
 

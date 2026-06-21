@@ -42,6 +42,28 @@ export function absolutePublicQuoteUrl(quote: Quote, params: Record<string, stri
   return `${siteBaseUrl()}${publicQuoteUrl(quote, params)}`;
 }
 
+export function whatsappQuoteBaseUrl() {
+  const configured = process.env.NEXT_PUBLIC_WHATSAPP_QUOTE_BASE_URL
+    || process.env.NEXT_PUBLIC_SITE_URL
+    || (process.env.NODE_ENV === "production" ? "https://preventivi.ischiastars.it" : "http://localhost:4000");
+  const normalized = new URL(configured);
+  if (normalized.hostname === "www.preventivi.ischiastars.it") normalized.hostname = "preventivi.ischiastars.it";
+  if (normalized.hostname !== "localhost" && normalized.hostname !== "127.0.0.1") normalized.protocol = "https:";
+  normalized.pathname = "";
+  normalized.search = "";
+  normalized.hash = "";
+  return normalized.toString().replace(/\/+$/, "");
+}
+
+export function shortPublicQuoteUrl(quote: Quote) {
+  const shortCode = quote.publicShortCode?.trim();
+  return shortCode ? `/p/${encodeURIComponent(shortCode)}` : publicQuoteUrl(quote);
+}
+
+export function absoluteShortPublicQuoteUrl(quote: Quote) {
+  return `${whatsappQuoteBaseUrl()}${shortPublicQuoteUrl(quote)}`;
+}
+
 export function normalizeItalianPhone(phone: string) {
   const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("39")) return digits;
@@ -53,7 +75,7 @@ export function whatsappQuoteMessage(quote: Quote) {
   return adminQuoteWhatsappMessage({
     quote,
     options,
-    quoteUrl: absolutePublicQuoteUrl(quote, { source: "whatsapp" }),
+    quoteUrl: absoluteShortPublicQuoteUrl(quote),
   });
 }
 

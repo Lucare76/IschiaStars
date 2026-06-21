@@ -96,6 +96,7 @@ export function mapQuote(
     id: String(row.id),
     code: String(row.code),
     token: String(row.public_token),
+    publicShortCode: row.public_short_code ? String(row.public_short_code) : undefined,
     requestId: String(row.quote_request_id ?? ""),
     customerFirstName: String(row.client_first_name ?? row.customer_first_name ?? ""),
     customerLastName: String(row.client_last_name ?? row.customer_last_name ?? ""),

@@ -200,6 +200,7 @@ export type Quote = {
   id: string;
   code: string;
   token: string;
+  publicShortCode?: string;
   requestId: string;
   customerFirstName: string;
   customerLastName: string;

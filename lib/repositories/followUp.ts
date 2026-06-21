@@ -2,7 +2,7 @@ import { getQuoteEventsForQuoteIds, trackableEvents } from "@/lib/repositories/q
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, getEffectiveHotelOptions, RepositoryResult } from "@/lib/repositories/shared";
 import { followUpCustomerKey, followUpStage, followUpStageLabel, FollowUpStage, hasReliableQuoteTracking, isFollowUpStageDue } from "@/lib/follow-up-policy";
-import { absolutePublicQuoteUrl, formatCurrency, normalizeItalianPhone } from "@/lib/utils";
+import { absolutePublicQuoteUrl, absoluteShortPublicQuoteUrl, formatCurrency, normalizeItalianPhone } from "@/lib/utils";
 import type { Quote, QuoteEvent } from "@/lib/types";
 
 export type FollowUpSegment = "non_visualizzato" | "aperto_non_confermato" | "molto_interessato" | "da_sollecitare" | "recente" | "storico_non_affidabile" | "chiuso";
@@ -107,7 +107,7 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
   const isClosed = followUpEvents.some((event) => event.metadata?.action === "closed");
   const lastEvent = latestEvent(customerEvents);
   const publicUrl = absolutePublicQuoteUrl(quote);
-  const whatsappPublicUrl = absolutePublicQuoteUrl(quote, { source: "whatsapp" });
+  const whatsappPublicUrl = absoluteShortPublicQuoteUrl(quote);
   const segment = isClosed ? "chiuso" : !isTrackingReliable && opened.length === 0 ? "storico_non_affidabile" : resolveSegment({
     sentAt,
     opened,
