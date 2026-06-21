@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { AdminRouteRefresh } from "@/components/AdminRouteRefresh";
 import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 import { LogoutButton } from "@/components/LogoutButton";
 import { MobileNav } from "@/components/MobileNav";
@@ -23,7 +22,6 @@ const nav = [
 export function AdminShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
     <main className="min-h-screen bg-ischia-mist">
-      <AdminRouteRefresh />
       <header className="brand-shell relative z-30 text-white shadow-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3">
           <div className="shrink-0">
