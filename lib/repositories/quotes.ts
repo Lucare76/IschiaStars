@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { hotels } from "@/lib/mock-data";
 import { addDemoQuote, allDemoQuotes, excludeDemoQuoteFromStats, isQuoteConfirmedInDemo, markQuoteConfirmed as markDemoQuoteConfirmed, restoreDemoQuote, softDeleteDemoQuote, updateDemoQuote } from "@/lib/demo-store";
 import { listHotels } from "@/lib/repositories/hotels";
@@ -39,6 +40,7 @@ export type QuoteInput = {
 };
 
 export async function listQuotes({ includeDeleted = false, includeLabTests = false }: { includeDeleted?: boolean; includeLabTests?: boolean } = {}): Promise<RepositoryResult<Quote[]>> {
+  noStore();
   const supabase = createSupabaseAdminClient();
   const demoQuotes = (includeDeleted ? allDemoQuotes() : allDemoQuotes().filter((q) => !q.deletedAt))
     .filter((quote) => includeLabTests || !quote.isLabTest);
@@ -79,6 +81,7 @@ export type LabTestQuote = {
 };
 
 export async function listLabTestQuotes(): Promise<LabTestQuote[]> {
+  noStore();
   const supabase = createSupabaseAdminClient();
   if (!supabase) return [];
 
@@ -101,6 +104,7 @@ export async function listLabTestQuotes(): Promise<LabTestQuote[]> {
 }
 
 export async function getQuoteByCodeAndToken(code: string, token?: string): Promise<RepositoryResult<Quote | null>> {
+  noStore();
   const local = allDemoQuotes().find((q) => q.code === code && q.token === token) ?? null;
   const supabase = createSupabaseAdminClient();
   if (!supabase || !token) return fallback(local);
@@ -122,6 +126,7 @@ export async function getQuoteByCodeAndToken(code: string, token?: string): Prom
 }
 
 export async function getQuoteByShortCode(shortCode: string): Promise<RepositoryResult<Quote | null>> {
+  noStore();
   const normalized = shortCode.trim().toLowerCase();
   const local = allDemoQuotes().find((quote) => (quote.publicShortCode ?? quote.token.slice(-16)).toLowerCase() === normalized) ?? null;
   const supabase = createSupabaseAdminClient();
@@ -152,6 +157,7 @@ export async function getQuoteByShortCode(shortCode: string): Promise<Repository
 }
 
 export async function getQuoteByCode(code: string): Promise<RepositoryResult<Quote | null>> {
+  noStore();
   const local = allDemoQuotes().find((q) => q.code === code) ?? null;
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(local);
@@ -174,6 +180,7 @@ export async function getQuoteByCode(code: string): Promise<RepositoryResult<Quo
 }
 
 export async function getQuoteById(id: string): Promise<RepositoryResult<Quote | null>> {
+  noStore();
   const local = allDemoQuotes().find((q) => q.id === id) ?? null;
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(local);
