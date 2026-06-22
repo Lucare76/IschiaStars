@@ -6,7 +6,7 @@ import { buildHotelOptionRows, QuoteHotelOptionInput, fetchHotelOptionsForQuotes
 import { createQuoteStatusEvent } from "@/lib/repositories/quoteStatusEvents";
 import { fallback, fromSupabase, mapQuote, RepositoryResult } from "@/lib/repositories/shared";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { Quote, QuoteStatus, TransportOffer } from "@/lib/types";
+import { Quote, QuoteHotelOption, QuoteStatus, TransportOffer } from "@/lib/types";
 
 export type QuoteInput = {
   quoteRequestId?: string;
@@ -55,14 +55,20 @@ export async function listQuotes({ includeDeleted = false, includeLabTests = fal
   if (error) return fallback(demoQuotes, error);
 
   const quoteIds = (data ?? []).map((row) => row.id as string);
-  const [childRowsResult, hotelOptionsMap, confirmationsMap] = await Promise.all([
-    quoteIds.length ? supabase.from("quote_children").select("*").in("quote_id", quoteIds) : Promise.resolve({ data: [] }),
-    fetchHotelOptionsForQuotes(quoteIds),
-    fetchConfirmationsForQuotes(quoteIds)
-  ]);
+  let childRows: Record<string, unknown>[];
+  let hotelOptionsMap: Record<string, QuoteHotelOption[]>;
+  let confirmationsMap: Record<string, Record<string, unknown>>;
+  try {
+    [childRows, hotelOptionsMap, confirmationsMap] = await Promise.all([
+      fetchQuoteChildrenForQuotes(quoteIds),
+      fetchHotelOptionsForQuotes(quoteIds),
+      fetchConfirmationsForQuotes(quoteIds)
+    ]);
+  } catch (relatedDataError) {
+    return fallback(demoQuotes, relatedDataError);
+  }
 
   const allHotels = hotelResult.data.length ? hotelResult.data : hotels;
-  const childRows = childRowsResult.data ?? [];
 
   return fromSupabase(
     (data ?? []).map((row) => {
@@ -206,16 +212,40 @@ async function fetchConfirmationsForQuotes(quoteIds: string[]): Promise<Record<s
   const supabase = createSupabaseAdminClient();
   if (!supabase) return {};
 
-  const { data } = await supabase
-    .from("quote_confirmations")
-    .select("id,quote_id,created_at,first_name,last_name,phone,email,fiscal_code,address,city,postal_code,province,accepted_terms,accepted_privacy,selected_hotel_option_id,selected_hotel_name,selected_treatment_key,selected_treatment_label,selected_price,selected_deposit_percent,selected_deposit_amount,selected_balance_amount,selected_balance_method,selected_payment_policy,selected_cancellation_policy,payment_settings_snapshot,metadata,availability_status,deposit_due_at,deposit_paid_at,balance_paid_at,voucher_notes,final_confirmation_sent_at,final_confirmation_notes,unavailable_reason,unavailability_email_sent_at,availability_updated_at")
-    .in("quote_id", quoteIds);
-
   const result: Record<string, Record<string, unknown>> = {};
-  for (const row of data ?? []) {
-    result[String(row.quote_id)] = row as Record<string, unknown>;
+  for (const chunk of chunkArray(quoteIds, 100)) {
+    const { data, error } = await supabase
+      .from("quote_confirmations")
+      .select("id,quote_id,created_at,first_name,last_name,phone,email,fiscal_code,address,city,postal_code,province,accepted_terms,accepted_privacy,selected_hotel_option_id,selected_hotel_name,selected_treatment_key,selected_treatment_label,selected_price,selected_deposit_percent,selected_deposit_amount,selected_balance_amount,selected_balance_method,selected_payment_policy,selected_cancellation_policy,payment_settings_snapshot,metadata,availability_status,deposit_due_at,deposit_paid_at,balance_paid_at,voucher_notes,final_confirmation_sent_at,final_confirmation_notes,unavailable_reason,unavailability_email_sent_at,availability_updated_at")
+      .in("quote_id", chunk);
+    if (error) throw new Error(`Impossibile caricare le conferme: ${error.message}`);
+    for (const row of data ?? []) {
+      result[String(row.quote_id)] = row as Record<string, unknown>;
+    }
   }
   return result;
+}
+
+async function fetchQuoteChildrenForQuotes(quoteIds: string[]): Promise<Record<string, unknown>[]> {
+  if (!quoteIds.length) return [];
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return [];
+
+  const rows: Record<string, unknown>[] = [];
+  for (const chunk of chunkArray(quoteIds, 100)) {
+    const { data, error } = await supabase.from("quote_children").select("*").in("quote_id", chunk);
+    if (error) throw new Error(`Impossibile caricare i bambini dei preventivi: ${error.message}`);
+    rows.push(...(data as Record<string, unknown>[] ?? []));
+  }
+  return rows;
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
 }
 
 export async function createQuoteFromRequest(input: QuoteInput, _options: { accessToken?: string; isLabTest?: boolean } = {}): Promise<RepositoryResult<Quote | null>> {
