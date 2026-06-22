@@ -2,15 +2,26 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { PublicQuoteLinkError } from "@/components/PublicQuoteLinkError";
 import { getQuoteByShortCode } from "@/lib/repositories/quotes";
-import { renderPublicQuote } from "@/app/preventivi/[code]/page";
+import { generateQuoteMetadataFromQuote, renderPublicQuote } from "@/app/preventivi/[code]/page";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+const defaultMetadata: Metadata = {
   title: "Preventivo IschiaStars",
   description: "La tua proposta personalizzata per una vacanza a Ischia.",
   robots: { index: false, follow: false }
 };
+
+export async function generateMetadata({ params }: { params: { shortCode: string } }): Promise<Metadata> {
+  const shortCode = safeDecode(params.shortCode);
+  if (!shortCode || !/^[0-9a-f]{16}$/.test(shortCode)) return defaultMetadata;
+
+  const result = await getQuoteByShortCode(shortCode);
+  const quote = result.data;
+  if (!quote || quote.deletedAt || isExpired(quote.offerExpiresAt)) return defaultMetadata;
+
+  return generateQuoteMetadataFromQuote(quote);
+}
 
 export default async function ShortQuotePage({ params }: { params: { shortCode: string } }) {
   const requestHeaders = headers();

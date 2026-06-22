@@ -42,7 +42,10 @@ export async function generateQuoteMetadata(code: string, token?: string): Promi
   const result = await getQuoteByCodeAndToken(code, token);
   const quote = result.data;
   if (!quote || quote.deletedAt) return defaultMetadata;
+  return generateQuoteMetadataFromQuote(quote);
+}
 
+export function generateQuoteMetadataFromQuote(quote: Quote): Metadata {
   const hotelOptions = quote.hotelOptions.length ? quote.hotelOptions : [];
   const hotelGroups = new Map<number, typeof hotelOptions>();
   for (const option of hotelOptions) {
