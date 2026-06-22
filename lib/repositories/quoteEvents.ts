@@ -90,19 +90,31 @@ export async function getQuoteEventsForQuoteIds(quoteIds: string[]): Promise<Rep
 
   const pageSize = 1000;
   const rows: Record<string, any>[] = [];
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await supabase
-      .from("quote_events")
-      .select("*")
-      .in("quote_id", quoteIds)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .range(from, from + pageSize - 1);
-    if (error) return fallback(local, error);
-    rows.push(...(data ?? []));
-    if ((data ?? []).length < pageSize) break;
+  // PostgREST serializza `.in()` nella query string. Con centinaia di
+  // preventivi un'unica richiesta supera il limite URL e risponde 400.
+  for (const quoteIdsChunk of chunkArray(quoteIds, 100)) {
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase
+        .from("quote_events")
+        .select("*")
+        .in("quote_id", quoteIdsChunk)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (error) return fallback(local, error);
+      rows.push(...(data ?? []));
+      if ((data ?? []).length < pageSize) break;
+    }
   }
   return fromSupabase(groupEventsByQuote(deduplicateEvents(trackableEvents(rows.map(mapEvent)))));
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
 }
 
 export async function getQuoteEventStats(quoteId: string) {

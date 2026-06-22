@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: { shortCode: string
 
   const result = await getQuoteByShortCode(shortCode);
   const quote = result.data;
-  if (!quote || quote.deletedAt || isExpired(quote.offerExpiresAt)) return defaultMetadata;
+  if (!quote || quote.deletedAt) return defaultMetadata;
 
   return generateQuoteMetadataFromQuote(quote);
 }
@@ -45,11 +45,6 @@ export default async function ShortQuotePage({ params }: { params: { shortCode: 
     logShortLink({ ...baseLog, quoteId: quote?.id ?? null, outcome: "invalid" });
     return <PublicQuoteLinkError />;
   }
-  if (isExpired(quote.offerExpiresAt)) {
-    logShortLink({ ...baseLog, quoteId: quote.id, outcome: "expired" });
-    return <PublicQuoteLinkError />;
-  }
-
   logShortLink({ ...baseLog, quoteId: quote.id, outcome: "success" });
   return renderPublicQuote(quote, "whatsapp");
 }
@@ -60,18 +55,6 @@ function safeDecode(value: string | undefined) {
   } catch {
     return null;
   }
-}
-
-function isExpired(value: string) {
-  const date = value.slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Rome",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(new Date());
-  return date < today;
 }
 
 function logShortLink(entry: Record<string, unknown>) {

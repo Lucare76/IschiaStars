@@ -18,34 +18,55 @@ export async function GET(request: NextRequest) {
 
   const supabase = createSupabaseAdminClient();
   if (!supabase) return NextResponse.json({ ok: true, data: [] });
+  const db = supabase;
 
-  const { data, error } = await supabase
-    .from("quotes")
-    .select("client_first_name, client_last_name, client_email, client_phone")
+  const clientsResult = await db
+    .from("clients")
+    .select("first_name, last_name, email, phone")
     .or(
-      `client_first_name.ilike.%${q}%,client_last_name.ilike.%${q}%,client_email.ilike.%${q}%,client_phone.ilike.%${q}%`
+      `first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`
     )
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
+    .order("last_seen_at", { ascending: false })
     .limit(50);
 
-  if (error) return NextResponse.json({ ok: true, data: [] });
+  const rows = clientsResult.error
+    ? await loadLegacyClientRows(q)
+    : (clientsResult.data ?? []).map((row) => ({
+        firstName: String(row.first_name ?? ""),
+        lastName: String(row.last_name ?? ""),
+        email: String(row.email ?? ""),
+        phone: String(row.phone ?? "")
+      }));
 
-  // Deduplicazione per email
+  // Deduplicazione per email, con telefono come alternativa.
   const seen = new Set<string>();
   const clients: ClientSearchResult[] = [];
-  for (const row of data ?? []) {
-    const key = String(row.client_email ?? "").toLowerCase() || `${row.client_first_name}-${row.client_last_name}-${row.client_phone}`;
+  for (const row of rows) {
+    const key = row.email.toLowerCase() || `${row.firstName}-${row.lastName}-${row.phone}`;
     if (!seen.has(key)) {
       seen.add(key);
-      clients.push({
-        firstName: String(row.client_first_name ?? ""),
-        lastName: String(row.client_last_name ?? ""),
-        email: String(row.client_email ?? ""),
-        phone: String(row.client_phone ?? "")
-      });
+      clients.push(row);
     }
   }
 
   return NextResponse.json({ ok: true, data: clients });
+
+  async function loadLegacyClientRows(search: string): Promise<ClientSearchResult[]> {
+    const { data } = await db
+      .from("quotes")
+      .select("client_first_name, client_last_name, client_email, client_phone")
+      .or(
+        `client_first_name.ilike.%${search}%,client_last_name.ilike.%${search}%,client_email.ilike.%${search}%,client_phone.ilike.%${search}%`
+      )
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    return (data ?? []).map((row) => ({
+      firstName: String(row.client_first_name ?? ""),
+      lastName: String(row.client_last_name ?? ""),
+      email: String(row.client_email ?? ""),
+      phone: String(row.client_phone ?? "")
+    }));
+  }
 }
