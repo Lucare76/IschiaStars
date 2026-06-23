@@ -156,6 +156,20 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#039;");
 }
 
+function escapeHtmlAttribute(value: string): string {
+  return escapeHtml(value);
+}
+
+function safeEmailUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "#";
+    return escapeHtmlAttribute(url.toString());
+  } catch {
+    return "#";
+  }
+}
+
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!local || !domain) return "invalid";
@@ -251,9 +265,9 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     .filter((o) => o.treatments.length > 0)
     .map((o) => {
       const treatmentsHtml = o.treatments
-        .map((t) => `<tr><td style="padding:4px 0;font-size:13px;color:#555;">${t.label}</td><td style="padding:4px 0;font-size:13px;color:#1a3a5c;text-align:right;font-weight:600;">${formatPrice(t.price)}</td></tr>`)
+        .map((t) => `<tr><td style="padding:4px 0;font-size:13px;color:#555;">${escapeHtml(t.label)}</td><td style="padding:4px 0;font-size:13px;color:#1a3a5c;text-align:right;font-weight:600;">${formatPrice(t.price)}</td></tr>`)
         .join("");
-      return `<tr><td colspan="2" style="padding:10px 0 4px;font-size:14px;font-weight:bold;color:#1a3a5c;">${o.hotelName}${o.hotelLocation ? ` — ${o.hotelLocation}` : ""}</td></tr>${treatmentsHtml}`;
+      return `<tr><td colspan="2" style="padding:10px 0 4px;font-size:14px;font-weight:bold;color:#1a3a5c;">${escapeHtml(o.hotelName)}${o.hotelLocation ? ` — ${escapeHtml(o.hotelLocation)}` : ""}</td></tr>${treatmentsHtml}`;
     })
     .join("");
 
@@ -289,8 +303,8 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
                   <tr><td style="padding:3px 0;font-size:14px;color:#374151;">🗓 ${formatDateDayMonth(quote.arrivalDate)} → ${formatDateDayMonthYear(quote.departureDate)}</td></tr>
                   <tr><td style="padding:3px 0;font-size:14px;color:#374151;">🌙 ${nights} nott${nights === 1 ? "e" : "i"}</td></tr>
                   <tr><td style="padding:3px 0;font-size:14px;color:#374151;">👥 ${guestsLabel}</td></tr>
-                  ${firstRoomType ? `<tr><td style="padding:3px 0;font-size:14px;color:#374151;">🛏 ${firstRoomType}</td></tr>` : ""}
-                  ${hotelSummaryLabel ? `<tr><td style="padding:3px 0;font-size:14px;color:#374151;">🏨 ${hotelSummaryLabel}</td></tr>` : ""}
+                  ${firstRoomType ? `<tr><td style="padding:3px 0;font-size:14px;color:#374151;">🛏 ${escapeHtml(firstRoomType)}</td></tr>` : ""}
+                  ${hotelSummaryLabel ? `<tr><td style="padding:3px 0;font-size:14px;color:#374151;">🏨 ${escapeHtml(hotelSummaryLabel)}</td></tr>` : ""}
                 </table>
               </td></tr>
             </table>`;
@@ -308,7 +322,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
 
         <tr>
           <td class="header-padding" style="background:#1a3a5c;padding:28px 32px;text-align:center;">
-            <img src="${logoUrl}" alt="IschiaStars" width="120" style="display:block;width:120px;max-width:100%;height:auto;margin:0 auto 8px;">
+            <img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="120" style="display:block;width:120px;max-width:100%;height:auto;margin:0 auto 8px;">
             <p class="section-title" style="margin:0;color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:1px;">Preventivi IschiaStars</p>
             <p style="margin:6px 0 0;color:#a8c4e0;font-size:13px;">Soggiorni a Ischia</p>
           </td>
@@ -316,7 +330,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
 
         <tr>
           <td class="email-body" style="padding:28px 32px 24px;">
-            <p style="margin:0 0 18px;font-size:15px;color:#1F2937;line-height:1.6;">Ciao ${firstName},</p>
+            <p style="margin:0 0 18px;font-size:15px;color:#1F2937;line-height:1.6;">Ciao ${escapeHtml(firstName)},</p>
             <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">${introText}</p>
 
             ${staySummaryBoxHtml}
@@ -342,7 +356,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
             </table>
 
             <div style="text-align:center;margin:28px 0 20px;">
-              <a href="${quoteUrl}" class="cta-button"
+              <a href="${safeEmailUrl(quoteUrl)}" class="cta-button"
                  style="background:#1a3a5c;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block;letter-spacing:0.5px;">
                 ${hasMultiple ? "Vedi le proposte e conferma" : "Apri il preventivo"}
               </a>
@@ -352,7 +366,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
               Se il pulsante non funziona, copia e incolla questo link nel browser:
             </p>
             <p style="text-align:center;margin:0 0 28px;font-size:12px;word-break:break-all;">
-              <a href="${quoteUrl}" style="color:#1a3a5c;">${quoteUrl}</a>
+              <a href="${safeEmailUrl(quoteUrl)}" style="color:#1a3a5c;">${escapeHtml(quoteUrl)}</a>
             </p>
 
             ${travelServicesBoxHtml}
@@ -467,7 +481,7 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
     ? children.map((child, index) => {
         const parts: string[] = [`Bambino ${index + 1}:`];
         if (child.declaredAge != null) parts.push(`età preventivo ${child.declaredAge} anni`);
-        if (child.birthDate) parts.push(`nato il ${child.birthDate}`);
+        if (child.birthDate) parts.push(`nato il ${escapeHtml(child.birthDate)}`);
         if (child.calculatedAge != null) parts.push(`→ ${child.calculatedAge} anni al check-in`);
         const line = `<div>${parts.join(" — ")}${child.ageMismatch ? " <strong style='color:#b45309'>⚠ età non coerente</strong>" : ""}</div>`;
         return line;
@@ -486,11 +500,11 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
   const selectionHtml = hasSelection
     ? `<tr>
         <td style="padding:10px 0 6px;font-size:15px;border-top:1px solid #b8d8b8;"><strong>Hotel scelto</strong></td>
-        <td style="padding:10px 0 6px;font-size:15px;font-weight:bold;color:#1a4a2a;text-align:right;border-top:1px solid #b8d8b8;">${confirmation.selectedHotelName}</td>
+        <td style="padding:10px 0 6px;font-size:15px;font-weight:bold;color:#1a4a2a;text-align:right;border-top:1px solid #b8d8b8;">${escapeHtml(confirmation.selectedHotelName!)}</td>
       </tr>
       <tr>
         <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Trattamento scelto</strong></td>
-        <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${confirmation.selectedTreatmentLabel}</td>
+        <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${escapeHtml(confirmation.selectedTreatmentLabel!)}</td>
       </tr>
       ${confirmation.selectedPrice != null ? `<tr>
         <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Prezzo scelto</strong></td>
@@ -506,11 +520,11 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
       </tr>` : ""}
       ${confirmation.selectedBalanceMethod ? `<tr>
         <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Modalità saldo</strong></td>
-        <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${confirmation.selectedBalanceMethod}</td>
+        <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${escapeHtml(confirmation.selectedBalanceMethod)}</td>
       </tr>` : ""}
       ${confirmation.selectedCancellationPolicy ? `<tr>
         <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Policy cancellazione</strong></td>
-        <td style="padding:6px 0;font-size:13px;color:#1a4a2a;text-align:right;">${confirmation.selectedCancellationPolicy}</td>
+        <td style="padding:6px 0;font-size:13px;color:#1a4a2a;text-align:right;">${escapeHtml(confirmation.selectedCancellationPolicy)}</td>
       </tr>` : ""}`
     : `<tr>
         <td colspan="2" style="padding:10px 0 6px;font-size:13px;border-top:1px solid #b8d8b8;color:#888;">Il cliente non ha specificato l'opzione (conferma generica)</td>
@@ -522,11 +536,11 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
     ? `<tr>
         <td style="padding:10px 0 6px;font-size:14px;color:#555;border-top:1px solid #b8d8b8;"><strong>Coordinate comunicate</strong></td>
         <td style="padding:10px 0 6px;font-size:13px;color:#1a4a2a;text-align:right;border-top:1px solid #b8d8b8;">
-          ${paymentSnapshot.bank_account_holder ? `Intestatario: ${paymentSnapshot.bank_account_holder}<br>` : ""}
-          ${paymentSnapshot.bank_name ? `Banca: ${paymentSnapshot.bank_name}<br>` : ""}
-          ${paymentSnapshot.iban ? `IBAN: ${paymentSnapshot.iban}<br>` : ""}
-          ${paymentSnapshot.bic_swift ? `BIC/SWIFT: ${paymentSnapshot.bic_swift}<br>` : ""}
-          ${paymentReason ? `Causale: ${paymentReason}` : ""}
+          ${paymentSnapshot.bank_account_holder ? `Intestatario: ${escapeHtml(String(paymentSnapshot.bank_account_holder))}<br>` : ""}
+          ${paymentSnapshot.bank_name ? `Banca: ${escapeHtml(String(paymentSnapshot.bank_name))}<br>` : ""}
+          ${paymentSnapshot.iban ? `IBAN: ${escapeHtml(String(paymentSnapshot.iban))}<br>` : ""}
+          ${paymentSnapshot.bic_swift ? `BIC/SWIFT: ${escapeHtml(String(paymentSnapshot.bic_swift))}<br>` : ""}
+          ${paymentReason ? `Causale: ${escapeHtml(paymentReason)}` : ""}
         </td>
       </tr>`
     : `<tr>
@@ -573,23 +587,23 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
               </tr>
               <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Cliente</strong></td>
-                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${confirmation.firstName} ${confirmation.lastName}</td>
+                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${escapeHtml(confirmation.firstName)} ${escapeHtml(confirmation.lastName)}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Telefono</strong></td>
-                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${confirmation.phone}</td>
+                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${escapeHtml(confirmation.phone)}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Email</strong></td>
-                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${confirmation.email}</td>
+                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${escapeHtml(confirmation.email)}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Codice fiscale</strong></td>
-                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${confirmation.fiscalCode}</td>
+                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${escapeHtml(confirmation.fiscalCode)}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Indirizzo</strong></td>
-                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${addressLine || "-"}</td>
+                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${escapeHtml(addressLine || "-")}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Bambini</strong></td>
@@ -607,12 +621,12 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
               ${paymentCoordinatesHtml}
               <tr>
                 <td style="padding:6px 0;font-size:14px;color:#555;"><strong>Confermato il</strong></td>
-                <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${confirmedAtFormatted}</td>
+                <td style="padding:6px 0;font-size:14px;color:#1a4a2a;text-align:right;font-weight:600;">${escapeHtml(confirmedAtFormatted)}</td>
               </tr>
             </table>
 
             <div style="text-align:center;">
-              <a href="${backofficeUrl}" class="cta-button"
+              <a href="${safeEmailUrl(backofficeUrl)}" class="cta-button"
                  style="background:#1a3a5c;color:#ffffff;text-decoration:none;padding:14px 30px;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block;">
                 Apri backoffice preventivi
               </a>
@@ -699,20 +713,20 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
   const balanceLabel = confirmation?.selectedBalanceAmount != null ? formatPrice(confirmation.selectedBalanceAmount) : "";
   const additionalServices = getConfirmationAdditionalServices(confirmation?.metadata);
   const additionalServicesHtml = additionalServices.length
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#374151;"><strong>Servizi aggiuntivi</strong><br>${additionalServices.map(formatConfirmationAdditionalService).join("<br>")}</td></tr></table>`
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#374151;"><strong>Servizi aggiuntivi</strong><br>${additionalServices.map((service) => escapeHtml(formatConfirmationAdditionalService(service))).join("<br>")}</td></tr></table>`
     : "";
 
   const coordinatesHtml = snapshot.configured === true
     ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;">
         <tr><td style="padding:16px 18px;">
           <div style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#1B3A5C;text-transform:uppercase;letter-spacing:0.5px;">Coordinate caparra</div>
-          ${snapshot.bank_account_holder ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Intestatario:</strong> ${snapshot.bank_account_holder}</div>` : ""}
-          ${snapshot.bank_name ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Banca:</strong> ${snapshot.bank_name}</div>` : ""}
-          ${snapshot.iban ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>IBAN:</strong> ${snapshot.iban}</div>` : ""}
+          ${snapshot.bank_account_holder ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Intestatario:</strong> ${escapeHtml(String(snapshot.bank_account_holder))}</div>` : ""}
+          ${snapshot.bank_name ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Banca:</strong> ${escapeHtml(String(snapshot.bank_name))}</div>` : ""}
+          ${snapshot.iban ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>IBAN:</strong> ${escapeHtml(String(snapshot.iban))}</div>` : ""}
           ${snapshot.iban ? `<div style="margin:0 0 5px;font-size:13px;font-weight:bold;color:#1B3A5C;">La quinta lettera è la I di Imola.</div>` : ""}
-          ${snapshot.bic_swift ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>BIC/SWIFT:</strong> ${snapshot.bic_swift}</div>` : ""}
-          ${paymentReason ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Causale:</strong> ${paymentReason}</div>` : ""}
-          ${snapshot.payment_instructions ? `<div style="margin:10px 0 0;font-size:13px;color:#6B7280;">${snapshot.payment_instructions}</div>` : ""}
+          ${snapshot.bic_swift ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>BIC/SWIFT:</strong> ${escapeHtml(String(snapshot.bic_swift))}</div>` : ""}
+          ${paymentReason ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Causale:</strong> ${escapeHtml(paymentReason)}</div>` : ""}
+          ${snapshot.payment_instructions ? `<div style="margin:10px 0 0;font-size:13px;color:#6B7280;">${escapeHtml(String(snapshot.payment_instructions))}</div>` : ""}
         </td></tr>
       </table>`
     : `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;">
@@ -734,7 +748,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
           <td>
-            ${logoUrl ? `<img src="${logoUrl}" alt="IschiaStars" width="150" style="display:block;max-width:150px;height:auto;margin:0 0 8px;">` : `<div style="font-size:22px;font-weight:bold;color:#ffffff;letter-spacing:0.3px;">IschiaStars</div>`}
+            ${logoUrl ? `<img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="150" style="display:block;max-width:150px;height:auto;margin:0 0 8px;">` : `<div style="font-size:22px;font-weight:bold;color:#ffffff;letter-spacing:0.3px;">IschiaStars</div>`}
             <div style="font-size:13px;color:#C9A84C;letter-spacing:0.5px;">Conferma definitiva</div>
           </td>
           <td align="right">
@@ -744,13 +758,13 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
       </table>
     </td></tr>
     <tr><td class="email-body" style="background:#FFFFFF;padding:28px 32px;color:#374151;font-size:15px;line-height:1.6;">
-      <p style="margin:0 0 18px;font-size:15px;">Ciao <strong>${firstName}</strong>,</p>
-      <p style="margin:0 0 22px;font-size:15px;">la struttura ha confermato la disponibilità per la proposta selezionata. Per bloccare definitivamente il soggiorno è necessario versare la caparra entro <strong style="color:#1B3A5C;">${dueAt}</strong>.</p>
+      <p style="margin:0 0 18px;font-size:15px;">Ciao <strong>${escapeHtml(firstName)}</strong>,</p>
+      <p style="margin:0 0 22px;font-size:15px;">la struttura ha confermato la disponibilità per la proposta selezionata. Per bloccare definitivamente il soggiorno è necessario versare la caparra entro <strong style="color:#1B3A5C;">${escapeHtml(dueAt)}</strong>.</p>
 
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D9E2EC;border-radius:10px;overflow:hidden;margin:0 0 22px;">
         <tr><td colspan="2" style="background:#1B3A5C;padding:12px 16px;">
-          <div style="font-size:16px;font-weight:bold;color:#FFFFFF;">${hotelName}</div>
-          <div style="font-size:12px;color:#C9A84C;margin-top:3px;">${treatmentLabel}</div>
+          <div style="font-size:16px;font-weight:bold;color:#FFFFFF;">${escapeHtml(hotelName)}</div>
+          <div style="font-size:12px;color:#C9A84C;margin-top:3px;">${escapeHtml(treatmentLabel)}</div>
         </td></tr>
         <tr>
           <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Prezzo totale</td>
@@ -766,14 +780,14 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
         </tr>` : ""}
         ${confirmation?.selectedBalanceMethod ? `<tr>
           <td style="padding:12px 16px;font-size:13px;color:#6B7280;">Modalità saldo</td>
-          <td align="right" style="padding:12px 16px;font-size:13px;font-weight:bold;color:#374151;">${confirmation.selectedBalanceMethod}</td>
+          <td align="right" style="padding:12px 16px;font-size:13px;font-weight:bold;color:#374151;">${escapeHtml(confirmation.selectedBalanceMethod)}</td>
         </tr>` : ""}
       </table>
 
       ${additionalServicesHtml}
       ${coordinatesHtml}
-      ${confirmation?.selectedCancellationPolicy ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#FBF5E6;border:1px solid #C9A84C;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#5F4B16;"><strong>Policy cancellazione</strong><br>${confirmation.selectedCancellationPolicy}</td></tr></table>` : ""}
-      ${details.notes ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#374151;"><strong>Note</strong><br>${details.notes}</td></tr></table>` : ""}
+      ${confirmation?.selectedCancellationPolicy ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#FBF5E6;border:1px solid #C9A84C;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#5F4B16;"><strong>Policy cancellazione</strong><br>${escapeHtml(confirmation.selectedCancellationPolicy)}</td></tr></table>` : ""}
+      ${details.notes ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#374151;"><strong>Note</strong><br>${escapeHtml(details.notes)}</td></tr></table>` : ""}
 
       <p style="margin:0;font-size:13px;color:#6B7280;">Per qualsiasi dubbio puoi rispondere a questa email o scriverci su WhatsApp.</p>
     </td></tr>
@@ -941,7 +955,7 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
 
     <!-- Body -->
     <tr><td class="email-body" style="background:#ffffff;padding:28px 32px;">
-      <p style="margin:0 0 18px;font-size:15px;color:#374151;">Ciao <strong>${firstName}</strong>,</p>
+      <p style="margin:0 0 18px;font-size:15px;color:#374151;">Ciao <strong>${escapeHtml(firstName)}</strong>,</p>
       <p style="margin:0 0 22px;font-size:14px;color:#4b5563;line-height:1.6;">
         abbiamo ricevuto la tua caparra. La prenotazione è confermata e il tuo soggiorno a Ischia è assicurato. In allegato trovi il voucher ufficiale da conservare.
       </p>
@@ -950,8 +964,8 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
       ${hotelName ? `
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #d9e2ec;border-radius:8px;overflow:hidden;margin-bottom:24px;">
         <tr><td style="background:#1B3A5C;padding:10px 14px;">
-          <span style="font-size:15px;font-weight:bold;color:#ffffff;">${hotelName}</span>
-          ${treatmentLabel ? `<span style="font-size:12px;color:#94a3b8;margin-left:10px;">${treatmentLabel}</span>` : ""}
+          <span style="font-size:15px;font-weight:bold;color:#ffffff;">${escapeHtml(hotelName)}</span>
+          ${treatmentLabel ? `<span style="font-size:12px;color:#94a3b8;margin-left:10px;">${escapeHtml(treatmentLabel)}</span>` : ""}
         </td></tr>
         ${arrivalLabel || departureLabel ? `
         <tr>
@@ -1085,14 +1099,14 @@ export async function sendSupplierConfirmationEmail(params: {
         <tr><td class="email-body" style="padding:24px 32px;color:#1F2937;font-size:14px;line-height:1.6;">
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
             <tr><td colspan="2" style="font-weight:bold;color:#1B3A5C;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">Dati cliente</td></tr>
-            <tr><td style="padding:6px 0;color:#555;">Nome</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${fullName}</td></tr>
-            <tr><td style="padding:6px 0;color:#555;">Telefono</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${phone || "-"}</td></tr>
-            ${email ? `<tr><td style="padding:6px 0;color:#555;">Email</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${email}</td></tr>` : ""}
+            <tr><td style="padding:6px 0;color:#555;">Nome</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${escapeHtml(fullName)}</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Telefono</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${escapeHtml(phone || "-")}</td></tr>
+            ${email ? `<tr><td style="padding:6px 0;color:#555;">Email</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${escapeHtml(email)}</td></tr>` : ""}
           </table>
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
             <tr><td colspan="2" style="font-weight:bold;color:#1B3A5C;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">Dati soggiorno</td></tr>
-            <tr><td style="padding:6px 0;color:#555;">Hotel/Struttura</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${confirmation.selectedHotelName ?? "-"}</td></tr>
-            <tr><td style="padding:6px 0;color:#555;">Trattamento</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${confirmation.selectedTreatmentLabel ?? "-"}</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Hotel/Struttura</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${escapeHtml(confirmation.selectedHotelName ?? "-")}</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Trattamento</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${escapeHtml(confirmation.selectedTreatmentLabel ?? "-")}</td></tr>
             <tr><td style="padding:6px 0;color:#555;">Check-in</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${formatDate(quote.arrivalDate)}</td></tr>
             <tr><td style="padding:6px 0;color:#555;">Check-out</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${formatDate(quote.departureDate)}</td></tr>
             <tr><td style="padding:6px 0;color:#555;">Adulti</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${quote.adults}</td></tr>
@@ -1103,7 +1117,7 @@ export async function sendSupplierConfirmationEmail(params: {
             <tr><td style="padding:14px 18px;font-weight:bold;color:#7a5a12;">Prezzo netto concordato: ${netPriceFormatted}</td></tr>
           </table>
           ${notes?.trim() ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6;border-radius:8px;margin-bottom:18px;">
-            <tr><td style="padding:14px 18px;color:#374151;"><strong>Note:</strong> ${notes.trim()}</td></tr>
+            <tr><td style="padding:14px 18px;color:#374151;"><strong>Note:</strong> ${escapeHtml(notes.trim())}</td></tr>
           </table>` : ""}
           <p style="color:#555;">Per conferma rispondere a questa email.</p>
         </td></tr>
@@ -1158,7 +1172,7 @@ export async function sendAvailabilityUnavailableEmailToClient(quote: Quote, det
 
   const email = quote.customerEmail?.trim();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
-  const messageHtml = details.message.split("\n").map((line) => line.trim() ? `<p>${line}</p>` : "").join("");
+  const messageHtml = details.message.split("\n").map((line) => line.trim() ? `<p>${escapeHtml(line)}</p>` : "").join("");
 
   const html = `<!DOCTYPE html>
 <html lang="it">
@@ -1176,10 +1190,10 @@ export async function sendAvailabilityUnavailableEmailToClient(quote: Quote, det
         <tr><td class="email-body" style="padding:28px 32px;color:#1F2937;font-size:15px;line-height:1.6;">
           ${messageHtml}
           <p><strong>Preventivo:</strong> ${quote.code}<br>
-          <strong>Hotel selezionato:</strong> ${quote.confirmation?.selectedHotelName ?? quote.proposedHotel.name}<br>
+          <strong>Hotel selezionato:</strong> ${escapeHtml(quote.confirmation?.selectedHotelName ?? quote.proposedHotel.name)}<br>
           <strong>Date:</strong> ${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}<br>
-          <strong>Trattamento:</strong> ${quote.confirmation?.selectedTreatmentLabel ?? quote.treatment}</p>
-          ${details.reason ? `<p><strong>Nota:</strong> ${details.reason}</p>` : ""}
+          <strong>Trattamento:</strong> ${escapeHtml(quote.confirmation?.selectedTreatmentLabel ?? quote.treatment)}</p>
+          ${details.reason ? `<p><strong>Nota:</strong> ${escapeHtml(details.reason)}</p>` : ""}
         </td></tr>
   </table>
   </div>
