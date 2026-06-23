@@ -11,6 +11,16 @@ import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from
 import { Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime, normalizeItalianPhone } from "@/lib/utils";
 
+type VoucherEmailApiResult = {
+  ok?: boolean;
+  success?: boolean;
+  error?: string;
+  quote?: Quote;
+  paymentSaved?: boolean;
+  voucherEmailSent?: boolean;
+  voucherEmailError?: string | null;
+};
+
 export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureFlags, onConfirmationUpdated }: { quote: Quote; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; onConfirmationUpdated?: (quote: Quote) => void }) {
   const router = useRouter();
   const confirmation = quote.confirmation;
@@ -257,13 +267,13 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
       headers: adminApiHeaders(),
       body: JSON.stringify(body)
     });
-    const result = await readAdminApiJson<{ ok?: boolean; error?: string; quote?: Quote }>(response);
+    const result = await readAdminApiJson<VoucherEmailApiResult>(response);
     setLoadingAction(null);
     if (!response.ok || !result?.ok) {
       setMessage(adminApiErrorMessage(response, result));
       return;
     }
-    setMessage(success);
+    setMessage(voucherAwareSuccessMessage(result, success));
     if (result.quote) onConfirmationUpdated?.(result.quote);
     router.refresh();
   }
@@ -276,13 +286,32 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
       headers: adminApiHeaders(),
       body: JSON.stringify({})
     });
-    const result = await readAdminApiJson<{ success?: boolean; error?: string; quote?: Quote }>(response);
+    const result = await readAdminApiJson<VoucherEmailApiResult>(response);
     setLoadingAction(null);
     if (!response.ok || !result?.success) {
       setMessage(adminApiErrorMessage(response, result));
       return;
     }
-    setMessage(success);
+    setMessage(voucherAwareSuccessMessage(result, success));
+    if (result.quote) onConfirmationUpdated?.(result.quote);
+    router.refresh();
+  }
+
+  async function resendVoucherEmail() {
+    setLoadingAction("send-voucher");
+    setMessage(null);
+    const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/send-voucher`, {
+      method: "POST",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({})
+    });
+    const result = await readAdminApiJson<VoucherEmailApiResult>(response);
+    setLoadingAction(null);
+    if (!response.ok || !result?.ok) {
+      setMessage(adminApiErrorMessage(response, result, "Invio voucher non riuscito. Puoi riprovare manualmente."));
+      return;
+    }
+    setMessage("Voucher reinviato al cliente.");
     if (result.quote) onConfirmationUpdated?.(result.quote);
     router.refresh();
   }
@@ -896,7 +925,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
                 <button
                   className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
                   disabled={Boolean(loadingAction)}
-                  onClick={() => void postDepositReceived("Voucher reinviato al cliente.")}
+                  onClick={() => void resendVoucherEmail()}
                   type="button"
                 >
                   Invia voucher di nuovo
@@ -921,7 +950,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
                 <button
                   className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
                   disabled={Boolean(loadingAction)}
-                  onClick={() => void postAction("balance-received", {}, "Voucher reinviato al cliente.")}
+                  onClick={() => void resendVoucherEmail()}
                   type="button"
                 >
                   Invia voucher di nuovo
@@ -987,6 +1016,17 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
 function formatAmountInput(value: number | undefined) {
   if (value == null || !Number.isFinite(value)) return "";
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+function voucherAwareSuccessMessage(result: VoucherEmailApiResult | null, success: string) {
+  if (result?.paymentSaved && result.voucherEmailSent === false) {
+    return `${paymentSavedLabelFromSuccess(success)}, ma invio voucher non riuscito. Puoi reinviarlo manualmente.`;
+  }
+  return success;
+}
+
+function paymentSavedLabelFromSuccess(success: string) {
+  return success.toLowerCase().includes("saldo") ? "Saldo registrato" : "Caparra registrata";
 }
 
 function confirmationDepositDueLocalInput(value: string | undefined) {
