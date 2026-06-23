@@ -71,6 +71,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       balanceTitleLabel: balanceSchedule.title,
       balanceDueDateLabel: balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : undefined,
       balanceMethodLabel: confirmation.selectedBalanceMethod,
+      isBalancePaid: true,
+      balancePaidAtLabel: formatDateTime(balancePaidAt),
       cancellationPolicy: confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy,
       voucherNotes: confirmation.voucherNotes,
       whatsappNumber: ischiastarsWhatsappNumber()

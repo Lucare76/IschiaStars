@@ -43,6 +43,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (nights > 0) nightsCount = nights;
   }
 
+  const isBalancePaid = Boolean(confirmation.balancePaidAt);
+
   const pdfBuffer = await generateVoucherPdf({
     quoteCode: quote.code,
     clientFullName: formatClientName(confirmation.firstName ?? quote.customerFirstName, confirmation.lastName ?? quote.customerLastName),
@@ -62,6 +64,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     balanceTitleLabel: balanceSchedule.title,
     balanceDueDateLabel: balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : undefined,
     balanceMethodLabel: confirmation.selectedBalanceMethod,
+    isBalancePaid,
+    balancePaidAtLabel: isBalancePaid ? formatDateTime(String(confirmation.balancePaidAt)) : undefined,
     cancellationPolicy: confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy,
     voucherNotes: confirmation.voucherNotes,
     whatsappNumber: ischiastarsWhatsappNumber()

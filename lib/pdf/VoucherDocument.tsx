@@ -384,6 +384,8 @@ export type VoucherDocumentData = {
   balanceTitleLabel?: string;
   balanceDueDateLabel?: string;
   balanceMethodLabel?: string;
+  isBalancePaid?: boolean;
+  balancePaidAtLabel?: string;
   cancellationPolicy?: string;
   voucherNotes?: string;
   whatsappNumber: string;
@@ -519,18 +521,28 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
                 <Text style={styles.paymentMeta}>Pagamento registrato il {data.depositPaidAtLabel}</Text>
               </View>
               {data.balanceAmountLabel ? (
-                <View style={styles.paymentBalance}>
-                  <Text style={styles.paymentEyebrow}>{data.balanceTitleLabel ?? "Saldo restante"}</Text>
-                  <Text style={styles.balanceAmount}>{data.balanceAmountLabel}</Text>
-                  {data.balanceDueDateLabel ? (
-                    <Text style={styles.paymentMeta}>Da versare entro il {data.balanceDueDateLabel}</Text>
-                  ) : null}
-                  {data.balanceMethodLabel ? (
-                    <Text style={styles.paymentMeta}>{data.balanceMethodLabel}</Text>
-                  ) : (
-                    <Text style={styles.paymentMeta}>Salvo diverse indicazioni di IschiaStars.</Text>
-                  )}
-                </View>
+                data.isBalancePaid ? (
+                  <View style={styles.paymentPaid}>
+                    <Text style={styles.paymentEyebrow}>Saldo ricevuto</Text>
+                    <Text style={styles.paidAmount}>{data.balanceAmountLabel}</Text>
+                    {data.balancePaidAtLabel ? (
+                      <Text style={styles.paymentMeta}>Pagamento registrato il {data.balancePaidAtLabel}</Text>
+                    ) : null}
+                  </View>
+                ) : (
+                  <View style={styles.paymentBalance}>
+                    <Text style={styles.paymentEyebrow}>{data.balanceTitleLabel ?? "Saldo restante"}</Text>
+                    <Text style={styles.balanceAmount}>{data.balanceAmountLabel}</Text>
+                    {data.balanceDueDateLabel ? (
+                      <Text style={styles.paymentMeta}>Da versare entro il {data.balanceDueDateLabel}</Text>
+                    ) : null}
+                    {data.balanceMethodLabel ? (
+                      <Text style={styles.paymentMeta}>{data.balanceMethodLabel}</Text>
+                    ) : (
+                      <Text style={styles.paymentMeta}>Salvo diverse indicazioni di IschiaStars.</Text>
+                    )}
+                  </View>
+                )
               ) : null}
             </View>
           </View>
@@ -552,7 +564,9 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
           <View style={styles.notes} wrap={false}>
             <Text style={styles.notesTitle}>Note importanti</Text>
             <Text style={styles.notesText}>
-              Il saldo sarà versato direttamente in struttura, salvo diverse indicazioni. Extra, tasse di soggiorno e servizi non indicati nel voucher sono esclusi. Presentare il voucher al check-in con documento valido.
+              {data.isBalancePaid
+                ? "Soggiorno interamente saldato. Extra, tasse di soggiorno e servizi non indicati nel voucher sono esclusi. Presentare il voucher al check-in con documento valido."
+                : "Il saldo sarà versato direttamente in struttura, salvo diverse indicazioni. Extra, tasse di soggiorno e servizi non indicati nel voucher sono esclusi. Presentare il voucher al check-in con documento valido."}
             </Text>
           </View>
         </View>
