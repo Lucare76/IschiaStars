@@ -3,10 +3,10 @@
 import { PrintButton } from "@/components/PrintButton";
 import { trackQuoteEvent } from "@/lib/client-tracking";
 import { publicQuoteConfirmOrInfoWhatsappMessage, publicQuoteInfoWhatsappMessage } from "@/lib/message-templates";
-import { Quote } from "@/lib/types";
+import type { PublicQuoteDTO } from "@/lib/public-quote-dto";
 import { absolutePublicQuoteUrl, publicWhatsappLink } from "@/lib/utils";
 
-export function PublicQuoteHeaderActions({ quote }: { quote: Quote }) {
+export function PublicQuoteHeaderActions({ quote }: { quote: PublicQuoteDTO }) {
   const quoteUrl = absolutePublicQuoteUrl(quote);
   return (
     <div className="flex flex-wrap gap-2">
@@ -22,7 +22,7 @@ export function PublicQuoteHeaderActions({ quote }: { quote: Quote }) {
   );
 }
 
-export function PublicQuoteMainActions({ quote }: { quote: Quote }) {
+export function PublicQuoteMainActions({ quote }: { quote: PublicQuoteDTO }) {
   const quoteUrl = absolutePublicQuoteUrl(quote);
   return (
     <div className="no-print grid gap-3 rounded-2xl bg-white p-5 shadow-soft">
@@ -41,7 +41,7 @@ export function PublicQuoteMainActions({ quote }: { quote: Quote }) {
   );
 }
 
-export function MobileFloatingWhatsApp({ quote }: { quote: Quote }) {
+export function MobileFloatingWhatsApp({ quote }: { quote: PublicQuoteDTO }) {
   const quoteUrl = absolutePublicQuoteUrl(quote);
   return (
     <a

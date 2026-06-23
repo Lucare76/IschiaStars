@@ -7,6 +7,7 @@ import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
 import { getFeatureFlags } from "@/lib/repositories/settings";
 import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
 import { getAdminSession } from "@/lib/server/auth-guard";
+import { toPublicQuoteDTO } from "@/lib/public-quote-dto";
 import { siteBaseUrl } from "@/lib/utils";
 import type { Quote } from "@/lib/types";
 
@@ -111,7 +112,7 @@ export async function renderPublicQuote(quote: Quote, openingSource?: string) {
 
   return (
     <PublicQuotePage
-      quote={quote}
+      quote={toPublicQuoteDTO(quote)}
       hotelPopularity={hotelPopularity}
       showHesitantBanner={showHesitantBanner}
       featureFlags={featureFlagsResult.data}

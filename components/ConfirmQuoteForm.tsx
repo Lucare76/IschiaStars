@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Quote, QuoteRoomSelection } from "@/lib/types";
+import type { PublicQuoteDTO } from "@/lib/public-quote-dto";
+import type { QuoteRoomSelection } from "@/lib/types";
 import { formatCurrency, ischiastarsWhatsappNumber } from "@/lib/utils";
 
-export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: Quote; selectedRooms?: QuoteRoomSelection[] }) {
+export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: PublicQuoteDTO; selectedRooms?: QuoteRoomSelection[] }) {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

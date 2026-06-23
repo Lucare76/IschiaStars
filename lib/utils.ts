@@ -5,6 +5,12 @@ import { adminQuoteWhatsappMessage } from "@/lib/message-templates";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { Quote } from "@/lib/types";
 
+type PublicQuoteUrlTarget = {
+  code: string;
+  token: string;
+  publicShortCode?: string;
+};
+
 export function formatCurrency(value: number) {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(value);
 }
@@ -25,7 +31,7 @@ export function formatDateTime(value: string) {
   return formatDateTimeRome(value);
 }
 
-export function publicQuoteUrl(quote: Quote, params: Record<string, string | undefined> = {}) {
+export function publicQuoteUrl(quote: PublicQuoteUrlTarget, params: Record<string, string | undefined> = {}) {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value) query.set(key, value);
@@ -38,7 +44,7 @@ export function siteBaseUrl() {
   return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:4000").replace(/\/+$/, "");
 }
 
-export function absolutePublicQuoteUrl(quote: Quote, params: Record<string, string | undefined> = {}) {
+export function absolutePublicQuoteUrl(quote: PublicQuoteUrlTarget, params: Record<string, string | undefined> = {}) {
   return `${siteBaseUrl()}${publicQuoteUrl(quote, params)}`;
 }
 
@@ -55,12 +61,12 @@ export function whatsappQuoteBaseUrl() {
   return normalized.toString().replace(/\/+$/, "");
 }
 
-export function shortPublicQuoteUrl(quote: Quote) {
+export function shortPublicQuoteUrl(quote: PublicQuoteUrlTarget) {
   const shortCode = quote.publicShortCode?.trim();
   return shortCode ? `/p/${encodeURIComponent(shortCode)}` : publicQuoteUrl(quote);
 }
 
-export function absoluteShortPublicQuoteUrl(quote: Quote) {
+export function absoluteShortPublicQuoteUrl(quote: PublicQuoteUrlTarget) {
   return `${whatsappQuoteBaseUrl()}${shortPublicQuoteUrl(quote)}`;
 }
 

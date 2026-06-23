@@ -7,8 +7,8 @@ import { emptyFeatureFlags, FeatureFlags } from "@/lib/feature-flags";
 import type { ExtraServiceEmailItem } from "@/lib/extra-service-email-items";
 import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown } from "@/lib/hotel-policies";
 import { publicQuoteInfoWhatsappMessage } from "@/lib/message-templates";
-import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
-import { Quote, QuoteHotelOption, QuoteRoomSelection, TreatmentOption } from "@/lib/types";
+import type { PublicQuoteDTO, PublicQuoteHotelOptionDTO } from "@/lib/public-quote-dto";
+import type { QuoteRoomSelection, TreatmentOption } from "@/lib/types";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
 import { formatCurrency, publicWhatsappLink } from "@/lib/utils";
 
@@ -16,17 +16,17 @@ function hasDisplayablePrice(treatment: TreatmentOption) {
   return Number.isFinite(treatment.price) && treatment.price > 0;
 }
 
-function visibleTreatments(option: QuoteHotelOption) {
+function visibleTreatments(option: PublicQuoteHotelOptionDTO) {
   return option.treatments.filter(hasDisplayablePrice);
 }
 
-function treatmentDetails(option: QuoteHotelOption, treatment: TreatmentOption) {
+function treatmentDetails(option: PublicQuoteHotelOptionDTO, treatment: TreatmentOption) {
   if (treatment.key === "breakfast") return option.breakfastDetails?.trim();
   if (treatment.key === "half_board") return option.halfBoardDetails?.trim();
   return option.fullBoardDetails?.trim();
 }
 
-function treatmentPriceDeltas(option: QuoteHotelOption) {
+function treatmentPriceDeltas(option: PublicQuoteHotelOptionDTO) {
   const activeTreatments = visibleTreatments(option);
   if (activeTreatments.length <= 1) return new Map<string, number>();
 
@@ -165,7 +165,7 @@ export function QuoteProposalSection({
   featureFlags = emptyFeatureFlags,
   travelServices = []
 }: {
-  quote: Quote;
+  quote: PublicQuoteDTO;
   hotelPopularity?: Record<string, number>;
   featureFlags?: FeatureFlags;
   travelServices?: ExtraServiceEmailItem[];
@@ -174,7 +174,7 @@ export function QuoteProposalSection({
   const [compareMode, setCompareMode] = useState(false);
   const confirmRef = useRef<HTMLDivElement>(null);
 
-  const allOptions = getEffectiveHotelOptions(quote);
+  const allOptions = quote.hotelOptions;
 
   // Raggruppa per hotelGroup: ogni gruppo è una struttura con potenziali multiple tipologie camera
   const groupedHotels = Array.from(
@@ -183,7 +183,7 @@ export function QuoteProposalSection({
       if (!map.has(g)) map.set(g, []);
       map.get(g)!.push(opt);
       return map;
-    }, new Map<number, QuoteHotelOption[]>())
+    }, new Map<number, PublicQuoteHotelOptionDTO[]>())
   ).sort(([a], [b]) => a - b);
 
   // Sort stabile: badge prioritario ("Consigliato", "Più richiesto") sempre in cima.
@@ -201,7 +201,7 @@ export function QuoteProposalSection({
 
   const isConfirmed = quote.status === "confermato";
 
-  function handleSelectTreatment(option: QuoteHotelOption, treatment: TreatmentOption) {
+  function handleSelectTreatment(option: PublicQuoteHotelOptionDTO, treatment: TreatmentOption) {
     const breakdown = calculatePaymentBreakdown(treatment.price, option.depositPercent, option.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
     const roomSelection: QuoteRoomSelection = {
       optionId: option.id,
@@ -360,13 +360,13 @@ function CompareView({
   isConfirmed,
   onSelectTreatment,
 }: {
-  groupedHotels: [number, QuoteHotelOption[]][];
+  groupedHotels: [number, PublicQuoteHotelOptionDTO[]][];
   hotelPopularity: Record<string, number>;
   isConfirmed: boolean;
-  onSelectTreatment: (option: QuoteHotelOption, treatment: TreatmentOption) => void;
+  onSelectTreatment: (option: PublicQuoteHotelOptionDTO, treatment: TreatmentOption) => void;
 }) {
   const [pendingSelection, setPendingSelection] = useState<{
-    option: QuoteHotelOption;
+    option: PublicQuoteHotelOptionDTO;
     treatment: TreatmentOption;
   } | null>(null);
 
@@ -620,20 +620,20 @@ function HotelCard({
   featureFlags,
   onSelectTreatment
 }: {
-  mainOption: QuoteHotelOption;
-  allGroupOptions: QuoteHotelOption[];
+  mainOption: PublicQuoteHotelOptionDTO;
+  allGroupOptions: PublicQuoteHotelOptionDTO[];
   isConfirmed: boolean;
   popularity?: number;
   quoteCode: string;
   token: string;
   featureFlags: FeatureFlags;
-  onSelectTreatment: (option: QuoteHotelOption, treatment: TreatmentOption) => void;
+  onSelectTreatment: (option: PublicQuoteHotelOptionDTO, treatment: TreatmentOption) => void;
 }) {
   // TODO: wow6_adaptive — da implementare
   // Quando featureFlags.wow6_adaptive === true, evidenziare l'hotel più visto dal cliente
   // nelle sessioni precedenti (leggi quote_events con eventType "hotel_view" o simile).
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [pendingSelection, setPendingSelection] = useState<{ option: QuoteHotelOption; treatment: TreatmentOption } | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<{ option: PublicQuoteHotelOptionDTO; treatment: TreatmentOption } | null>(null);
   const [reaction, setReaction] = useState<"interested" | "too_expensive" | null>(null);
   const reactionKey = `reaction_${quoteCode}_${mainOption.hotelGroup}`;
 
@@ -912,7 +912,7 @@ function HotelCard({
   );
 }
 
-function TreatmentDetails({ option, treatment, details, className }: { option: QuoteHotelOption; treatment: TreatmentOption; details?: string; className?: string }) {
+function TreatmentDetails({ option, treatment, details, className }: { option: PublicQuoteHotelOptionDTO; treatment: TreatmentOption; details?: string; className?: string }) {
   const services = splitLines(option.includedServices);
   const breakdown = calculatePaymentBreakdown(treatment.price, option.depositPercent, option.balanceMethod || BALANCE_METHOD_IN_STRUCTURE);
   const hasDetails = services.length > 0 || option.paymentPolicy || option.cancellationPolicy || option.paymentNotes || option.notes || breakdown.depositPercent > 0;

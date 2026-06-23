@@ -1,5 +1,9 @@
 import { Quote, QuoteHotelOption } from "@/lib/types";
 
+type PublicQuoteMessageTarget = {
+  code: string;
+};
+
 function formatWAPrice(price: number): string {
   const rounded = Math.round(price);
   if (Math.abs(price - rounded) < 0.005) {
@@ -113,14 +117,14 @@ A presto,
 Diego - IschiaStars ☀️`;
 }
 
-export function publicQuoteInfoWhatsappMessage(quote: Quote, quoteUrl?: string) {
+export function publicQuoteInfoWhatsappMessage(quote: PublicQuoteMessageTarget, quoteUrl?: string) {
   return `Ciao IschiaStars, vorrei informazioni sul preventivo ${quote.code}${quoteUrl ? `: ${quoteUrl}` : ""}`;
 }
 
-export function publicQuoteConfirmOrInfoWhatsappMessage(quote: Quote, quoteUrl: string) {
+export function publicQuoteConfirmOrInfoWhatsappMessage(quote: PublicQuoteMessageTarget, quoteUrl: string) {
   return `Ciao IschiaStars, vorrei confermare o chiedere info sul preventivo ${quote.code}: ${quoteUrl}`;
 }
 
-export function publicQuoteConfirmedWhatsappMessage(quote: Quote) {
+export function publicQuoteConfirmedWhatsappMessage(quote: PublicQuoteMessageTarget) {
   return `Ciao IschiaStars, ho confermato il preventivo ${quote.code}.`;
 }

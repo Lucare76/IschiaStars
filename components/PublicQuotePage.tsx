@@ -7,9 +7,8 @@ import { CountdownBanner } from "@/components/public/CountdownBanner";
 import { QuotePageWrapper } from "@/components/public/QuotePageWrapper";
 import { QuoteProposalSection } from "@/components/QuoteProposalSection";
 import { PrintButton } from "@/components/PrintButton";
-import { Quote } from "@/lib/types";
+import type { PublicQuoteDTO } from "@/lib/public-quote-dto";
 import { formatClientName, formatDate } from "@/lib/utils";
-import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { emptyFeatureFlags, FeatureFlags } from "@/lib/feature-flags";
 import type { ExtraServiceEmailItem } from "@/lib/extra-service-email-items";
 
@@ -22,7 +21,7 @@ export function PublicQuotePage({
   trackOpening = true,
   openingSource
 }: {
-  quote: Quote;
+  quote: PublicQuoteDTO;
   hotelPopularity?: Record<string, number>;
   showHesitantBanner?: boolean;
   featureFlags?: FeatureFlags;
@@ -31,7 +30,7 @@ export function PublicQuotePage({
   openingSource?: string;
 }) {
   const guests = `${quote.adults} adulti${quote.children.length ? `, ${quote.children.length} bambini` : ""}`;
-  const options = getEffectiveHotelOptions(quote);
+  const options = quote.hotelOptions;
   const hasMultipleOptions = options.length > 1;
 
   return (
@@ -94,11 +93,7 @@ export function PublicQuotePage({
                   {quote.children.map((child, index) => (
                     <li key={child.id} className="rounded-xl bg-white p-3 ring-1 ring-ischia-blue/10">
                       Bambino {index + 1}:{" "}
-                      {child.age != null
-                        ? `${child.age} ${child.age === 1 ? "anno" : "anni"}`
-                        : child.birthDate
-                          ? `nato il ${formatDate(child.birthDate)}`
-                          : "—"}
+                      {child.age != null ? `${child.age} ${child.age === 1 ? "anno" : "anni"}` : "—"}
                     </li>
                   ))}
                 </ul>
@@ -147,11 +142,11 @@ export function PublicQuotePage({
 
 // Il cliente non deve vedere gli stati tecnici di backoffice (in_lavorazione, preventivo_inviato...):
 // mostriamo solo l'esito che lo riguarda davvero.
-function PublicQuoteStatusBadge({ quote }: { quote: Quote }) {
-  if (quote.confirmation?.availabilityStatus === "availability_confirmed") {
+function PublicQuoteStatusBadge({ quote }: { quote: PublicQuoteDTO }) {
+  if (quote.confirmationAvailabilityStatus === "availability_confirmed") {
     return <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">Confermato</span>;
   }
-  if (quote.confirmation) {
+  if (quote.hasConfirmation) {
     return <span className="inline-flex rounded-full bg-ischia-sun/18 px-3 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-200">In attesa di conferma</span>;
   }
   return null;
