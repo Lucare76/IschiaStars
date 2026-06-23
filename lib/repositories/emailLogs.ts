@@ -76,9 +76,13 @@ export type BrevoWebhookEvent = {
   event: string;
   messageId?: string;
   "message-id"?: string;
+  message_id?: string;
+  MessageId?: string;
+  "Message-Id"?: string;
   ts_event?: number;
   date?: string;
   reason?: string;
+  [key: string]: unknown;
 };
 
 function normalizeBrevoMessageId(value: string | null | undefined): string | null {
@@ -104,8 +108,8 @@ export async function updateEmailLogFromBrevoEvent(event: BrevoWebhookEvent): Pr
   const supabase = createSupabaseAdminClient();
   if (!supabase) return false;
 
-  const rawMessageId = event.messageId ?? event["message-id"];
-  if (!rawMessageId) return false;
+  const rawMessageId = event["message-id"] ?? event.messageId ?? event.message_id ?? event.MessageId ?? event["Message-Id"];
+  if (!rawMessageId || typeof rawMessageId !== "string") return false;
 
   const normalized = normalizeBrevoMessageId(rawMessageId);
   if (!normalized) return false;
