@@ -62,7 +62,7 @@ export async function logEmailAttempt(params: LogEmailAttemptParams): Promise<vo
       email_type: params.emailType,
       recipient_email: params.recipientEmail,
       subject: params.subject,
-      brevo_message_id: params.brevoMessageId ?? null,
+      brevo_message_id: normalizeBrevoMessageId(params.brevoMessageId),
       status: params.ok ? "sent" : "failed",
       sent_at: params.ok ? new Date().toISOString() : null,
       error_message: params.errorMessage ?? null,
@@ -81,6 +81,12 @@ export type BrevoWebhookEvent = {
   reason?: string;
 };
 
+function normalizeBrevoMessageId(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return trimmed.replace(/^<|>$/g, "");
+}
+
 const STATUS_PRIORITY: Record<string, number> = {
   failed: 0,
   sent: 1,
@@ -98,19 +104,24 @@ export async function updateEmailLogFromBrevoEvent(event: BrevoWebhookEvent): Pr
   const supabase = createSupabaseAdminClient();
   if (!supabase) return false;
 
-  const messageId = event.messageId ?? event["message-id"];
-  if (!messageId) return false;
+  const rawMessageId = event.messageId ?? event["message-id"];
+  if (!rawMessageId) return false;
+
+  const normalized = normalizeBrevoMessageId(rawMessageId);
+  if (!normalized) return false;
+
+  const variants = Array.from(new Set([normalized, `<${normalized}>`, rawMessageId.trim()]));
 
   const { data: existing } = await supabase
     .from("email_logs")
     .select("id, status, raw_events, delivered_at, opened_at, clicked_at, bounced_at")
-    .eq("brevo_message_id", messageId)
+    .in("brevo_message_id", variants)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (!existing) {
-    console.warn(`[email-logs] webhook event for unknown message_id=${messageId} event=${event.event}`);
+    console.warn(`[email-logs] webhook event for unknown message_id=${normalized} event=${event.event}`);
     return false;
   }
 
