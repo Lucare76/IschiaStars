@@ -6,6 +6,8 @@ import type { FormEvent, InputHTMLAttributes, TextareaHTMLAttributes } from "rea
 import { useEffect, useRef, useState } from "react";
 import { CloneQuoteButton } from "@/components/CloneQuoteButton";
 import { ConfirmationAvailabilityPanel } from "@/components/ConfirmationAvailabilityPanel";
+import { EmailTrackingStatus } from "@/components/EmailTrackingStatus";
+import type { EmailLog } from "@/lib/repositories/emailLogs";
 import {
   HotelOptionState,
   HotelOptionsEditor,
@@ -35,7 +37,7 @@ function tomorrowDateString() {
   return date.toISOString().split("T")[0];
 }
 
-export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags, quoteEvents = [] }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; quoteEvents?: QuoteEvent[] }) {
+export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags, quoteEvents = [], emailLogs = [] }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; quoteEvents?: QuoteEvent[]; emailLogs?: EmailLog[] }) {
   const router = useRouter();
   const effective = getEffectiveHotelOptions(quote);
   const [currentQuote, setCurrentQuote] = useState(quote);
@@ -491,6 +493,8 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
             </div>
           </div>
         )}
+
+        {emailLogs.length > 0 ? <EmailTrackingStatus emailLogs={emailLogs} /> : null}
 
         {/* Azioni preventivo */}
         <div className="rounded-2xl bg-white/90 p-5 text-center shadow-soft">

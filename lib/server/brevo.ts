@@ -1,4 +1,5 @@
 import type { Quote, QuoteConfirmation } from "@/lib/types";
+import { logEmailAttempt } from "@/lib/repositories/emailLogs";
 import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
@@ -48,6 +49,7 @@ type BrevoSendResult = {
   ok: boolean;
   status?: number;
   error?: string;
+  messageId?: string;
 };
 
 export function isBrevoEnabled(): boolean {
@@ -92,7 +94,14 @@ async function sendBrevoEmailWithResult(params: SendBrevoEmailParams): Promise<B
       body: JSON.stringify(payload)
     });
 
-    if (response.ok) return { ok: true, status: response.status };
+    if (response.ok) {
+      let messageId: string | undefined;
+      try {
+        const json = await response.json();
+        if (typeof json?.messageId === "string") messageId = json.messageId;
+      } catch { /* body not parsable — not critical */ }
+      return { ok: true, status: response.status, messageId };
+    }
 
     const body = await response.text().catch(() => "(unreadable)");
     console.error(`[brevo] API error status=${response.status} message=${body.slice(0, 300)}`);
@@ -434,9 +443,11 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
 
   if (sendResult.ok) {
     console.info(`[brevo] sent quote email code=${quote.code}`);
+    logEmailAttempt({ quoteId: quote.id, emailType: "quote_to_client", recipientEmail: email, subject, brevoMessageId: sendResult.messageId, ok: true });
     return { sent: true };
   } else {
     console.warn(`[brevo] failed quote email code=${quote.code} status=${sendResult.status ?? "fetch_error"} error=${sendResult.error ?? "-"}`);
+    logEmailAttempt({ quoteId: quote.id, emailType: "quote_to_client", recipientEmail: email, subject, ok: false, errorMessage: sendResult.error });
     return { sent: false, skipReason: `brevo_error_${sendResult.status ?? "fetch"}` };
   }
 }
@@ -672,19 +683,21 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
     `Backoffice: ${backofficeUrl}`
   ].join("\n");
 
-  const ok = await sendBrevoEmail({
+  const internalSubject = `Preventivo confermato ${quote.code}`;
+  const internalResult = await sendBrevoEmailWithResult({
     to: [{ email: internalEmail, name: "IschiaStars" }],
     cc: internalCcEmail ? [{ email: internalCcEmail, name: "IschiaStars Preventivi" }] : undefined,
-    subject: `Preventivo confermato ${quote.code}`,
+    subject: internalSubject,
     html,
     text
   });
 
-  if (ok) {
+  if (internalResult.ok) {
     console.info(`[brevo] sent internal confirmation ${quote.code}`);
   } else {
     console.warn(`[brevo] failed internal confirmation ${quote.code} — check server logs`);
   }
+  logEmailAttempt({ quoteId: quote.id, emailType: "confirmation_internal", recipientEmail: internalEmail, subject: internalSubject, brevoMessageId: internalResult.messageId, ok: internalResult.ok, errorMessage: internalResult.error });
 }
 
 export type FinalConfirmationEmailDetails = {
@@ -882,13 +895,16 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     "IschiaStars"
   ].join("\n");
 
-  return sendBrevoEmail({
+  const finalSubject = `Conferma definitiva soggiorno - ${quote.code}`;
+  const finalResult = await sendBrevoEmailWithResult({
     to: [{ email, name: `${quote.customerFirstName} ${quote.customerLastName}`.trim() }],
-    subject: `Conferma definitiva soggiorno - ${quote.code}`,
+    subject: finalSubject,
     html: buildFinalConfirmationEmailHtml(quote, details),
     text,
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
   });
+  logEmailAttempt({ quoteId: quote.id, confirmationId: quote.confirmation?.id, emailType: "final_confirmation_to_client", recipientEmail: email, subject: finalSubject, brevoMessageId: finalResult.messageId, ok: finalResult.ok, errorMessage: finalResult.error });
+  return finalResult.ok;
 }
 
 export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string): Promise<boolean> {
@@ -1037,14 +1053,17 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
     "IschiaStars"
   ].join("\n");
 
-  return sendBrevoEmail({
+  const voucherSubject = `Il tuo voucher IschiaStars — ${quote.code}`;
+  const voucherResult = await sendBrevoEmailWithResult({
     to: [{ email, name: fullName }],
-    subject: `Il tuo voucher IschiaStars — ${quote.code}`,
+    subject: voucherSubject,
     html,
     text,
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" },
     attachment: [{ name: `voucher-${quote.code}.pdf`, content: pdfBase64 }]
   });
+  logEmailAttempt({ quoteId: quote.id, confirmationId: quote.confirmation?.id, emailType: "voucher_to_client", recipientEmail: email, subject: voucherSubject, brevoMessageId: voucherResult.messageId, ok: voucherResult.ok, errorMessage: voucherResult.error });
+  return voucherResult.ok;
 }
 
 export async function sendSupplierConfirmationEmail(params: {
@@ -1154,13 +1173,16 @@ export async function sendSupplierConfirmationEmail(params: {
     `IschiaStars — WhatsApp +${whatsapp}`
   ].join("\n");
 
-  return sendBrevoEmail({
+  const supplierSubject = `Conferma prenotazione — ${confirmation.selectedHotelName ?? quote.proposedHotel.name} — ${quote.code}`;
+  const supplierResult = await sendBrevoEmailWithResult({
     to: [{ email: to }],
-    subject: `Conferma prenotazione — ${confirmation.selectedHotelName ?? quote.proposedHotel.name} — ${quote.code}`,
+    subject: supplierSubject,
     html,
     text,
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
   });
+  logEmailAttempt({ quoteId: quote.id, confirmationId: confirmation.id, emailType: "supplier_confirmation", recipientEmail: to, subject: supplierSubject, brevoMessageId: supplierResult.messageId, ok: supplierResult.ok, errorMessage: supplierResult.error });
+  return supplierResult.ok;
 }
 
 export async function sendAvailabilityUnavailableEmailToClient(quote: Quote, details: AvailabilityUnavailableEmailDetails): Promise<boolean> {
@@ -1209,13 +1231,16 @@ export async function sendAvailabilityUnavailableEmailToClient(quote: Quote, det
     ...(details.reason ? [`Nota: ${details.reason}`] : [])
   ].join("\n");
 
-  return sendBrevoEmail({
+  const unavailSubject = `Aggiornamento disponibilità struttura - ${quote.code}`;
+  const unavailResult = await sendBrevoEmailWithResult({
     to: [{ email, name: `${quote.customerFirstName} ${quote.customerLastName}`.trim() }],
-    subject: `Aggiornamento disponibilità struttura - ${quote.code}`,
+    subject: unavailSubject,
     html,
     text,
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
   });
+  logEmailAttempt({ quoteId: quote.id, confirmationId: quote.confirmation?.id, emailType: "unavailability_to_client", recipientEmail: email, subject: unavailSubject, brevoMessageId: unavailResult.messageId, ok: unavailResult.ok, errorMessage: unavailResult.error });
+  return unavailResult.ok;
 }
 
 function formatDateTimeForEmail(value: string) {
