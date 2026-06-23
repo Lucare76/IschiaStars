@@ -42,6 +42,14 @@ export default async function QuotesPage({ searchParams }: { searchParams?: { fi
     })
   );
 
+  if (quoteResult.source !== "supabase") {
+    return (
+      <AdminShell title="Preventivi evasi" subtitle="Preventivi giÃ  elaborati, non cancellati e non ancora confermati dal cliente.">
+        <DataUnavailable error={quoteResult.error} />
+      </AdminShell>
+    );
+  }
+
   return (
     <AdminShell title="Preventivi evasi" subtitle="Preventivi già elaborati, non cancellati e non ancora confermati dal cliente.">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -52,13 +60,18 @@ export default async function QuotesPage({ searchParams }: { searchParams?: { fi
       </div>
 
       <section>
-        {quoteResult.source !== "supabase" ? (
-          <div className="mb-5 rounded-2xl bg-red-50 px-5 py-4 text-sm font-bold text-red-700 ring-1 ring-red-200">
-            Database non collegato: stai visualizzando dati demo/locali. Le modifiche non vengono salvate nel database reale.
-          </div>
-        ) : null}
         <QuoteFilters quotes={quotes} statsByQuote={statsByQuote} initialFilter={initialFilter} />
       </section>
     </AdminShell>
+  );
+}
+
+function DataUnavailable({ error }: { error?: string }) {
+  return (
+    <div className="rounded-2xl bg-red-50 p-5 text-sm font-semibold text-red-800 shadow-soft ring-1 ring-red-200">
+      <p className="text-base font-black">Preventivi non disponibili</p>
+      <p className="mt-2">Impossibile caricare i dati in questo momento. Riprova tra qualche minuto.</p>
+      {error ? <p className="mt-3 break-words text-xs text-red-700/80">Dettaglio tecnico: {error}</p> : null}
+    </div>
   );
 }

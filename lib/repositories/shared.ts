@@ -10,10 +10,19 @@ export type RepositoryResult<T> = {
 };
 
 export function fallback<T>(data: T, error?: unknown): RepositoryResult<T> {
+  const serializedError = serializeRepositoryError(error);
+  if (!isDemoFallbackAllowed()) {
+    return {
+      data: sanitizeProductionFallbackData(data),
+      source: "mock",
+      error: serializedError ?? "Dati non disponibili. Verifica la connessione o riprova più tardi."
+    };
+  }
+
   return {
     data,
     source: "mock",
-    error: serializeRepositoryError(error)
+    error: serializedError
   };
 }
 
@@ -380,4 +389,55 @@ function serializeRepositoryError(error?: unknown) {
     return message ? `${message}${code}${details}` : "Errore repository";
   }
   return undefined;
+}
+
+function isDemoFallbackAllowed() {
+  return process.env.NODE_ENV !== "production" && process.env.USE_DEMO_DATA !== "false";
+}
+
+function sanitizeProductionFallbackData<T>(data: T): T {
+  if (Array.isArray(data)) return [] as T;
+  if (data === null || data === undefined) return data;
+  if (data instanceof Set) return new Set() as T;
+  if (data instanceof Map) return new Map() as T;
+
+  if (typeof data === "object") {
+    const record = data as Record<string, unknown>;
+    if (isOperationalEntity(record)) return null as T;
+    return Object.fromEntries(
+      Object.entries(record).map(([key, value]) => [key, sanitizeProductionFallbackValue(value)])
+    ) as T;
+  }
+
+  return data;
+}
+
+function sanitizeProductionFallbackValue(value: unknown): unknown {
+  if (Array.isArray(value)) return [];
+  if (value instanceof Set) return new Set();
+  if (value instanceof Map) return new Map();
+  if (value === null || value === undefined) return value;
+  if (typeof value === "number") return 0;
+  if (typeof value === "boolean") return false;
+  if (typeof value === "string") return "";
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (isOperationalEntity(record)) return null;
+    return Object.fromEntries(
+      Object.entries(record).map(([key, nestedValue]) => [key, sanitizeProductionFallbackValue(nestedValue)])
+    );
+  }
+  return undefined;
+}
+
+function isOperationalEntity(record: Record<string, unknown>) {
+  return typeof record.id === "string" && (
+    "code" in record ||
+    "customerFirstName" in record ||
+    "customerEmail" in record ||
+    "receivedAt" in record ||
+    "zone" in record ||
+    "stars" in record ||
+    "confirmedAt" in record
+  );
 }

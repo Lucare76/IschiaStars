@@ -26,6 +26,16 @@ type Filter = (typeof filters)[number];
 export default async function ConfirmationsPage({ searchParams }: { searchParams?: { filter?: string } }) {
   const selectedFilter = filters.includes(searchParams?.filter as Filter) ? searchParams?.filter as Filter : "tutte";
   const [result, paymentSettings] = await Promise.all([listQuotes({ includeLabTests: true }), getPaymentSettings()]);
+
+  if (result.source !== "supabase" || paymentSettings.source !== "supabase") {
+    const error = [result.error, paymentSettings.error].filter(Boolean).join(" | ");
+    return (
+      <AdminShell title="Conferme cliente" subtitle="Verifica manuale disponibilitÃ  struttura e invio comunicazioni definitive.">
+        <DataUnavailable error={error} />
+      </AdminShell>
+    );
+  }
+
   const missingPaymentSettings = !isPaymentSettingsConfigured(paymentSettings.data);
   const confirmations = result.data
     .filter((quote) => quote.confirmation && !quote.deletedAt && (!quote.excludedFromStats || quote.isLabTest))
@@ -125,6 +135,16 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
 function confirmationTimestamp(value: string | undefined) {
   const timestamp = value ? new Date(value).getTime() : 0;
   return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function DataUnavailable({ error }: { error?: string }) {
+  return (
+    <div className="rounded-2xl bg-red-50 p-5 text-sm font-semibold text-red-800 shadow-soft ring-1 ring-red-200">
+      <p className="text-base font-black">Conferme non disponibili</p>
+      <p className="mt-2">Impossibile caricare i dati in questo momento. Riprova tra qualche minuto.</p>
+      {error ? <p className="mt-3 break-words text-xs text-red-700/80">Dettaglio tecnico: {error}</p> : null}
+    </div>
+  );
 }
 
 function Info({ label, value }: { label: string; value: string }) {

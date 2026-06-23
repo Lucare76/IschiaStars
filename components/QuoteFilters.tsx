@@ -56,7 +56,7 @@ export function QuoteFilters({
     setQuotes(result.data);
     setLastUpdated(formatTime(new Date()));
     if (result.source !== "supabase") {
-      setMessage(result.error ?? "Database non collegato: stai visualizzando dati demo/locali.");
+      setMessage(result.error ?? "Dati non disponibili. Verifica la connessione o riprova più tardi.");
     }
   }, []);
 
