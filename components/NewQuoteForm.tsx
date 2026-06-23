@@ -222,6 +222,14 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
       return;
     }
 
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      await adminApiFetch(`/api/quotes/${result.data.id}`, {
+        method: "POST",
+        body: JSON.stringify({ action: "send" })
+      }).catch(() => {});
+    }
+
     router.push(`/admin/preventivi/${result.data.code}`);
     router.refresh();
   }
