@@ -10,7 +10,7 @@ import { getFeatureFlags, getPaymentSettings } from "@/lib/repositories/settings
 
 export const dynamic = "force-dynamic";
 
-export default async function QuoteDetailPage({ params }: { params: { code: string } }) {
+export default async function QuoteDetailPage({ params, searchParams }: { params: { code: string }; searchParams?: { email_error?: string } }) {
   const [quoteResult, hotelResult, paymentSettings, featureFlagsResult] = await Promise.all([
     getQuoteByCode(params.code),
     listHotels(),
@@ -35,6 +35,11 @@ export default async function QuoteDetailPage({ params }: { params: { code: stri
           Tutti i preventivi
         </Link>
       </div>
+      {searchParams?.email_error === "1" ? (
+        <div className="mb-5 rounded-2xl bg-rose-50 p-4 text-sm font-bold text-rose-800 ring-1 ring-rose-200">
+          Preventivo creato, ma l&apos;email non è stata inviata. Puoi riprovare dal dettaglio preventivo con il pulsante &quot;Invia preventivo&quot;.
+        </div>
+      ) : null}
       <QuoteDetailEditor quote={quote} hotels={hotelResult.data} paymentSettings={paymentSettings.data} featureFlags={featureFlagsResult.data} quoteEvents={quoteEventsResult.data} emailLogs={emailLogs} />
     </AdminShell>
   );

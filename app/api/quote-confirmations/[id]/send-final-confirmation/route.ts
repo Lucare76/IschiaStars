@@ -47,7 +47,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   if (depositAmountOverride !== undefined) {
     const totalPrice = quoteResult.data.confirmation?.selectedPrice ?? quoteResult.data.totalPrice ?? 0;
-    await updateConfirmationAmounts(params.id, depositAmountOverride, totalPrice > depositAmountOverride ? totalPrice - depositAmountOverride : null);
+    const amountsUpdate = await updateConfirmationAmounts(params.id, depositAmountOverride, totalPrice > depositAmountOverride ? totalPrice - depositAmountOverride : null);
+    if (!amountsUpdate.data) {
+      return NextResponse.json({
+        ok: false,
+        error: "Email inviata, ma gli importi non sono stati aggiornati. Verifica il dettaglio della conferma."
+      }, { status: 500 });
+    }
   }
   if (!update.data) return NextResponse.json({ ok: false, error: update.error ?? "Conferma non aggiornata" }, { status: 500 });
 

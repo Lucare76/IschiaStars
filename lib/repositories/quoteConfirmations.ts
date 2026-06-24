@@ -201,10 +201,10 @@ export async function updateConfirmationAmounts(
   balanceAmount: number | null,
   selectedPrice?: number,
   metadata?: Record<string, unknown>
-): Promise<void> {
+): Promise<RepositoryResult<Record<string, unknown> | null>> {
   const supabase = createSupabaseAdminClient();
-  if (!supabase) return;
-  await supabase
+  if (!supabase) return fallback(null);
+  const { data, error } = await supabase
     .from("quote_confirmations")
     .update({
       ...(selectedPrice !== undefined ? { selected_price: selectedPrice } : {}),
@@ -212,7 +212,12 @@ export async function updateConfirmationAmounts(
       selected_balance_amount: balanceAmount,
       ...(metadata !== undefined ? { metadata } : {})
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+  if (error) return fallback(null, error);
+  if (!data) return fallback(null, "Conferma non trovata");
+  return fromSupabase(data as Record<string, unknown>);
 }
 
 export async function updateConfirmationCustomerDetails(

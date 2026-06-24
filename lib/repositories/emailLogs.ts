@@ -80,7 +80,7 @@ export async function logEmailAttempt(params: LogEmailAttemptParams): Promise<vo
     const supabase = createSupabaseAdminClient();
     if (!supabase) return;
 
-    await supabase.from("email_logs").insert({
+    const { error } = await supabase.from("email_logs").insert({
       quote_id: params.quoteId ?? null,
       confirmation_id: params.confirmationId ?? null,
       email_type: params.emailType,
@@ -91,6 +91,9 @@ export async function logEmailAttempt(params: LogEmailAttemptParams): Promise<vo
       sent_at: params.ok ? new Date().toISOString() : null,
       error_message: params.errorMessage ?? null,
     });
+    if (error) {
+      console.error("[email-logs] failed to log email attempt", error.message);
+    }
   } catch (err) {
     console.error("[email-logs] failed to log email attempt", err instanceof Error ? err.message : err);
   }

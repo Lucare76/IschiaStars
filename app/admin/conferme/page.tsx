@@ -73,6 +73,7 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
           const confirmation = quote.confirmation!;
           const status = (confirmation.availabilityStatus ?? "availability_to_check") as ConfirmationAvailabilityStatus;
           const balanceSchedule = getBalancePaymentSchedule(confirmation.selectedBalanceMethod, quote.arrivalDate);
+          const confirmedAfterExpiry = isAfterOfferExpiry(confirmation.confirmedAt, quote.offerExpiresAt);
           return (
             <article key={quote.id} className="rounded-2xl bg-white/90 p-5 shadow-soft">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -84,6 +85,11 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
                   {availabilityStatusLabels[status]}
                 </span>
               </div>
+              {confirmedAfterExpiry ? (
+                <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
+                  Richiesta da ricontrollare: conferma ricevuta su preventivo scaduto.
+                </div>
+              ) : null}
               <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <Info label="Telefono" value={confirmation.phone ?? quote.customerPhone ?? "-"} />
                 <Info label="Email" value={confirmation.email ?? quote.customerEmail ?? "-"} />
@@ -135,6 +141,19 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
 function confirmationTimestamp(value: string | undefined) {
   const timestamp = value ? new Date(value).getTime() : 0;
   return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function isAfterOfferExpiry(confirmedAt: string | undefined, offerExpiresAt: string) {
+  if (!confirmedAt || !offerExpiresAt) return false;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date(confirmedAt));
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  const confirmedDate = `${part("year")}-${part("month")}-${part("day")}`;
+  return confirmedDate > offerExpiresAt;
 }
 
 function DataUnavailable({ error }: { error?: string }) {

@@ -109,9 +109,9 @@ export function CountdownBanner({ offerExpiresAt, isConfirmed }: CountdownBanner
           padding: "20px 28px",
         }}
       >
-        <p className="font-semibold text-gray-600">Questa offerta non è più attiva.</p>
-        <p className="mt-1 text-sm text-gray-500">
-          Vuoi sapere se la soluzione che ti interessa è ancora disponibile?
+        <p className="font-semibold text-gray-700">Offerta scaduta</p>
+        <p className="mt-1 text-sm leading-6 text-gray-600">
+          Puoi comunque inviare una richiesta di conferma. IschiaStars verificherà disponibilità, prezzo e condizioni aggiornate prima della conferma definitiva.
         </p>
         <a
           className="mt-3 inline-flex rounded-full bg-[#25D366] px-5 py-2 text-sm font-semibold text-white"
@@ -119,7 +119,7 @@ export function CountdownBanner({ offerExpiresAt, isConfirmed }: CountdownBanner
           rel="noopener noreferrer"
           target="_blank"
         >
-          Scrivici su WhatsApp
+          Chiedi informazioni su WhatsApp
         </a>
       </div>
     );

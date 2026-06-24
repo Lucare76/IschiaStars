@@ -66,7 +66,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       additional_services: nextServices
     };
 
-    await updateConfirmationAmounts(params.id, recalculatedDeposit, recalculatedBalance, recalculatedTotal, metadata);
+    const amountsUpdate = await updateConfirmationAmounts(params.id, recalculatedDeposit, recalculatedBalance, recalculatedTotal, metadata);
+    if (!amountsUpdate.data) {
+      return NextResponse.json({ success: false, error: amountsUpdate.error ?? "Importi non aggiornati" }, { status: 500 });
+    }
     await trackQuoteEvent(quoteId, "amounts_updated", {
       oldTotal,
       newTotal: recalculatedTotal,
@@ -115,7 +118,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       }
     : undefined;
 
-  await updateConfirmationAmounts(params.id, depositAmount, balanceAmount, newTotalPrice, metadata);
+  const amountsUpdate = await updateConfirmationAmounts(params.id, depositAmount, balanceAmount, newTotalPrice, metadata);
+  if (!amountsUpdate.data) {
+    return NextResponse.json({ success: false, error: amountsUpdate.error ?? "Importi non aggiornati" }, { status: 500 });
+  }
 
   if (serviceLabel) {
     await trackQuoteEvent(quoteId, "amounts_updated", {

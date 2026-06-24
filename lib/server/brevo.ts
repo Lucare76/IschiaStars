@@ -443,11 +443,11 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
 
   if (sendResult.ok) {
     console.info(`[brevo] sent quote email code=${quote.code}`);
-    logEmailAttempt({ quoteId: quote.id, emailType: "quote_to_client", recipientEmail: email, subject, brevoMessageId: sendResult.messageId, ok: true });
+    await logEmailAttempt({ quoteId: quote.id, emailType: "quote_to_client", recipientEmail: email, subject, brevoMessageId: sendResult.messageId, ok: true });
     return { sent: true };
   } else {
     console.warn(`[brevo] failed quote email code=${quote.code} status=${sendResult.status ?? "fetch_error"} error=${sendResult.error ?? "-"}`);
-    logEmailAttempt({ quoteId: quote.id, emailType: "quote_to_client", recipientEmail: email, subject, ok: false, errorMessage: sendResult.error });
+    await logEmailAttempt({ quoteId: quote.id, emailType: "quote_to_client", recipientEmail: email, subject, ok: false, errorMessage: sendResult.error });
     return { sent: false, skipReason: `brevo_error_${sendResult.status ?? "fetch"}` };
   }
 }
@@ -697,7 +697,7 @@ export async function sendQuoteConfirmedInternalEmail(quote: Quote, confirmation
   } else {
     console.warn(`[brevo] failed internal confirmation ${quote.code} — check server logs`);
   }
-  logEmailAttempt({ quoteId: quote.id, emailType: "confirmation_internal", recipientEmail: internalEmail, subject: internalSubject, brevoMessageId: internalResult.messageId, ok: internalResult.ok, errorMessage: internalResult.error });
+  await logEmailAttempt({ quoteId: quote.id, emailType: "confirmation_internal", recipientEmail: internalEmail, subject: internalSubject, brevoMessageId: internalResult.messageId, ok: internalResult.ok, errorMessage: internalResult.error });
 }
 
 export type FinalConfirmationEmailDetails = {
@@ -903,7 +903,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     text,
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
   });
-  logEmailAttempt({ quoteId: quote.id, confirmationId: quote.confirmation?.id, emailType: "final_confirmation_to_client", recipientEmail: email, subject: finalSubject, brevoMessageId: finalResult.messageId, ok: finalResult.ok, errorMessage: finalResult.error });
+  await logEmailAttempt({ quoteId: quote.id, confirmationId: quote.confirmation?.id, emailType: "final_confirmation_to_client", recipientEmail: email, subject: finalSubject, brevoMessageId: finalResult.messageId, ok: finalResult.ok, errorMessage: finalResult.error });
   return finalResult.ok;
 }
 
@@ -1062,7 +1062,7 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" },
     attachment: [{ name: `voucher-${quote.code}.pdf`, content: pdfBase64 }]
   });
-  logEmailAttempt({ quoteId: quote.id, confirmationId: quote.confirmation?.id, emailType: "voucher_to_client", recipientEmail: email, subject: voucherSubject, brevoMessageId: voucherResult.messageId, ok: voucherResult.ok, errorMessage: voucherResult.error });
+  await logEmailAttempt({ quoteId: quote.id, confirmationId: quote.confirmation?.id, emailType: "voucher_to_client", recipientEmail: email, subject: voucherSubject, brevoMessageId: voucherResult.messageId, ok: voucherResult.ok, errorMessage: voucherResult.error });
   return voucherResult.ok;
 }
 
@@ -1181,7 +1181,7 @@ export async function sendSupplierConfirmationEmail(params: {
     text,
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
   });
-  logEmailAttempt({ quoteId: quote.id, confirmationId: confirmation.id, emailType: "supplier_confirmation", recipientEmail: to, subject: supplierSubject, brevoMessageId: supplierResult.messageId, ok: supplierResult.ok, errorMessage: supplierResult.error });
+  await logEmailAttempt({ quoteId: quote.id, confirmationId: confirmation.id, emailType: "supplier_confirmation", recipientEmail: to, subject: supplierSubject, brevoMessageId: supplierResult.messageId, ok: supplierResult.ok, errorMessage: supplierResult.error });
   return supplierResult.ok;
 }
 
@@ -1239,7 +1239,7 @@ export async function sendAvailabilityUnavailableEmailToClient(quote: Quote, det
     text,
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
   });
-  logEmailAttempt({ quoteId: quote.id, confirmationId: quote.confirmation?.id, emailType: "unavailability_to_client", recipientEmail: email, subject: unavailSubject, brevoMessageId: unavailResult.messageId, ok: unavailResult.ok, errorMessage: unavailResult.error });
+  await logEmailAttempt({ quoteId: quote.id, confirmationId: quote.confirmation?.id, emailType: "unavailability_to_client", recipientEmail: email, subject: unavailSubject, brevoMessageId: unavailResult.messageId, ok: unavailResult.ok, errorMessage: unavailResult.error });
   return unavailResult.ok;
 }
 

@@ -222,12 +222,16 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
       return;
     }
 
-    await adminApiFetch(`/api/quotes/${result.data.id}`, {
+    const sendResponse = await adminApiFetch(`/api/quotes/${result.data.id}`, {
       method: "POST",
       body: JSON.stringify({ action: "send" })
-    }).catch(() => {});
+    }).catch(() => null);
+    const sendResult = sendResponse
+      ? await readAdminApiJson<{ ok?: boolean; error?: string }>(sendResponse)
+      : null;
+    const emailFailed = !sendResponse?.ok || !sendResult?.ok;
 
-    router.push(`/admin/preventivi/${result.data.code}`);
+    router.push(`/admin/preventivi/${result.data.code}${emailFailed ? "?email_error=1" : ""}`);
     router.refresh();
   }
 
