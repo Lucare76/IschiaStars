@@ -1,3 +1,4 @@
+import { getFollowUpEmailStatusByQuoteId, type FollowUpEmailStatus } from "@/lib/repositories/emailLogs";
 import { getQuoteEventsForQuoteIds, trackableEvents } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, getEffectiveHotelOptions, RepositoryResult } from "@/lib/repositories/shared";
@@ -7,6 +8,15 @@ import type { Quote, QuoteEvent } from "@/lib/types";
 
 export type FollowUpSegment = "non_visualizzato" | "aperto_non_confermato" | "molto_interessato" | "da_sollecitare" | "recente" | "storico_non_affidabile" | "chiuso";
 export type FollowUpPriority = "alta" | "media" | "bassa";
+
+export type FollowUpEmailInfo = {
+  delivered: boolean;
+  opened: boolean;
+  clicked: boolean;
+  problem: boolean;
+  label: string;
+  actionHint: string;
+};
 
 export type FollowUpQuote = {
   id: string;
@@ -45,6 +55,7 @@ export type FollowUpQuote = {
   mainOffer: string;
   publicUrl: string;
   whatsappHref?: string;
+  emailInfo: FollowUpEmailInfo;
 };
 
 export type FollowUpHotelClick = {
@@ -59,14 +70,17 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuote[]>> {
   const quotesResult = await listQuotes({ includeDeleted: false });
   const quoteIds = quotesResult.data.map((quote) => quote.id);
-  const eventsResult = await getQuoteEventsForQuoteIds(quoteIds);
+  const [eventsResult, emailStatusByQuote] = await Promise.all([
+    getQuoteEventsForQuoteIds(quoteIds),
+    getFollowUpEmailStatusByQuoteId(quoteIds)
+  ]);
   const confirmedCustomerKeys = new Set(
     quotesResult.data
       .filter(hasActiveConfirmedBooking)
       .map(followUpCustomerKey)
       .filter(Boolean)
   );
-  const mapped = quotesResult.data.map((quote) => toFollowUpQuote(quote, eventsResult.data[quote.id] ?? [], confirmedCustomerKeys));
+  const mapped = quotesResult.data.map((quote) => toFollowUpQuote(quote, eventsResult.data[quote.id] ?? [], confirmedCustomerKeys, emailStatusByQuote[quote.id]));
   const data = mapped
     .filter((quote): quote is FollowUpQuote => Boolean(quote))
     .sort(compareFollowUpQuotes);
@@ -77,7 +91,7 @@ export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuot
     : fallback(data, error);
 }
 
-function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKeys: Set<string>): FollowUpQuote | null {
+function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKeys: Set<string>, emailStatus?: FollowUpEmailStatus): FollowUpQuote | null {
   if (quote.deletedAt || quote.excludedFromStats || quote.status !== "preventivo_inviato" || quote.confirmation) return null;
   const customerKey = followUpCustomerKey(quote);
   if (customerKey && confirmedCustomerKeys.has(customerKey)) return null;
@@ -108,6 +122,8 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
   const lastEvent = latestEvent(customerEvents);
   const publicUrl = absolutePublicQuoteUrl(quote);
   const whatsappPublicUrl = absoluteShortPublicQuoteUrl(quote);
+  const emailLinkClicks = customerEvents.filter((event) => event.eventType === "email_link_clicked");
+  const emailInfo = resolveEmailInfo(emailStatus, opened.length > 0);
   const segment = isClosed ? "chiuso" : !isTrackingReliable && opened.length === 0 ? "storico_non_affidabile" : resolveSegment({
     sentAt,
     opened,
@@ -115,11 +131,13 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
     hotelLinkClicks,
     printClicks,
     confirmClicks,
-    detailsOpened
+    detailsOpened,
+    emailLinkClicks,
+    emailStatus
   });
   const clientName = [quote.customerFirstName, quote.customerLastName].filter(Boolean).join(" ").trim() || "Cliente";
   const clientPhone = quote.customerPhone.trim();
-  const engagementScore = scoreEngagement({ opened, whatsappClicks, hotelLinkClicks, printClicks, confirmClicks, detailsOpened });
+  const engagementScore = scoreEngagement({ opened, whatsappClicks, hotelLinkClicks, printClicks, confirmClicks, detailsOpened, emailStatus });
   const stage = followUpStage(sentAt);
 
   return {
@@ -163,7 +181,8 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
     hotelsSummary: summarizeHotels(quote),
     mainOffer: summarizeMainOffer(quote),
     publicUrl,
-    whatsappHref: clientPhone ? followUpWhatsappHref(clientPhone, followUpMessage(segment, stage, clientName, whatsappPublicUrl)) : undefined
+    whatsappHref: clientPhone ? followUpWhatsappHref(clientPhone, followUpMessage(segment, stage, clientName, whatsappPublicUrl)) : undefined,
+    emailInfo
   };
 }
 
@@ -174,7 +193,9 @@ function resolveSegment({
   hotelLinkClicks,
   printClicks,
   confirmClicks,
-  detailsOpened
+  detailsOpened,
+  emailLinkClicks,
+  emailStatus
 }: {
   sentAt: string;
   opened: QuoteEvent[];
@@ -183,9 +204,11 @@ function resolveSegment({
   printClicks: QuoteEvent[];
   confirmClicks: QuoteEvent[];
   detailsOpened: QuoteEvent[];
+  emailLinkClicks: QuoteEvent[];
+  emailStatus?: FollowUpEmailStatus;
 }): FollowUpSegment {
   const lastOpening = opened.at(-1)?.createdAt;
-  const isVeryInterested = opened.length > 1 || whatsappClicks.length > 0 || hotelLinkClicks.length > 0 || printClicks.length > 0 || confirmClicks.length > 0 || detailsOpened.length > 0;
+  const isVeryInterested = opened.length > 1 || whatsappClicks.length > 0 || hotelLinkClicks.length > 0 || printClicks.length > 0 || confirmClicks.length > 0 || detailsOpened.length > 0 || emailLinkClicks.length > 0 || emailStatus?.clicked;
   if (isVeryInterested) return "molto_interessato";
   if (lastOpening && hoursSince(lastOpening) >= 24) return "da_sollecitare";
   if (opened.length > 0) return "aperto_non_confermato";
@@ -255,6 +278,30 @@ function summarizeMainOffer(quote: Quote) {
   return `${room}${treatment.label} · ${formatCurrency(treatment.price)}`;
 }
 
+function resolveEmailInfo(emailStatus: FollowUpEmailStatus | undefined, hasPageOpening: boolean): FollowUpEmailInfo {
+  if (!emailStatus) return { delivered: false, opened: false, clicked: false, problem: false, label: "", actionHint: "" };
+
+  if (emailStatus.problem) {
+    return { delivered: false, opened: false, clicked: false, problem: true, label: "Email non consegnata", actionHint: "Contatta via WhatsApp" };
+  }
+  if (emailStatus.clicked) {
+    return { delivered: true, opened: true, clicked: true, problem: false, label: "Link email cliccato", actionHint: "Richiamare" };
+  }
+  if (emailStatus.opened && !hasPageOpening) {
+    return { delivered: true, opened: true, clicked: false, problem: false, label: "Email aperta, preventivo non visto", actionHint: "Invia WhatsApp con link" };
+  }
+  if (emailStatus.opened) {
+    return { delivered: true, opened: true, clicked: false, problem: false, label: "Email aperta", actionHint: "" };
+  }
+  if (emailStatus.delivered && !hasPageOpening) {
+    return { delivered: true, opened: false, clicked: false, problem: false, label: "Email consegnata, non aperta", actionHint: "Follow-up soft" };
+  }
+  if (emailStatus.delivered) {
+    return { delivered: true, opened: false, clicked: false, problem: false, label: "Email consegnata", actionHint: "" };
+  }
+  return { delivered: false, opened: false, clicked: false, problem: false, label: "", actionHint: "" };
+}
+
 function eventLabel(eventType: QuoteEvent["eventType"]) {
   const labels: Record<QuoteEvent["eventType"], string> = {
     quote_opened: "Preventivo aperto",
@@ -277,7 +324,8 @@ function eventLabel(eventType: QuoteEvent["eventType"]) {
     supplier_confirmation_sent: "Conferma inviata a hotel/agenzia",
     reaction_interested: "Ha indicato interesse",
     reaction_too_expensive: "Ha indicato prezzo alto",
-    amounts_updated: "Importi aggiornati"
+    amounts_updated: "Importi aggiornati",
+    email_link_clicked: "Click link email"
   };
   return labels[eventType];
 }
@@ -321,7 +369,8 @@ function scoreEngagement({
   hotelLinkClicks,
   printClicks,
   confirmClicks,
-  detailsOpened
+  detailsOpened,
+  emailStatus
 }: {
   opened: QuoteEvent[];
   whatsappClicks: QuoteEvent[];
@@ -329,8 +378,15 @@ function scoreEngagement({
   printClicks: QuoteEvent[];
   confirmClicks: QuoteEvent[];
   detailsOpened: QuoteEvent[];
+  emailStatus?: FollowUpEmailStatus;
 }) {
-  return opened.length + (whatsappClicks.length * 4) + (hotelLinkClicks.length * 3) + (printClicks.length * 3) + (confirmClicks.length * 6) + (detailsOpened.length * 2);
+  let score = opened.length + (whatsappClicks.length * 4) + (hotelLinkClicks.length * 3) + (printClicks.length * 3) + (confirmClicks.length * 6) + (detailsOpened.length * 2);
+  if (emailStatus) {
+    if (emailStatus.delivered) score += 1;
+    if (emailStatus.opened) score += 2;
+    if (emailStatus.clicked) score += 4;
+  }
+  return score;
 }
 
 function compareFollowUpQuotes(a: FollowUpQuote, b: FollowUpQuote) {

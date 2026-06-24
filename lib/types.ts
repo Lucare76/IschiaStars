@@ -73,7 +73,8 @@ export type QuoteEvent = {
     | "supplier_confirmation_sent"
     | "reaction_interested"
     | "reaction_too_expensive"
-    | "amounts_updated";
+    | "amounts_updated"
+    | "email_link_clicked";
   createdAt: string;
   userAgent?: string;
   metadata?: Record<string, unknown>;

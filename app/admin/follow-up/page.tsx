@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
 import { FollowUpActionButtons } from "@/components/FollowUpActionButtons";
 import { FollowUpWhatsAppButton } from "@/components/FollowUpWhatsAppButton";
-import { followUpGroupSegment, getDueFollowUpCustomerKeys, getFollowUpQuotes, FollowUpHotelClick, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
+import { followUpGroupSegment, getDueFollowUpCustomerKeys, getFollowUpQuotes, FollowUpEmailInfo, FollowUpHotelClick, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
 import { followUpCustomerKey, isFollowUpStageDue } from "@/lib/follow-up-policy";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
@@ -43,6 +43,7 @@ type FollowUpGroup = {
   staySummary: string;
   isSnoozed: boolean;
   isContactDue: boolean;
+  emailInfo: FollowUpEmailInfo;
 };
 
 export default async function FollowUpPage({ searchParams }: { searchParams?: { filter?: string } }) {
@@ -137,6 +138,9 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
             <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${segmentClass(group.segment)}`}>{group.segmentLabel}</span>
             <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${priorityClass(group.priority)}`}>Priorità {group.priority}</span>
             {quote.expiresSoon ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black uppercase text-amber-800">Scadenza vicina</span> : null}
+            {group.emailInfo.problem ? <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-black uppercase text-rose-800">{group.emailInfo.label}</span> : null}
+            {!group.emailInfo.problem && group.emailInfo.clicked ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase text-emerald-800">{group.emailInfo.label}</span> : null}
+            {!group.emailInfo.problem && !group.emailInfo.clicked && group.emailInfo.label ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-black uppercase text-sky-800">{group.emailInfo.label}</span> : null}
             {quote.segment === "non_visualizzato" ? <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black uppercase text-violet-800">{quote.stageLabel}</span> : null}
             {group.isSnoozed && group.snoozedUntil ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase text-slate-700">Rimandato a {formatDate(group.snoozedUntil)}</span> : null}
           </div>
@@ -169,9 +173,11 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
         <Info label="Click hotel / PDF" value={`${group.totalHotelClicks} / ${group.totalPrints}`} />
       </div>
 
-      <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+      <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 lg:grid-cols-4">
         <Info label="Punteggio interesse" value={String(group.engagementScore)} />
         <Info label="Ultimo follow-up" value={group.lastFollowUpAt ? formatDateTime(group.lastFollowUpAt) : "Non ancora registrato"} />
+        {group.emailInfo.label ? <Info label="Stato email" value={group.emailInfo.label} /> : null}
+        {group.emailInfo.actionHint ? <Info label="Azione consigliata" value={group.emailInfo.actionHint} /> : null}
       </div>
       <div className="mt-4 grid gap-3 text-sm">
         <Info label="Date soggiorno" value={group.staySummary} />
@@ -261,6 +267,18 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
     const segment = followUpGroupSegment(sorted, totalOpenings, engagementScore);
     const priority = priorityForSegment(segment);
     const staySummary = summarizeStayDates(sorted);
+    const emailInfo = sorted.reduce<FollowUpEmailInfo>(
+      (acc, quote) => ({
+        delivered: acc.delivered || quote.emailInfo.delivered,
+        opened: acc.opened || quote.emailInfo.opened,
+        clicked: acc.clicked || quote.emailInfo.clicked,
+        problem: acc.problem || quote.emailInfo.problem,
+        label: quote.emailInfo.label || acc.label,
+        actionHint: quote.emailInfo.actionHint || acc.actionHint
+      }),
+      { delivered: false, opened: false, clicked: false, problem: false, label: "", actionHint: "" }
+    );
+
     return {
       key,
       primary,
@@ -281,7 +299,8 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
       snoozedUntil,
       staySummary,
       isSnoozed: Boolean(snoozedUntil && new Date(snoozedUntil).getTime() > Date.now()),
-      isContactDue: sorted.some((quote) => isFollowUpStageDue(quote.sentAt, lastFollowUpAt))
+      isContactDue: sorted.some((quote) => isFollowUpStageDue(quote.sentAt, lastFollowUpAt)),
+      emailInfo
     };
   }).sort((a, b) =>
     b.engagementScore - a.engagementScore ||

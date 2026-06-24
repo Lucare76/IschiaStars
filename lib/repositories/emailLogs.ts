@@ -232,6 +232,26 @@ export async function updateEmailLogFromBrevoEvent(event: BrevoWebhookEvent): Pr
   return true;
 }
 
+export async function getEmailLogQuoteIdByMessageId(rawMessageId: string): Promise<{ quoteId: string; emailType: string } | null> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return null;
+
+  const normalized = normalizeBrevoMessageId(rawMessageId);
+  if (!normalized) return null;
+
+  const variants = Array.from(new Set([normalized, `<${normalized}>`, rawMessageId.trim()]));
+  const { data } = await supabase
+    .from("email_logs")
+    .select("quote_id,email_type")
+    .in("brevo_message_id", variants)
+    .not("quote_id", "is", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (!data?.quote_id) return null;
+  return { quoteId: String(data.quote_id), emailType: String(data.email_type) };
+}
+
 function mapEmailLogRow(row: Record<string, unknown>): EmailLog {
   return {
     id: String(row.id),
@@ -347,6 +367,44 @@ export async function getQuoteEmailDashboardData(): Promise<RepositoryResult<Quo
     problems: rows.filter((row) => isDeliveryProblem(String(row.status ?? ""))).length,
     byQuoteId
   });
+}
+
+export type FollowUpEmailStatus = {
+  delivered: boolean;
+  opened: boolean;
+  clicked: boolean;
+  problem: boolean;
+  errorMessage: string | null;
+};
+
+export async function getFollowUpEmailStatusByQuoteId(quoteIds: string[]): Promise<Record<string, FollowUpEmailStatus>> {
+  if (!quoteIds.length) return {};
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return {};
+
+  const result: Record<string, FollowUpEmailStatus> = {};
+  for (let i = 0; i < quoteIds.length; i += 100) {
+    const chunk = quoteIds.slice(i, i + 100);
+    const { data } = await supabase
+      .from("email_logs")
+      .select("quote_id,status,delivered_at,opened_at,clicked_at,error_message")
+      .eq("email_type", "quote_to_client")
+      .in("quote_id", chunk);
+
+    for (const row of data ?? []) {
+      const qid = String(row.quote_id);
+      const current = result[qid];
+      const status = String(row.status ?? "");
+      result[qid] = {
+        delivered: (current?.delivered ?? false) || Boolean(row.delivered_at),
+        opened: (current?.opened ?? false) || Boolean(row.opened_at),
+        clicked: (current?.clicked ?? false) || Boolean(row.clicked_at),
+        problem: (current?.problem ?? false) || isDeliveryProblem(status),
+        errorMessage: isDeliveryProblem(status) ? (String(row.error_message ?? "") || (current?.errorMessage ?? null)) : (current?.errorMessage ?? null)
+      };
+    }
+  }
+  return result;
 }
 
 function emptyQuoteEmailDashboardData(): QuoteEmailDashboardData {

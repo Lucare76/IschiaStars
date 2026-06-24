@@ -117,7 +117,7 @@ create table if not exists public.quote_children (
 create table if not exists public.quote_events (
   id uuid primary key default gen_random_uuid(),
   quote_id uuid not null references public.quotes(id) on delete cascade,
-  event_type text not null check (event_type in ('quote_opened','whatsapp_clicked','confirm_clicked','quote_confirmed','print_clicked','hotel_link_clicked','details_opened','follow_up_whatsapp_click','availability_confirmed','final_confirmation_email_sent','deposit_due_at_set','availability_unavailable','availability_unavailable_email_sent','alternative_to_propose','compare_opened','reveal_options_clicked','hesitant_whatsapp_clicked','supplier_confirmation_sent','reaction_interested','reaction_too_expensive','amounts_updated')),
+  event_type text not null check (event_type in ('quote_opened','whatsapp_clicked','confirm_clicked','quote_confirmed','print_clicked','hotel_link_clicked','details_opened','follow_up_whatsapp_click','availability_confirmed','final_confirmation_email_sent','deposit_due_at_set','availability_unavailable','availability_unavailable_email_sent','alternative_to_propose','compare_opened','reveal_options_clicked','hesitant_whatsapp_clicked','supplier_confirmation_sent','reaction_interested','reaction_too_expensive','amounts_updated','email_link_clicked')),
   user_agent text,
   ip_hash text,
   metadata jsonb not null default '{}',

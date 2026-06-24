@@ -125,7 +125,8 @@ function notificationPresentation(event: QuoteEvent, openingCount: number): { ty
     compare_opened: "ha confrontato le proposte",
     reveal_options_clicked: "ha visualizzato altre proposte",
     reaction_interested: "ha indicato interesse",
-    reaction_too_expensive: "ha indicato prezzo troppo alto"
+    reaction_too_expensive: "ha indicato prezzo troppo alto",
+    email_link_clicked: "ha cliccato un link nell'email"
   };
   return {
     type: event.eventType.startsWith("reaction_") ? "interesse" : "click",

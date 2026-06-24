@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateEmailLogFromBrevoEvent, type BrevoWebhookEvent } from "@/lib/repositories/emailLogs";
+import { getEmailLogQuoteIdByMessageId, updateEmailLogFromBrevoEvent, type BrevoWebhookEvent } from "@/lib/repositories/emailLogs";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 function extractBrevoWebhookEvents(body: unknown): BrevoWebhookEvent[] {
   if (Array.isArray(body)) {
@@ -52,8 +53,44 @@ export async function POST(request: NextRequest) {
   let matched = 0;
   for (const event of events) {
     const updated = await updateEmailLogFromBrevoEvent(event);
-    if (updated) matched++;
+    if (updated) {
+      matched++;
+      if (event.event?.toLowerCase() === "click") {
+        await maybeCreateEmailLinkClickedEvent(event);
+      }
+    }
   }
 
   return NextResponse.json({ ok: true, received: events.length, matched });
+}
+
+async function maybeCreateEmailLinkClickedEvent(event: BrevoWebhookEvent) {
+  try {
+    const rawMessageId = event["message-id"] ?? event.messageId ?? event.message_id ?? event.MessageId ?? event["Message-Id"];
+    if (!rawMessageId || typeof rawMessageId !== "string") return;
+
+    const emailInfo = await getEmailLogQuoteIdByMessageId(rawMessageId);
+    if (!emailInfo || emailInfo.emailType !== "quote_to_client") return;
+
+    const supabase = createSupabaseAdminClient();
+    if (!supabase) return;
+
+    const { data: existing } = await supabase
+      .from("quote_events")
+      .select("id")
+      .eq("quote_id", emailInfo.quoteId)
+      .eq("event_type", "email_link_clicked")
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) return;
+
+    await supabase.from("quote_events").insert({
+      quote_id: emailInfo.quoteId,
+      event_type: "email_link_clicked",
+      metadata: { source: "brevo_webhook" }
+    });
+  } catch (err) {
+    console.error("[brevo-webhook] email_link_clicked event creation failed", err instanceof Error ? err.message : err);
+  }
 }
