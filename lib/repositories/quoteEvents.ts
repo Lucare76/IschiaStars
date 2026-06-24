@@ -139,7 +139,7 @@ export async function getDashboardEventStats() {
   const localEvents = trackableEvents(allQuoteEvents());
   if (!supabase) return fallback(eventDashboard(localEvents));
 
-  const [aggregateResult, followUpResult] = await Promise.all([
+  const [aggregateResult, followUpResult, openingResult] = await Promise.all([
     supabase.rpc("get_dashboard_event_stats", {
       p_excluded_ips: getTrackingExcludedIps()
     }).maybeSingle(),
@@ -147,13 +147,34 @@ export async function getDashboardEventStats() {
       .from("quote_events")
       .select("*")
       .eq("event_type", "follow_up_whatsapp_click")
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: true }),
+    (async () => {
+      const rows: Record<string, unknown>[] = [];
+      const pageSize = 1000;
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from("quote_events")
+          .select("quote_id,created_at,user_agent,metadata")
+          .eq("event_type", "quote_opened")
+          .order("created_at", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) return { data: rows, error };
+        rows.push(...(data ?? []));
+        if ((data ?? []).length < pageSize) return { data: rows, error: null };
+      }
+    })()
   ]);
-  if (aggregateResult.error || followUpResult.error) {
-    return fallback(eventDashboard(localEvents), aggregateResult.error ?? followUpResult.error);
+  if (aggregateResult.error || followUpResult.error || openingResult.error) {
+    return fallback(eventDashboard(localEvents), aggregateResult.error ?? followUpResult.error ?? openingResult.error);
   }
+  const openingEvents = deduplicateEvents(trackableEvents((openingResult.data ?? []).map((row, index) => mapEvent({
+    id: `dashboard-opening-${index}`,
+    event_type: "quote_opened",
+    ...row
+  }))));
   return fromSupabase({
     ...mapDashboardEventAggregates(aggregateResult.data),
+    openingCountByQuote: countOpeningsByQuote(openingEvents),
     ...followUpDashboard((followUpResult.data ?? []).map(mapEvent))
   });
 }
@@ -168,12 +189,21 @@ function mapDashboardEventAggregates(row: unknown) {
 }
 
 function eventDashboard(events: QuoteEvent[]) {
+  const openingEvents = events.filter((event) => event.eventType === "quote_opened");
   return {
-    openedQuoteIds: new Set(events.filter((event) => event.eventType === "quote_opened").map((event) => event.quoteId)),
+    openedQuoteIds: new Set(openingEvents.map((event) => event.quoteId)),
+    openingCountByQuote: countOpeningsByQuote(openingEvents),
     whatsappClickQuoteIds: events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event)).map((event) => event.quoteId),
     confirmedEventIds: new Set(events.filter((event) => event.eventType === "quote_confirmed").map((event) => event.quoteId)),
     ...followUpDashboard(events.filter((event) => event.eventType === "follow_up_whatsapp_click"))
   };
+}
+
+function countOpeningsByQuote(events: QuoteEvent[]) {
+  return events.reduce<Record<string, number>>((counts, event) => {
+    counts[event.quoteId] = (counts[event.quoteId] ?? 0) + 1;
+    return counts;
+  }, {});
 }
 
 function followUpDashboard(events: QuoteEvent[]) {

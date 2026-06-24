@@ -1,27 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateEmailLogFromBrevoEvent, type BrevoWebhookEvent } from "@/lib/repositories/emailLogs";
 
-const SENSITIVE_KEYS = ["email", "recipient", "to", "token", "secret", "subject"];
-
-function safeKeys(obj: Record<string, unknown>): string[] {
-  return Object.keys(obj).filter(
-    (k) => !SENSITIVE_KEYS.includes(k.toLowerCase())
-  );
-}
-
-function debugLogEvent(event: BrevoWebhookEvent, matched: boolean): void {
-  const keys = safeKeys(event as Record<string, unknown>);
-  const messageIdFields: Record<string, unknown> = {};
-  for (const k of Object.keys(event)) {
-    if (/message|msg.*id/i.test(k)) {
-      messageIdFields[k] = event[k];
-    }
-  }
-  console.log(
-    `[brevo-webhook-debug] event=${event.event} keys=${keys.join(",")} messageIdFields=${JSON.stringify(messageIdFields)} matched=${matched}`
-  );
-}
-
 function extractBrevoWebhookEvents(body: unknown): BrevoWebhookEvent[] {
   if (Array.isArray(body)) {
     return body.filter((item) => item && typeof item === "object" && typeof item.event === "string");
@@ -66,15 +45,13 @@ export async function POST(request: NextRequest) {
   const events = extractBrevoWebhookEvents(body);
 
   if (events.length === 0) {
-    const topKeys = body && typeof body === "object" ? safeKeys(body as Record<string, unknown>) : [];
-    console.log(`[brevo-webhook-debug] ignored payload keys=${topKeys.join(",")}`);
+    console.warn("[brevo-webhook] payload ignorato: nessun evento riconosciuto");
     return NextResponse.json({ ok: true, matched: false, ignored: true, reason: "no_events" });
   }
 
   let matched = 0;
   for (const event of events) {
     const updated = await updateEmailLogFromBrevoEvent(event);
-    debugLogEvent(event, updated);
     if (updated) matched++;
   }
 

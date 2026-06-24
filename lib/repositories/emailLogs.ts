@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { fallback, fromSupabase, type RepositoryResult } from "@/lib/repositories/shared";
 
 export type EmailType =
   | "quote_to_client"
@@ -38,6 +39,29 @@ export type EmailLog = {
   errorMessage: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type QuoteEmailDashboardStatus = {
+  sent: boolean;
+  delivered: boolean;
+  opened: boolean;
+  clicked: boolean;
+  problem: boolean;
+  sentCount: number;
+  deliveredCount: number;
+  openedCount: number;
+  clickedCount: number;
+  problemCount: number;
+  lastActivityAt: string | null;
+};
+
+export type QuoteEmailDashboardData = {
+  sent: number;
+  delivered: number;
+  opened: number;
+  clicked: number;
+  problems: number;
+  byQuoteId: Record<string, QuoteEmailDashboardStatus>;
 };
 
 export type LogEmailAttemptParams = {
@@ -116,13 +140,18 @@ export async function updateEmailLogFromBrevoEvent(event: BrevoWebhookEvent): Pr
 
   const variants = Array.from(new Set([normalized, `<${normalized}>`, rawMessageId.trim()]));
 
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from("email_logs")
     .select("id, status, raw_events, delivered_at, opened_at, clicked_at, bounced_at")
     .in("brevo_message_id", variants)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (lookupError) {
+    console.error("[email-logs] webhook lookup failed", lookupError.message);
+    return false;
+  }
 
   if (!existing) {
     console.warn(`[email-logs] webhook event for unknown message_id=${normalized} event=${event.event}`);
@@ -192,7 +221,11 @@ export async function updateEmailLogFromBrevoEvent(event: BrevoWebhookEvent): Pr
     updates.raw_events = [...rawEvents, { event: brevoEvent, ts: eventTs, reason: event.reason }];
   }
 
-  await supabase.from("email_logs").update(updates).eq("id", existing.id);
+  const { error: updateError } = await supabase.from("email_logs").update(updates).eq("id", existing.id);
+  if (updateError) {
+    console.error("[email-logs] webhook update failed", updateError.message);
+    return false;
+  }
   return true;
 }
 
@@ -252,4 +285,101 @@ export async function getEmailLogsForQuoteIds(quoteIds: string[]): Promise<Recor
     }
   }
   return result;
+}
+
+export async function getQuoteEmailDashboardData(): Promise<RepositoryResult<QuoteEmailDashboardData>> {
+  const empty = emptyQuoteEmailDashboardData();
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(empty);
+
+  const rows: Record<string, unknown>[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("email_logs")
+      .select("quote_id,status,sent_at,delivered_at,opened_at,clicked_at,bounced_at,last_event_at,created_at")
+      .eq("email_type", "quote_to_client")
+      .order("created_at", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) return fallback(empty, error);
+    rows.push(...(data ?? []));
+    if ((data ?? []).length < pageSize) break;
+  }
+
+  const byQuoteId: Record<string, QuoteEmailDashboardStatus> = {};
+  for (const row of rows) {
+    if (!row.quote_id) continue;
+    const quoteId = String(row.quote_id);
+    const current = byQuoteId[quoteId] ?? emptyQuoteEmailStatus();
+    const status = String(row.status ?? "");
+    const lastActivityAt = latestIso(
+      current.lastActivityAt,
+      row.last_event_at,
+      row.clicked_at,
+      row.opened_at,
+      row.delivered_at,
+      row.sent_at,
+      row.created_at
+    );
+    byQuoteId[quoteId] = {
+      sent: current.sent || Boolean(row.sent_at),
+      delivered: current.delivered || Boolean(row.delivered_at),
+      opened: current.opened || Boolean(row.opened_at),
+      clicked: current.clicked || Boolean(row.clicked_at),
+      problem: current.problem || isDeliveryProblem(status),
+      sentCount: current.sentCount + (row.sent_at ? 1 : 0),
+      deliveredCount: current.deliveredCount + (row.delivered_at ? 1 : 0),
+      openedCount: current.openedCount + (row.opened_at ? 1 : 0),
+      clickedCount: current.clickedCount + (row.clicked_at ? 1 : 0),
+      problemCount: current.problemCount + (isDeliveryProblem(status) ? 1 : 0),
+      lastActivityAt
+    };
+  }
+
+  return fromSupabase({
+    sent: rows.filter((row) => Boolean(row.sent_at)).length,
+    delivered: rows.filter((row) => Boolean(row.delivered_at)).length,
+    opened: rows.filter((row) => Boolean(row.opened_at)).length,
+    clicked: rows.filter((row) => Boolean(row.clicked_at)).length,
+    problems: rows.filter((row) => isDeliveryProblem(String(row.status ?? ""))).length,
+    byQuoteId
+  });
+}
+
+function emptyQuoteEmailDashboardData(): QuoteEmailDashboardData {
+  return {
+    sent: 0,
+    delivered: 0,
+    opened: 0,
+    clicked: 0,
+    problems: 0,
+    byQuoteId: {}
+  };
+}
+
+function emptyQuoteEmailStatus(): QuoteEmailDashboardStatus {
+  return {
+    sent: false,
+    delivered: false,
+    opened: false,
+    clicked: false,
+    problem: false,
+    sentCount: 0,
+    deliveredCount: 0,
+    openedCount: 0,
+    clickedCount: 0,
+    problemCount: 0,
+    lastActivityAt: null
+  };
+}
+
+function isDeliveryProblem(status: string) {
+  return ["failed", "soft_bounce", "hard_bounce", "blocked", "error", "invalid"].includes(status);
+}
+
+function latestIso(...values: unknown[]): string | null {
+  return values
+    .filter((value): value is string => typeof value === "string" && Boolean(value))
+    .sort()
+    .at(-1) ?? null;
 }

@@ -1,5 +1,6 @@
 import { listPendingQuoteRequests } from "@/lib/repositories/quoteRequests";
 import { getDashboardEventStats } from "@/lib/repositories/quoteEvents";
+import { getQuoteEmailDashboardData, type QuoteEmailDashboardData } from "@/lib/repositories/emailLogs";
 import { getDueFollowUpCustomerKeys, getFollowUpQuotes } from "@/lib/repositories/followUp";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
@@ -21,14 +22,33 @@ export type DashboardStats = {
   whatsappClicks: number;
   confirmedValue: number;
   depositReceivedValue: number;
+  emailSent: number;
+  emailDelivered: number;
+  emailOpened: number;
+  emailClicked: number;
+  emailProblems: number;
+  clickedUnconfirmedQuotes: number;
+  repeatedlyViewedQuotes: number;
+  hotCustomers: number;
+  attentionItems: CommercialAttentionItem[];
+};
+
+export type CommercialAttentionItem = {
+  quoteId: string;
+  quoteCode: string;
+  customerName: string;
+  status: string;
+  action: "Richiamare" | "Inviare follow-up" | "Verificare email" | "Attendere";
+  priority: "alta" | "media" | "bassa";
 };
 
 export async function getDashboardStats(): Promise<RepositoryResult<DashboardStats>> {
-  const [quotesResult, requestsResult, eventsResult, followUpResult] = await Promise.all([
+  const [quotesResult, requestsResult, eventsResult, followUpResult, emailResult] = await Promise.all([
     listQuotes({ includeDeleted: false }),
     listPendingQuoteRequests(),
     getDashboardEventStats(),
-    getFollowUpQuotes()
+    getFollowUpQuotes(),
+    getQuoteEmailDashboardData()
   ]);
 
   const stats = buildDashboardStats({
@@ -40,11 +60,13 @@ export async function getDashboardStats(): Promise<RepositoryResult<DashboardSta
     closedFollowUpQuoteIds: eventsResult.data.closedFollowUpQuoteIds,
     snoozedUntilByQuote: eventsResult.data.snoozedUntilByQuote,
     lastContactAtByQuote: eventsResult.data.lastContactAtByQuote,
-    toContactTodayOverride: getDueFollowUpCustomerKeys(followUpResult.data).size
+    toContactTodayOverride: getDueFollowUpCustomerKeys(followUpResult.data).size,
+    openingCountByQuote: eventsResult.data.openingCountByQuote,
+    emailData: emailResult.data
   });
 
-  const error = [quotesResult.error, requestsResult.error, eventsResult.error, followUpResult.error].filter(Boolean).join(" | ") || undefined;
-  return quotesResult.source === "supabase" && requestsResult.source === "supabase" && eventsResult.source === "supabase" && followUpResult.source === "supabase"
+  const error = [quotesResult.error, requestsResult.error, eventsResult.error, followUpResult.error, emailResult.error].filter(Boolean).join(" | ") || undefined;
+  return quotesResult.source === "supabase" && requestsResult.source === "supabase" && eventsResult.source === "supabase" && followUpResult.source === "supabase" && emailResult.source === "supabase"
     ? fromSupabase(stats)
     : fallback(stats, error);
 }
@@ -58,7 +80,9 @@ export function buildDashboardStats({
   closedFollowUpQuoteIds = new Set<string>(),
   snoozedUntilByQuote = {},
   lastContactAtByQuote = {},
-  toContactTodayOverride
+  toContactTodayOverride,
+  openingCountByQuote = {},
+  emailData = emptyEmailDashboardData()
 }: {
   quotes: Quote[];
   pendingRequests: QuoteRequest[];
@@ -69,10 +93,22 @@ export function buildDashboardStats({
   snoozedUntilByQuote?: Record<string, string>;
   lastContactAtByQuote?: Record<string, string>;
   toContactTodayOverride?: number;
+  openingCountByQuote?: Record<string, number>;
+  emailData?: QuoteEmailDashboardData;
 }): DashboardStats {
   // Solo preventivi attivi nelle statistiche: non cancellati e non esclusi
   const activeQuotes = quotes.filter((quote) => !quote.deletedAt && !quote.excludedFromStats);
   const activeIds = new Set(activeQuotes.map((quote) => quote.id));
+  const activeEmailTotals = Array.from(activeIds).reduce((totals, quoteId) => {
+    const email = emailData.byQuoteId[quoteId];
+    if (!email) return totals;
+    totals.sent += email.sentCount;
+    totals.delivered += email.deliveredCount;
+    totals.opened += email.openedCount;
+    totals.clicked += email.clickedCount;
+    totals.problems += email.problemCount;
+    return totals;
+  }, { sent: 0, delivered: 0, opened: 0, clicked: 0, problems: 0 });
 
   // Filtra eventi per soli preventivi attivi
   const activeOpenedIds = new Set(Array.from(openedQuoteIds).filter((id) => activeIds.has(id)));
@@ -86,6 +122,11 @@ export function buildDashboardStats({
   const evaded = sentUnconfirmed.filter((quote) => !isStayExpiredRome(quote.departureDate));
   const opened = evaded.filter((quote) => activeOpenedIds.has(quote.id));
   const unopened = evaded.filter((quote) => hasReliableQuoteTracking(quote.sentAt ?? quote.createdAt) && !activeOpenedIds.has(quote.id));
+  const clickedUnconfirmed = evaded.filter((quote) => emailData.byQuoteId[quote.id]?.clicked);
+  const repeatedlyViewed = evaded.filter((quote) => (openingCountByQuote[quote.id] ?? 0) >= 2);
+  const hotCustomers = evaded.filter((quote) =>
+    emailData.byQuoteId[quote.id]?.clicked || (openingCountByQuote[quote.id] ?? 0) >= 3
+  );
   const now = Date.now();
   const confirmedCustomerKeys = new Set(
     confirmed
@@ -142,6 +183,97 @@ export function buildDashboardStats({
       const deposit = c.selectedDepositAmount ?? 0;
       const balance = c.balancePaidAt ? (c.selectedBalanceAmount ?? 0) : 0;
       return sum + deposit + balance;
-    }, 0)
+    }, 0),
+    emailSent: activeEmailTotals.sent,
+    emailDelivered: activeEmailTotals.delivered,
+    emailOpened: activeEmailTotals.opened,
+    emailClicked: activeEmailTotals.clicked,
+    emailProblems: activeEmailTotals.problems,
+    clickedUnconfirmedQuotes: clickedUnconfirmed.length,
+    repeatedlyViewedQuotes: repeatedlyViewed.length,
+    hotCustomers: hotCustomers.length,
+    attentionItems: buildAttentionItems(evaded, activeOpenedIds, openingCountByQuote, emailData)
+  };
+}
+
+function buildAttentionItems(
+  quotes: Quote[],
+  openedQuoteIds: Set<string>,
+  openingCountByQuote: Record<string, number>,
+  emailData: QuoteEmailDashboardData
+): CommercialAttentionItem[] {
+  const now = Date.now();
+  return quotes
+    .map((quote): (CommercialAttentionItem & { score: number; activityAt: string }) | null => {
+      const email = emailData.byQuoteId[quote.id];
+      const customerName = [quote.customerFirstName, quote.customerLastName].filter(Boolean).join(" ").trim() || "Cliente";
+      const activityAt = email?.lastActivityAt ?? quote.sentAt ?? quote.createdAt;
+
+      if (email?.problem) {
+        return {
+          quoteId: quote.id,
+          quoteCode: quote.code,
+          customerName,
+          status: "Email non consegnata",
+          action: "Verificare email",
+          priority: "alta",
+          score: 400,
+          activityAt
+        };
+      }
+      if (email?.clicked) {
+        return {
+          quoteId: quote.id,
+          quoteCode: quote.code,
+          customerName,
+          status: "Link email cliccato, non confermato",
+          action: "Richiamare",
+          priority: "alta",
+          score: 300 + (openingCountByQuote[quote.id] ?? 0),
+          activityAt
+        };
+      }
+      if (openedQuoteIds.has(quote.id)) {
+        const openings = openingCountByQuote[quote.id] ?? 1;
+        return {
+          quoteId: quote.id,
+          quoteCode: quote.code,
+          customerName,
+          status: openings >= 2 ? `Preventivo visualizzato ${openings} volte` : "Preventivo visualizzato, non confermato",
+          action: openings >= 2 ? "Richiamare" : "Inviare follow-up",
+          priority: openings >= 2 ? "alta" : "media",
+          score: 200 + openings,
+          activityAt
+        };
+      }
+      if (email?.sent) {
+        const hoursSinceSent = Math.max(0, now - new Date(quote.sentAt ?? quote.createdAt).getTime()) / (60 * 60 * 1000);
+        return {
+          quoteId: quote.id,
+          quoteCode: quote.code,
+          customerName,
+          status: "Preventivo inviato, mai visualizzato",
+          action: hoursSinceSent >= 24 ? "Inviare follow-up" : "Attendere",
+          priority: hoursSinceSent >= 24 ? "media" : "bassa",
+          score: hoursSinceSent >= 24 ? 100 : 10,
+          activityAt
+        };
+      }
+      return null;
+    })
+    .filter((item): item is CommercialAttentionItem & { score: number; activityAt: string } => Boolean(item))
+    .sort((a, b) => b.score - a.score || new Date(b.activityAt).getTime() - new Date(a.activityAt).getTime())
+    .slice(0, 8)
+    .map(({ score: _score, activityAt: _activityAt, ...item }) => item);
+}
+
+function emptyEmailDashboardData(): QuoteEmailDashboardData {
+  return {
+    sent: 0,
+    delivered: 0,
+    opened: 0,
+    clicked: 0,
+    problems: 0,
+    byQuoteId: {}
   };
 }
