@@ -53,7 +53,6 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  const [previewOpened, setPreviewOpened] = useState(false);
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -452,13 +451,9 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
             </div>
           ) : (
             <div className="mt-5 grid gap-2 [&_a]:block [&_a]:text-center">
-              <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
-                Controlla l&apos;anteprima cliente prima di segnare il preventivo come inviato.
-              </p>
               <Link
                 className="rounded-full bg-ischia-navy/10 px-4 py-2 text-center text-sm font-bold text-ischia-navy ring-1 ring-ischia-navy/20"
                 href={publicQuoteUrl(currentQuote)}
-                onClick={() => setPreviewOpened(true)}
                 rel="noopener noreferrer"
                 target="_blank"
               >
@@ -466,13 +461,13 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
               </Link>
               <button
                 className="rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white disabled:opacity-60"
-                disabled={sending || !previewOpened}
+                disabled={sending}
                 onClick={() => void sendQuote()}
                 type="button"
               >
-                {sending ? "Aggiornamento..." : previewOpened ? "Invia preventivo" : "Apri prima l'anteprima"}
+                {sending ? "Aggiornamento..." : "Invia preventivo"}
               </button>
-              {previewOpened ? <WhatsAppSendButton quote={currentQuote} /> : null}
+              <WhatsAppSendButton quote={currentQuote} />
               <button className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy" onClick={() => void duplicateCurrentQuote()} type="button">
                 Duplica preventivo
               </button>
