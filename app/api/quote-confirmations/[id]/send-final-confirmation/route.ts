@@ -11,7 +11,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const unauthorized = await requireAdminApiAccess(request);
   if (unauthorized) return unauthorized;
 
-  const body = await request.json().catch(() => null) as { depositDueAt?: string; notes?: string; depositAmountOverride?: number } | null;
+  const body = await request.json().catch(() => null) as { depositDueAt?: string; notes?: string; depositAmountOverride?: number; balanceAmountOverride?: number } | null;
   if (!body?.depositDueAt) return NextResponse.json({ ok: false, error: "Scadenza caparra obbligatoria" }, { status: 400 });
 
   const confirmationResult = await getQuoteConfirmationById(params.id);
@@ -25,7 +25,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   const now = new Date().toISOString();
   const depositAmountOverride = typeof body.depositAmountOverride === "number" && body.depositAmountOverride > 0 ? body.depositAmountOverride : undefined;
-  const snapshot = await resolvePaymentSnapshot(quoteResult.data, body.depositDueAt, now, depositAmountOverride);
+  const balanceAmountOverride = typeof body.balanceAmountOverride === "number" && body.balanceAmountOverride > 0 ? body.balanceAmountOverride : undefined;
+  const snapshot = await resolvePaymentSnapshot(quoteResult.data, body.depositDueAt, now, depositAmountOverride, balanceAmountOverride);
   if (snapshot.configured !== true) {
     return NextResponse.json({ ok: false, error: "Coordinate pagamento non configurate. Completa le impostazioni prima di inviare la conferma definitiva." }, { status: 400 });
   }
@@ -45,9 +46,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     paymentSettingsSnapshot: snapshot
   });
 
-  if (depositAmountOverride !== undefined) {
+  if (depositAmountOverride !== undefined || balanceAmountOverride !== undefined) {
     const totalPrice = quoteResult.data.confirmation?.selectedPrice ?? quoteResult.data.totalPrice ?? 0;
-    const amountsUpdate = await updateConfirmationAmounts(params.id, depositAmountOverride, totalPrice > depositAmountOverride ? totalPrice - depositAmountOverride : null);
+    const newDeposit = depositAmountOverride ?? quoteResult.data.confirmation?.selectedDepositAmount ?? quoteResult.data.deposit ?? 0;
+    const newBalance = balanceAmountOverride ?? (totalPrice > newDeposit ? totalPrice - newDeposit : null);
+    const amountsUpdate = await updateConfirmationAmounts(params.id, newDeposit, newBalance);
     if (!amountsUpdate.data) {
       return NextResponse.json({
         ok: false,
@@ -74,16 +77,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   return NextResponse.json({ ok: true, source: update.source, data: update.data, quote: freshQuoteResult.data });
 }
 
-async function resolvePaymentSnapshot(quote: NonNullable<Awaited<ReturnType<typeof getQuoteById>>["data"]>, depositDueAt: string, emailSentAt: string, depositAmountOverride?: number) {
+async function resolvePaymentSnapshot(quote: NonNullable<Awaited<ReturnType<typeof getQuoteById>>["data"]>, depositDueAt: string, emailSentAt: string, depositAmountOverride?: number, balanceAmountOverride?: number) {
   const settings = (await getPaymentSettings()).data;
   const firstName = quote.confirmation?.firstName ?? quote.customerFirstName;
   const lastName = quote.confirmation?.lastName ?? quote.customerLastName;
   const reason = buildPaymentReason(settings, quote.code, firstName, lastName);
   const depositAmount = depositAmountOverride ?? quote.confirmation?.selectedDepositAmount ?? quote.deposit;
   const totalPrice = quote.confirmation?.selectedPrice ?? quote.totalPrice ?? 0;
-  const balanceAmount = depositAmountOverride !== undefined
-    ? (totalPrice > depositAmountOverride ? totalPrice - depositAmountOverride : null)
-    : quote.confirmation?.selectedBalanceAmount;
+  const balanceAmount = balanceAmountOverride
+    ?? (depositAmountOverride !== undefined ? (totalPrice > depositAmountOverride ? totalPrice - depositAmountOverride : null) : null)
+    ?? quote.confirmation?.selectedBalanceAmount;
   const base = {
     payment_reason: reason,
     deposit_amount: depositAmount,

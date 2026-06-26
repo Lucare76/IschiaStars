@@ -785,7 +785,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
         </tr>
         ${depositLabel ? `<tr>
           <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Caparra</td>
-          <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#15803D;">${confirmation?.selectedDepositPercent != null ? `${confirmation.selectedDepositPercent}% pari a ` : ""}${depositLabel}</td>
+          <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#15803D;">${depositLabel}</td>
         </tr>` : ""}
         ${balanceLabel ? `<tr>
           <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Saldo restante</td>
@@ -854,7 +854,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
           <p><strong>Hotel:</strong> ${confirmation?.selectedHotelName ?? quote.proposedHotel.name}<br>
           <strong>Trattamento:</strong> ${confirmation?.selectedTreatmentLabel ?? quote.treatment}<br>
           <strong>Prezzo totale:</strong> ${confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice)}<br>
-          ${confirmation?.selectedDepositPercent != null ? `<strong>Caparra:</strong> ${confirmation.selectedDepositPercent}% pari a ${formatPrice(confirmation.selectedDepositAmount ?? 0)}<br>` : ""}
+          ${confirmation?.selectedDepositAmount != null ? `<strong>Caparra:</strong> ${formatPrice(confirmation.selectedDepositAmount)}<br>` : ""}
           ${confirmation?.selectedBalanceAmount != null ? `<strong>Saldo restante:</strong> ${formatPrice(confirmation.selectedBalanceAmount)}<br>` : ""}
           ${confirmation?.selectedBalanceMethod ? `<strong>Modalità saldo:</strong> ${confirmation.selectedBalanceMethod}` : ""}</p>
           ${coordinatesHtml}
@@ -876,7 +876,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     `Hotel: ${confirmation?.selectedHotelName ?? quote.proposedHotel.name}`,
     `Trattamento: ${confirmation?.selectedTreatmentLabel ?? quote.treatment}`,
     `Prezzo totale: ${confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice)}`,
-    ...(confirmation?.selectedDepositPercent != null ? [`Caparra: ${confirmation.selectedDepositPercent}% pari a ${formatPrice(confirmation.selectedDepositAmount ?? 0)}`] : []),
+    ...(confirmation?.selectedDepositAmount != null ? [`Caparra: ${formatPrice(confirmation.selectedDepositAmount)}`] : []),
     ...(confirmation?.selectedBalanceAmount != null ? [`Saldo restante: ${formatPrice(confirmation.selectedBalanceAmount)}`] : []),
     ...(confirmation?.selectedBalanceMethod ? [`Modalità saldo: ${confirmation.selectedBalanceMethod}`] : []),
     ...(additionalServices.length ? ["", "Servizi aggiuntivi:", ...additionalServices.map((service) => `- ${formatConfirmationAdditionalService(service)}`)] : []),

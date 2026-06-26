@@ -41,7 +41,8 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [supplierSending, setSupplierSending] = useState(false);
   const [supplierError, setSupplierError] = useState<string | null>(null);
   const [depositCoordinatesCopied, setDepositCoordinatesCopied] = useState(false);
-  const [depositAmountOverride, setDepositAmountOverride] = useState("");
+  const [depositAmountOverride, setDepositAmountOverride] = useState(formatAmountInput(defaultDepositAmount));
+  const [balanceAmountOverride, setBalanceAmountOverride] = useState("");
   const [serviceLabel, setServiceLabel] = useState("");
   const [serviceCost, setServiceCost] = useState("");
   const [newTotalPrice, setNewTotalPrice] = useState(formatAmountInput(defaultSelectedPrice));
@@ -92,6 +93,11 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
   }, [depositDueAt]);
 
+  const finalDepositAmount = Number(depositAmountOverride);
+  const finalBalanceAmount = isInHotelBalance
+    ? (Number.isFinite(finalDepositAmount) && finalDepositAmount > 0 ? selectedPrice - finalDepositAmount : 0)
+    : Number(balanceAmountOverride);
+
   useEffect(() => {
     setServiceLabel("");
     setServiceCost("");
@@ -100,6 +106,8 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     setTotalManuallyEdited(false);
     setVoucherNotes(confirmation?.voucherNotes ?? "");
     setDepositDueAt(confirmationDepositDueLocalInput(confirmation?.depositDueAt));
+    setDepositAmountOverride(formatAmountInput(defaultDepositAmount));
+    setBalanceAmountOverride("");
     setCustomerFirstName(confirmation?.firstName ?? quote.customerFirstName);
     setCustomerLastName(confirmation?.lastName ?? quote.customerLastName);
     setCustomerEmail(confirmation?.email ?? quote.customerEmail);
@@ -500,7 +508,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
         <Info label="Hotel scelto" value={confirmation.selectedHotelName ?? quote.proposedHotel.name} />
         <Info label="Trattamento" value={confirmation.selectedTreatmentLabel ?? (quote.treatment || "-")} />
         <Info label="Prezzo" value={selectedPrice > 0 ? formatCurrency(selectedPrice) : "-"} />
-        <Info label="Caparra" value={depositAmount != null ? `${confirmation.selectedDepositPercent ?? 0}% = ${formatCurrency(depositAmount)}` : "-"} />
+        <Info label="Caparra" value={depositAmount != null ? formatCurrency(depositAmount) : "-"} />
         <Info label="Saldo" value={balanceAmount != null ? formatCurrency(balanceAmount) : "-"} />
         <Info label="Modalità saldo" value={confirmation.selectedBalanceMethod ?? "-"} />
         {balanceSchedule.dueDate ? <Info label="Scadenza saldo" value={formatDate(balanceSchedule.dueDate)} /> : null}
@@ -648,7 +656,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
             <button
               className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[#1B3A5C] ring-1 ring-[#1B3A5C]/30 hover:bg-[#EFF6FF] disabled:opacity-60"
               disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
-              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(depositAmountOverride ? { depositAmountOverride: Number(depositAmountOverride) } : {}) }, "Conferma definitiva reinviata al cliente.")}
+              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(Number(depositAmountOverride) > 0 ? { depositAmountOverride: Number(depositAmountOverride) } : {}), ...(finalBalanceAmount > 0 ? { balanceAmountOverride: finalBalanceAmount } : {}) }, "Conferma definitiva reinviata al cliente.")}
               type="button"
             >
               Reinvia conferma al cliente
@@ -717,15 +725,32 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
               <input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" type="datetime-local" value={depositDueAt} onChange={(event) => setDepositDueAt(event.target.value)} />
             </label>
             <label className="text-sm font-semibold text-ischia-ink">
-              Importo caparra (lascia vuoto per usare quello standard{depositAmount != null ? `: ${formatCurrency(depositAmount)}` : ""})
+              Importo caparra (&euro;)
               <input
                 className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
                 type="number"
                 min="0"
-                placeholder={depositAmount != null ? String(depositAmount) : "es. 300"}
+                step="0.01"
+                placeholder="es. 300"
                 value={depositAmountOverride}
                 onChange={(event) => setDepositAmountOverride(event.target.value)}
               />
+            </label>
+            <label className="text-sm font-semibold text-ischia-ink">
+              Saldo (&euro;){isInHotelBalance ? " — calcolato automaticamente" : ""}
+              <input
+                className={`mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2 ${isInHotelBalance ? "bg-ischia-mist font-bold text-ischia-navy" : ""}`}
+                type="number"
+                min="0"
+                step="0.01"
+                readOnly={isInHotelBalance}
+                value={isInHotelBalance ? formatAmountInput(finalBalanceAmount > 0 ? finalBalanceAmount : 0) : balanceAmountOverride}
+                onChange={isInHotelBalance ? undefined : (event) => setBalanceAmountOverride(event.target.value)}
+              />
+            </label>
+            <label className="text-sm font-semibold text-ischia-ink">
+              Totale: {formatCurrency(selectedPrice)}
+              <span className="mt-1 block text-xs font-normal text-ischia-ink/65">Modalità saldo: {confirmation?.selectedBalanceMethod ?? "-"}</span>
             </label>
             <label className="text-sm font-semibold text-ischia-ink sm:col-span-2">
               Note per il cliente
@@ -753,7 +778,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
               <button
                 className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
                 disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
-                onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(depositAmountOverride ? { depositAmountOverride: Number(depositAmountOverride) } : {}) }, "Conferma definitiva reinviata al cliente.")}
+                onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(Number(depositAmountOverride) > 0 ? { depositAmountOverride: Number(depositAmountOverride) } : {}), ...(finalBalanceAmount > 0 ? { balanceAmountOverride: finalBalanceAmount } : {}) }, "Conferma definitiva reinviata al cliente.")}
                 type="button"
               >
                 Reinvia conferma al cliente
@@ -763,7 +788,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
             <button
               className="mt-3 rounded-full bg-ischia-navy px-4 py-2 text-sm font-black text-white disabled:opacity-60"
               disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
-              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(depositAmountOverride ? { depositAmountOverride: Number(depositAmountOverride) } : {}) }, "Conferma definitiva inviata al cliente.")}
+              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(Number(depositAmountOverride) > 0 ? { depositAmountOverride: Number(depositAmountOverride) } : {}), ...(finalBalanceAmount > 0 ? { balanceAmountOverride: finalBalanceAmount } : {}) }, "Conferma definitiva inviata al cliente.")}
               type="button"
             >
               Invia conferma definitiva al cliente
