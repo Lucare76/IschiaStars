@@ -21,7 +21,7 @@ import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/adm
 import { FeatureFlags } from "@/lib/feature-flags";
 import { PaymentSettings } from "@/lib/payment-settings";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
-import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
+import { getBalancePaymentSchedule, isBalanceMethodInStructure } from "@/lib/hotel-policies";
 import { Hotel, Quote, QuoteEvent, QuoteStatus, TransportOffer } from "@/lib/types";
 import { formatCurrency, formatDate, publicQuoteUrl } from "@/lib/utils";
 
@@ -526,7 +526,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
 
 function ConfirmationStatusCard({ confirmation, arrivalDate }: { confirmation: NonNullable<Quote["confirmation"]>; arrivalDate: string }) {
   const status = confirmation.availabilityStatus ?? "availability_to_check";
-  const isInHotelBalance = confirmation.selectedBalanceMethod?.toLowerCase().includes("in struttura") ?? false;
+  const isInHotelBalance = isBalanceMethodInStructure(confirmation.selectedBalanceMethod);
   const balanceSchedule = getBalancePaymentSchedule(confirmation.selectedBalanceMethod, arrivalDate);
   const allDone = confirmation.balancePaidAt || (isInHotelBalance && confirmation.depositPaidAt);
 

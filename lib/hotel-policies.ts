@@ -24,10 +24,15 @@ export type BalancePaymentSchedule = {
   title: string;
 };
 
+export function isBalanceMethodInStructure(balanceMethod: string | undefined): boolean {
+  const normalized = (balanceMethod ?? "").trim().toLowerCase().replace(/[‘’]/g, "’");
+  return normalized.includes("in struttura") || normalized.includes("in hotel");
+}
+
 export function getBalancePaymentSchedule(balanceMethod: string | undefined, arrivalDate: string): BalancePaymentSchedule {
   const method = balanceMethod?.trim() ?? "";
-  const normalized = method.toLowerCase().replace(/[’']/g, "'");
-  if (normalized.includes("in struttura")) {
+  const normalized = method.toLowerCase().replace(/[‘’]/g, "’");
+  if (isBalanceMethodInStructure(method)) {
     return { type: "in_structure", title: "Saldo da versare in struttura" };
   }
   if ((normalized.includes("14 giorni") || normalized.includes("14gg")) && normalized.includes("arrivo")) {

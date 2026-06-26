@@ -6,7 +6,7 @@ import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson 
 import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
 import { availabilityStatusLabel, defaultUnavailabilityMessage, depositCoordinatesWhatsappMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
 import { FeatureFlags } from "@/lib/feature-flags";
-import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
+import { getBalancePaymentSchedule, isBalanceMethodInStructure } from "@/lib/hotel-policies";
 import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
 import { Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime, normalizeItalianPhone } from "@/lib/utils";
@@ -61,7 +61,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     : storedStatus;
   const isManualEmailImport = confirmation?.metadata?.source === "manual_email_import";
   const canSendFinal = status === "availability_confirmed";
-  const isInHotelBalance = confirmation?.selectedBalanceMethod?.toLowerCase().includes("in struttura") ?? false;
+  const isInHotelBalance = isBalanceMethodInStructure(confirmation?.selectedBalanceMethod);
   const selectedPrice = defaultSelectedPrice;
   const depositAmount = confirmation?.selectedDepositAmount;
   const balanceAmount = confirmation?.selectedBalanceAmount;
