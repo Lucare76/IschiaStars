@@ -68,7 +68,7 @@ const COMMITMENT_NOTE_TEXT = "Tariffa riservata ai clienti con impegnativa per f
 const ROOM_TYPE_PRESETS = [
   { label: "Camera singola standard", capacity: 1 },
   { label: "Camera matrimoniale standard", capacity: 2 },
-  { label: "Camera matrimoniale superior con balcone", capacity: 2 },
+  { label: "Camera matrimoniale con balcone", capacity: 2 },
   { label: "Camera tripla standard", capacity: 3 },
   { label: "Camera tripla con balcone", capacity: 3 },
   { label: "Camera quadrupla standard", capacity: 4 },
