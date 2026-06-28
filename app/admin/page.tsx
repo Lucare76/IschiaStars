@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
+import { PollEmailNowButton } from "@/components/PollEmailNowButton";
 import { StatsCards } from "@/components/StatsCards";
 import { QuoteCard } from "@/components/QuoteCard";
 import { PendingRequestCard } from "@/components/PendingRequestCard";
@@ -63,9 +64,12 @@ export default async function AdminDashboardPage() {
                   </span>
                 )}
               </h2>
-              <Link className="text-sm font-bold text-ischia-blue hover:underline" href="/admin/preventivi-da-evadere">
-                Vedi tutte →
-              </Link>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <PollEmailNowButton />
+                <Link className="text-sm font-bold text-ischia-blue hover:underline" href="/admin/preventivi-da-evadere">
+                  Vedi tutte →
+                </Link>
+              </div>
             </div>
             <div className="grid gap-4">
               {quoteRequests.length
