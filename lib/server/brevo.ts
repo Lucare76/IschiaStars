@@ -787,7 +787,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
     <tr><td class="email-body" style="background:#FFFFFF;padding:28px 32px;color:#374151;font-size:15px;line-height:1.6;">
       <p style="margin:0 0 18px;font-size:15px;">Ciao <strong>${escapeHtml(firstName)}</strong>,</p>
       <p style="margin:0 0 12px;font-size:15px;">la struttura ha confermato la disponibilità per la proposta selezionata.</p>
-      <p style="margin:0 0 12px;font-size:15px;">Per bloccare definitivamente il soggiorno è necessario versare la caparra entro <strong style="color:#1B3A5C;">48 ore dalla conferma</strong>.</p>
+      <p style="margin:0 0 12px;font-size:15px;">Per bloccare definitivamente il soggiorno è necessario versare la caparra.</p>
       ${balanceInstruction ? `<p style="margin:0 0 22px;font-size:15px;">${balanceInstruction}</p>` : ""}
 
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D9E2EC;border-radius:10px;overflow:hidden;margin:0 0 22px;">
@@ -890,7 +890,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
         <tr><td style="background:#1a4a2a;padding:22px 32px;color:#fff;font-weight:bold;font-size:18px;">Conferma definitiva IschiaStars</td></tr>
         <tr><td style="padding:28px 32px;color:#333;font-size:15px;line-height:1.7;">
           <p>Ciao ${firstName},</p>
-          <p>la struttura ha confermato la disponibilità per la proposta selezionata. Per bloccare definitivamente il soggiorno è necessario versare la caparra entro <strong>48 ore dalla conferma</strong>.</p>
+          <p>la struttura ha confermato la disponibilità per la proposta selezionata. Per bloccare definitivamente il soggiorno è necessario versare la caparra.</p>
           ${balanceText ? `<p><strong>${balanceText}</strong></p>` : ""}
           <p><strong>Hotel:</strong> ${hotelName}<br>
           <strong>Trattamento:</strong> ${confirmation?.selectedTreatmentLabel ?? quote.treatment}<br>
@@ -913,7 +913,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     `Ciao ${firstName},`,
     "",
     "La struttura ha confermato la disponibilità.",
-    "Caparra da versare entro 48 ore dalla conferma.",
+    "Caparra da versare per bloccare la prenotazione.",
     ...(balanceText ? [balanceText] : []),
     `Hotel: ${hotelName}`,
     `Arrivo: ${arrivalLabel}`,

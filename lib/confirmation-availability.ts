@@ -79,7 +79,7 @@ Ottime notizie: la disponibilità per la tua proposta *${code}* è stata conferm
 ${stayDetails.room ? `🛏️ ${stayDetails.room}\n` : ""}🍽️ ${stayDetails.treatment}
 💰 Totale soggiorno: *${priceLabel}*
 
-Per bloccare la prenotazione è richiesto un acconto di *${depositLabel}* entro 48 ore dalla conferma.
+Per bloccare la prenotazione è richiesto un acconto di *${depositLabel}*.
 ${balanceSentence ? `\n${balanceSentence}\n` : ""}
 💳 *Coordinate per il bonifico*
 Intestatario: *${bankAccountHolder}*
