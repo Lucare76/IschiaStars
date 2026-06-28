@@ -45,6 +45,18 @@ export function getBalancePaymentSchedule(balanceMethod: string | undefined, arr
   return { type: "other", title: "Saldo restante" };
 }
 
+export function getEffectiveBalancePaymentSchedule(input: {
+  balanceMethod?: string;
+  arrivalDate: string;
+  hotelName?: string;
+}): BalancePaymentSchedule {
+  const defaultPolicy = input.hotelName ? getDefaultHotelPoliciesByName(input.hotelName) : null;
+  const effectiveMethod = defaultPolicy?.balanceMethod === BALANCE_METHOD_BONIFICO_14
+    ? defaultPolicy.balanceMethod
+    : input.balanceMethod;
+  return getBalancePaymentSchedule(effectiveMethod, input.arrivalDate);
+}
+
 export const CANCELLATION_POLICY_7_DAYS =
   "La cancellazione o modifica della prenotazione è consentita senza penale entro 7 giorni prima della data di arrivo. L’eventuale acconto versato resterà valido come credito utilizzabile entro 12 mesi. Oltre tale termine e in caso di no-show, verrà applicata una penale pari al 100% del totale prenotato. In caso di arrivo posticipato, partenza anticipata o riduzione del numero di persone rispetto a quanto prenotato, l’intero importo della prenotazione resta dovuto. I pasti non fruiti non danno diritto a rimborso.";
 

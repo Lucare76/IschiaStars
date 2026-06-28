@@ -6,7 +6,7 @@ import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson 
 import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
 import { availabilityStatusLabel, defaultDepositDueAtForArrival, defaultUnavailabilityMessage, depositCoordinatesWhatsappMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
 import { FeatureFlags } from "@/lib/feature-flags";
-import { getBalancePaymentSchedule, isBalanceMethodInStructure } from "@/lib/hotel-policies";
+import { getEffectiveBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
 import { Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime, normalizeItalianPhone } from "@/lib/utils";
@@ -62,11 +62,15 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     : storedStatus;
   const isManualEmailImport = confirmation?.metadata?.source === "manual_email_import";
   const canSendFinal = status === "availability_confirmed";
-  const isInHotelBalance = isBalanceMethodInStructure(confirmation?.selectedBalanceMethod);
   const selectedPrice = defaultSelectedPrice;
   const depositAmount = confirmation?.selectedDepositAmount;
   const balanceAmount = confirmation?.selectedBalanceAmount;
-  const balanceSchedule = getBalancePaymentSchedule(confirmation?.selectedBalanceMethod, quote.arrivalDate);
+  const balanceSchedule = getEffectiveBalancePaymentSchedule({
+    balanceMethod: confirmation?.selectedBalanceMethod,
+    arrivalDate: quote.arrivalDate,
+    hotelName: confirmation?.selectedHotelName ?? quote.proposedHotel.name
+  });
+  const isInHotelBalance = balanceSchedule.type === "in_structure";
   const parsedNewTotalPrice = Number(newTotalPrice);
   const parsedNewDepositAmount = Number(newDepositAmount);
   const editedBalanceAmount = Number.isFinite(parsedNewTotalPrice) && Number.isFinite(parsedNewDepositAmount)
@@ -516,7 +520,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
         <Info label="Prezzo" value={selectedPrice > 0 ? formatCurrency(selectedPrice) : "-"} />
         <Info label="Caparra" value={depositAmount != null ? formatCurrency(depositAmount) : "-"} />
         <Info label="Saldo" value={balanceAmount != null ? formatCurrency(balanceAmount) : "-"} />
-        <Info label="Modalità saldo" value={confirmation.selectedBalanceMethod ?? "-"} />
+        <Info label="Modalità saldo" value={balanceSchedule.dueDate ? `${balanceSchedule.title} entro il ${formatDate(balanceSchedule.dueDate)}` : balanceSchedule.title} />
         {balanceSchedule.dueDate ? <Info label="Scadenza saldo" value={formatDate(balanceSchedule.dueDate)} /> : null}
         <Info label="Coordinate" value={hasCurrentCoordinates ? "Configurate per invio definitivo" : "Non configurate"} />
         <Info label="Causale" value={currentPaymentReason || "-"} />
@@ -756,7 +760,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
             </label>
             <label className="text-sm font-semibold text-ischia-ink">
               Totale: {formatCurrency(selectedPrice)}
-              <span className="mt-1 block text-xs font-normal text-ischia-ink/65">Modalità saldo: {confirmation?.selectedBalanceMethod ?? "-"}</span>
+              <span className="mt-1 block text-xs font-normal text-ischia-ink/65">Modalità saldo: {balanceSchedule.dueDate ? `${balanceSchedule.title} entro il ${formatDate(balanceSchedule.dueDate)}` : balanceSchedule.title}</span>
             </label>
             <label className="text-sm font-semibold text-ischia-ink sm:col-span-2">
               Note per il cliente

@@ -4,7 +4,7 @@ import { formatConfirmationAdditionalService, getConfirmationAdditionalServices 
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
 import { getFeatureFlags } from "@/lib/repositories/settings";
-import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
+import { getEffectiveBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { ischiastarsWhatsappNumber } from "@/lib/utils";
 
 type BrevoRecipient = { email: string; name?: string };
@@ -715,7 +715,6 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
   const confirmation = quote.confirmation;
   const snapshot = details.paymentSettingsSnapshot ?? confirmation?.paymentSettingsSnapshot ?? {};
   const paymentReason = typeof snapshot.payment_reason === "string" ? snapshot.payment_reason : "";
-  const dueAt = formatDateTimeForEmail(details.depositDueAt);
   const firstName = quote.customerFirstName || "Cliente";
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
   const logoUrl = siteUrl ? `${siteUrl}/ischiastars-logo.png` : "";
@@ -726,6 +725,19 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
   const totalPriceLabel = confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice);
   const depositLabel = confirmation?.selectedDepositAmount != null ? formatPrice(confirmation.selectedDepositAmount) : "";
   const balanceLabel = confirmation?.selectedBalanceAmount != null ? formatPrice(confirmation.selectedBalanceAmount) : "";
+  const balanceSchedule = getEffectiveBalancePaymentSchedule({
+    balanceMethod: confirmation?.selectedBalanceMethod,
+    arrivalDate: quote.arrivalDate,
+    hotelName
+  });
+  const balanceDueLabel = balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : "";
+  const balanceInstruction = balanceLabel
+    ? balanceDueLabel
+      ? `Il saldo restante di <strong style="color:#1B3A5C;">${balanceLabel}</strong> dovrà essere versato entro il <strong style="color:#1B3A5C;">${balanceDueLabel}</strong>.`
+      : balanceSchedule.type === "in_structure"
+        ? `Il saldo restante di <strong style="color:#1B3A5C;">${balanceLabel}</strong> dovrà essere versato in struttura.`
+        : `Il saldo restante è di <strong style="color:#1B3A5C;">${balanceLabel}</strong>.`
+    : "";
   const additionalServices = getConfirmationAdditionalServices(confirmation?.metadata);
   const additionalServicesHtml = additionalServices.length
     ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#374151;"><strong>Servizi aggiuntivi</strong><br>${additionalServices.map((service) => escapeHtml(formatConfirmationAdditionalService(service))).join("<br>")}</td></tr></table>`
@@ -774,7 +786,9 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
     </td></tr>
     <tr><td class="email-body" style="background:#FFFFFF;padding:28px 32px;color:#374151;font-size:15px;line-height:1.6;">
       <p style="margin:0 0 18px;font-size:15px;">Ciao <strong>${escapeHtml(firstName)}</strong>,</p>
-      <p style="margin:0 0 22px;font-size:15px;">la struttura ha confermato la disponibilità per la proposta selezionata. Per bloccare definitivamente il soggiorno è necessario versare la caparra entro <strong style="color:#1B3A5C;">${escapeHtml(dueAt)}</strong>.</p>
+      <p style="margin:0 0 12px;font-size:15px;">la struttura ha confermato la disponibilità per la proposta selezionata.</p>
+      <p style="margin:0 0 12px;font-size:15px;">Per bloccare definitivamente il soggiorno è necessario versare la caparra entro <strong style="color:#1B3A5C;">48 ore dalla conferma</strong>.</p>
+      ${balanceInstruction ? `<p style="margin:0 0 22px;font-size:15px;">${balanceInstruction}</p>` : ""}
 
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D9E2EC;border-radius:10px;overflow:hidden;margin:0 0 22px;">
         <tr><td colspan="2" style="background:#1B3A5C;padding:12px 16px;">
@@ -801,9 +815,9 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
           <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Saldo restante</td>
           <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#1B3A5C;">${balanceLabel}</td>
         </tr>` : ""}
-        ${confirmation?.selectedBalanceMethod ? `<tr>
-          <td style="padding:12px 16px;font-size:13px;color:#6B7280;">Modalità saldo</td>
-          <td align="right" style="padding:12px 16px;font-size:13px;font-weight:bold;color:#374151;">${escapeHtml(confirmation.selectedBalanceMethod)}</td>
+        ${balanceLabel ? `<tr>
+          <td style="padding:12px 16px;font-size:13px;color:#6B7280;">Scadenza saldo</td>
+          <td align="right" style="padding:12px 16px;font-size:13px;font-weight:bold;color:#374151;">${balanceDueLabel ? `Entro il ${balanceDueLabel}` : balanceSchedule.title}</td>
         </tr>` : ""}
       </table>
 
@@ -839,10 +853,24 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
   const additionalServices = getConfirmationAdditionalServices(confirmation?.metadata);
   const snapshot = details.paymentSettingsSnapshot ?? confirmation?.paymentSettingsSnapshot ?? {};
   const paymentReason = typeof snapshot.payment_reason === "string" ? snapshot.payment_reason : "";
-  const dueAt = formatDateTimeForEmail(details.depositDueAt);
   const firstName = quote.customerFirstName || "Cliente";
   const arrivalLabel = formatDate(quote.arrivalDate);
   const departureLabel = formatDate(quote.departureDate);
+  const hotelName = confirmation?.selectedHotelName ?? quote.proposedHotel.name;
+  const balanceLabel = confirmation?.selectedBalanceAmount != null ? formatPrice(confirmation.selectedBalanceAmount) : "";
+  const balanceSchedule = getEffectiveBalancePaymentSchedule({
+    balanceMethod: confirmation?.selectedBalanceMethod,
+    arrivalDate: quote.arrivalDate,
+    hotelName
+  });
+  const balanceDueLabel = balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : "";
+  const balanceText = balanceLabel
+    ? balanceDueLabel
+      ? `Saldo restante: ${balanceLabel} entro il ${balanceDueLabel}`
+      : balanceSchedule.type === "in_structure"
+        ? `Saldo restante: ${balanceLabel} da versare in struttura`
+        : `Saldo restante: ${balanceLabel}`
+    : "";
 
   const coordinatesHtml = snapshot.configured === true
     ? `<p><strong>Coordinate caparra</strong><br>
@@ -862,13 +890,13 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
         <tr><td style="background:#1a4a2a;padding:22px 32px;color:#fff;font-weight:bold;font-size:18px;">Conferma definitiva IschiaStars</td></tr>
         <tr><td style="padding:28px 32px;color:#333;font-size:15px;line-height:1.7;">
           <p>Ciao ${firstName},</p>
-          <p>la struttura ha confermato la disponibilità per la proposta selezionata. Per bloccare definitivamente il soggiorno è necessario versare la caparra entro <strong>${dueAt}</strong>.</p>
-          <p><strong>Hotel:</strong> ${confirmation?.selectedHotelName ?? quote.proposedHotel.name}<br>
+          <p>la struttura ha confermato la disponibilità per la proposta selezionata. Per bloccare definitivamente il soggiorno è necessario versare la caparra entro <strong>48 ore dalla conferma</strong>.</p>
+          ${balanceText ? `<p><strong>${balanceText}</strong></p>` : ""}
+          <p><strong>Hotel:</strong> ${hotelName}<br>
           <strong>Trattamento:</strong> ${confirmation?.selectedTreatmentLabel ?? quote.treatment}<br>
           <strong>Prezzo totale:</strong> ${confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice)}<br>
           ${confirmation?.selectedDepositAmount != null ? `<strong>Caparra:</strong> ${formatPrice(confirmation.selectedDepositAmount)}<br>` : ""}
-          ${confirmation?.selectedBalanceAmount != null ? `<strong>Saldo restante:</strong> ${formatPrice(confirmation.selectedBalanceAmount)}<br>` : ""}
-          ${confirmation?.selectedBalanceMethod ? `<strong>Modalità saldo:</strong> ${confirmation.selectedBalanceMethod}` : ""}</p>
+          ${balanceText ? `<strong>${balanceText}</strong>` : ""}</p>
           ${coordinatesHtml}
           ${confirmation?.selectedCancellationPolicy ? `<p><strong>Policy cancellazione:</strong> ${confirmation.selectedCancellationPolicy}</p>` : ""}
           ${details.notes ? `<p><strong>Note:</strong> ${details.notes}</p>` : ""}
@@ -884,15 +912,15 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     "",
     `Ciao ${firstName},`,
     "",
-    `La struttura ha confermato la disponibilità. Versa la caparra entro ${dueAt}.`,
-    `Hotel: ${confirmation?.selectedHotelName ?? quote.proposedHotel.name}`,
+    "La struttura ha confermato la disponibilità.",
+    "Caparra da versare entro 48 ore dalla conferma.",
+    ...(balanceText ? [balanceText] : []),
+    `Hotel: ${hotelName}`,
     `Arrivo: ${arrivalLabel}`,
     `Partenza: ${departureLabel}`,
     `Trattamento: ${confirmation?.selectedTreatmentLabel ?? quote.treatment}`,
     `Prezzo totale: ${confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice)}`,
     ...(confirmation?.selectedDepositAmount != null ? [`Caparra: ${formatPrice(confirmation.selectedDepositAmount)}`] : []),
-    ...(confirmation?.selectedBalanceAmount != null ? [`Saldo restante: ${formatPrice(confirmation.selectedBalanceAmount)}`] : []),
-    ...(confirmation?.selectedBalanceMethod ? [`Modalità saldo: ${confirmation.selectedBalanceMethod}`] : []),
     ...(additionalServices.length ? ["", "Servizi aggiuntivi:", ...additionalServices.map((service) => `- ${formatConfirmationAdditionalService(service)}`)] : []),
     ...(snapshot.configured === true ? [
       snapshot.bank_account_holder ? `Intestatario: ${snapshot.bank_account_holder}` : "",
@@ -947,7 +975,11 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
   const balanceLabel = quote.confirmation?.selectedBalanceAmount != null
     ? formatPrice(quote.confirmation.selectedBalanceAmount)
     : "";
-  const balanceSchedule = getBalancePaymentSchedule(quote.confirmation?.selectedBalanceMethod, quote.arrivalDate);
+  const balanceSchedule = getEffectiveBalancePaymentSchedule({
+    balanceMethod: quote.confirmation?.selectedBalanceMethod,
+    arrivalDate: quote.arrivalDate,
+    hotelName
+  });
   const balanceDueLabel = balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : "";
 
   const bookingRowStyle = `padding:10px 14px;border-bottom:1px solid #e5e7eb;`;
