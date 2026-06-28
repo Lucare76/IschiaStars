@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
+import { PollEmailNowButton } from "@/components/PollEmailNowButton";
 import { QuoteFilters } from "@/components/QuoteFilters";
 import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
@@ -54,9 +55,12 @@ export default async function QuotesPage({ searchParams }: { searchParams?: { fi
     <AdminShell title="Preventivi evasi" subtitle="Preventivi già elaborati, non cancellati e non ancora confermati dal cliente.">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-semibold text-ischia-ink/70">Crea preventivi manuali, cerca per codice o cliente e invia il link cliente su WhatsApp.</p>
-        <Link className="rounded-full bg-ischia-sun px-5 py-3 text-sm font-black text-ischia-navy shadow-sm" href="/admin/preventivi/nuovo">
-          Nuovo preventivo
-        </Link>
+        <div className="flex flex-wrap items-start gap-2">
+          <PollEmailNowButton />
+          <Link className="rounded-full bg-ischia-sun px-5 py-3 text-sm font-black text-ischia-navy shadow-sm" href="/admin/preventivi/nuovo">
+            Nuovo preventivo
+          </Link>
+        </div>
       </div>
 
       <section>

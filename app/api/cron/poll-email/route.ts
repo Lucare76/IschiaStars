@@ -1,4 +1,4 @@
-import { getImapConfig, pollImapInbox } from '@/lib/imapParser';
+import { isEmailPollingConfigured, pollEmailNow } from '@/lib/email/poll-email';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
   console.info('[cron-email] authorized');
 
-  if (!getImapConfig()) {
+  if (!isEmailPollingConfigured()) {
     return Response.json(
       { ok: false, error: 'Casella email non configurata. Verifica MAIL_INBOX_*.' },
       { status: 503 }
@@ -55,22 +55,25 @@ export async function GET(request: Request) {
 
   console.info('[cron-email] start provider=imap');
 
-  const result = await pollImapInbox();
+  const result = await pollEmailNow({ source: 'cron', bypassCooldown: true });
 
   console.info(
-    `[cron-email] completed imported=${result.imported} skipped=${result.skipped} duplicates=${result.duplicates} ignored=${result.ignored} needsReview=${result.needsReview} errors=${result.errors.length}`
+    `[cron-email] completed processed=${result.processed} imported=${result.imported} skipped=${result.skipped} duplicates=${result.duplicates} ignored=${result.ignored} needsReview=${result.needsReview} errors=${result.errors.length} durationMs=${result.durationMs}`
   );
 
   return Response.json({
-    ok: result.errors.length === 0,
+    ok: result.ok,
     provider: result.provider,
     mailbox: result.mailbox,
+    processed: result.processed,
     imported: result.imported,
     skipped: result.skipped,
     duplicates: result.duplicates,
     ignored: result.ignored,
     needsReview: result.needsReview,
     errors: result.errors,
-    details: result.details
+    details: result.details,
+    message: result.message,
+    durationMs: result.durationMs
   });
 }
