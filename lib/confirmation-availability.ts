@@ -17,6 +17,18 @@ export function defaultDepositDueAt() {
   return new Date(Date.now() + 24 * 60 * 60 * 1000);
 }
 
+export function defaultDepositDueAtForArrival(arrivalDate?: string) {
+  if (!arrivalDate) return defaultDepositDueAt();
+  const dateOnlyMatch = arrivalDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = dateOnlyMatch
+    ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]), 23, 59, 0, 0)
+    : new Date(arrivalDate);
+  if (Number.isNaN(date.getTime())) return defaultDepositDueAt();
+  date.setDate(date.getDate() - 14);
+  date.setHours(23, 59, 0, 0);
+  return date;
+}
+
 export function formatDepositDueLocalInput(date = defaultDepositDueAt()) {
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -26,6 +38,7 @@ export function depositCoordinatesWhatsappMessage(input: {
   firstName: string;
   code: string;
   hotelName: string;
+  stayDatesLabel?: string;
   treatmentLabel: string;
   priceLabel: string;
   depositLabel: string;
@@ -39,7 +52,7 @@ export function depositCoordinatesWhatsappMessage(input: {
   paymentInstructions?: string;
 }) {
   const {
-    firstName, code, hotelName, treatmentLabel, priceLabel,
+    firstName, code, hotelName, stayDatesLabel, treatmentLabel, priceLabel,
     depositLabel, balanceLabel, depositDueLabel,
     bankAccountHolder, bankName, iban, bicSwift, paymentReason, paymentInstructions
   } = input;
@@ -47,6 +60,7 @@ export function depositCoordinatesWhatsappMessage(input: {
   return `Ciao ${firstName || "Cliente"} 👋
 
 Ottime notizie: la disponibilità per la tua proposta ${code} è stata confermata dalla struttura ${hotelName} (${treatmentLabel}, ${priceLabel}).
+${stayDatesLabel ? `\nSoggiorno: ${stayDatesLabel}.\n` : ""}
 
 Per bloccare la prenotazione ti chiediamo un acconto di ${depositLabel}${balanceLabel ? `, saldo di ${balanceLabel} da versare in struttura` : ""}${depositDueLabel ? `, entro il ${depositDueLabel}` : ""}.
 

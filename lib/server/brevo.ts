@@ -721,6 +721,8 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
   const logoUrl = siteUrl ? `${siteUrl}/ischiastars-logo.png` : "";
   const hotelName = confirmation?.selectedHotelName ?? quote.proposedHotel.name;
   const treatmentLabel = confirmation?.selectedTreatmentLabel ?? quote.treatment;
+  const arrivalLabel = formatDate(quote.arrivalDate);
+  const departureLabel = formatDate(quote.departureDate);
   const totalPriceLabel = confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice);
   const depositLabel = confirmation?.selectedDepositAmount != null ? formatPrice(confirmation.selectedDepositAmount) : "";
   const balanceLabel = confirmation?.selectedBalanceAmount != null ? formatPrice(confirmation.selectedBalanceAmount) : "";
@@ -780,6 +782,14 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
           <div style="font-size:12px;color:#C9A84C;margin-top:3px;">${escapeHtml(treatmentLabel)}</div>
         </td></tr>
         <tr>
+          <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Arrivo</td>
+          <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#1B3A5C;">${arrivalLabel}</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Partenza</td>
+          <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#1B3A5C;">${departureLabel}</td>
+        </tr>
+        <tr>
           <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Prezzo totale</td>
           <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#1B3A5C;">${totalPriceLabel}</td>
         </tr>
@@ -831,6 +841,8 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
   const paymentReason = typeof snapshot.payment_reason === "string" ? snapshot.payment_reason : "";
   const dueAt = formatDateTimeForEmail(details.depositDueAt);
   const firstName = quote.customerFirstName || "Cliente";
+  const arrivalLabel = formatDate(quote.arrivalDate);
+  const departureLabel = formatDate(quote.departureDate);
 
   const coordinatesHtml = snapshot.configured === true
     ? `<p><strong>Coordinate caparra</strong><br>
@@ -874,6 +886,8 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     "",
     `La struttura ha confermato la disponibilità. Versa la caparra entro ${dueAt}.`,
     `Hotel: ${confirmation?.selectedHotelName ?? quote.proposedHotel.name}`,
+    `Arrivo: ${arrivalLabel}`,
+    `Partenza: ${departureLabel}`,
     `Trattamento: ${confirmation?.selectedTreatmentLabel ?? quote.treatment}`,
     `Prezzo totale: ${confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice)}`,
     ...(confirmation?.selectedDepositAmount != null ? [`Caparra: ${formatPrice(confirmation.selectedDepositAmount)}`] : []),

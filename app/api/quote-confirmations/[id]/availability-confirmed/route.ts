@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { defaultDepositDueAt } from "@/lib/confirmation-availability";
+import { defaultDepositDueAtForArrival } from "@/lib/confirmation-availability";
 import { buildPaymentReason, isPaymentSettingsConfigured, paymentSettingsToDbValue } from "@/lib/payment-settings";
 import { updateQuoteConfirmationAvailability, getQuoteConfirmationById } from "@/lib/repositories/quoteConfirmations";
 import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
@@ -39,7 +39,7 @@ async function sendFinalConfirmationEmailAutomatically(confirmationId: string, q
     }
 
     const confirmation = quote.confirmation;
-    const depositDueAt = defaultDepositDueAt().toISOString();
+    const depositDueAt = defaultDepositDueAtForArrival(quote.arrivalDate).toISOString();
     const emailSentAt = new Date().toISOString();
     const reason = buildPaymentReason(settings, quote.code, confirmation.firstName ?? quote.customerFirstName, confirmation.lastName ?? quote.customerLastName);
     const snapshot = {

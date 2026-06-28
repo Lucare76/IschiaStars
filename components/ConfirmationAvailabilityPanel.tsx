@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
-import { availabilityStatusLabel, defaultUnavailabilityMessage, depositCoordinatesWhatsappMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
+import { availabilityStatusLabel, defaultDepositDueAtForArrival, defaultUnavailabilityMessage, depositCoordinatesWhatsappMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
 import { FeatureFlags } from "@/lib/feature-flags";
 import { getBalancePaymentSchedule, isBalanceMethodInStructure } from "@/lib/hotel-policies";
 import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
@@ -28,7 +28,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const defaultDepositAmount = confirmation?.selectedDepositAmount ?? quote.deposit;
   const [message, setMessage] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
-  const [depositDueAt, setDepositDueAt] = useState(() => confirmationDepositDueLocalInput(confirmation?.depositDueAt));
+  const [depositDueAt, setDepositDueAt] = useState(() => confirmationDepositDueLocalInput(confirmation?.depositDueAt, quote.arrivalDate));
   const [finalNotes, setFinalNotes] = useState("");
   const [unavailableReason, setUnavailableReason] = useState("");
   const [alternativeToPropose, setAlternativeToPropose] = useState(false);
@@ -105,7 +105,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     setNewDepositAmount(formatAmountInput(defaultDepositAmount));
     setTotalManuallyEdited(false);
     setVoucherNotes(confirmation?.voucherNotes ?? "");
-    setDepositDueAt(confirmationDepositDueLocalInput(confirmation?.depositDueAt));
+    setDepositDueAt(confirmationDepositDueLocalInput(confirmation?.depositDueAt, quote.arrivalDate));
     setDepositAmountOverride(formatAmountInput(defaultDepositAmount));
     setBalanceAmountOverride("");
     setCustomerFirstName(confirmation?.firstName ?? quote.customerFirstName);
@@ -116,6 +116,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     confirmationId,
     confirmation?.voucherNotes,
     confirmation?.depositDueAt,
+    quote.arrivalDate,
     confirmation?.firstName,
     confirmation?.lastName,
     confirmation?.email,
@@ -134,6 +135,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
       firstName: confirmation?.firstName ?? quote.customerFirstName,
       code: quote.code,
       hotelName: confirmation?.selectedHotelName ?? quote.proposedHotel.name,
+      stayDatesLabel: `${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`,
       treatmentLabel: confirmation?.selectedTreatmentLabel ?? quote.treatment,
       priceLabel: formatCurrency(selectedPrice),
       depositLabel: formatCurrency(depositAmount),
@@ -1054,10 +1056,10 @@ function paymentSavedLabelFromSuccess(success: string) {
   return success.toLowerCase().includes("saldo") ? "Saldo registrato" : "Caparra registrata";
 }
 
-function confirmationDepositDueLocalInput(value: string | undefined) {
-  if (!value) return formatDepositDueLocalInput();
+function confirmationDepositDueLocalInput(value: string | undefined, arrivalDate?: string) {
+  if (!value) return formatDepositDueLocalInput(defaultDepositDueAtForArrival(arrivalDate));
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? formatDepositDueLocalInput() : formatDepositDueLocalInput(date);
+  return Number.isNaN(date.getTime()) ? formatDepositDueLocalInput(defaultDepositDueAtForArrival(arrivalDate)) : formatDepositDueLocalInput(date);
 }
 
 function Info({ label, value }: { label: string; value: string }) {
