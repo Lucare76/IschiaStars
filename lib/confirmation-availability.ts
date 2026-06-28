@@ -21,11 +21,10 @@ export function defaultDepositDueAtForArrival(arrivalDate?: string) {
   if (!arrivalDate) return defaultDepositDueAt();
   const dateOnlyMatch = arrivalDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
   const date = dateOnlyMatch
-    ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]), 23, 59, 0, 0)
+    ? new Date(Date.UTC(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]), 21, 59, 0, 0))
     : new Date(arrivalDate);
   if (Number.isNaN(date.getTime())) return defaultDepositDueAt();
-  date.setDate(date.getDate() - 14);
-  date.setHours(23, 59, 0, 0);
+  date.setUTCDate(date.getUTCDate() - 14);
   return date;
 }
 
