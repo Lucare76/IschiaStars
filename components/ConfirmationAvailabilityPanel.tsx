@@ -131,16 +131,20 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
 
   const depositCoordinatesWhatsapp = useMemo(() => {
     if (!hasCurrentCoordinates || depositAmount == null) return null;
+    const selectedOption = quote.hotelOptions.find((option) => option.id === confirmation?.selectedHotelOptionId);
     const message = depositCoordinatesWhatsappMessage({
       firstName: confirmation?.firstName ?? quote.customerFirstName,
       code: quote.code,
       hotelName: confirmation?.selectedHotelName ?? quote.proposedHotel.name,
-      stayDatesLabel: `${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`,
+      arrivalDate: quote.arrivalDate,
+      departureDate: quote.departureDate,
+      roomLabel: selectedOption?.roomTypeLabel,
       treatmentLabel: confirmation?.selectedTreatmentLabel ?? quote.treatment,
       priceLabel: formatCurrency(selectedPrice),
       depositLabel: formatCurrency(depositAmount),
       balanceLabel: balanceAmount != null ? formatCurrency(balanceAmount) : undefined,
-      depositDueLabel: depositDueIso ? formatDateTime(depositDueIso) : undefined,
+      balanceDueLabel: balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : undefined,
+      balanceInStructure: balanceSchedule.type === "in_structure",
       bankAccountHolder: paymentSettings.bankAccountHolder,
       bankName: paymentSettings.bankName || undefined,
       iban: paymentSettings.iban,
@@ -150,7 +154,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     });
     const phone = confirmation?.phone ?? quote.customerPhone;
     return { message, chatUrl: `https://wa.me/${normalizeItalianPhone(phone)}` };
-  }, [hasCurrentCoordinates, depositAmount, balanceAmount, confirmation, quote, selectedPrice, depositDueIso, paymentSettings, currentPaymentReason]);
+  }, [hasCurrentCoordinates, depositAmount, balanceAmount, confirmation, quote, selectedPrice, balanceSchedule, paymentSettings, currentPaymentReason]);
 
   async function handleSendDepositCoordinatesWhatsapp() {
     if (!depositCoordinatesWhatsapp) return;

@@ -37,12 +37,15 @@ export function depositCoordinatesWhatsappMessage(input: {
   firstName: string;
   code: string;
   hotelName: string;
-  stayDatesLabel?: string;
+  arrivalDate: string;
+  departureDate: string;
+  roomLabel?: string;
   treatmentLabel: string;
   priceLabel: string;
   depositLabel: string;
   balanceLabel?: string;
-  depositDueLabel?: string;
+  balanceDueLabel?: string;
+  balanceInStructure?: boolean;
   bankAccountHolder: string;
   bankName?: string;
   iban: string;
@@ -51,28 +54,86 @@ export function depositCoordinatesWhatsappMessage(input: {
   paymentInstructions?: string;
 }) {
   const {
-    firstName, code, hotelName, stayDatesLabel, treatmentLabel, priceLabel,
-    depositLabel, balanceLabel, depositDueLabel,
-    bankAccountHolder, bankName, iban, bicSwift, paymentReason, paymentInstructions
+    firstName, code, hotelName, arrivalDate, departureDate, roomLabel, treatmentLabel, priceLabel,
+    depositLabel, balanceLabel, balanceDueLabel, balanceInStructure,
+    bankAccountHolder, bankName, iban, bicSwift, paymentReason
   } = input;
+  const stayDetails = splitStayDetails(treatmentLabel, roomLabel);
+  const formattedFirstName = formatFirstName(firstName);
+  const formattedBankName = formatBankName(bankName);
+  const balanceSentence = balanceLabel
+    ? balanceDueLabel
+      ? `Il saldo restante di *${balanceLabel}* dovrà essere versato entro il *${balanceDueLabel}*.`
+      : balanceInStructure
+        ? `Il saldo restante di *${balanceLabel}* dovrà essere versato in struttura.`
+        : `Il saldo restante è di *${balanceLabel}*.`
+    : "";
 
-  return `Ciao ${firstName || "Cliente"} 👋
+  return `Ciao ${formattedFirstName} 👋
 
-Ottime notizie: la disponibilità per la tua proposta ${code} è stata confermata dalla struttura ${hotelName} (${treatmentLabel}, ${priceLabel}).
-${stayDatesLabel ? `\nSoggiorno: ${stayDatesLabel}.\n` : ""}
+Ottime notizie: la disponibilità per la tua proposta *${code}* è stata confermata dalla struttura *${hotelName}*.
 
-Per bloccare la prenotazione ti chiediamo un acconto di ${depositLabel}${balanceLabel ? `, saldo di ${balanceLabel} da versare in struttura` : ""}${depositDueLabel ? `, entro il ${depositDueLabel}` : ""}.
+*Dettagli soggiorno*
+📅 Dal *${formatDateRome(arrivalDate)}* al *${formatDateRome(departureDate)}*
+🏨 *${hotelName}*
+${stayDetails.room ? `🛏️ ${stayDetails.room}\n` : ""}🍽️ ${stayDetails.treatment}
+💰 Totale soggiorno: *${priceLabel}*
 
-💳 Coordinate per il bonifico:
-Intestatario: ${bankAccountHolder}
-${bankName ? `Banca: ${bankName}\n` : ""}IBAN: ${iban}
-La quinta lettera è la I di Imola.
-${bicSwift ? `BIC/SWIFT: ${bicSwift}\n` : ""}Causale: ${paymentReason}
-${paymentInstructions ? `\n${paymentInstructions}` : ""}
+Per bloccare la prenotazione è richiesto un acconto di *${depositLabel}* entro 48 ore dalla conferma.
+${balanceSentence ? `\n${balanceSentence}\n` : ""}
+💳 *Coordinate per il bonifico*
+Intestatario: *${bankAccountHolder}*
+${formattedBankName ? `Banca: *${formattedBankName}*\n` : ""}IBAN: *${iban}*
+Nota: la quinta lettera dell’IBAN è la *I di Imola*.
+${bicSwift ? `BIC/SWIFT: *${bicSwift}*\n` : ""}
+*Causale:*
+${paymentReason}
 
-Appena ricevuto l'acconto ti confermiamo definitivamente la prenotazione. Per qualsiasi dubbio scrivici pure qui su WhatsApp.
+Ti chiediamo gentilmente di inviare copia del pagamento tramite email o WhatsApp.
+
+Appena ricevuto l’acconto, ti invieremo la conferma definitiva della prenotazione.
+
+Per qualsiasi dubbio puoi scriverci qui su WhatsApp.
 
 IschiaStars 🌊`;
+}
+
+function splitStayDetails(treatmentLabel: string, roomLabel?: string) {
+  const cleaned = treatmentLabel.trim();
+  const firstRoomMatch = cleaned.match(/^Camera\s+\d+:\s*([^,;]+),\s*([^;]+)(?:;|$)/i);
+  if (!firstRoomMatch) {
+    return {
+      room: roomLabel?.trim(),
+      treatment: cleaned
+    };
+  }
+  return {
+    room: roomLabel?.trim() || firstRoomMatch[1].trim(),
+    treatment: firstRoomMatch[2].trim()
+  };
+}
+
+function formatFirstName(value: string) {
+  const cleaned = value.trim();
+  if (!cleaned) return "Cliente";
+  return cleaned.charAt(0).toLocaleUpperCase("it-IT") + cleaned.slice(1).toLocaleLowerCase("it-IT");
+}
+
+function formatBankName(value?: string) {
+  const cleaned = value?.trim();
+  if (!cleaned) return undefined;
+  return cleaned.replace(/\bIntesa\s+San\s+Paolo\b/i, "Intesa Sanpaolo");
+}
+
+function formatDateRome(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("it-IT", {
+    timeZone: "Europe/Rome",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).format(date);
 }
 
 export function defaultUnavailabilityMessage(firstName: string, code: string) {
