@@ -113,7 +113,15 @@ export async function getHotelById(id: string): Promise<RepositoryResult<Hotel |
   return fromSupabase(data ? mapHotel(data) : null);
 }
 
+function isInvalidManualImageUrl(imageUrl: string | null | undefined): boolean {
+  if (!imageUrl) return false;
+  return !/\.(jpe?g|png|webp|gif|avif)(\?.*)?$/i.test(imageUrl.trim());
+}
+
 export async function createHotel(input: HotelInput): Promise<RepositoryResult<Hotel | null>> {
+  if (isInvalidManualImageUrl(input.imageUrl)) {
+    return fallback(null, "L'URL immagine deve puntare direttamente a un file immagine (es. .jpg, .png), non alla pagina dell'hotel.");
+  }
   const supabase = createSupabaseAdminClient();
   if (!supabase) {
     return fallback(
@@ -147,6 +155,9 @@ export async function createHotel(input: HotelInput): Promise<RepositoryResult<H
 }
 
 export async function updateHotel(id: string, input: Partial<HotelInput>): Promise<RepositoryResult<Hotel | null>> {
+  if (isInvalidManualImageUrl(input.imageUrl)) {
+    return fallback(null, "L'URL immagine deve puntare direttamente a un file immagine (es. .jpg, .png), non alla pagina dell'hotel.");
+  }
   const supabase = createSupabaseAdminClient();
   if (!supabase) {
     const current = allDemoHotels().find((hotel) => hotel.id === id);

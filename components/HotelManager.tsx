@@ -290,7 +290,7 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
         </div>
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
           <Textarea label="Descrizione breve" value={form.shortDescription} onChange={(value) => setForm({ ...form, shortDescription: value })} />
-          <Textarea label="Immagine URL opzionale" value={form.imageUrl} onChange={(value) => setForm({ ...form, imageUrl: value })} />
+          <Textarea label="Immagine URL opzionale (link diretto al file, es. .jpg/.png — non la pagina hotel)" value={form.imageUrl} onChange={(value) => setForm({ ...form, imageUrl: value })} />
           <Input label="URL pagina hotel su IschiaStars.it (visibile sul preventivo cliente)" value={form.sourceUrl} onChange={(value) => setForm({ ...form, sourceUrl: value })} />
           <Textarea label="Servizi inclusi standard" value={form.standardServices} onChange={(value) => setForm({ ...form, standardServices: value })} />
           <Input label="Acconto standard (%)" type="number" value={form.defaultDepositPercent} onChange={(value) => setForm({ ...form, defaultDepositPercent: value })} />
