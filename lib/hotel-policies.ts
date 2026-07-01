@@ -94,6 +94,17 @@ const GROUP_D_30 = [
   "punto azzurro",         // Resort Punto Azzurro
 ];
 
+const MANDATORY_HOTEL_FEES: { match: string; note: string }[] = [
+  { match: "castiglione village", note: "Tessera club obbligatoria: 5€ a persona al giorno, da pagare in struttura." }
+];
+
+export function getMandatoryHotelFeeNote(hotelName: string): string | null {
+  const normalized = normalizeHotelPolicyName(hotelName);
+  if (!normalized) return null;
+  const match = MANDATORY_HOTEL_FEES.find((entry) => normalized.includes(entry.match));
+  return match?.note ?? null;
+}
+
 export function normalizeHotelPolicyName(value: string): string {
   return value
     .toLowerCase()

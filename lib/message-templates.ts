@@ -1,4 +1,5 @@
 import { Quote, QuoteHotelOption } from "@/lib/types";
+import { getMandatoryHotelFeeNote } from "@/lib/hotel-policies";
 
 type PublicQuoteMessageTarget = {
   code: string;
@@ -87,6 +88,15 @@ export function adminQuoteWhatsappMessage(input: {
 
   const hotelsBlock = hotelBlocks.join("\n─────────\n");
 
+  const mandatoryFeeNotes = Array.from(new Set(
+    hotelEntries
+      .map((group) => getMandatoryHotelFeeNote(group[0].hotelName))
+      .filter((note): note is string => Boolean(note))
+  ));
+  const mandatoryFeeBlock = mandatoryFeeNotes.length > 0
+    ? `\n⚠️ ${mandatoryFeeNotes.join("\n⚠️ ")}\n`
+    : "";
+
   const stayLines = [
     `🗒 ${stayLine}`,
     `👥 ${guestsLine}`,
@@ -99,7 +109,7 @@ La tua proposta personalizzata per Ischia è pronta 🌊
 ${stayLines}
 
 ${hotelsBlock}
-
+${mandatoryFeeBlock}
 Ecco il tuo preventivo personalizzato:
 
 ${quoteUrl}
@@ -112,6 +122,7 @@ Se il link non si apre, tienilo premuto e scegli “Apri il link”.
 Per dubbi o richieste:
 📞 081 90 54 81
 💬 WhatsApp 371 75 90 017
+🌐 ischiastars.it
 
 A presto,
 Diego - IschiaStars ☀️`;

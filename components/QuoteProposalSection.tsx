@@ -5,7 +5,7 @@ import { ConfirmQuoteForm } from "@/components/ConfirmQuoteForm";
 import { trackQuoteEvent } from "@/lib/client-tracking";
 import { emptyFeatureFlags, FeatureFlags } from "@/lib/feature-flags";
 import type { ExtraServiceEmailItem } from "@/lib/extra-service-email-items";
-import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown } from "@/lib/hotel-policies";
+import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown, getMandatoryHotelFeeNote } from "@/lib/hotel-policies";
 import { publicQuoteInfoWhatsappMessage } from "@/lib/message-templates";
 import type { PublicQuoteDTO, PublicQuoteHotelOptionDTO } from "@/lib/public-quote-dto";
 import type { QuoteRoomSelection, TreatmentOption } from "@/lib/types";
@@ -408,6 +408,7 @@ function CompareView({
             const hotelReason = mainOption.hotelReason?.trim();
             const commitmentNote = mainOption.commitmentNote?.trim();
             const services = splitLines(mainOption.includedServices);
+            const mandatoryFeeNote = getMandatoryHotelFeeNote(mainOption.hotelName);
             const treatments = visibleTreatments(mainOption);
             const minPrice = treatments.length > 0 ? Math.min(...treatments.map((t) => t.price)) : null;
             const firstTreatment = treatments[0] ?? null;
@@ -457,6 +458,9 @@ function CompareView({
                     <p className="mt-0.5 text-sm text-[#C9A84C]">{"★".repeat(mainOption.hotelStars)}</p>
                   ) : null}
                   {commitmentNote ? <CommitmentNoteBadge note={commitmentNote} /> : null}
+                  {mandatoryFeeNote ? (
+                    <p className="mt-1 text-xs font-semibold text-amber-700">⚠️ {mandatoryFeeNote}</p>
+                  ) : null}
                   <PopularityBadge count={hotelPopularity[mainOption.hotelName] ?? 0} />
                 </div>
 
@@ -661,6 +665,7 @@ function HotelCard({
   const badge = mainOption.badge?.trim();
   const hotelReason = mainOption.hotelReason?.trim();
   const commitmentNote = mainOption.commitmentNote?.trim();
+  const mandatoryFeeNote = getMandatoryHotelFeeNote(mainOption.hotelName);
   const features = extractHighlightedFeatures({
     hotelName: mainOption.hotelName,
     includedServices: mainOption.includedServices,
@@ -764,6 +769,13 @@ function HotelCard({
           <div className="mt-3 rounded-r-lg border-l-[3px] border-[#C9A84C] bg-[#FBF5E6] px-4 py-2">
             <p className="text-xs font-bold uppercase tracking-wide text-[#C9A84C]">Perché te lo proponiamo</p>
             <p className="mt-1 text-sm text-gray-700">{hotelReason}</p>
+          </div>
+        ) : null}
+
+        {mandatoryFeeNote ? (
+          <div className="mt-3 rounded-r-lg border-l-[3px] border-amber-500 bg-amber-50 px-4 py-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Da pagare in loco</p>
+            <p className="mt-1 text-sm text-amber-900">{mandatoryFeeNote}</p>
           </div>
         ) : null}
 
