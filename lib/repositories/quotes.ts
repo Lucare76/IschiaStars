@@ -346,7 +346,7 @@ async function nextQuoteCode(supabase?: ReturnType<typeof createSupabaseAdminCli
         .from("quotes")
         .select("code")
         .like("code", `LAB-${year}-%`)
-        .order("code", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       const match = (data as { code?: string } | null)?.code?.match(/^LAB-\d{4}-(\d+)$/);
@@ -364,7 +364,7 @@ async function nextQuoteCode(supabase?: ReturnType<typeof createSupabaseAdminCli
       .from("quotes")
       .select("code")
       .like("code", `IS-${year}-%`)
-      .order("code", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     const match = (data as { code?: string } | null)?.code?.match(/^IS-\d{4}-(\d+)$/);
