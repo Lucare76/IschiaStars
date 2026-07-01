@@ -12,7 +12,13 @@ export function WhatsAppSendButton({ quote, label = "Invia su WhatsApp" }: { quo
 
   async function handleClick() {
     trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "whatsapp_clicked", { placement: "admin_quote_card" });
-    await navigator.clipboard.writeText(whatsappQuoteMessage(quote)).catch(() => null);
+    let message = "";
+    try {
+      message = whatsappQuoteMessage(quote);
+    } catch (err) {
+      console.error("[WhatsAppSendButton] failed to build message:", err);
+    }
+    if (message) await navigator.clipboard.writeText(message).catch(() => null);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
     window.open(chatUrl, "_blank", "noopener,noreferrer");

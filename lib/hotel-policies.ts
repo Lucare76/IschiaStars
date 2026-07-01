@@ -106,6 +106,7 @@ export function getMandatoryHotelFeeNote(hotelName: string): string | null {
 }
 
 export function normalizeHotelPolicyName(value: string): string {
+  if (!value) return "";
   return value
     .toLowerCase()
     .normalize("NFD")
