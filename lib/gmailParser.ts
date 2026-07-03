@@ -136,8 +136,13 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
   const checkIn = normalizeFormDate(rawCheckIn, yearFromDate(checkOut));
 
   const parsedAges = etaBambini && bambini > 0
-    ? etaBambini.split(',').map((eta: string) => parseInt(eta.trim())).filter((n) => !isNaN(n))
+    ? etaBambini.split(/[,\/;\s\-]+/).map((eta: string) => parseInt(eta.trim())).filter((n) => !isNaN(n))
     : [];
+
+  const parseWarnings: string[] = [];
+  if (bambini > 4 && parsedAges.length === 1) {
+    parseWarnings.push('suspicious_children_count_single_age');
+  }
 
   // Una sola età con più bambini dichiarati = gemelli (stessa età per tutti)
   const childAges = parsedAges.length === 1 && bambini > 1
@@ -156,6 +161,7 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     checkOut,
     adults: parseInt(get('Adulti') ?? '2'),
     children,
+    parseWarnings,
     rooms: parseInt(get('Numero di Camere') ?? '1'),
     message: getMultiline('Messaggio') ?? undefined,
     receivedAt: typeof metadata.email_date === "string" ? metadata.email_date : undefined,
@@ -385,6 +391,34 @@ export async function pollGmail(): Promise<PollGmailResult> {
           await updateLedgerMessage(message.id!, {
             status: "needs_review",
             metadata: { reason: "missing_fields", fields: missingFields.split(",") }
+          });
+          result.needsReview++;
+          result.skipped++;
+          result.details.push(detail);
+          continue;
+        }
+
+        if (input.parseWarnings.length) {
+          const reason = `parse_warning:${input.parseWarnings.join(',')}`;
+          const detail = `msg ${message.id}: needs_review reason=${reason}`;
+          console.info(`[email-import] needs_review reason=${reason} adults=${input.adults} children=${input.children.length} body_len=${bodyLen} snippet="${snippet}" msgId=${message.id}`);
+          await saveInboundNeedsReview({
+            gmailMessageId: message.id!,
+            rfcMessageId,
+            subject,
+            date: receivedAt,
+            reason,
+            headers,
+            body: emailText
+          });
+          await updateLedgerMessage(message.id!, {
+            status: "needs_review",
+            metadata: {
+              reason: "parse_warning",
+              warnings: input.parseWarnings,
+              adults: input.adults,
+              children: input.children.length
+            }
           });
           result.needsReview++;
           result.skipped++;

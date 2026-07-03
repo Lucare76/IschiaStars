@@ -129,6 +129,11 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
       ? etaBambini.split(/[,\/;\s\-]+/).map((s) => s.trim()).filter(Boolean).map((eta) => parseInt(eta)).filter((n) => !isNaN(n))
       : [];
 
+  const parseWarnings: string[] = [];
+  if (bambini > 4 && parsedAges.length === 1) {
+    parseWarnings.push('suspicious_children_count_single_age');
+  }
+
   // Una sola età con più bambini dichiarati = gemelli (stessa età per tutti)
   const childAges = parsedAges.length === 1 && bambini > 1
     ? Array(bambini).fill(parsedAges[0])
@@ -150,6 +155,7 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     checkOut,
     adults: parseInt(get('Adulti') ?? '2'),
     children,
+    parseWarnings,
     rooms: parseInt(get('Numero di Camere') ?? '1'),
     message: getMultiline('Messaggio') ?? undefined,
     receivedAt: typeof metadata.email_date === 'string' ? metadata.email_date : undefined,
@@ -543,6 +549,35 @@ export async function pollImapInbox(): Promise<PollImapResult> {
           await updateLedgerMessage(messageId, {
             status: 'needs_review',
             metadata: { reason: 'missing_fields', fields: missingFields.split(',') },
+          });
+          result.needsReview++;
+          result.skipped++;
+          result.details.push(detail);
+          continue;
+        }
+
+        if (input.parseWarnings.length) {
+          const reason = `parse_warning:${input.parseWarnings.join(',')}`;
+          const detail = `uid ${msg.uid}: needs_review reason=${reason}`;
+          console.info(
+            `[mail-inbox] needs_review reason=${reason} adults=${input.adults} children=${input.children.length} body_len=${bodyLen} snippet="${snippet}"`
+          );
+          await saveInboundNeedsReview({
+            messageId,
+            rfcMessageId,
+            subject,
+            date,
+            reason,
+            body: emailText,
+          });
+          await updateLedgerMessage(messageId, {
+            status: 'needs_review',
+            metadata: {
+              reason: 'parse_warning',
+              warnings: input.parseWarnings,
+              adults: input.adults,
+              children: input.children.length,
+            },
           });
           result.needsReview++;
           result.skipped++;
