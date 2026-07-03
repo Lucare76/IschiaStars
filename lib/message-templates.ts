@@ -88,11 +88,14 @@ export function adminQuoteWhatsappMessage(input: {
 
   const hotelsBlock = hotelBlocks.join("\n─────────\n");
 
-  const mandatoryFeeNotes = Array.from(new Set(
-    hotelEntries
-      .map((group) => getMandatoryHotelFeeNote(group[0].hotelName))
-      .filter((note): note is string => Boolean(note))
-  ));
+  const showMandatoryHotelFees = hotelEntries.length <= 1;
+  const mandatoryFeeNotes = showMandatoryHotelFees
+    ? Array.from(new Set(
+        hotelEntries
+          .map((group) => getMandatoryHotelFeeNote(group[0].hotelName))
+          .filter((note): note is string => Boolean(note))
+      ))
+    : [];
   const mandatoryFeeBlock = mandatoryFeeNotes.length > 0
     ? `\n⚠️ ${mandatoryFeeNotes.join("\n⚠️ ")}\n`
     : "";
