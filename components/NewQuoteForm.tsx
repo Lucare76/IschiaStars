@@ -18,6 +18,12 @@ import { Hotel, Quote, QuoteRequest } from "@/lib/types";
 
 type ClientResult = { firstName: string; lastName: string; email: string; phone: string };
 
+const PUBLIC_NOTE_CHIPS = [
+  "Traghetto da Napoli € 33 a persona a/r con transfer",
+  "Ultime disponibilità",
+  "Quota cane 20 euro al giorno da pagare in loco"
+];
+
 function todayDateString() {
   return new Date().toISOString().split("T")[0];
 }
@@ -337,7 +343,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
           <div className="grid gap-3 sm:grid-cols-2">
             <Input name="validUntil" label={manualConfirmation ? "Data registrazione" : "Validità offerta"} required type="date" min={todayDateString()} defaultValue={manualConfirmation ? todayDateString() : undefined} />
           </div>
-          <Textarea name="publicNotes" label="Note visibili al cliente" />
+          <Textarea name="publicNotes" label="Note visibili al cliente" noteChips={PUBLIC_NOTE_CHIPS} />
           <Textarea name="internalNotes" label="Note interne" defaultValue={initialRequest?.message} />
         </Section>
 
@@ -404,16 +410,51 @@ function Input({ label, ...props }: { label: string } & InputHTMLAttributes<HTML
   );
 }
 
-function Textarea({ label, value, onChange, onInput, ...props }: { label: string; value?: string; onChange?: (value: string) => void } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange" | "value">) {
+function Textarea({ label, value, onChange, onInput, noteChips, ...props }: { label: string; value?: string; onChange?: (value: string) => void; noteChips?: string[] } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange" | "value">) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     resizeTextarea(ref.current);
   }, [value, props.defaultValue]);
 
+  function appendNoteChip(note: string) {
+    const textarea = ref.current;
+    if (!textarea) return;
+    const currentValue = value ?? textarea.value;
+    if (currentValue.includes(note)) {
+      textarea.focus();
+      return;
+    }
+    const separator = currentValue.trim().length > 0 && !currentValue.endsWith("\n") ? "\n" : "";
+    const nextValue = `${currentValue}${separator}${note}`;
+    if (onChange) {
+      onChange(nextValue);
+    } else {
+      textarea.value = nextValue;
+    }
+    window.requestAnimationFrame(() => {
+      resizeTextarea(textarea);
+      textarea.focus();
+    });
+  }
+
   return (
-    <label className="block text-sm font-semibold text-ischia-ink">
-      {label}
+    <div className="block text-sm font-semibold text-ischia-ink">
+      <label htmlFor={props.id ?? props.name}>{label}</label>
+      {noteChips?.length ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {noteChips.map((note) => (
+            <button
+              className="rounded-full border border-ischia-blue/20 bg-ischia-mist px-3 py-1 text-xs font-bold text-ischia-navy transition hover:border-ischia-blue/40 hover:bg-white"
+              key={note}
+              type="button"
+              onClick={() => appendNoteChip(note)}
+            >
+              {note}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <textarea
         className="mt-1 min-h-24 w-full resize-y overflow-hidden whitespace-pre-wrap break-words rounded-xl border border-ischia-blue/20 px-3 py-2 leading-6"
         ref={ref}
@@ -426,7 +467,7 @@ function Textarea({ label, value, onChange, onInput, ...props }: { label: string
         wrap="soft"
         {...props}
       />
-    </label>
+    </div>
   );
 }
 
