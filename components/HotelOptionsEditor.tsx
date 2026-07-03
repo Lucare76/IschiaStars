@@ -63,6 +63,12 @@ const TREATMENT_DETAIL_QUICK_PHRASES = [
   "Extra esclusi salvo diversa indicazione"
 ] as const;
 
+const CUSTOMER_NOTE_QUICK_PHRASES = [
+  "Traghetto da Napoli € 33 a persona a/r con transfer",
+  "Ultime disponibilità",
+  "Quota cane 20 euro al giorno da pagare in loco"
+] as const;
+
 const COMMITMENT_NOTE_TEXT = "Tariffa riservata ai clienti con impegnativa per fanghi e bagni termali";
 
 const ROOM_TYPE_PRESETS = [
@@ -559,7 +565,12 @@ function HotelOptionBlock({
         <Textarea label="Policy pagamento" value={opt.paymentPolicy} onChange={(value) => onChange({ paymentPolicy: value })} />
         <Textarea label="Policy cancellazione" value={opt.cancellationPolicy} onChange={(value) => onChange({ cancellationPolicy: value })} />
         <Textarea label="Note pagamento" value={opt.paymentNotes} onChange={(value) => onChange({ paymentNotes: value })} />
-        <Textarea label="Note per il cliente" value={opt.notes} onChange={(value) => onChange({ notes: value })} />
+        <Textarea
+          label="Note per il cliente"
+          value={opt.notes}
+          onChange={(value) => onChange({ notes: value })}
+          noteChips={CUSTOMER_NOTE_QUICK_PHRASES}
+        />
       </div>
 
       {detectedPlus.length > 0 && (
@@ -676,17 +687,38 @@ function Input({ label, ...props }: { label: string } & InputHTMLAttributes<HTML
   );
 }
 
-function Textarea({ label, value, onChange, ...props }: { label: string; value?: string; onChange?: (value: string) => void } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange" | "value">) {
+function Textarea({ label, value, onChange, noteChips, ...props }: { label: string; value?: string; onChange?: (value: string) => void; noteChips?: readonly string[] } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange" | "value">) {
+  function appendNoteChip(note: string) {
+    const currentValue = value ?? "";
+    if (currentValue.includes(note)) return;
+    const separator = currentValue.trim().length > 0 && !currentValue.endsWith("\n") ? "\n" : "";
+    onChange?.(`${currentValue}${separator}${note}`);
+  }
+
   return (
-    <label className="block text-sm font-semibold text-ischia-ink">
-      {label}
+    <div className="block text-sm font-semibold text-ischia-ink">
+      <label>{label}</label>
+      {noteChips?.length ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {noteChips.map((note) => (
+            <button
+              className="rounded-full border border-ischia-blue/20 bg-ischia-mist px-3 py-1 text-xs font-bold text-ischia-navy transition hover:border-ischia-blue/40 hover:bg-white"
+              key={note}
+              type="button"
+              onClick={() => appendNoteChip(note)}
+            >
+              {note}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <textarea
         className="mt-1 min-h-20 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
         value={value}
         onChange={onChange ? (event) => onChange(event.target.value) : undefined}
         {...props}
       />
-    </label>
+    </div>
   );
 }
 
