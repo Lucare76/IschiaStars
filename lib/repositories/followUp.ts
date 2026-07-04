@@ -3,7 +3,7 @@ import { getQuoteEventsForQuoteIds, trackableEvents } from "@/lib/repositories/q
 import { listQuotes } from "@/lib/repositories/quotes";
 import { fallback, fromSupabase, getEffectiveHotelOptions, RepositoryResult } from "@/lib/repositories/shared";
 import { followUpCustomerKey, followUpStage, followUpStageLabel, FollowUpStage, hasReliableQuoteTracking, isFollowUpStageDue } from "@/lib/follow-up-policy";
-import { absolutePublicQuoteUrl, absoluteShortPublicQuoteUrl, formatCurrency, normalizeItalianPhone } from "@/lib/utils";
+import { absolutePublicQuoteUrl, absoluteShortPublicQuoteUrl, formatCurrency } from "@/lib/utils";
 import type { Quote, QuoteEvent } from "@/lib/types";
 
 export type FollowUpSegment = "non_visualizzato" | "aperto_non_confermato" | "molto_interessato" | "da_sollecitare" | "recente" | "storico_non_affidabile" | "chiuso";
@@ -54,7 +54,7 @@ export type FollowUpQuote = {
   hotelsSummary: string;
   mainOffer: string;
   publicUrl: string;
-  whatsappHref?: string;
+  whatsappMessage?: string;
   emailInfo: FollowUpEmailInfo;
 };
 
@@ -181,7 +181,7 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
     hotelsSummary: summarizeHotels(quote),
     mainOffer: summarizeMainOffer(quote),
     publicUrl,
-    whatsappHref: clientPhone ? followUpWhatsappHref(clientPhone, followUpMessage(quote.customerFirstName, whatsappPublicUrl)) : undefined,
+    whatsappMessage: clientPhone ? followUpMessage(quote.customerFirstName, whatsappPublicUrl) : undefined,
     emailInfo
   };
 }
@@ -228,10 +228,6 @@ Se Le interessa Le consiglio di confermare al più presto, perché la disponibil
 
 Resto a disposizione! 🌴
 Diego`;
-}
-
-function followUpWhatsappHref(phone: string, message: string) {
-  return `https://wa.me/${normalizeItalianPhone(phone)}?text=${encodeURIComponent(message)}`;
 }
 
 function latestEvent(events: QuoteEvent[]) {

@@ -158,7 +158,7 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
           <a className="inline-flex h-9 items-center justify-center rounded-full bg-ischia-navy px-3.5 text-center text-xs font-black text-white transition hover:bg-ischia-blue" href={quote.publicUrl} rel="noreferrer" target="_blank">
             Apri preventivo
           </a>
-          {!quote.isClosed ? <FollowUpWhatsAppButton href={quote.whatsappHref} quoteCode={quote.code} token={quote.token} segment={quote.segment} clientPhone={quote.clientPhone} /> : null}
+          {!quote.isClosed ? <FollowUpWhatsAppButton message={quote.whatsappMessage} quoteCode={quote.code} token={quote.token} segment={quote.segment} clientPhone={quote.clientPhone} /> : null}
           {!quote.isClosed ? <FollowUpEmailButton quoteId={quote.id} clientEmail={quote.clientEmail} /> : null}
           <a className="inline-flex h-9 items-center justify-center rounded-full bg-white px-3.5 text-center text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/20" href={`tel:${quote.clientPhone.replace(/\D/g, "")}`}>
             Chiama

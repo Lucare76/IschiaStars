@@ -1,17 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import type { FollowUpSegment } from "@/lib/repositories/followUp";
+import { normalizeItalianPhone } from "@/lib/utils";
 
 type FollowUpWhatsAppButtonProps = {
-  href?: string;
+  message?: string;
   quoteCode: string;
   token: string;
   segment: FollowUpSegment;
   clientPhone?: string;
 };
 
-export function FollowUpWhatsAppButton({ href, quoteCode, token, segment, clientPhone }: FollowUpWhatsAppButtonProps) {
-  if (!href || !clientPhone) {
+export function FollowUpWhatsAppButton({ message, quoteCode, token, segment, clientPhone }: FollowUpWhatsAppButtonProps) {
+  const [copied, setCopied] = useState(false);
+
+  if (!message || !clientPhone) {
     return (
       <span className="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-400 ring-1 ring-slate-200">
         Telefono assente
@@ -19,7 +23,7 @@ export function FollowUpWhatsAppButton({ href, quoteCode, token, segment, client
     );
   }
 
-  const trackClick = () => {
+  async function handleClick() {
     fetch("/api/quote-events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -36,17 +40,20 @@ export function FollowUpWhatsAppButton({ href, quoteCode, token, segment, client
         }
       })
     }).catch(() => undefined);
-  };
+
+    await navigator.clipboard.writeText(message!).catch(() => null);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+    window.open(`https://wa.me/${normalizeItalianPhone(clientPhone!)}`, "_blank", "noopener,noreferrer");
+  }
 
   return (
-    <a
+    <button
       className="inline-flex h-9 items-center justify-center rounded-full bg-ischia-leaf px-3.5 text-center text-xs font-black text-white transition hover:bg-ischia-navy"
-      href={href}
-      onClick={trackClick}
-      rel="noreferrer"
-      target="_blank"
+      onClick={() => void handleClick()}
+      type="button"
     >
-      Scrivi su WhatsApp
-    </a>
+      {copied ? "✓ Incolla il messaggio su WhatsApp" : "Scrivi su WhatsApp"}
+    </button>
   );
 }
