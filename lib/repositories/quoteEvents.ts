@@ -214,7 +214,7 @@ function followUpDashboard(events: QuoteEvent[]) {
 
   for (const event of events) {
     const action = String(event.metadata?.action ?? "");
-    if (["whatsapp", "called", "solicited"].includes(action)) {
+    if (["whatsapp", "email", "called", "solicited"].includes(action)) {
       contactedQuoteIds.add(event.quoteId);
       lastContactAtByQuote[event.quoteId] = event.createdAt;
     }

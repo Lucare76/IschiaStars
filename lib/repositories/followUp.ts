@@ -115,7 +115,7 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
   const confirmClicks = customerEvents.filter((event) => event.eventType === "confirm_clicked");
   const detailsOpened = customerEvents.filter((event) => event.eventType === "details_opened");
   const followUpEvents = customerEvents.filter((event) => event.eventType === "follow_up_whatsapp_click");
-  const contactEvents = followUpEvents.filter((event) => ["whatsapp", "called", "solicited"].includes(String(event.metadata?.action ?? "")));
+  const contactEvents = followUpEvents.filter((event) => ["whatsapp", "email", "called", "solicited"].includes(String(event.metadata?.action ?? "")));
   const lastFollowUp = latestEvent(contactEvents);
   const snoozedUntil = latestSnoozeUntil(followUpEvents);
   const isClosed = followUpEvents.some((event) => event.metadata?.action === "closed");
@@ -181,7 +181,7 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
     hotelsSummary: summarizeHotels(quote),
     mainOffer: summarizeMainOffer(quote),
     publicUrl,
-    whatsappHref: clientPhone ? followUpWhatsappHref(clientPhone, followUpMessage(segment, stage, clientName, whatsappPublicUrl)) : undefined,
+    whatsappHref: clientPhone ? followUpWhatsappHref(clientPhone, followUpMessage(quote.customerFirstName, whatsappPublicUrl)) : undefined,
     emailInfo
   };
 }
@@ -216,21 +216,18 @@ function resolveSegment({
   return "recente";
 }
 
-function followUpMessage(segment: FollowUpSegment, stage: FollowUpStage, clientName: string, publicUrl: string) {
-  const firstName = clientName.split(" ")[0] || "ciao";
-  if (segment === "non_visualizzato" && stage === "primo_sollecito") {
-    return `Ciao ${firstName}, ti abbiamo inviato le proposte per il tuo soggiorno a Ischia. Ti lascio di nuovo il link: ${publicUrl}. Se vuoi ti aiuto a scegliere la soluzione più adatta.`;
-  }
-  if (segment === "non_visualizzato" && stage === "secondo_sollecito") {
-    return `Ciao ${firstName}, volevo assicurarmi che il preventivo per Ischia ti fosse arrivato correttamente. Puoi visualizzarlo qui: ${publicUrl}. Se vuoi modificare date, struttura o trattamento, scrivimi pure.`;
-  }
-  if (segment === "non_visualizzato" && stage === "ultimo_contatto") {
-    return `Ciao ${firstName}, ti ricontatto un'ultima volta per il preventivo richiesto per Ischia. Se sei ancora interessato trovi qui tutte le proposte: ${publicUrl}. Resto a disposizione per qualsiasi modifica.`;
-  }
-  if (segment === "molto_interessato") {
-    return `Ciao ${firstName}, ho visto che hai guardato più volte il preventivo. La soluzione che ti interessa potrebbe non restare disponibile a lungo: se vuoi la blocchiamo insieme. Ti lascio il link: ${publicUrl}.`;
-  }
-  return `Ciao ${firstName}, ho visto che hai consultato le proposte. Se hai dubbi posso aiutarti a scegliere la struttura più adatta. Ti lascio il link: ${publicUrl}.`;
+export function followUpMessage(firstName: string, publicUrl: string) {
+  const greeting = firstName.trim() ? `Salve ${firstName.trim()},` : "Salve,";
+  return `${greeting}
+solo un rapido promemoria: ha avuto modo di valutare la proposta per il suo soggiorno a Ischia?
+
+Può rivedere il preventivo qui:
+${publicUrl}
+
+Se Le interessa Le consiglio di confermare al più presto, perché la disponibilità è in continuo aggiornamento e potrebbe presto terminare.
+
+Resto a disposizione! 🌴
+Diego`;
 }
 
 function followUpWhatsappHref(phone: string, message: string) {

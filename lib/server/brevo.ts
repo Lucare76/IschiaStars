@@ -5,7 +5,7 @@ import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
 import { getFeatureFlags } from "@/lib/repositories/settings";
 import { getEffectiveBalancePaymentSchedule } from "@/lib/hotel-policies";
-import { ischiastarsWhatsappNumber } from "@/lib/utils";
+import { absoluteShortPublicQuoteUrl, ischiastarsWhatsappNumber } from "@/lib/utils";
 
 type BrevoRecipient = { email: string; name?: string };
 
@@ -1302,4 +1302,112 @@ function formatDateTimeForEmail(value: string) {
   } catch {
     return value;
   }
+}
+
+export type SendFollowUpEmailResult = { sent: boolean; skipReason?: string; error?: string };
+
+export async function sendFollowUpEmailToClient(quote: Quote): Promise<SendFollowUpEmailResult> {
+  const missingEnvReason = brevoMissingEnvReason();
+  if (missingEnvReason) {
+    console.info(`[brevo] skipped follow-up email code=${quote.code} reason=${missingEnvReason}`);
+    return { sent: false, skipReason: missingEnvReason };
+  }
+
+  const email = quote.customerEmail?.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    console.warn(`[brevo] skipped follow-up email code=${quote.code} reason=missing_client_email`);
+    return { sent: false, skipReason: "missing_client_email" };
+  }
+
+  const quoteUrl = absoluteShortPublicQuoteUrl(quote);
+  const firstName = quote.customerFirstName?.trim() || "";
+  const greeting = firstName ? `Salve ${firstName},` : "Salve,";
+  const clientName = `${quote.customerFirstName} ${quote.customerLastName}`.trim();
+  const replyEmail = process.env.BREVO_FROM_EMAIL || "info@ischiastars.it";
+  const replyName = process.env.BREVO_FROM_NAME || "IschiaStars";
+
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${emailSharedStyles()}
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f4f6f9;margin:0;padding:0;">
+  <div class="email-wrapper" style="padding:24px 16px;">
+  <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+    <tr>
+      <td class="header-padding" style="background:#1a3a5c;padding:28px 32px;text-align:center;">
+        <p class="section-title" style="margin:0;color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:1px;">IschiaStars</p>
+        <p style="margin:6px 0 0;color:#a8c4e0;font-size:13px;">Promemoria proposta soggiorno a Ischia</p>
+      </td>
+    </tr>
+    <tr>
+      <td class="email-body" style="padding:28px 32px 24px;">
+        <p style="margin:0 0 18px;font-size:15px;color:#1F2937;line-height:1.6;">${escapeHtml(greeting)}</p>
+        <p style="margin:0 0 18px;font-size:15px;color:#374151;line-height:1.6;">
+          solo un rapido promemoria: ha avuto modo di valutare la proposta per il suo soggiorno a Ischia?
+        </p>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${safeEmailUrl(quoteUrl)}" class="cta-button"
+             style="background:#1a3a5c;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block;letter-spacing:0.5px;">
+            Rivedi il preventivo
+          </a>
+        </div>
+        <p style="text-align:center;margin:0 0 24px;font-size:12px;word-break:break-all;">
+          <a href="${safeEmailUrl(quoteUrl)}" style="color:#1a3a5c;">${escapeHtml(quoteUrl)}</a>
+        </p>
+        <p style="margin:0 0 12px;font-size:15px;color:#374151;line-height:1.6;">
+          Se Le interessa Le consiglio di confermare al più presto, perché la disponibilità è in continuo aggiornamento e potrebbe presto terminare.
+        </p>
+        <p style="margin:0;font-size:15px;color:#374151;line-height:1.6;">Resto a disposizione.</p>
+      </td>
+    </tr>
+    <tr>
+      <td class="footer-padding" style="background:#f0f6ff;padding:20px 32px;text-align:center;border-top:1px solid #e0e8f0;">
+        <p style="margin:0;font-size:13px;color:#666;">Diego · IschiaStars</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#999;">info@ischiastars.it</p>
+      </td>
+    </tr>
+  </table>
+  </div>
+</body>
+</html>`;
+
+  const text = [
+    greeting,
+    "",
+    "solo un rapido promemoria: ha avuto modo di valutare la proposta per il suo soggiorno a Ischia?",
+    "",
+    "Può rivedere il preventivo da qui:",
+    quoteUrl,
+    "",
+    "Se Le interessa Le consiglio di confermare al più presto, perché la disponibilità è in continuo aggiornamento e potrebbe presto terminare.",
+    "",
+    "Resto a disposizione.",
+    "",
+    "Diego",
+    "IschiaStars"
+  ].join("\n");
+
+  const subject = `Promemoria proposta soggiorno a Ischia - ${quote.code}`;
+
+  console.info(`[brevo] sending follow-up email code=${quote.code} to=${maskEmail(email)}`);
+  const sendResult = await sendBrevoEmailWithResult({
+    to: [{ email, name: clientName }],
+    subject,
+    html,
+    text,
+    replyTo: { email: replyEmail, name: replyName }
+  });
+
+  if (sendResult.ok) {
+    console.info(`[brevo] sent follow-up email code=${quote.code}`);
+    await logEmailAttempt({ quoteId: quote.id, emailType: "follow_up_to_client", recipientEmail: email, subject, brevoMessageId: sendResult.messageId, ok: true });
+    return { sent: true };
+  }
+
+  console.warn(`[brevo] failed follow-up email code=${quote.code} status=${sendResult.status ?? "fetch_error"} error=${sendResult.error ?? "-"}`);
+  await logEmailAttempt({ quoteId: quote.id, emailType: "follow_up_to_client", recipientEmail: email, subject, ok: false, errorMessage: sendResult.error });
+  return { sent: false, error: sendResult.error ?? `brevo_error_${sendResult.status ?? "fetch"}` };
 }

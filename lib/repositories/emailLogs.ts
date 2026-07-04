@@ -7,7 +7,8 @@ export type EmailType =
   | "final_confirmation_to_client"
   | "voucher_to_client"
   | "supplier_confirmation"
-  | "unavailability_to_client";
+  | "unavailability_to_client"
+  | "follow_up_to_client";
 
 export type EmailLogStatus =
   | "sent"

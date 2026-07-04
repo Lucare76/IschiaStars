@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
 import { FollowUpActionButtons } from "@/components/FollowUpActionButtons";
+import { FollowUpEmailButton } from "@/components/FollowUpEmailButton";
 import { FollowUpWhatsAppButton } from "@/components/FollowUpWhatsAppButton";
 import { followUpGroupSegment, getDueFollowUpCustomerKeys, getFollowUpQuotes, FollowUpEmailInfo, FollowUpHotelClick, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
 import { followUpCustomerKey, isFollowUpStageDue } from "@/lib/follow-up-policy";
@@ -158,6 +159,7 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
             Apri preventivo
           </a>
           {!quote.isClosed ? <FollowUpWhatsAppButton href={quote.whatsappHref} quoteCode={quote.code} token={quote.token} segment={quote.segment} clientPhone={quote.clientPhone} /> : null}
+          {!quote.isClosed ? <FollowUpEmailButton quoteId={quote.id} clientEmail={quote.clientEmail} /> : null}
           <a className="inline-flex h-9 items-center justify-center rounded-full bg-white px-3.5 text-center text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/20" href={`tel:${quote.clientPhone.replace(/\D/g, "")}`}>
             Chiama
           </a>
