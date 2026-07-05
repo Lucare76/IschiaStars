@@ -30,6 +30,7 @@ const statusOptions: QuoteStatus[] = ["in_lavorazione", "confermato", "perso_non
 const PUBLIC_NOTE_CHIPS = [
   "Traghetto da Napoli € 33 a persona a/r con transfer",
   "Ultime disponibilità",
+  "Costi intesi per ogni camera",
   "Quota cane 20 euro al giorno da pagare in loco"
 ];
 

@@ -66,6 +66,7 @@ const TREATMENT_DETAIL_QUICK_PHRASES = [
 const CUSTOMER_NOTE_QUICK_PHRASES = [
   "Traghetto da Napoli € 33 a persona a/r con transfer",
   "Ultime disponibilità",
+  "Costi intesi per ogni camera",
   "Quota cane 20 euro al giorno da pagare in loco"
 ] as const;
 

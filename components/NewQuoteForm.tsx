@@ -21,6 +21,7 @@ type ClientResult = { firstName: string; lastName: string; email: string; phone:
 const PUBLIC_NOTE_CHIPS = [
   "Traghetto da Napoli € 33 a persona a/r con transfer",
   "Ultime disponibilità",
+  "Costi intesi per ogni camera",
   "Quota cane 20 euro al giorno da pagare in loco"
 ];
 
