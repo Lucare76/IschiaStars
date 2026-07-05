@@ -99,6 +99,13 @@ export function adminQuoteWhatsappMessage(input: {
   const mandatoryFeeBlock = mandatoryFeeNotes.length > 0
     ? `\n⚠️ ${mandatoryFeeNotes.join("\n⚠️ ")}\n`
     : "";
+  const customerNotes = quote.customerNotes
+    .split("\n")
+    .map((note) => note.trim())
+    .filter(Boolean);
+  const customerNotesBlock = customerNotes.length > 0
+    ? `\n📝 Note:\n${customerNotes.map((note) => `· ${note}`).join("\n")}\n`
+    : "";
 
   const stayLines = [
     `🗒 ${stayLine}`,
@@ -113,8 +120,10 @@ ${stayLines}
 
 ${hotelsBlock}
 ${mandatoryFeeBlock}
+${customerNotesBlock}
 Ecco il tuo preventivo personalizzato:
 
+Apri il link ⬇️
 ${quoteUrl}
 
 Dal link puoi vedere tutti i dettagli e confermare direttamente online.
