@@ -9,6 +9,7 @@ import {
   HotelOptionsEditor,
   hotelOptionHasPrice,
   mapHotelOptionsToPayload,
+  parseHotelPrice,
   suggestedGuestsPerRoom,
   suggestedRoomTypeLabel
 } from "@/components/HotelOptionsEditor";
@@ -386,7 +387,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
 function countPricedTreatments(hotelOptions: HotelOptionState[]) {
   return hotelOptions.reduce(
     (total, option) => total + option.roomTypes.reduce(
-      (roomTotal, room) => roomTotal + [room.breakfastPrice, room.halfBoardPrice, room.fullBoardPrice].filter((price) => Number(price) > 0).length,
+      (roomTotal, room) => roomTotal + [room.breakfastPrice, room.halfBoardPrice, room.fullBoardPrice].filter((price) => parseHotelPrice(price) !== undefined).length,
       0
     ),
     0

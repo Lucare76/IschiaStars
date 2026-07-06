@@ -81,6 +81,12 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
       return;
     }
 
+    if (mappedOptions.length === 0) {
+      setMessage("Inserisci almeno un prezzo valido in almeno una struttura prima di salvare.");
+      setLoading(false);
+      return;
+    }
+
     const payload = {
       clientFirstName: formData.get("firstName"),
       clientLastName: formData.get("lastName"),
@@ -99,7 +105,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
       transportOffers,
       publicNotes: formData.get("publicNotes"),
       internalNotes: formData.get("internalNotes"),
-      hotelOptions: mappedOptions.length > 0 ? mappedOptions : undefined
+      hotelOptions: mappedOptions
     };
 
     const response = await adminApiFetch(`/api/quotes/${currentQuote.id}`, {

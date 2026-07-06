@@ -117,6 +117,19 @@ export function hotelOptionHasPrice(opt: HotelOptionState) {
   return opt.roomTypes.some(roomTypeHasPrice);
 }
 
+export function parseHotelPrice(value: string) {
+  const raw = value.trim();
+  if (!raw) return undefined;
+
+  const normalized = raw.includes(",")
+    ? raw.replace(/\./g, "").replace(",", ".")
+    : /^\d{1,3}(\.\d{3})+$/.test(raw)
+      ? raw.replace(/\./g, "")
+      : raw;
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
+}
+
 export function mapHotelOptionsToPayload(hotelOptions: HotelOptionState[], options: { preserveGroups?: boolean; defaultRoomTypeLabel?: string } = {}) {
   const mappedOptions: object[] = [];
   let globalPosition = 0;
@@ -124,6 +137,9 @@ export function mapHotelOptionsToPayload(hotelOptions: HotelOptionState[], optio
   hotelOptions.filter(hotelOptionHasPrice).forEach((opt, hotelIdx) => {
     const hotelGroup = options.preserveGroups ? opt.hotelGroup ?? hotelIdx + 1 : hotelIdx + 1;
     opt.roomTypes.filter(roomTypeHasPrice).forEach((rt) => {
+      const breakfastPrice = parseHotelPrice(rt.breakfastPrice);
+      const halfBoardPrice = parseHotelPrice(rt.halfBoardPrice);
+      const fullBoardPrice = parseHotelPrice(rt.fullBoardPrice);
       globalPosition++;
       mappedOptions.push({
         hotelId: opt.hotelId || undefined,
@@ -141,9 +157,9 @@ export function mapHotelOptionsToPayload(hotelOptions: HotelOptionState[], optio
         hotelStars: opt.hotelStars ? Number(opt.hotelStars) : undefined,
         hotelImageUrl: opt.hotelImageUrl || undefined,
         sourceUrl: opt.sourceUrl || undefined,
-        breakfastPrice: rt.breakfastPrice ? Number(rt.breakfastPrice) : undefined,
-        halfBoardPrice: rt.halfBoardPrice ? Number(rt.halfBoardPrice) : undefined,
-        fullBoardPrice: rt.fullBoardPrice ? Number(rt.fullBoardPrice) : undefined,
+        breakfastPrice,
+        halfBoardPrice,
+        fullBoardPrice,
         includedServices: opt.includedServices || undefined,
         depositPercent: opt.depositPercent ? Number(opt.depositPercent) : undefined,
         balanceMethod: opt.balanceMethod || undefined,
@@ -724,7 +740,7 @@ function Textarea({ label, value, onChange, noteChips, ...props }: { label: stri
 }
 
 function roomTypeHasPrice(rt: RoomTypeState) {
-  return Boolean(rt.breakfastPrice || rt.halfBoardPrice || rt.fullBoardPrice);
+  return [rt.breakfastPrice, rt.halfBoardPrice, rt.fullBoardPrice].some((price) => parseHotelPrice(price) !== undefined);
 }
 
 function hotelPolicies(hotel?: Hotel) {

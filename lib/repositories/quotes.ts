@@ -444,7 +444,7 @@ export async function updateQuote(id: string, input: Partial<QuoteInput>): Promi
     if (childrenError) return fallback(null, childrenError);
   }
 
-  if (input.hotelOptions?.length) {
+  if (input.hotelOptions !== undefined) {
     await upsertHotelOptions(id, input.hotelOptions);
   }
 
