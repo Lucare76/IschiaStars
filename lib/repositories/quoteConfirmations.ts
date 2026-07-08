@@ -243,6 +243,62 @@ export async function updateConfirmationCustomerDetails(
   return fromSupabase(data as Record<string, unknown>);
 }
 
+export async function updateConfirmationDetails(
+  id: string,
+  input: {
+    firstName: string;
+    lastName: string;
+    fiscalCode: string;
+    phone: string;
+    email: string;
+    address: string;
+    selectedHotelOptionId?: string | null;
+    selectedHotelName: string;
+    selectedTreatmentKey?: string | null;
+    selectedTreatmentLabel: string;
+    selectedPrice: number;
+    selectedDepositPercent?: number | null;
+    selectedDepositAmount: number;
+    selectedBalanceAmount: number;
+    selectedBalanceMethod: string;
+    selectedPaymentPolicy?: string | null;
+    selectedCancellationPolicy?: string | null;
+    metadata?: Record<string, unknown>;
+  }
+): Promise<RepositoryResult<Record<string, unknown> | null>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(null);
+
+  const { data, error } = await supabase
+    .from("quote_confirmations")
+    .update({
+      first_name: input.firstName,
+      last_name: input.lastName,
+      fiscal_code: input.fiscalCode,
+      phone: input.phone,
+      email: input.email,
+      address: input.address,
+      selected_hotel_option_id: input.selectedHotelOptionId ?? null,
+      selected_hotel_name: input.selectedHotelName,
+      selected_treatment_key: input.selectedTreatmentKey ?? null,
+      selected_treatment_label: input.selectedTreatmentLabel,
+      selected_price: input.selectedPrice,
+      selected_deposit_percent: input.selectedDepositPercent ?? null,
+      selected_deposit_amount: input.selectedDepositAmount,
+      selected_balance_amount: input.selectedBalanceAmount,
+      selected_balance_method: input.selectedBalanceMethod,
+      selected_payment_policy: input.selectedPaymentPolicy ?? null,
+      selected_cancellation_policy: input.selectedCancellationPolicy ?? null,
+      ...(input.metadata !== undefined ? { metadata: input.metadata } : {})
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) return fallback(null, error);
+  return fromSupabase(data as Record<string, unknown>);
+}
+
 export async function updateVoucherNotes(id: string, voucherNotes: string | null): Promise<RepositoryResult<Record<string, unknown> | null>> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(null);

@@ -46,6 +46,72 @@ function tomorrowDateString() {
   return date.toISOString().split("T")[0];
 }
 
+type ConfirmationEditForm = {
+  selectionKey: string;
+  firstName: string;
+  lastName: string;
+  fiscalCode: string;
+  phone: string;
+  email: string;
+  address: string;
+  selectedHotelOptionId: string;
+  selectedHotelName: string;
+  selectedTreatmentKey: string;
+  selectedTreatmentLabel: string;
+  selectedPrice: string;
+  selectedDepositAmount: string;
+  selectedBalanceAmount: string;
+  selectedBalanceMethod: string;
+  selectedPaymentPolicy: string;
+  selectedCancellationPolicy: string;
+};
+
+function buildConfirmationEditForm(quote: Quote): ConfirmationEditForm {
+  const confirmation = quote.confirmation;
+  const selectedHotelOptionId = confirmation?.selectedHotelOptionId ?? "";
+  const selectedTreatmentKey = confirmation?.selectedTreatmentKey ? String(confirmation.selectedTreatmentKey) : "";
+  return {
+    selectionKey: selectedHotelOptionId && selectedTreatmentKey ? `${selectedHotelOptionId}:${selectedTreatmentKey}` : "",
+    firstName: confirmation?.firstName ?? quote.customerFirstName,
+    lastName: confirmation?.lastName ?? quote.customerLastName,
+    fiscalCode: confirmation?.fiscalCode ?? "",
+    phone: confirmation?.phone ?? quote.customerPhone,
+    email: confirmation?.email ?? quote.customerEmail,
+    address: confirmation?.address ?? "",
+    selectedHotelOptionId,
+    selectedHotelName: confirmation?.selectedHotelName ?? quote.proposedHotel?.name ?? "",
+    selectedTreatmentKey,
+    selectedTreatmentLabel: confirmation?.selectedTreatmentLabel ?? "",
+    selectedPrice: confirmation?.selectedPrice != null ? String(confirmation.selectedPrice) : String(quote.totalPrice || ""),
+    selectedDepositAmount: confirmation?.selectedDepositAmount != null ? String(confirmation.selectedDepositAmount) : String(quote.deposit || ""),
+    selectedBalanceAmount: confirmation?.selectedBalanceAmount != null ? String(confirmation.selectedBalanceAmount) : "",
+    selectedBalanceMethod: confirmation?.selectedBalanceMethod ?? "",
+    selectedPaymentPolicy: confirmation?.selectedPaymentPolicy ?? "",
+    selectedCancellationPolicy: confirmation?.selectedCancellationPolicy ?? ""
+  };
+}
+
+function confirmationSelectionOptions(quote: Quote) {
+  return quote.hotelOptions.flatMap((option) =>
+    option.treatments.map((treatment) => ({
+      key: `${option.id}:${treatment.key}`,
+      optionId: option.id,
+      treatmentKey: treatment.key,
+      hotelName: option.hotelName,
+      treatmentLabel: [option.roomTypeLabel, treatment.label].filter(Boolean).join(", "),
+      price: treatment.price,
+      depositPercent: option.depositPercent ?? quote.confirmation?.selectedDepositPercent ?? 20,
+      balanceMethod: option.balanceMethod ?? quote.confirmation?.selectedBalanceMethod ?? "",
+      paymentPolicy: option.paymentPolicy ?? quote.confirmation?.selectedPaymentPolicy ?? "",
+      cancellationPolicy: option.cancellationPolicy ?? quote.confirmation?.selectedCancellationPolicy ?? ""
+    }))
+  );
+}
+
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
 export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags, quoteEvents = [], emailLogs = [] }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; quoteEvents?: QuoteEvent[]; emailLogs?: EmailLog[] }) {
   const router = useRouter();
   const effective = getEffectiveHotelOptions(quote);
@@ -62,6 +128,67 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [confirmationEditOpen, setConfirmationEditOpen] = useState(false);
+  const [confirmationSaving, setConfirmationSaving] = useState(false);
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
+  const [confirmationForm, setConfirmationForm] = useState<ConfirmationEditForm>(() => buildConfirmationEditForm(quote));
+
+  useEffect(() => {
+    setConfirmationForm(buildConfirmationEditForm(currentQuote));
+  }, [currentQuote]);
+
+  function updateConfirmationForm(patch: Partial<ConfirmationEditForm>) {
+    setConfirmationForm((current) => ({ ...current, ...patch }));
+  }
+
+  function applyConfirmationSelection(selectionKey: string) {
+    const selection = confirmationSelectionOptions(currentQuote).find((item) => item.key === selectionKey);
+    if (!selection) {
+      updateConfirmationForm({
+        selectionKey: "",
+        selectedHotelOptionId: "",
+        selectedTreatmentKey: ""
+      });
+      return;
+    }
+
+    const depositAmount = roundMoney(selection.price * (selection.depositPercent / 100));
+    updateConfirmationForm({
+      selectionKey,
+      selectedHotelOptionId: selection.optionId,
+      selectedHotelName: selection.hotelName,
+      selectedTreatmentKey: selection.treatmentKey,
+      selectedTreatmentLabel: selection.treatmentLabel,
+      selectedPrice: String(selection.price),
+      selectedDepositAmount: String(depositAmount),
+      selectedBalanceAmount: String(roundMoney(selection.price - depositAmount)),
+      selectedBalanceMethod: selection.balanceMethod,
+      selectedPaymentPolicy: selection.paymentPolicy,
+      selectedCancellationPolicy: selection.cancellationPolicy
+    });
+  }
+
+  async function saveConfirmationDetails(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!currentQuote.confirmation?.id) return;
+    setConfirmationSaving(true);
+    setConfirmationMessage(null);
+
+    const response = await adminApiFetch(`/api/quote-confirmations/${currentQuote.confirmation.id}/details`, {
+      method: "PATCH",
+      body: JSON.stringify(confirmationForm)
+    });
+    const result = await readAdminApiJson<{ success?: boolean; quote?: Quote; error?: string }>(response);
+    setConfirmationSaving(false);
+    if (!response.ok || !result?.success || !result.quote) {
+      setConfirmationMessage(adminApiErrorMessage(response, result, "Riepilogo non aggiornato."));
+      return;
+    }
+    setCurrentQuote(result.quote);
+    setConfirmationEditOpen(false);
+    setConfirmationMessage("Riepilogo prenotazione aggiornato.");
+    router.refresh();
+  }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -254,6 +381,8 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     currentQuote.confirmation?.selectedTreatmentLabel,
     currentQuote.confirmation?.selectedPrice != null ? formatCurrency(currentQuote.confirmation.selectedPrice) : undefined
   ].filter(Boolean).join(" - ");
+  const confirmationSelections = confirmationSelectionOptions(currentQuote);
+  const confirmationName = `${currentQuote.confirmation?.firstName ?? currentQuote.customerFirstName} ${currentQuote.confirmation?.lastName ?? currentQuote.customerLastName}`.trim();
 
   const reactionEvents = quoteEvents
     .filter((event) => event.eventType === "reaction_interested" || event.eventType === "reaction_too_expensive")
@@ -290,11 +419,27 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
       {isConfirmed ? (
         <div className="space-y-5">
           <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
-            <h2 className="text-xl font-black text-ischia-navy">Riepilogo prenotazione</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl font-black text-ischia-navy">Riepilogo prenotazione</h2>
+              <button
+                className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy disabled:opacity-60"
+                onClick={() => {
+                  setConfirmationEditOpen((open) => !open);
+                  setConfirmationMessage(null);
+                }}
+                type="button"
+              >
+                {confirmationEditOpen ? "Chiudi modifica" : "Modifica riepilogo"}
+              </button>
+            </div>
+            {confirmationMessage ? <p className="mt-3 rounded-xl bg-ischia-mist px-3 py-2 text-sm font-bold text-ischia-navy">{confirmationMessage}</p> : null}
             <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-              <ReadInfo label="Nome" value={`${currentQuote.customerFirstName} ${currentQuote.customerLastName}`.trim() || "-"} />
-              <ReadInfo label="Telefono" value={currentQuote.customerPhone || "-"} />
-              <ReadInfo label="Email" value={currentQuote.customerEmail || "-"} />
+              <ReadInfo label="Nome" value={confirmationName || "-"} />
+              <ReadInfo label="Telefono" value={currentQuote.confirmation!.phone ?? currentQuote.customerPhone ?? "-"} />
+              <ReadInfo label="Email" value={currentQuote.confirmation!.email ?? currentQuote.customerEmail ?? "-"} />
+              <ReadInfo label="Codice fiscale" value={currentQuote.confirmation!.fiscalCode || "-"} />
+              <ReadInfo label="Indirizzo" value={currentQuote.confirmation!.address || "-"} />
+              <ReadInfo label="Bambini / Età" value={currentQuote.children.length ? currentQuote.children.map((child, index) => `B${index + 1}: ${childAgeForForm(child, currentQuote.arrivalDate) || "-"}`).join(", ") : "-"} />
               <ReadInfo label="Hotel" value={currentQuote.confirmation!.selectedHotelName ?? currentQuote.proposedHotel?.name ?? "-"} />
               <ReadInfo label="Trattamento" value={currentQuote.confirmation!.selectedTreatmentLabel ?? "-"} />
               <ReadInfo label="Date" value={`${formatDate(currentQuote.arrivalDate)} → ${formatDate(currentQuote.departureDate)}`} />
@@ -309,6 +454,46 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
               })()}
               <ReadInfo label="Policy cancellazione" value={currentQuote.confirmation!.selectedCancellationPolicy ?? "-"} />
             </div>
+            {confirmationEditOpen ? (
+              <form className="mt-5 space-y-4 rounded-2xl bg-ischia-mist/50 p-4 ring-1 ring-ischia-blue/10" onSubmit={saveConfirmationDetails}>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <label className="text-sm font-semibold text-ischia-ink lg:col-span-3">
+                    Scegli una proposta del preventivo
+                    <select
+                      className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+                      value={confirmationForm.selectionKey}
+                      onChange={(event) => applyConfirmationSelection(event.target.value)}
+                    >
+                      <option value="">Modifica manuale</option>
+                      {confirmationSelections.map((selection) => (
+                        <option key={selection.key} value={selection.key}>
+                          {selection.hotelName} - {selection.treatmentLabel} - {formatCurrency(selection.price)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <Input label="Nome" required value={confirmationForm.firstName} onChange={(event) => updateConfirmationForm({ firstName: event.target.value })} />
+                  <Input label="Cognome" value={confirmationForm.lastName} onChange={(event) => updateConfirmationForm({ lastName: event.target.value })} />
+                  <Input label="Telefono" required value={confirmationForm.phone} onChange={(event) => updateConfirmationForm({ phone: event.target.value })} />
+                  <Input label="Email" required type="email" value={confirmationForm.email} onChange={(event) => updateConfirmationForm({ email: event.target.value })} />
+                  <Input label="Codice fiscale" value={confirmationForm.fiscalCode} onChange={(event) => updateConfirmationForm({ fiscalCode: event.target.value })} />
+                  <Input label="Indirizzo" value={confirmationForm.address} onChange={(event) => updateConfirmationForm({ address: event.target.value })} />
+                  <Input label="Hotel scelto" required value={confirmationForm.selectedHotelName} onChange={(event) => updateConfirmationForm({ selectedHotelName: event.target.value, selectionKey: "" })} />
+                  <Input label="Trattamento" required value={confirmationForm.selectedTreatmentLabel} onChange={(event) => updateConfirmationForm({ selectedTreatmentLabel: event.target.value, selectionKey: "" })} />
+                  <Input label="Modalità saldo" required value={confirmationForm.selectedBalanceMethod} onChange={(event) => updateConfirmationForm({ selectedBalanceMethod: event.target.value })} />
+                  <Input label="Prezzo" min="0" required step="0.01" type="number" value={confirmationForm.selectedPrice} onChange={(event) => updateConfirmationForm({ selectedPrice: event.target.value })} />
+                  <Input label="Caparra" min="0" required step="0.01" type="number" value={confirmationForm.selectedDepositAmount} onChange={(event) => updateConfirmationForm({ selectedDepositAmount: event.target.value })} />
+                  <Input label="Saldo" min="0" required step="0.01" type="number" value={confirmationForm.selectedBalanceAmount} onChange={(event) => updateConfirmationForm({ selectedBalanceAmount: event.target.value })} />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Textarea label="Policy pagamento" rows={3} value={confirmationForm.selectedPaymentPolicy} onChange={(value) => updateConfirmationForm({ selectedPaymentPolicy: value })} />
+                  <Textarea label="Policy cancellazione" rows={3} value={confirmationForm.selectedCancellationPolicy} onChange={(value) => updateConfirmationForm({ selectedCancellationPolicy: value })} />
+                </div>
+                <button className="rounded-full bg-ischia-navy px-5 py-3 text-sm font-black text-white disabled:opacity-60" disabled={confirmationSaving} type="submit">
+                  {confirmationSaving ? "Salvataggio..." : "Salva riepilogo"}
+                </button>
+              </form>
+            ) : null}
           </section>
         </div>
       ) : (
