@@ -117,6 +117,14 @@ export function hotelOptionHasPrice(opt: HotelOptionState) {
   return opt.roomTypes.some(roomTypeHasPrice);
 }
 
+export function hotelOptionNeedsPrice(opt: HotelOptionState) {
+  return Boolean(opt.hotelId || opt.hotelName.trim()) && !hotelOptionHasPrice(opt);
+}
+
+export function hotelOptionLabel(opt: HotelOptionState, index: number) {
+  return opt.hotelName.trim() || `Struttura ${index + 1}`;
+}
+
 export function parseHotelPrice(value: string) {
   const raw = value.trim();
   if (!raw) return undefined;

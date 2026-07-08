@@ -11,6 +11,8 @@ import type { EmailLog } from "@/lib/repositories/emailLogs";
 import {
   HotelOptionState,
   HotelOptionsEditor,
+  hotelOptionLabel,
+  hotelOptionNeedsPrice,
   mapHotelOptionsToPayload,
   quoteOptionsToHotelOptionState,
   suggestedGuestsPerRoom
@@ -66,6 +68,15 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     setLoading(true);
     setMessage(null);
     const formData = new FormData(event.currentTarget);
+
+    const optionsWithoutPrice = hotelOptions
+      .map((option, index) => ({ option, index }))
+      .filter(({ option }) => hotelOptionNeedsPrice(option));
+    if (optionsWithoutPrice.length > 0) {
+      setMessage(`Inserisci almeno un prezzo valido oppure rimuovi: ${optionsWithoutPrice.map(({ option, index }) => hotelOptionLabel(option, index)).join(", ")}.`);
+      setLoading(false);
+      return;
+    }
 
     const mappedOptions = mapHotelOptionsToPayload(hotelOptions, { preserveGroups: true });
     const children = hasChildren

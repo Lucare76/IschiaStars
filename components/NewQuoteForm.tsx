@@ -8,6 +8,8 @@ import {
   HotelOptionState,
   HotelOptionsEditor,
   hotelOptionHasPrice,
+  hotelOptionLabel,
+  hotelOptionNeedsPrice,
   mapHotelOptionsToPayload,
   parseHotelPrice,
   suggestedGuestsPerRoom,
@@ -137,6 +139,15 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
     }
     if (manualConfirmation && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError("Inserisci un indirizzo email valido.");
+      setLoading(false);
+      return;
+    }
+
+    const optionsWithoutPrice = hotelOptions
+      .map((option, index) => ({ option, index }))
+      .filter(({ option }) => hotelOptionNeedsPrice(option));
+    if (optionsWithoutPrice.length > 0) {
+      setError(`Inserisci almeno un prezzo valido oppure rimuovi: ${optionsWithoutPrice.map(({ option, index }) => hotelOptionLabel(option, index)).join(", ")}.`);
       setLoading(false);
       return;
     }
