@@ -179,6 +179,20 @@ function safeEmailUrl(value: string): string {
   }
 }
 
+function paymentCopyFieldHtml(label: string, value: string, helper: string): string {
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D9E2EC;border-radius:10px;background:#FFFFFF;margin:8px 0 10px;">
+    <tr>
+      <td style="padding:10px 12px 4px;">
+        <span style="display:inline-block;border:1px solid #1B3A5C;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:bold;color:#1B3A5C;background:#F8FAFC;">${escapeHtml(helper)}</span>
+        <span style="display:inline-block;margin-left:6px;font-size:11px;font-weight:bold;color:#6B7280;text-transform:uppercase;letter-spacing:0.4px;">${escapeHtml(label)}</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 12px 11px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:15px;line-height:1.5;font-weight:bold;color:#111827;word-break:break-word;user-select:all;-webkit-user-select:all;">${escapeHtml(value)}</td>
+    </tr>
+  </table>`;
+}
+
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!local || !domain) return "invalid";
@@ -749,10 +763,10 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
           <div style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#1B3A5C;text-transform:uppercase;letter-spacing:0.5px;">Coordinate caparra</div>
           ${snapshot.bank_account_holder ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Intestatario:</strong> ${escapeHtml(String(snapshot.bank_account_holder))}</div>` : ""}
           ${snapshot.bank_name ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Banca:</strong> ${escapeHtml(String(snapshot.bank_name))}</div>` : ""}
-          ${snapshot.iban ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>IBAN:</strong> ${escapeHtml(String(snapshot.iban))}</div>` : ""}
+          ${snapshot.iban ? paymentCopyFieldHtml("IBAN", String(snapshot.iban), "Copia IBAN") : ""}
           ${snapshot.iban ? `<div style="margin:0 0 5px;font-size:13px;font-weight:bold;color:#1B3A5C;">La quinta lettera è la I di Imola.</div>` : ""}
           ${snapshot.bic_swift ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>BIC/SWIFT:</strong> ${escapeHtml(String(snapshot.bic_swift))}</div>` : ""}
-          ${paymentReason ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Causale:</strong> ${escapeHtml(paymentReason)}</div>` : ""}
+          ${paymentReason ? paymentCopyFieldHtml("Causale bonifico", paymentReason, "Copia causale") : ""}
           ${snapshot.payment_instructions ? `<div style="margin:10px 0 0;font-size:13px;color:#6B7280;">${escapeHtml(String(snapshot.payment_instructions))}</div>` : ""}
         </td></tr>
       </table>`
@@ -876,10 +890,10 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     ? `<p><strong>Coordinate caparra</strong><br>
         ${snapshot.bank_account_holder ? `Intestatario: ${snapshot.bank_account_holder}<br>` : ""}
         ${snapshot.bank_name ? `Banca: ${snapshot.bank_name}<br>` : ""}
-        ${snapshot.iban ? `IBAN: ${snapshot.iban}<br>` : ""}
+        ${snapshot.iban ? paymentCopyFieldHtml("IBAN", String(snapshot.iban), "Copia IBAN") : ""}
         ${snapshot.iban ? `La quinta lettera è la I di Imola.<br>` : ""}
         ${snapshot.bic_swift ? `BIC/SWIFT: ${snapshot.bic_swift}<br>` : ""}
-        ${paymentReason ? `Causale: ${paymentReason}<br>` : ""}
+        ${paymentReason ? paymentCopyFieldHtml("Causale bonifico", paymentReason, "Copia causale") : ""}
         ${snapshot.payment_instructions ? `${snapshot.payment_instructions}<br>` : ""}
       </p>`
     : `<p>Le modalità operative per il versamento della caparra saranno comunicate dallo staff IschiaStars.</p>`;
