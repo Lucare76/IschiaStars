@@ -458,21 +458,35 @@ function HotelOptionBlock({
               onChange={(e) => onChange({ hotelReason: e.target.value })}
             />
           </label>
-          <p className="mt-3 text-sm font-semibold text-ischia-ink">Nota impegnativa</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              className={`rounded-full border px-3 py-1 text-xs transition hover:border-[#C9A84C] hover:bg-[#FBF5E6] ${
-                opt.commitmentNote === COMMITMENT_NOTE_TEXT
-                  ? "border-[#C9A84C] bg-[#FBF5E6] text-ischia-ink"
-                  : "border-gray-300 bg-white text-ischia-ink"
-              }`}
-              onClick={() =>
-                onChange({ commitmentNote: opt.commitmentNote === COMMITMENT_NOTE_TEXT ? "" : COMMITMENT_NOTE_TEXT })
-              }
-              type="button"
-            >
-              {COMMITMENT_NOTE_TEXT}
-            </button>
+          <div className="mt-4 rounded-2xl border-4 border-red-600 bg-[#FFF200] p-4 shadow-[0_0_0_5px_rgba(255,0,0,0.16),0_12px_24px_rgba(0,0,0,0.14)]">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-xl text-white shadow-sm" aria-hidden="true">
+                !
+              </span>
+              <span className="rounded-full bg-red-600 px-3 py-1 text-xs font-black uppercase tracking-widest text-white">
+                Attenzione
+              </span>
+              <p className="text-lg font-black uppercase tracking-wide text-black">Nota impegnativa</p>
+            </div>
+            <p className="mt-2 text-sm font-black text-black">
+              Evidenzia al cliente la tariffa riservata con impegnativa termale.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                className={`rounded-xl border-4 px-5 py-3 text-left text-base font-black shadow-md transition hover:bg-white ${
+                  opt.commitmentNote === COMMITMENT_NOTE_TEXT
+                    ? "border-red-700 bg-white text-black ring-4 ring-red-300"
+                    : "border-red-600 bg-[#FFFB00] text-black"
+                }`}
+                onClick={() =>
+                  onChange({ commitmentNote: opt.commitmentNote === COMMITMENT_NOTE_TEXT ? "" : COMMITMENT_NOTE_TEXT })
+                }
+                type="button"
+              >
+                {opt.commitmentNote === COMMITMENT_NOTE_TEXT ? "✓ " : "+ "}
+                {COMMITMENT_NOTE_TEXT}
+              </button>
+            </div>
           </div>
         </div>
         {showStars ? (

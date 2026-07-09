@@ -83,6 +83,10 @@ export function adminQuoteWhatsappMessage(input: {
         }
       }
     }
+    const commitmentNote = first.commitmentNote?.trim();
+    if (commitmentNote) {
+      lines.push(`   âš ï¸ *${commitmentNote}*`);
+    }
     return lines.join("\n");
   });
 

@@ -138,24 +138,13 @@ function BuildingIcon() {
   );
 }
 
-function InfoCircleIcon() {
-  return (
-    <svg fill="none" height={13} stroke="#D97706" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={13}>
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" x2="12" y1="16" y2="12" />
-      <line x1="12" x2="12.01" y1="8" y2="8" />
-    </svg>
-  );
-}
-
 function CommitmentNoteBadge({ note }: { note: string }) {
   return (
-    <span
-      className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-3 py-1.5 text-xs font-medium text-[#92400E]"
-    >
-      <InfoCircleIcon />
-      {note}
-    </span>
+    <div className="mt-2 rounded-xl border-2 border-ischia-sun bg-[#FFF8E6] p-2.5 text-ischia-navy shadow-[0_8px_18px_rgba(8,63,115,0.12)]">
+      <div className="rounded-lg border border-ischia-sun bg-white px-3 py-2 text-sm font-black text-ischia-navy shadow-sm">
+        + {note}
+      </div>
+    </div>
   );
 }
 
