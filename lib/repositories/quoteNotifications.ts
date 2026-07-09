@@ -7,6 +7,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { QuoteEvent } from "@/lib/types";
 
 export const QUOTE_NOTIFICATIONS_SEEN_KEY = "quote_notifications_seen_at";
+const NOTIFICATION_EVENT_SCAN_MULTIPLIER = 50;
+const MIN_NOTIFICATION_EVENT_SCAN_LIMIT = 500;
 
 export type QuoteNotificationType = "apertura" | "cliente_caldo" | "conferma" | "click" | "interesse";
 
@@ -69,16 +71,30 @@ export async function getQuoteNotifications(limit = 20): Promise<RepositoryResul
     return fallback(deriveQuoteNotifications(allQuoteEvents(), quotes).slice(0, limit));
   }
 
-  const [{ data: eventRows, error: eventError }, { data: quoteRows, error: quoteError }, { data: settingRow, error: settingError }] = await Promise.all([
-    supabase.from("quote_events").select("*").in("event_type", CUSTOMER_ACTIVITY_EVENT_TYPES).order("created_at", { ascending: false }),
-    supabase.from("quotes").select("id,code,client_first_name,client_last_name,metadata"),
+  const eventScanLimit = Math.max(limit * NOTIFICATION_EVENT_SCAN_MULTIPLIER, MIN_NOTIFICATION_EVENT_SCAN_LIMIT);
+  const [{ data: eventRows, error: eventError }, { data: settingRow, error: settingError }] = await Promise.all([
+    supabase
+      .from("quote_events")
+      .select("*")
+      .in("event_type", CUSTOMER_ACTIVITY_EVENT_TYPES)
+      .order("created_at", { ascending: false })
+      .limit(eventScanLimit),
     supabase.from("settings").select("value").eq("key", QUOTE_NOTIFICATIONS_SEEN_KEY).maybeSingle()
   ]);
 
-  const error = eventError ?? quoteError ?? settingError;
+  const error = eventError ?? settingError;
   if (error) return fallback([], error);
 
   const events = (eventRows ?? []).map(mapEvent);
+  const quoteIds = Array.from(new Set(events.map((event) => event.quoteId)));
+  if (!quoteIds.length) return fromSupabase([]);
+
+  const { data: quoteRows, error: quoteError } = await supabase
+    .from("quotes")
+    .select("id,code,client_first_name,client_last_name,metadata")
+    .in("id", quoteIds);
+  if (quoteError) return fallback([], quoteError);
+
   const quotes = (quoteRows ?? []).map((row) => ({
     id: String(row.id),
     code: String(row.code),

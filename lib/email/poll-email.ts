@@ -22,9 +22,11 @@ export type PollEmailNowResult = {
 };
 
 const MANUAL_COOLDOWN_MS = 60_000;
+const CRON_COOLDOWN_MS = 10 * 60_000;
 
 let pollInFlight: Promise<PollEmailNowResult> | null = null;
 let lastManualStartedAt = 0;
+let lastCronStartedAt = 0;
 
 export function isEmailPollingConfigured() {
   return Boolean(getImapConfig());
@@ -76,6 +78,29 @@ export async function pollEmailNow(options: { source: PollEmailNowSource; bypass
       };
     }
     lastManualStartedAt = startedAt;
+  }
+
+  if (options.source === "cron") {
+    const elapsed = startedAt - lastCronStartedAt;
+    if (elapsed < CRON_COOLDOWN_MS) {
+      const remaining = Math.ceil((CRON_COOLDOWN_MS - elapsed) / 1000);
+      console.info(`[poll-email] cooldown source=cron remaining=${remaining}s`);
+      return {
+        ok: false,
+        processed: 0,
+        imported: 0,
+        skipped: 0,
+        duplicates: 0,
+        ignored: 0,
+        needsReview: 0,
+        errors: [],
+        details: [],
+        message: `Controllo email recente, attendi ${remaining} secondi`,
+        durationMs: Date.now() - startedAt,
+        cooldownRemainingSeconds: remaining
+      };
+    }
+    lastCronStartedAt = startedAt;
   }
 
   pollInFlight = runPoll(options.source, startedAt).finally(() => {

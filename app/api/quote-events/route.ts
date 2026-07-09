@@ -22,9 +22,15 @@ const allowedEvents: QuoteEvent["eventType"][] = [
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as { quoteCode?: string; token?: string; eventType?: QuoteEvent["eventType"]; metadata?: Record<string, unknown> } | null;
+  const userAgent = request.headers.get("user-agent") ?? undefined;
+  const ip = getRequestIp(request.headers);
 
   if (!body?.quoteCode || !body.token || !body.eventType || !allowedEvents.includes(body.eventType)) {
     return NextResponse.json({ ok: false, error: "Evento preventivo non valido" }, { status: 400 });
+  }
+
+  if (isLikelyBotUserAgent(userAgent)) {
+    return NextResponse.json({ ok: true, ignored: "bot" });
   }
 
   const quoteResult = await getQuoteByCodeAndToken(body.quoteCode, body.token);
@@ -33,13 +39,6 @@ export async function POST(request: NextRequest) {
   }
   if (quoteResult.data.deletedAt) {
     return NextResponse.json({ ok: false, error: "Preventivo non disponibile" }, { status: 410 });
-  }
-
-  const userAgent = request.headers.get("user-agent") ?? undefined;
-  const ip = getRequestIp(request.headers);
-
-  if (isLikelyBotUserAgent(userAgent)) {
-    return NextResponse.json({ ok: true, source: quoteResult.source, ignored: "bot" });
   }
 
   if (body.eventType === "quote_opened" && (!userAgent || !ip)) {

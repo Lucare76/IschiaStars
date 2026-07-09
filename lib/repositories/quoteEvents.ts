@@ -6,6 +6,15 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getTrackingExcludedIps, isExcludedTrackingEvent } from "@/lib/server/trackingFilters";
 import { QuoteEvent } from "@/lib/types";
 
+const DEDUPLICATED_EVENT_TYPES = new Set<QuoteEvent["eventType"]>([
+  "details_opened",
+  "hotel_link_clicked",
+  "whatsapp_clicked",
+  "print_clicked",
+  "confirm_clicked"
+]);
+const QUICK_EVENT_DEDUP_WINDOW_MS = 2 * 60 * 1000;
+
 export async function trackQuoteEvent(quoteId: string, eventType: QuoteEvent["eventType"], metadata: Record<string, unknown> = {}, userAgent?: string): Promise<RepositoryResult<QuoteEvent | null>> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) {
@@ -27,6 +36,21 @@ export async function trackQuoteEvent(quoteId: string, eventType: QuoteEvent["ev
       .limit(1)
       .maybeSingle();
     if (recentOpening) return fromSupabase(mapEvent(recentOpening));
+  }
+
+  if (DEDUPLICATED_EVENT_TYPES.has(eventType) && typeof metadata.visitor_id === "string") {
+    const since = new Date(Date.now() - QUICK_EVENT_DEDUP_WINDOW_MS).toISOString();
+    const { data: recentEvent } = await supabase
+      .from("quote_events")
+      .select("*")
+      .eq("quote_id", quoteId)
+      .eq("event_type", eventType)
+      .eq("metadata->>visitor_id", metadata.visitor_id)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (recentEvent) return fromSupabase(mapEvent(recentEvent));
   }
 
   const { data, error } = await supabase
@@ -119,18 +143,34 @@ function chunkArray<T>(items: T[], size: number): T[][] {
 
 export async function getQuoteEventStats(quoteId: string) {
   const result = await getQuoteEvents(quoteId);
-  const events = result.data;
-  const openings = events.filter((event) => event.eventType === "quote_opened");
   return {
-    data: {
-      openings: openings.length,
-      lastOpening: openings.at(-1)?.createdAt,
-      whatsappClicks: events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event)).length,
-      confirmClicked: events.some((event) => event.eventType === "confirm_clicked"),
-      confirmed: events.some((event) => event.eventType === "quote_confirmed")
-    },
+    data: quoteEventStatsFromEvents(result.data),
     source: result.source,
     error: result.error
+  };
+}
+
+export async function getQuoteEventStatsForQuoteIds(quoteIds: string[]) {
+  const result = await getQuoteEventsForQuoteIds(quoteIds);
+  const statsByQuote: Record<string, ReturnType<typeof quoteEventStatsFromEvents>> = {};
+  for (const quoteId of quoteIds) {
+    statsByQuote[quoteId] = quoteEventStatsFromEvents(result.data[quoteId] ?? []);
+  }
+  return {
+    data: statsByQuote,
+    source: result.source,
+    error: result.error
+  };
+}
+
+function quoteEventStatsFromEvents(events: QuoteEvent[]) {
+  const openings = events.filter((event) => event.eventType === "quote_opened");
+  return {
+    openings: openings.length,
+    lastOpening: openings.at(-1)?.createdAt,
+    whatsappClicks: events.filter((event) => event.eventType === "whatsapp_clicked" && isCustomerWhatsappEvent(event)).length,
+    confirmClicked: events.some((event) => event.eventType === "confirm_clicked"),
+    confirmed: events.some((event) => event.eventType === "quote_confirmed")
   };
 }
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
 import { PollEmailNowButton } from "@/components/PollEmailNowButton";
 import { QuoteFilters } from "@/components/QuoteFilters";
-import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
+import { getQuoteEventStats, getQuoteEventStatsForQuoteIds } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
 
 export const dynamic = "force-dynamic";
@@ -35,13 +35,8 @@ export default async function QuotesPage({ searchParams }: { searchParams?: { fi
   const quotes = quoteResult.data;
   const statsByQuote: Record<string, Awaited<ReturnType<typeof getQuoteEventStats>>["data"]> = {};
   const initialFilter = getInitialFilter(searchParams?.filter);
-
-  await Promise.all(
-    quotes.map(async (quote) => {
-      const result = await getQuoteEventStats(quote.id);
-      statsByQuote[quote.id] = result.data;
-    })
-  );
+  const statsResult = await getQuoteEventStatsForQuoteIds(quotes.map((quote) => quote.id));
+  Object.assign(statsByQuote, statsResult.data);
 
   if (quoteResult.source !== "supabase") {
     return (

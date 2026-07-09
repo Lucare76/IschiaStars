@@ -20,6 +20,8 @@ type NotificationItem = {
   shouldPlaySound?: boolean;
 };
 
+const NOTIFICATION_POLL_INTERVAL_MS = 90_000;
+
 export function QuoteNotificationsBell() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -32,6 +34,8 @@ export function QuoteNotificationsBell() {
   const firstLoadDoneRef = useRef(false);
   // Latest announcement settings (fetched once, re-read on next poll cycle)
   const announcementRef = useRef<AnnouncementSettings>(defaultAnnouncementSettings);
+  const pollInFlightRef = useRef(false);
+  const lastPollAtRef = useRef(0);
 
   const unreadCount = notifications.filter((notification) => !notification.isRead).length;
 
@@ -46,8 +50,17 @@ export function QuoteNotificationsBell() {
   }, []);
 
   useEffect(() => {
-    async function poll() {
-      const items = await fetchNotifications();
+    async function poll(options: { force?: boolean } = {}) {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (pollInFlightRef.current) return;
+      if (!options.force && now - lastPollAtRef.current < NOTIFICATION_POLL_INTERVAL_MS) return;
+
+      pollInFlightRef.current = true;
+      lastPollAtRef.current = now;
+      const items = await fetchNotifications().finally(() => {
+        pollInFlightRef.current = false;
+      });
       if (!items) return;
 
       if (!firstLoadDoneRef.current) {
@@ -79,11 +92,11 @@ export function QuoteNotificationsBell() {
       }
     }
 
-    void poll();
+    void poll({ force: true });
 
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") void poll();
-    }, 30_000);
+    }, NOTIFICATION_POLL_INTERVAL_MS);
 
     function handleVisibilityChange() {
       if (document.visibilityState === "visible") void poll();
