@@ -1,12 +1,25 @@
-import { unstable_noStore as noStore } from "next/cache";
+import { revalidateTag, unstable_cache, unstable_noStore as noStore } from "next/cache";
 import { ANNOUNCEMENT_SETTINGS_KEY, AnnouncementSettings, normalizeAnnouncementSettings } from "@/lib/announcement-settings";
 import { emptyFeatureFlags, FEATURE_FLAGS_KEY, FeatureFlagKey, FeatureFlags, normalizeFeatureFlags } from "@/lib/feature-flags";
 import { emptyPaymentSettings, normalizePaymentSettings, PAYMENT_SETTINGS_KEY, PaymentSettings, paymentSettingsToDbValue } from "@/lib/payment-settings";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
+const PAYMENT_SETTINGS_CACHE_TAG = "ischiastars-payment-settings";
+const FEATURE_FLAGS_CACHE_TAG = "ischiastars-feature-flags";
+const ANNOUNCEMENT_SETTINGS_CACHE_TAG = "ischiastars-announcement-settings";
+
 export async function getPaymentSettings(): Promise<RepositoryResult<PaymentSettings>> {
-  noStore();
+  return getCachedPaymentSettings();
+}
+
+const getCachedPaymentSettings = unstable_cache(
+  async (): Promise<RepositoryResult<PaymentSettings>> => getPaymentSettingsUncached(),
+  [PAYMENT_SETTINGS_CACHE_TAG],
+  { revalidate: 60, tags: [PAYMENT_SETTINGS_CACHE_TAG] }
+);
+
+async function getPaymentSettingsUncached(): Promise<RepositoryResult<PaymentSettings>> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(emptyPaymentSettings);
 
@@ -36,11 +49,21 @@ export async function updatePaymentSettings(settings: PaymentSettings): Promise<
     .single();
 
   if (error) return fallback(normalized, error);
+  revalidateTag(PAYMENT_SETTINGS_CACHE_TAG);
   return fromSupabase(normalizePaymentSettings(data?.value));
 }
 
 export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>> {
-  noStore();
+  return getCachedFeatureFlags();
+}
+
+const getCachedFeatureFlags = unstable_cache(
+  async (): Promise<RepositoryResult<FeatureFlags>> => getFeatureFlagsUncached(),
+  [FEATURE_FLAGS_CACHE_TAG],
+  { revalidate: 60, tags: [FEATURE_FLAGS_CACHE_TAG] }
+);
+
+async function getFeatureFlagsUncached(): Promise<RepositoryResult<FeatureFlags>> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(emptyFeatureFlags);
 
@@ -63,7 +86,16 @@ export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>>
 }
 
 export async function getAnnouncementSettings(): Promise<RepositoryResult<AnnouncementSettings>> {
-  noStore();
+  return getCachedAnnouncementSettings();
+}
+
+const getCachedAnnouncementSettings = unstable_cache(
+  async (): Promise<RepositoryResult<AnnouncementSettings>> => getAnnouncementSettingsUncached(),
+  [ANNOUNCEMENT_SETTINGS_CACHE_TAG],
+  { revalidate: 30, tags: [ANNOUNCEMENT_SETTINGS_CACHE_TAG] }
+);
+
+async function getAnnouncementSettingsUncached(): Promise<RepositoryResult<AnnouncementSettings>> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(normalizeAnnouncementSettings({}));
 
@@ -90,6 +122,7 @@ export async function updateAnnouncementSettings(settings: AnnouncementSettings)
     .single();
 
   if (error) return fallback(normalized, error);
+  revalidateTag(ANNOUNCEMENT_SETTINGS_CACHE_TAG);
   return fromSupabase(normalizeAnnouncementSettings(data?.value));
 }
 
@@ -125,5 +158,6 @@ export async function updateFeatureFlag(flag: FeatureFlagKey, value: boolean): P
   console.log(`[updateFeatureFlag] RESULT: data=${JSON.stringify(data)} error=${error?.message ?? "null"} source=${error ? "mock" : "supabase"}`);
 
   if (error) return fallback(merged, error);
+  revalidateTag(FEATURE_FLAGS_CACHE_TAG);
   return fromSupabase(normalizeFeatureFlags(data?.value));
 }

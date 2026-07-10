@@ -1,3 +1,4 @@
+import { revalidateTag, unstable_cache } from "next/cache";
 import { allDemoHotels, deleteDemoHotel, upsertDemoHotel } from "@/lib/demo-store";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ImportedIschiaStarsHotel, mapImportedHotelToDbHotel, normalizeHotelName } from "@/lib/server/ischiastars-hotel-importer";
@@ -5,6 +6,8 @@ import { fetchLrHotelQuotesFeed, mapLrHotelToDbRow } from "@/lib/server/lr-hotel
 import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { Hotel } from "@/lib/types";
 import { fallback, fromSupabase, mapHotel, RepositoryResult } from "@/lib/repositories/shared";
+
+const HOTELS_CACHE_TAG = "ischiastars-hotels";
 
 export type HotelInput = {
   name: string;
@@ -34,6 +37,18 @@ export type HotelSyncReport = {
 };
 
 export async function listHotels(): Promise<RepositoryResult<Hotel[]>> {
+  return getCachedHotels();
+}
+
+const getCachedHotels = unstable_cache(
+  async (): Promise<RepositoryResult<Hotel[]>> => {
+    return listHotelsUncached();
+  },
+  [HOTELS_CACHE_TAG],
+  { revalidate: 60, tags: [HOTELS_CACHE_TAG] }
+);
+
+async function listHotelsUncached(): Promise<RepositoryResult<Hotel[]>> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(allDemoHotels());
 
@@ -95,6 +110,7 @@ export async function syncImportedHotels(importedHotels: ImportedIschiaStarsHote
 
   report.notDetected = existing.filter((row) => isWordPressHotelRow(row) && !seenIds.has(row.id)).length;
   report.hotels = importedResults;
+  revalidateTag(HOTELS_CACHE_TAG);
   return fromSupabase(report);
 }
 
@@ -151,6 +167,7 @@ export async function createHotel(input: HotelInput): Promise<RepositoryResult<H
     .single();
 
   if (error) return fallback(null, error);
+  revalidateTag(HOTELS_CACHE_TAG);
   return fromSupabase(mapHotel(data));
 }
 
@@ -190,6 +207,7 @@ export async function updateHotel(id: string, input: Partial<HotelInput>): Promi
     .single();
 
   if (error) return fallback(null, error);
+  revalidateTag(HOTELS_CACHE_TAG);
   return fromSupabase(mapHotel(data));
 }
 
@@ -206,6 +224,7 @@ export async function deleteHotel(id: string): Promise<RepositoryResult<{ delete
 
   const { error } = await supabase.from("hotels").delete().eq("id", id);
   if (error) return fallback({ deleted: false, reason: error.message }, error);
+  revalidateTag(HOTELS_CACHE_TAG);
   return fromSupabase({ deleted: true });
 }
 
@@ -441,5 +460,6 @@ export async function syncLrHotelFeed(): Promise<RepositoryResult<LrHotelSyncRep
     }
   }
 
+  revalidateTag(HOTELS_CACHE_TAG);
   return fromSupabase(report);
 }

@@ -7,8 +7,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { QuoteEvent } from "@/lib/types";
 
 export const QUOTE_NOTIFICATIONS_SEEN_KEY = "quote_notifications_seen_at";
-const NOTIFICATION_EVENT_SCAN_MULTIPLIER = 50;
-const MIN_NOTIFICATION_EVENT_SCAN_LIMIT = 500;
+const NOTIFICATION_EVENT_SCAN_MULTIPLIER = 25;
+const MIN_NOTIFICATION_EVENT_SCAN_LIMIT = 300;
+const MAX_NOTIFICATION_EVENT_SCAN_LIMIT = 500;
 
 export type QuoteNotificationType = "apertura" | "cliente_caldo" | "conferma" | "click" | "interesse";
 
@@ -71,11 +72,14 @@ export async function getQuoteNotifications(limit = 20): Promise<RepositoryResul
     return fallback(deriveQuoteNotifications(allQuoteEvents(), quotes).slice(0, limit));
   }
 
-  const eventScanLimit = Math.max(limit * NOTIFICATION_EVENT_SCAN_MULTIPLIER, MIN_NOTIFICATION_EVENT_SCAN_LIMIT);
+  const eventScanLimit = Math.min(
+    Math.max(limit * NOTIFICATION_EVENT_SCAN_MULTIPLIER, MIN_NOTIFICATION_EVENT_SCAN_LIMIT),
+    MAX_NOTIFICATION_EVENT_SCAN_LIMIT
+  );
   const [{ data: eventRows, error: eventError }, { data: settingRow, error: settingError }] = await Promise.all([
     supabase
       .from("quote_events")
-      .select("*")
+      .select("id,quote_id,event_type,created_at,user_agent,metadata")
       .in("event_type", CUSTOMER_ACTIVITY_EVENT_TYPES)
       .order("created_at", { ascending: false })
       .limit(eventScanLimit),
