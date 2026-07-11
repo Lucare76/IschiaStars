@@ -8,6 +8,8 @@ import { fallback, fromSupabase, mapQuote, RepositoryResult } from "@/lib/reposi
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { Quote, QuoteHotelOption, QuoteStatus, TransportOffer } from "@/lib/types";
 
+const QUOTES_PAGE_SIZE = 1000;
+
 export type QuoteInput = {
   quoteRequestId?: string;
   code?: string;
@@ -46,12 +48,11 @@ export async function listQuotes({ includeDeleted = false, includeLabTests = fal
     .filter((quote) => includeLabTests || !quote.isLabTest);
   if (!supabase) return fallback(demoQuotes);
 
-  let query = supabase.from("quotes").select("*").order("created_at", { ascending: false });
-  if (!includeDeleted) query = query.is("deleted_at", null);
-  if (!includeLabTests) {
-    query = query.or("metadata->>is_lab_test.is.null,metadata->>is_lab_test.neq.true");
-  }
-  const [hotelResult, { data, error }] = await Promise.all([listHotels(), query]);
+  const [hotelResult, rowsResult] = await Promise.all([
+    listHotels(),
+    fetchQuoteRows({ includeDeleted, includeLabTests })
+  ]);
+  const { data, error } = rowsResult;
   if (error) return fallback(demoQuotes, error);
 
   const quoteIds = (data ?? []).map((row) => row.id as string);
@@ -76,6 +77,35 @@ export async function listQuotes({ includeDeleted = false, includeLabTests = fal
       return withDemoStatus(mapQuote(row as Record<string, unknown>, allHotels, childRows as Record<string, unknown>[], hotelOpts, confirmationsMap[row.id as string]));
     })
   );
+}
+
+async function fetchQuoteRows({ includeDeleted, includeLabTests }: { includeDeleted: boolean; includeLabTests: boolean }) {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return { data: null, error: null };
+
+  const rows: Record<string, unknown>[] = [];
+
+  for (let from = 0; ; from += QUOTES_PAGE_SIZE) {
+    let query = supabase
+      .from("quotes")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(from, from + QUOTES_PAGE_SIZE - 1);
+
+    if (!includeDeleted) query = query.is("deleted_at", null);
+    if (!includeLabTests) {
+      query = query.or("metadata->>is_lab_test.is.null,metadata->>is_lab_test.neq.true");
+    }
+
+    const { data, error } = await query;
+    if (error) return { data: null, error };
+
+    const page = (data ?? []) as Record<string, unknown>[];
+    rows.push(...page);
+    if (page.length < QUOTES_PAGE_SIZE) break;
+  }
+
+  return { data: rows, error: null };
 }
 
 export type LabTestQuote = {
