@@ -5,7 +5,7 @@ import { isPaymentSettingsConfigured } from "@/lib/payment-settings";
 import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { listQuotes } from "@/lib/repositories/quotes";
 import { getPaymentSettings } from "@/lib/repositories/settings";
-import { ConfirmationAvailabilityStatus } from "@/lib/types";
+import { ConfirmationAvailabilityStatus, Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
 type AgeComparison = {
@@ -71,7 +71,6 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
       <div className="grid gap-4">
         {confirmations.map((quote) => {
           const confirmation = quote.confirmation!;
-          const status = (confirmation.availabilityStatus ?? "availability_to_check") as ConfirmationAvailabilityStatus;
           const balanceSchedule = getBalancePaymentSchedule(confirmation.selectedBalanceMethod, quote.arrivalDate);
           const confirmedAfterExpiry = isAfterOfferExpiry(confirmation.confirmedAt, quote.offerExpiresAt);
           return (
@@ -82,7 +81,7 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
                   <h2 className="text-xl font-black text-ischia-navy">{quote.customerFirstName} {quote.customerLastName}</h2>
                 </div>
                 <span className="rounded-full bg-ischia-mist px-3 py-1 text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/15">
-                  {availabilityStatusLabels[status]}
+                  {confirmationStatusLabel(confirmation)}
                 </span>
               </div>
               {confirmedAfterExpiry ? (
@@ -141,6 +140,13 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
 function confirmationTimestamp(value: string | undefined) {
   const timestamp = value ? new Date(value).getTime() : 0;
   return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function confirmationStatusLabel(confirmation: NonNullable<Quote["confirmation"]>) {
+  if (confirmation.balancePaidAt) return "Saldo ricevuto";
+  if (confirmation.depositPaidAt) return "Caparra ricevuta";
+  const status = (confirmation.availabilityStatus ?? "availability_to_check") as ConfirmationAvailabilityStatus;
+  return availabilityStatusLabels[status];
 }
 
 function isAfterOfferExpiry(confirmedAt: string | undefined, offerExpiresAt: string) {

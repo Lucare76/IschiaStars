@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { DashboardStats } from "@/lib/repositories/stats";
-import { formatCurrency } from "@/lib/utils";
 
 export function StatsCards({ stats }: { stats: DashboardStats }) {
   const quoteStats = [
@@ -36,33 +35,7 @@ export function StatsCards({ stats }: { stats: DashboardStats }) {
     }
   ] as const;
 
-  const emailStats = [
-    { label: "Email inviate", value: stats.emailSent, tone: "navy" },
-    { label: "Email consegnate", value: stats.emailDelivered, tone: "blue" },
-    { label: "Email aperte", value: stats.emailOpened, tone: "green" },
-    { label: "Link email cliccati", value: stats.emailClicked, tone: "sand" },
-    { label: "Problemi di consegna", value: stats.emailProblems, tone: stats.emailProblems > 0 ? "red" : "navy" }
-  ] as const;
-
   const interestStats = [
-    {
-      label: "Preventivi visualizzati",
-      value: stats.openedQuotes,
-      href: "/admin/preventivi?filter=aperti",
-      tone: "blue"
-    },
-    {
-      label: "Preventivi non visualizzati",
-      value: stats.unopenedQuotes,
-      href: "/admin/preventivi?filter=non_aperti",
-      tone: stats.unopenedQuotes > 0 ? "amber" : "navy"
-    },
-    {
-      label: "Click email, non confermati",
-      value: stats.clickedUnconfirmedQuotes,
-      href: "/admin/follow-up?filter=caldi",
-      tone: stats.clickedUnconfirmedQuotes > 0 ? "green" : "navy"
-    },
     {
       label: "Visualizzati più volte",
       value: stats.repeatedlyViewedQuotes,
@@ -84,19 +57,9 @@ export function StatsCards({ stats }: { stats: DashboardStats }) {
       href: "/admin/preventivi?filter=scaduti"
     },
     {
-      label: "Da contattare oggi",
-      value: stats.toContactToday,
-      href: "/admin/follow-up?filter=non_visualizzati"
-    },
-    {
       label: "Click WhatsApp",
       value: stats.whatsappClicks,
       href: "/admin/preventivi?filter=click_whatsapp"
-    },
-    {
-      label: "Incassato",
-      value: formatCurrency(stats.depositReceivedValue),
-      href: "/admin/preventivi?filter=confermati"
     }
   ];
 
@@ -109,49 +72,10 @@ export function StatsCards({ stats }: { stats: DashboardStats }) {
       />
 
       <DashboardSection
-        title="Stato email Brevo"
-        description="Tracking delle sole email di preventivo inviate al cliente."
-        cards={emailStats}
-      />
-
-      <DashboardSection
         title="Interesse cliente"
         description="Azioni sulla pagina preventivo, separate dalle aperture email."
         cards={interestStats}
       />
-
-      <section>
-        <div className="mb-3">
-          <h2 className="text-lg font-black text-ischia-navy">Attenzione commerciale</h2>
-          <p className="mt-1 text-sm font-semibold text-ischia-ink/55">Le situazioni più utili da controllare adesso.</p>
-        </div>
-        {stats.attentionItems.length ? (
-          <div className="overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ring-slate-200">
-            {stats.attentionItems.map((item, index) => (
-              <Link
-                key={item.quoteId}
-                href={`/admin/preventivi/${item.quoteCode}`}
-                className={`grid gap-2 px-4 py-4 transition hover:bg-slate-50 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] sm:items-center ${
-                  index > 0 ? "border-t border-slate-100" : ""
-                }`}
-              >
-                <div>
-                  <p className="font-black text-ischia-navy">{item.quoteCode}</p>
-                  <p className="mt-0.5 text-sm font-semibold text-ischia-ink/60">{item.customerName}</p>
-                </div>
-                <p className="text-sm font-bold text-ischia-ink/75">{item.status}</p>
-                <span className={`w-fit rounded-full px-3 py-1.5 text-xs font-black ${actionClass(item.priority)}`}>
-                  {item.action}
-                </span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl bg-white/80 p-5 text-sm font-semibold text-ischia-ink/55 ring-1 ring-white">
-            Nessuna situazione da segnalare.
-          </div>
-        )}
-      </section>
 
       <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
         {secondary.map(({ label, value, href }) => (
@@ -227,10 +151,4 @@ function toneClass(tone: DashboardCard["tone"]) {
     sand: "bg-orange-50 text-orange-900 ring-orange-100"
   };
   return classes[tone];
-}
-
-function actionClass(priority: "alta" | "media" | "bassa") {
-  if (priority === "alta") return "bg-rose-100 text-rose-800";
-  if (priority === "media") return "bg-amber-100 text-amber-800";
-  return "bg-slate-100 text-slate-700";
 }

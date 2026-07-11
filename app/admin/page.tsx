@@ -2,28 +2,20 @@ import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
 import { PollEmailNowButton } from "@/components/PollEmailNowButton";
 import { StatsCards } from "@/components/StatsCards";
-import { QuoteCard } from "@/components/QuoteCard";
 import { PendingRequestCard } from "@/components/PendingRequestCard";
-import { getDashboardEventStats } from "@/lib/repositories/quoteEvents";
-import { getQuoteEmailDashboardData } from "@/lib/repositories/emailLogs";
-import { getDueFollowUpCustomerKeys, getFollowUpQuotes } from "@/lib/repositories/followUp";
 import { listPendingQuoteRequests } from "@/lib/repositories/quoteRequests";
-import { listQuotes } from "@/lib/repositories/quotes";
-import { buildDashboardStats } from "@/lib/repositories/stats";
+import { getDashboardStats } from "@/lib/repositories/stats";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const [requestResult, quoteResult, eventsResult, followUpResult, emailResult] = await Promise.all([
-    listPendingQuoteRequests(),
-    listQuotes(),
-    getDashboardEventStats(),
-    getFollowUpQuotes(),
-    getQuoteEmailDashboardData()
+  const [requestResult, statsResult] = await Promise.all([
+    listPendingQuoteRequests({ limit: 2 }),
+    getDashboardStats()
   ]);
 
-  if (requestResult.source !== "supabase" || quoteResult.source !== "supabase" || eventsResult.source !== "supabase" || followUpResult.source !== "supabase" || emailResult.source !== "supabase") {
-    const error = [requestResult.error, quoteResult.error, eventsResult.error, followUpResult.error, emailResult.error].filter(Boolean).join(" | ");
+  if (requestResult.source !== "supabase" || statsResult.source !== "supabase") {
+    const error = [requestResult.error, statsResult.error].filter(Boolean).join(" | ");
     return (
       <AdminShell title="Dashboard preventivi" subtitle="Panoramica delle richieste, dei preventivi inviati e delle conferme cliente.">
         <DataUnavailable error={error} />
@@ -32,21 +24,7 @@ export default async function AdminDashboardPage() {
   }
 
   const quoteRequests = requestResult.data;
-  const activeQuotes = quoteResult.data.filter((quote) => !quote.deletedAt && !quote.excludedFromStats);
-  const dashboardStats = buildDashboardStats({
-    quotes: quoteResult.data,
-    pendingRequests: quoteRequests,
-    openedQuoteIds: eventsResult.data.openedQuoteIds,
-    confirmedEventIds: eventsResult.data.confirmedEventIds,
-    whatsappClickQuoteIds: eventsResult.data.whatsappClickQuoteIds,
-    closedFollowUpQuoteIds: eventsResult.data.closedFollowUpQuoteIds,
-    snoozedUntilByQuote: eventsResult.data.snoozedUntilByQuote,
-    lastContactAtByQuote: eventsResult.data.lastContactAtByQuote,
-    toContactTodayOverride: getDueFollowUpCustomerKeys(followUpResult.data).size,
-    openingCountByQuote: eventsResult.data.openingCountByQuote,
-    emailData: emailResult.data
-  });
-  const featuredQuote = activeQuotes[0];
+  const dashboardStats = statsResult.data;
 
   return (
     <AdminShell title="Dashboard preventivi" subtitle="Panoramica delle richieste, dei preventivi inviati e delle conferme cliente.">
@@ -58,9 +36,9 @@ export default async function AdminDashboardPage() {
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-xl font-black text-ischia-navy">
                 Ultime richieste da evadere
-                {quoteRequests.length > 0 && (
+                {dashboardStats.pendingRequests > 0 && (
                   <span className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-black text-white">
-                    {quoteRequests.length}
+                    {dashboardStats.pendingRequests}
                   </span>
                 )}
               </h2>
@@ -89,10 +67,6 @@ export default async function AdminDashboardPage() {
               <span className="text-ischia-leaf">●</span> WhatsApp 371 75 90 017
             </a>
           </div>
-
-          {featuredQuote ? (
-            <QuoteCard quote={featuredQuote} />
-          ) : null}
         </aside>
       </div>
     </AdminShell>

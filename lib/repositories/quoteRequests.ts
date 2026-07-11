@@ -35,7 +35,7 @@ export async function listQuoteRequests(status?: QuoteStatus): Promise<Repositor
   return fromSupabase((data ?? []).map(mapQuoteRequest));
 }
 
-export async function listPendingQuoteRequests() {
+export async function listPendingQuoteRequests(options: { limit?: number } = {}) {
   const demoRequests = filterUnprocessedRequests(allDemoQuoteRequests().filter((request) => request.status === "da_evadere"));
   const demoLinkedRequestIds = new Set(
     allDemoQuotes()
@@ -47,12 +47,16 @@ export async function listPendingQuoteRequests() {
   const supabase = createSupabaseAdminClient();
   if (!supabase) return fallback(local);
 
-  const { data, error } = await supabase
+  const queryLimit = options.limit ? Math.max(options.limit * 3, options.limit) : undefined;
+  let query = supabase
     .from("quote_requests")
     .select("*, quote_request_children(*)")
     .is("deleted_at", null)
     .in("status", ["da_evadere", "pending"])
     .order("created_at", { ascending: false });
+  if (queryLimit) query = query.limit(queryLimit);
+
+  const { data, error } = await query;
   if (error) return fallback(local, error);
 
   const pendingRequests = filterUnprocessedRequests((data ?? []).map(mapQuoteRequest));
@@ -72,7 +76,39 @@ export async function listPendingQuoteRequests() {
       .filter(Boolean)
   );
 
-  return fromSupabase(pendingRequests.filter((request) => !linkedRequestIds.has(request.id)));
+  const filtered = pendingRequests.filter((request) => !linkedRequestIds.has(request.id));
+  return fromSupabase(options.limit ? filtered.slice(0, options.limit) : filtered);
+}
+
+export async function countPendingQuoteRequests(): Promise<RepositoryResult<number>> {
+  const demoRequests = filterUnprocessedRequests(allDemoQuoteRequests().filter((request) => request.status === "da_evadere"));
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(demoRequests.length);
+
+  const { data, error } = await supabase
+    .from("quote_requests")
+    .select("id")
+    .is("deleted_at", null)
+    .in("status", ["da_evadere", "pending"]);
+  if (error) return fallback(demoRequests.length, error);
+
+  const requestIds = (data ?? []).map((request) => String(request.id));
+  if (!requestIds.length) return fromSupabase(0);
+
+  const linkedQuotes = await supabase
+    .from("quotes")
+    .select("quote_request_id")
+    .in("quote_request_id", requestIds)
+    .is("deleted_at", null);
+  if (linkedQuotes.error) return fromSupabase(requestIds.length);
+
+  const linkedRequestIds = new Set(
+    (linkedQuotes.data ?? [])
+      .map((quote) => quote.quote_request_id ? String(quote.quote_request_id) : "")
+      .filter(Boolean)
+  );
+
+  return fromSupabase(requestIds.filter((id) => !linkedRequestIds.has(id)).length);
 }
 
 export async function getQuoteRequestById(id: string): Promise<RepositoryResult<QuoteRequest | null>> {

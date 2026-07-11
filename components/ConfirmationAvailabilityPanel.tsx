@@ -41,6 +41,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [supplierSending, setSupplierSending] = useState(false);
   const [supplierError, setSupplierError] = useState<string | null>(null);
   const [depositCoordinatesCopied, setDepositCoordinatesCopied] = useState(false);
+  const [balanceSummaryCopied, setBalanceSummaryCopied] = useState(false);
   const [depositAmountOverride, setDepositAmountOverride] = useState(formatAmountInput(defaultDepositAmount));
   const [balanceAmountOverride, setBalanceAmountOverride] = useState("");
   const [serviceLabel, setServiceLabel] = useState("");
@@ -160,12 +161,58 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     return { message, chatUrl: `https://wa.me/${normalizeItalianPhone(phone)}` };
   }, [hasCurrentCoordinates, depositAmount, balanceAmount, confirmation, quote, selectedPrice, balanceSchedule, paymentSettings, currentPaymentReason]);
 
+  const balanceSummaryWhatsapp = useMemo(() => {
+    if (!confirmation?.depositPaidAt || confirmation.balancePaidAt || isInHotelBalance || !balanceSchedule.dueDate) return null;
+    if (depositAmount == null || balanceAmount == null) return null;
+
+    const firstName = confirmation.firstName ?? quote.customerFirstName;
+    const phone = confirmation.phone ?? quote.customerPhone;
+    const message = `Ciao ${formatWhatsappFirstName(firstName)} 👋
+
+ti confermiamo di aver ricevuto la caparra di *${formatCurrency(depositAmount)}* per la prenotazione *${quote.code}*.
+
+Il saldo restante di *${formatCurrency(balanceAmount)}* dovrà essere versato entro il *${formatDate(balanceSchedule.dueDate)}*.
+
+Per qualsiasi dubbio puoi scriverci qui su WhatsApp.
+
+IschiaStars 🌊`;
+
+    return { message, chatUrl: `https://wa.me/${normalizeItalianPhone(phone)}?text=${encodeURIComponent(message)}` };
+  }, [confirmation, quote, depositAmount, balanceAmount, isInHotelBalance, balanceSchedule]);
+
   async function handleSendDepositCoordinatesWhatsapp() {
     if (!depositCoordinatesWhatsapp) return;
     await navigator.clipboard.writeText(depositCoordinatesWhatsapp.message).catch(() => null);
     setDepositCoordinatesCopied(true);
     setTimeout(() => setDepositCoordinatesCopied(false), 3000);
     window.open(depositCoordinatesWhatsapp.chatUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function handleSendBalanceSummaryWhatsapp() {
+    if (!balanceSummaryWhatsapp) return;
+    await navigator.clipboard.writeText(balanceSummaryWhatsapp.message).catch(() => null);
+    setBalanceSummaryCopied(true);
+    setTimeout(() => setBalanceSummaryCopied(false), 3000);
+    window.open(balanceSummaryWhatsapp.chatUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function sendBalanceSummaryEmail() {
+    setLoadingAction("send-balance-summary");
+    setMessage(null);
+    const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/send-balance-summary`, {
+      method: "POST",
+      headers: adminApiHeaders(),
+      body: JSON.stringify({})
+    });
+    const result = await readAdminApiJson<{ ok?: boolean; success?: boolean; error?: string; quote?: Quote; message?: string }>(response);
+    setLoadingAction(null);
+    if (!response.ok || !result?.ok) {
+      setMessage(adminApiErrorMessage(response, result, "Email riepilogo saldo non inviata."));
+      return;
+    }
+    setMessage(result.message ?? "Riepilogo saldo inviato via email.");
+    if (result.quote) onConfirmationUpdated?.(result.quote);
+    router.refresh();
   }
 
   async function handleSendVoucherWhatsapp() {
@@ -996,6 +1043,26 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
                 <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
                   ✓ Caparra ricevuta il {formatDateTime(confirmation.depositPaidAt)}
                 </p>
+                {balanceSummaryWhatsapp ? (
+                  <>
+                    <button
+                      className="rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
+                      disabled={Boolean(loadingAction)}
+                      onClick={() => void handleSendBalanceSummaryWhatsapp()}
+                      type="button"
+                    >
+                      {balanceSummaryCopied ? "✓ Riepilogo copiato — incolla su WhatsApp" : "Invia riepilogo saldo WhatsApp"}
+                    </button>
+                    <button
+                      className="rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
+                      disabled={Boolean(loadingAction)}
+                      onClick={() => void sendBalanceSummaryEmail()}
+                      type="button"
+                    >
+                      {loadingAction === "send-balance-summary" ? "Invio email..." : "Invia riepilogo saldo email"}
+                    </button>
+                  </>
+                ) : null}
                 <button
                   className="rounded-full px-4 py-2 text-sm font-black text-white disabled:opacity-60"
                   style={{ backgroundColor: "#16A34A" }}
@@ -1068,6 +1135,12 @@ function confirmationDepositDueLocalInput(value: string | undefined, arrivalDate
   if (!value) return formatDepositDueLocalInput(defaultDepositDueAtForArrival(arrivalDate));
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? formatDepositDueLocalInput(defaultDepositDueAtForArrival(arrivalDate)) : formatDepositDueLocalInput(date);
+}
+
+function formatWhatsappFirstName(value: string) {
+  const cleaned = value.trim();
+  if (!cleaned) return "Cliente";
+  return cleaned.charAt(0).toLocaleUpperCase("it-IT") + cleaned.slice(1).toLocaleLowerCase("it-IT");
 }
 
 function Info({ label, value }: { label: string; value: string }) {
