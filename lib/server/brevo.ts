@@ -5,7 +5,7 @@ import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
 import { getFeatureFlags } from "@/lib/repositories/settings";
 import { getEffectiveBalancePaymentSchedule } from "@/lib/hotel-policies";
-import { absoluteShortPublicQuoteUrl, ischiastarsWhatsappNumber } from "@/lib/utils";
+import { absoluteShortPublicQuoteUrl, ischiastarsWhatsappNumber, siteBaseUrl } from "@/lib/utils";
 
 type BrevoRecipient = { email: string; name?: string };
 
@@ -50,6 +50,13 @@ type BrevoSendResult = {
   status?: number;
   error?: string;
   messageId?: string;
+};
+
+export type DepositBalanceSummaryEmailPreview = {
+  to: BrevoRecipient;
+  subject: string;
+  html: string;
+  text: string;
 };
 
 export function isBrevoEnabled(): boolean {
@@ -1126,20 +1133,13 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
   return voucherResult.ok;
 }
 
-export async function sendDepositBalanceSummaryEmailToClient(quote: Quote): Promise<boolean> {
-  const missingEnvReason = brevoMissingEnvReason();
-  if (missingEnvReason) {
-    console.info(`[brevo] skipped deposit balance summary code=${quote.code} reason=${missingEnvReason}`);
-    return false;
-  }
-
+export function buildDepositBalanceSummaryEmail(quote: Quote): DepositBalanceSummaryEmailPreview | null {
   const confirmation = quote.confirmation;
-  if (!confirmation?.depositPaidAt || confirmation.balancePaidAt) return false;
+  if (!confirmation?.depositPaidAt || confirmation.balancePaidAt) return null;
 
   const email = confirmation.email?.trim() || quote.customerEmail?.trim();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    console.warn(`[brevo] skipped deposit balance summary code=${quote.code} reason=missing_client_email`);
-    return false;
+    return null;
   }
 
   const hotelName = confirmation.selectedHotelName ?? quote.proposedHotel.name;
@@ -1149,26 +1149,38 @@ export async function sendDepositBalanceSummaryEmailToClient(quote: Quote): Prom
     hotelName
   });
   if (balanceSchedule.type === "in_structure" || !balanceSchedule.dueDate || confirmation.selectedBalanceAmount == null || confirmation.selectedDepositAmount == null) {
-    return false;
+    return null;
   }
 
   const firstName = confirmation.firstName ?? quote.customerFirstName ?? "Cliente";
   const fullName = `${confirmation.firstName ?? quote.customerFirstName} ${confirmation.lastName ?? quote.customerLastName}`.trim();
+  const greetingName = fullName || firstName;
   const depositLabel = formatPrice(confirmation.selectedDepositAmount);
   const balanceLabel = formatPrice(confirmation.selectedBalanceAmount);
   const balanceDueLabel = formatDate(balanceSchedule.dueDate);
+  const stayLabel = `${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`;
+  const logoUrl = `${siteBaseUrl()}/ischiastars-logo.png`;
   const subject = `Caparra ricevuta e riepilogo saldo - ${quote.code}`;
 
-  const html = `<!DOCTYPE html><html lang="it"><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
+  const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>${escapeHtml(subject)}</title><style>@media print{.no-print{display:none!important}body{background:#ffffff!important;padding:0!important}.email-container{box-shadow:none!important}}</style></head><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
     <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border-radius:10px;overflow:hidden;">
-        <tr><td style="background:#1B3A5C;padding:22px 30px;color:#fff;font-weight:bold;font-size:18px;">IschiaStars</td></tr>
+      <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);">
+        <tr><td style="background:#1B3A5C;padding:20px 30px;color:#fff;">
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td width="74" style="width:74px;"><img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:999px;background:#ffffff;"></td>
+            <td style="padding-left:14px;">
+              <div style="font-weight:bold;font-size:19px;line-height:1.25;">IschiaStars</div>
+              <div style="margin-top:4px;font-size:12px;line-height:1.35;color:#DCEBFA;">Vacanze a Ischia su misura</div>
+            </td>
+          </tr></table>
+        </td></tr>
         <tr><td style="padding:28px 30px;color:#374151;font-size:15px;line-height:1.7;">
-          <p style="margin:0 0 16px;">Ciao <strong>${escapeHtml(firstName)}</strong>,</p>
+          <p style="margin:0 0 16px;">Ciao <strong>${escapeHtml(greetingName)}</strong>,</p>
           <p style="margin:0 0 18px;">ti confermiamo di aver ricevuto la caparra per la prenotazione <strong>${escapeHtml(quote.code)}</strong>.</p>
           <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D9E2EC;border-radius:10px;overflow:hidden;margin:0 0 20px;">
             <tr><td style="padding:12px 16px;background:#F6F8FB;color:#6B7280;font-size:13px;">Hotel</td><td align="right" style="padding:12px 16px;background:#F6F8FB;color:#1B3A5C;font-weight:bold;">${escapeHtml(hotelName)}</td></tr>
-            <tr><td style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Caparra ricevuta</td><td align="right" style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#15803D;font-weight:bold;">${depositLabel}</td></tr>
+            <tr><td style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Soggiorno</td><td align="right" style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#1B3A5C;font-weight:bold;">${escapeHtml(stayLabel)}</td></tr>
+            <tr><td style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Caparra ricevuta</td><td align="right" style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#15803D;font-weight:bold;">${escapeHtml(depositLabel)}</td></tr>
             <tr><td style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Saldo restante</td><td align="right" style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#1B3A5C;font-weight:bold;">${balanceLabel}</td></tr>
             <tr><td style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Da versare entro</td><td align="right" style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#1B3A5C;font-weight:bold;">${balanceDueLabel}</td></tr>
           </table>
@@ -1180,11 +1192,12 @@ export async function sendDepositBalanceSummaryEmailToClient(quote: Quote): Prom
   </body></html>`;
 
   const text = [
-    `Ciao ${firstName},`,
+    `Ciao ${greetingName},`,
     "",
     `ti confermiamo di aver ricevuto la caparra per la prenotazione ${quote.code}.`,
     "",
     `Hotel: ${hotelName}`,
+    `Soggiorno: ${stayLabel}`,
     `Caparra ricevuta: ${depositLabel}`,
     `Saldo restante: ${balanceLabel}`,
     `Da versare entro: ${balanceDueLabel}`,
@@ -1194,14 +1207,35 @@ export async function sendDepositBalanceSummaryEmailToClient(quote: Quote): Prom
     "IschiaStars"
   ].join("\n");
 
-  const result = await sendBrevoEmailWithResult({
-    to: [{ email, name: fullName }],
+  return {
+    to: { email, name: fullName },
     subject,
     html,
     text,
+  };
+}
+
+export async function sendDepositBalanceSummaryEmailToClient(quote: Quote): Promise<boolean> {
+  const missingEnvReason = brevoMissingEnvReason();
+  if (missingEnvReason) {
+    console.info(`[brevo] skipped deposit balance summary code=${quote.code} reason=${missingEnvReason}`);
+    return false;
+  }
+
+  const preview = buildDepositBalanceSummaryEmail(quote);
+  if (!preview) {
+    console.warn(`[brevo] skipped deposit balance summary code=${quote.code} reason=not_available`);
+    return false;
+  }
+
+  const result = await sendBrevoEmailWithResult({
+    to: [preview.to],
+    subject: preview.subject,
+    html: preview.html,
+    text: preview.text,
     replyTo: { email: process.env.BREVO_FROM_EMAIL || "info@ischiastars.it", name: process.env.BREVO_FROM_NAME || "IschiaStars" }
   });
-  await logEmailAttempt({ quoteId: quote.id, confirmationId: confirmation.id, emailType: "final_confirmation_to_client", recipientEmail: email, subject, brevoMessageId: result.messageId, ok: result.ok, errorMessage: result.error });
+  await logEmailAttempt({ quoteId: quote.id, confirmationId: quote.confirmation?.id, emailType: "final_confirmation_to_client", recipientEmail: preview.to.email, subject: preview.subject, brevoMessageId: result.messageId, ok: result.ok, errorMessage: result.error });
   return result.ok;
 }
 

@@ -1061,6 +1061,14 @@ IschiaStars 🌊`;
                     >
                       {loadingAction === "send-balance-summary" ? "Invio email..." : "Invia riepilogo saldo email"}
                     </button>
+                    <a
+                      className="rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/20"
+                      href={`/api/quote-confirmations/${confirmationId}/balance-summary-preview`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Anteprima riepilogo saldo email
+                    </a>
                   </>
                 ) : null}
                 <button
