@@ -3,7 +3,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { FollowUpActionButtons } from "@/components/FollowUpActionButtons";
 import { FollowUpEmailButton } from "@/components/FollowUpEmailButton";
 import { FollowUpWhatsAppButton } from "@/components/FollowUpWhatsAppButton";
-import { followUpGroupSegment, getDueFollowUpCustomerKeys, getFollowUpQuotes, FollowUpEmailInfo, FollowUpHotelClick, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
+import { FOLLOW_UP_MAX_LIMIT, FOLLOW_UP_PAGE_SIZE, followUpGroupSegment, getDueFollowUpCustomerKeys, getFollowUpQuotes, FollowUpEmailInfo, FollowUpHotelClick, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
 import { followUpCustomerKey, isFollowUpStageDue } from "@/lib/follow-up-policy";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
@@ -47,9 +47,10 @@ type FollowUpGroup = {
   emailInfo: FollowUpEmailInfo;
 };
 
-export default async function FollowUpPage({ searchParams }: { searchParams?: { filter?: string } }) {
+export default async function FollowUpPage({ searchParams }: { searchParams?: { filter?: string; limit?: string } }) {
   const activeFilter = normalizeFilter(searchParams?.filter);
-  const followUpResult = await getFollowUpQuotes();
+  const activeLimit = normalizeLimit(searchParams?.limit);
+  const followUpResult = await getFollowUpQuotes({ limit: activeLimit });
 
   if (followUpResult.source !== "supabase") {
     return (
@@ -59,7 +60,8 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
     );
   }
 
-  const quotes = followUpResult.data;
+  const quotes = followUpResult.data.quotes;
+  const hasMore = followUpResult.data.hasMore;
   const dueCustomerKeys = getDueFollowUpCustomerKeys(quotes);
   const groups = groupFollowUps(quotes);
   const visibleGroups = groups.filter((group) => matchesFilter(group, activeFilter, dueCustomerKeys));
@@ -104,6 +106,18 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
           visibleGroups.map((group) => <FollowUpCard key={group.key} group={group} />)
         )}
       </section>
+
+      {hasMore ? (
+        <div className="mt-6 flex justify-center">
+          <Link
+            className="rounded-full bg-ischia-navy px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-ischia-blue"
+            href={followUpHref(activeFilter, Math.min(activeLimit + FOLLOW_UP_PAGE_SIZE, FOLLOW_UP_MAX_LIMIT))}
+            prefetch={false}
+          >
+            Carica altri
+          </Link>
+        </div>
+      ) : null}
     </AdminShell>
   );
 }
@@ -229,6 +243,20 @@ function summarizeHotelClicks(clicks: FollowUpHotelClick[]) {
 
 function normalizeFilter(value?: string): FollowUpFilter {
   return filters.some((filter) => filter.value === value) ? value as FollowUpFilter : "caldi";
+}
+
+function normalizeLimit(value?: string) {
+  const parsed = Number.parseInt(value ?? "", 10);
+  const numeric = Number.isFinite(parsed) ? parsed : FOLLOW_UP_PAGE_SIZE;
+  const bounded = Math.min(Math.max(numeric, FOLLOW_UP_PAGE_SIZE), FOLLOW_UP_MAX_LIMIT);
+  return Math.ceil(bounded / FOLLOW_UP_PAGE_SIZE) * FOLLOW_UP_PAGE_SIZE;
+}
+
+function followUpHref(filter: FollowUpFilter, limit: number) {
+  const params = new URLSearchParams();
+  params.set("filter", filter);
+  params.set("limit", String(limit));
+  return `/admin/follow-up?${params.toString()}`;
 }
 
 function matchesFilter(group: FollowUpGroup, filter: FollowUpFilter, dueCustomerKeys: Set<string>) {

@@ -70,8 +70,14 @@ export type FollowUpHotelClick = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FOLLOW_UP_LOOKBACK_DAYS = 7;
-const FOLLOW_UP_CANDIDATE_LIMIT = 60;
-const FOLLOW_UP_RESULT_LIMIT = 30;
+export const FOLLOW_UP_PAGE_SIZE = 30;
+export const FOLLOW_UP_MAX_LIMIT = 120;
+
+type FollowUpQuotesData = {
+  quotes: FollowUpQuote[];
+  hasMore: boolean;
+  limit: number;
+};
 
 const CUSTOMER_SIGNAL_EVENT_TYPES: QuoteEvent["eventType"][] = [
   "quote_opened",
@@ -118,8 +124,11 @@ const FOLLOW_UP_QUOTE_SELECT = [
   "confirmed_at"
 ].join(",");
 
-export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuote[]>> {
-  const quotesResult = await getRecentFollowUpCandidateQuotes();
+export async function getFollowUpQuotes(options: { limit?: number } = {}): Promise<RepositoryResult<FollowUpQuotesData>> {
+  const resultLimit = normalizeFollowUpLimit(options.limit);
+  const fetchLimit = Math.min(resultLimit + 1, FOLLOW_UP_MAX_LIMIT + 1);
+  const candidateLimit = Math.min(Math.max(fetchLimit * 3, FOLLOW_UP_PAGE_SIZE * 3), FOLLOW_UP_MAX_LIMIT * 3);
+  const quotesResult = await getRecentFollowUpCandidateQuotes(candidateLimit);
   const now = Date.now();
   const quoteIds = quotesResult.data.map((quote) => quote.id);
   const [eventsResult, emailStatusByQuote] = await Promise.all([
@@ -133,11 +142,15 @@ export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuot
       .filter(Boolean)
   );
   const mapped = quotesResult.data.map((quote) => toFollowUpQuote(quote, eventsResult.data[quote.id] ?? [], confirmedCustomerKeys, emailStatusByQuote[quote.id]));
-  const data = mapped
+  const allData = mapped
     .filter((quote): quote is FollowUpQuote => Boolean(quote))
     .filter((quote) => isRecentOperationalFollowUp(quote, now))
-    .sort(compareFollowUpQuotes)
-    .slice(0, FOLLOW_UP_RESULT_LIMIT);
+    .sort(compareFollowUpQuotes);
+  const data = {
+    quotes: allData.slice(0, resultLimit),
+    hasMore: allData.length > resultLimit && resultLimit < FOLLOW_UP_MAX_LIMIT,
+    limit: resultLimit
+  };
 
   const error = [quotesResult.error, eventsResult.error].filter(Boolean).join(" | ") || undefined;
   return quotesResult.source === "supabase" && eventsResult.source === "supabase"
@@ -145,7 +158,13 @@ export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuot
     : fallback(data, error);
 }
 
-async function getRecentFollowUpCandidateQuotes(): Promise<RepositoryResult<Quote[]>> {
+function normalizeFollowUpLimit(value?: number) {
+  const numeric = Number.isFinite(value) ? Number(value) : FOLLOW_UP_PAGE_SIZE;
+  const bounded = Math.min(Math.max(numeric, FOLLOW_UP_PAGE_SIZE), FOLLOW_UP_MAX_LIMIT);
+  return Math.ceil(bounded / FOLLOW_UP_PAGE_SIZE) * FOLLOW_UP_PAGE_SIZE;
+}
+
+async function getRecentFollowUpCandidateQuotes(candidateLimit: number): Promise<RepositoryResult<Quote[]>> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) return listQuotes({ includeDeleted: false });
   const db = supabase;
@@ -159,25 +178,25 @@ async function getRecentFollowUpCandidateQuotes(): Promise<RepositoryResult<Quot
   const recentRowsResult = await baseFollowUpQuoteQuery(todayIso)
     .gte("created_at", cutoffIso)
     .order("created_at", { ascending: false })
-    .limit(FOLLOW_UP_CANDIDATE_LIMIT);
+    .limit(candidateLimit);
 
   if (recentRowsResult.error) return fallback([], recentRowsResult.error);
   for (const row of rowsFromSupabase(recentRowsResult.data)) rowsById.set(String(row.id), row);
 
-  const eventQuoteIds = recentEventQuoteIdsResult.data.filter((id) => !rowsById.has(id)).slice(0, FOLLOW_UP_CANDIDATE_LIMIT);
+  const eventQuoteIds = recentEventQuoteIdsResult.data.filter((id) => !rowsById.has(id)).slice(0, candidateLimit);
   for (const chunk of chunkArray(eventQuoteIds, 100)) {
     if (!chunk.length) continue;
     const eventRowsResult = await baseFollowUpQuoteQuery(todayIso)
       .in("id", chunk)
       .order("created_at", { ascending: false })
-      .limit(FOLLOW_UP_CANDIDATE_LIMIT);
+      .limit(candidateLimit);
     if (eventRowsResult.error) return fallback([], eventRowsResult.error);
     for (const row of rowsFromSupabase(eventRowsResult.data)) rowsById.set(String(row.id), row);
   }
 
   const rows = Array.from(rowsById.values())
     .sort((a, b) => new Date(String(b.created_at ?? "")).getTime() - new Date(String(a.created_at ?? "")).getTime())
-    .slice(0, FOLLOW_UP_CANDIDATE_LIMIT);
+    .slice(0, candidateLimit);
   const quoteIds = rows.map((row) => String(row.id));
   const confirmedQuoteIds = await getConfirmedFollowUpQuoteIds(quoteIds);
   const activeRows = rows.filter((row) => !confirmedQuoteIds.has(String(row.id)));
