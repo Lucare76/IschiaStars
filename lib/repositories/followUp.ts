@@ -1,8 +1,11 @@
 import { getFollowUpEmailStatusByQuoteId, type FollowUpEmailStatus } from "@/lib/repositories/emailLogs";
 import { getQuoteEventsForQuoteIds, trackableEvents } from "@/lib/repositories/quoteEvents";
 import { listQuotes } from "@/lib/repositories/quotes";
-import { fallback, fromSupabase, getEffectiveHotelOptions, RepositoryResult } from "@/lib/repositories/shared";
+import { listHotels } from "@/lib/repositories/hotels";
+import { fetchHotelOptionsForQuotes } from "@/lib/repositories/quoteHotelOptions";
+import { fallback, fromSupabase, getEffectiveHotelOptions, mapQuote, RepositoryResult } from "@/lib/repositories/shared";
 import { followUpCustomerKey, followUpStage, followUpStageLabel, FollowUpStage, hasReliableQuoteTracking, isFollowUpStageDue } from "@/lib/follow-up-policy";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { absolutePublicQuoteUrl, absoluteShortPublicQuoteUrl, formatCurrency } from "@/lib/utils";
 import type { Quote, QuoteEvent } from "@/lib/types";
 
@@ -66,9 +69,58 @@ export type FollowUpHotelClick = {
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const FOLLOW_UP_LOOKBACK_DAYS = 7;
+const FOLLOW_UP_CANDIDATE_LIMIT = 60;
+const FOLLOW_UP_RESULT_LIMIT = 30;
+
+const CUSTOMER_SIGNAL_EVENT_TYPES: QuoteEvent["eventType"][] = [
+  "quote_opened",
+  "email_link_clicked",
+  "whatsapp_clicked",
+  "hotel_link_clicked",
+  "details_opened",
+  "confirm_clicked"
+];
+
+const FOLLOW_UP_QUOTE_SELECT = [
+  "id",
+  "code",
+  "public_token",
+  "public_short_code",
+  "quote_request_id",
+  "status",
+  "client_first_name",
+  "client_last_name",
+  "client_email",
+  "client_phone",
+  "hotel_requested",
+  "hotel_id",
+  "alternative_hotel_id",
+  "is_alternative_offer",
+  "check_in",
+  "check_out",
+  "adults",
+  "rooms",
+  "treatment",
+  "total_price",
+  "deposit_amount",
+  "valid_until",
+  "included_services",
+  "transport_offers",
+  "payment_policy",
+  "cancellation_policy",
+  "internal_notes",
+  "public_notes",
+  "created_at",
+  "excluded_from_stats",
+  "deleted_at",
+  "metadata",
+  "confirmed_at"
+].join(",");
 
 export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuote[]>> {
-  const quotesResult = await listQuotes({ includeDeleted: false });
+  const quotesResult = await getRecentFollowUpCandidateQuotes();
+  const now = Date.now();
   const quoteIds = quotesResult.data.map((quote) => quote.id);
   const [eventsResult, emailStatusByQuote] = await Promise.all([
     getQuoteEventsForQuoteIds(quoteIds),
@@ -83,12 +135,121 @@ export async function getFollowUpQuotes(): Promise<RepositoryResult<FollowUpQuot
   const mapped = quotesResult.data.map((quote) => toFollowUpQuote(quote, eventsResult.data[quote.id] ?? [], confirmedCustomerKeys, emailStatusByQuote[quote.id]));
   const data = mapped
     .filter((quote): quote is FollowUpQuote => Boolean(quote))
-    .sort(compareFollowUpQuotes);
+    .filter((quote) => isRecentOperationalFollowUp(quote, now))
+    .sort(compareFollowUpQuotes)
+    .slice(0, FOLLOW_UP_RESULT_LIMIT);
 
   const error = [quotesResult.error, eventsResult.error].filter(Boolean).join(" | ") || undefined;
   return quotesResult.source === "supabase" && eventsResult.source === "supabase"
     ? fromSupabase(data)
     : fallback(data, error);
+}
+
+async function getRecentFollowUpCandidateQuotes(): Promise<RepositoryResult<Quote[]>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return listQuotes({ includeDeleted: false });
+  const db = supabase;
+
+  const cutoffIso = new Date(Date.now() - FOLLOW_UP_LOOKBACK_DAYS * DAY_MS).toISOString();
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const recentEventQuoteIdsResult = await getRecentCustomerEventQuoteIds(cutoffIso);
+  if (recentEventQuoteIdsResult.error) return fallback([], recentEventQuoteIdsResult.error);
+
+  const rowsById = new Map<string, Record<string, unknown>>();
+  const recentRowsResult = await baseFollowUpQuoteQuery(todayIso)
+    .gte("created_at", cutoffIso)
+    .order("created_at", { ascending: false })
+    .limit(FOLLOW_UP_CANDIDATE_LIMIT);
+
+  if (recentRowsResult.error) return fallback([], recentRowsResult.error);
+  for (const row of rowsFromSupabase(recentRowsResult.data)) rowsById.set(String(row.id), row);
+
+  const eventQuoteIds = recentEventQuoteIdsResult.data.filter((id) => !rowsById.has(id)).slice(0, FOLLOW_UP_CANDIDATE_LIMIT);
+  for (const chunk of chunkArray(eventQuoteIds, 100)) {
+    if (!chunk.length) continue;
+    const eventRowsResult = await baseFollowUpQuoteQuery(todayIso)
+      .in("id", chunk)
+      .order("created_at", { ascending: false })
+      .limit(FOLLOW_UP_CANDIDATE_LIMIT);
+    if (eventRowsResult.error) return fallback([], eventRowsResult.error);
+    for (const row of rowsFromSupabase(eventRowsResult.data)) rowsById.set(String(row.id), row);
+  }
+
+  const rows = Array.from(rowsById.values())
+    .sort((a, b) => new Date(String(b.created_at ?? "")).getTime() - new Date(String(a.created_at ?? "")).getTime())
+    .slice(0, FOLLOW_UP_CANDIDATE_LIMIT);
+  const quoteIds = rows.map((row) => String(row.id));
+  const confirmedQuoteIds = await getConfirmedFollowUpQuoteIds(quoteIds);
+  const activeRows = rows.filter((row) => !confirmedQuoteIds.has(String(row.id)));
+  const activeQuoteIds = activeRows.map((row) => String(row.id));
+  const [hotelResult, hotelOptionsMap] = await Promise.all([
+    listHotels(),
+    fetchHotelOptionsForQuotes(activeQuoteIds)
+  ]);
+
+  return fromSupabase(activeRows.map((row) => mapQuote(row, hotelResult.data, [], hotelOptionsMap[String(row.id)] ?? [])));
+
+  function baseFollowUpQuoteQuery(minCheckIn: string) {
+    return db
+      .from("quotes")
+      .select(FOLLOW_UP_QUOTE_SELECT)
+      .eq("status", "preventivo_inviato")
+      .is("deleted_at", null)
+      .eq("excluded_from_stats", false)
+      .gte("check_in", minCheckIn);
+  }
+}
+
+async function getRecentCustomerEventQuoteIds(cutoffIso: string): Promise<RepositoryResult<string[]>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fromSupabase([]);
+
+  const { data, error } = await supabase
+    .from("quote_events")
+    .select("quote_id,created_at,event_type,metadata")
+    .in("event_type", CUSTOMER_SIGNAL_EVENT_TYPES)
+    .gte("created_at", cutoffIso)
+    .order("created_at", { ascending: false })
+    .limit(300);
+
+  if (error) return fallback([], error);
+  const ids = Array.from(new Set((data ?? []).map((row) => String(row.quote_id)).filter(Boolean)));
+  return fromSupabase(ids);
+}
+
+async function getConfirmedFollowUpQuoteIds(quoteIds: string[]) {
+  const supabase = createSupabaseAdminClient();
+  const confirmed = new Set<string>();
+  if (!supabase || !quoteIds.length) return confirmed;
+
+  for (const chunk of chunkArray(quoteIds, 100)) {
+    const { data } = await supabase
+      .from("quote_confirmations")
+      .select("quote_id")
+      .in("quote_id", chunk);
+    for (const row of data ?? []) confirmed.add(String(row.quote_id));
+  }
+  return confirmed;
+}
+
+function isRecentOperationalFollowUp(quote: FollowUpQuote, now = Date.now()) {
+  const cutoff = now - FOLLOW_UP_LOOKBACK_DAYS * DAY_MS;
+  const sentTimestamp = new Date(quote.sentAt).getTime();
+  const lastEventTimestamp = quote.lastEventAt ? new Date(quote.lastEventAt).getTime() : 0;
+  if (lastEventTimestamp >= cutoff) return true;
+  return quote.openedCount === 0 && Number.isFinite(sentTimestamp) && sentTimestamp >= cutoff;
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+function rowsFromSupabase(data: unknown): Record<string, unknown>[] {
+  return Array.isArray(data) ? data as Record<string, unknown>[] : [];
 }
 
 function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKeys: Set<string>, emailStatus?: FollowUpEmailStatus): FollowUpQuote | null {
@@ -123,6 +284,21 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
   const publicUrl = absolutePublicQuoteUrl(quote);
   const whatsappPublicUrl = absoluteShortPublicQuoteUrl(quote);
   const emailLinkClicks = customerEvents.filter((event) => event.eventType === "email_link_clicked");
+  const lastCustomerEvent = latestEvent([
+    ...opened,
+    ...whatsappClicks,
+    ...hotelLinkClicks,
+    ...detailsOpened,
+    ...confirmClicks,
+    ...emailLinkClicks
+  ]);
+  const lastCustomerActivityAt = lastCustomerEvent?.createdAt ?? sentAt;
+  const snoozeExpired = Boolean(snoozedUntil && new Date(snoozedUntil).getTime() <= Date.now());
+
+  if (isClosed) return null;
+  if (snoozedUntil && new Date(snoozedUntil).getTime() > Date.now()) return null;
+  if (lastFollowUp && new Date(lastFollowUp.createdAt).getTime() >= new Date(lastCustomerActivityAt).getTime() && !snoozeExpired) return null;
+
   const emailInfo = resolveEmailInfo(emailStatus, opened.length > 0);
   const segment = isClosed ? "chiuso" : !isTrackingReliable && opened.length === 0 ? "storico_non_affidabile" : resolveSegment({
     sentAt,

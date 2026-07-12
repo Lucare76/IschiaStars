@@ -120,7 +120,7 @@ export async function getQuoteEventsForQuoteIds(quoteIds: string[]): Promise<Rep
     for (let from = 0; ; from += pageSize) {
       const { data, error } = await supabase
         .from("quote_events")
-        .select("*")
+        .select("id,quote_id,event_type,created_at,user_agent,metadata")
         .in("quote_id", quoteIdsChunk)
         .order("created_at", { ascending: true })
         .order("id", { ascending: true })
