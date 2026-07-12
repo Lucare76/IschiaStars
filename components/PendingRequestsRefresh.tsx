@@ -8,8 +8,21 @@ import { useBackofficePolling } from "@/hooks/useBackofficePolling";
 type ImportState =
   | { type: "idle" }
   | { type: "loading" }
-  | { type: "done"; imported: number; skipped: number; needsReview: number }
+  | { type: "done"; message: string }
   | { type: "error"; message: string };
+
+type PollEmailResponse = {
+  ok?: boolean;
+  imported?: number;
+  skipped?: number;
+  duplicates?: number;
+  ignored?: number;
+  needsReview?: number;
+  errors?: string[];
+  message?: string;
+  cooldownRemainingSeconds?: number;
+  error?: string;
+};
 
 export function PendingRequestsRefresh() {
   const router = useRouter();
@@ -29,19 +42,14 @@ export function PendingRequestsRefresh() {
   const handleImport = useCallback(async () => {
     setImportState({ type: "loading" });
     try {
-      const res = await adminApiFetch("/api/quote-requests/import-email", { method: "POST" });
-      const data = await res.json();
+      const res = await adminApiFetch("/api/admin/poll-email-now", { method: "POST" });
+      const data = await res.json() as PollEmailResponse;
       if (!res.ok || !data.ok) {
-        const errorMsg = data.error ?? data.errors?.[0] ?? "Errore durante l'importazione";
+        const errorMsg = data.message ?? data.error ?? data.errors?.[0] ?? "Errore durante l'importazione";
         setImportState({ type: "error", message: errorMsg });
       } else {
-        setImportState({
-          type: "done",
-          imported: data.imported ?? 0,
-          skipped: data.skipped ?? 0,
-          needsReview: data.needsReview ?? 0,
-        });
-        if ((data.imported ?? 0) > 0) refresh();
+        setImportState({ type: "done", message: formatImportMessage(data) });
+        refresh();
       }
     } catch {
       setImportState({ type: "error", message: "Errore di rete. Riprova." });
@@ -78,12 +86,7 @@ export function PendingRequestsRefresh() {
           }`}
         >
           {importState.type === "loading" && "Connessione alla casella email in corso…"}
-          {importState.type === "done" &&
-            importState.imported > 0 &&
-            `${importState.imported} nuove richieste importate${importState.needsReview > 0 ? `, ${importState.needsReview} da revisionare` : ""}.`}
-          {importState.type === "done" &&
-            importState.imported === 0 &&
-            `Nessuna nuova richiesta.${importState.skipped > 0 ? ` ${importState.skipped} email già elaborate.` : ""}`}
+          {importState.type === "done" && importState.message}
           {importState.type === "error" && importState.message}
         </div>
       )}
@@ -93,4 +96,25 @@ export function PendingRequestsRefresh() {
 
 function formatTime(value: Date) {
   return value.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatImportMessage(data: PollEmailResponse) {
+  const imported = data.imported ?? 0;
+  const duplicates = data.duplicates ?? 0;
+  const skipped = data.skipped ?? 0;
+  const ignored = data.ignored ?? 0;
+  const needsReview = data.needsReview ?? 0;
+  const errors = data.errors?.length ?? 0;
+  const parts = [
+    `${imported} importate`,
+    `${duplicates} duplicate`,
+    `${skipped} saltate`,
+    `${ignored} ignorate`,
+    `${needsReview} da revisionare`
+  ];
+  const suffix = errors > 0 ? ` ${errors} errori.` : "";
+  const reviewNote = needsReview > 0
+    ? " Alcune email richiedono revisione e non compaiono nella lista Da evadere."
+    : "";
+  return `Controllo completato: ${parts.join(", ")}.${suffix}${reviewNote}`;
 }

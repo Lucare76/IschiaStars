@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       duplicates: result.duplicates,
       ignored: result.ignored,
       needsReview: result.needsReview,
+      errors: result.errors,
       message: result.message,
       durationMs: result.durationMs,
       ...(result.cooldownRemainingSeconds ? { cooldownRemainingSeconds: result.cooldownRemainingSeconds } : {})
