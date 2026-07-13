@@ -1160,6 +1160,13 @@ export function buildDepositBalanceSummaryEmail(quote: Quote): DepositBalanceSum
   const balanceDueLabel = formatDate(balanceSchedule.dueDate);
   const stayLabel = `${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`;
   const logoUrl = `${siteBaseUrl()}/ischiastars-logo.png`;
+  const additionalServices = getConfirmationAdditionalServices(confirmation.metadata);
+  const additionalServicesHtml = additionalServices.length
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 20px;">
+        <tr><td style="padding:14px 16px;color:#1B3A5C;font-weight:bold;font-size:14px;">Servizi aggiuntivi</td></tr>
+        ${additionalServices.map((service) => `<tr><td style="padding:0 16px 12px;color:#374151;font-size:14px;line-height:1.5;">${escapeHtml(formatConfirmationAdditionalService(service))}</td></tr>`).join("")}
+      </table>`
+    : "";
   const subject = `Caparra ricevuta e riepilogo saldo - ${quote.code}`;
 
   const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>${escapeHtml(subject)}</title><style>@media print{.no-print{display:none!important}body{background:#ffffff!important;padding:0!important}.email-container{box-shadow:none!important}}</style></head><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
@@ -1184,6 +1191,7 @@ export function buildDepositBalanceSummaryEmail(quote: Quote): DepositBalanceSum
             <tr><td style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Saldo restante</td><td align="right" style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#1B3A5C;font-weight:bold;">${balanceLabel}</td></tr>
             <tr><td style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Da versare entro</td><td align="right" style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#1B3A5C;font-weight:bold;">${balanceDueLabel}</td></tr>
           </table>
+          ${additionalServicesHtml}
           <p style="margin:0 0 14px;">Per qualsiasi dubbio puoi rispondere a questa email o scriverci su WhatsApp.</p>
           <p style="margin:0;">IschiaStars</p>
         </td></tr>
@@ -1201,6 +1209,7 @@ export function buildDepositBalanceSummaryEmail(quote: Quote): DepositBalanceSum
     `Caparra ricevuta: ${depositLabel}`,
     `Saldo restante: ${balanceLabel}`,
     `Da versare entro: ${balanceDueLabel}`,
+    ...(additionalServices.length ? ["", "Servizi aggiuntivi:", ...additionalServices.map((service) => `- ${formatConfirmationAdditionalService(service)}`)] : []),
     "",
     "Per qualsiasi dubbio puoi rispondere a questa email o scriverci su WhatsApp.",
     "",
