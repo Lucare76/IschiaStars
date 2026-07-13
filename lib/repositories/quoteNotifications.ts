@@ -43,6 +43,10 @@ export function deriveQuoteNotifications(
 
   return events
     .filter(isCustomerActivityEvent)
+    // Una semplice apertura pagina può essere un reload, una tab ripristinata
+    // o un link aperto da un dispositivo non identificabile con certezza.
+    // La campanella deve segnalare solo attività intenzionali del cliente.
+    .filter((event) => event.eventType !== "quote_opened")
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
     .map((event) => {
       const quote = quoteById.get(event.quoteId);
