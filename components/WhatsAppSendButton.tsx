@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Quote } from "@/lib/types";
 import { trackQuoteEvent } from "@/lib/client-tracking";
-import { adminApiFetch } from "@/lib/admin-api-client";
+import { adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { normalizeItalianPhone, whatsappQuoteMessage } from "@/lib/utils";
 
 export function WhatsAppSendButton({ quote, label = "Invia su WhatsApp" }: { quote: Quote; label?: string }) {
+  const router = useRouter();
   const chatUrl = `https://wa.me/${normalizeItalianPhone(quote.customerPhone)}`;
   const [copied, setCopied] = useState(false);
 
@@ -24,10 +26,15 @@ export function WhatsAppSendButton({ quote, label = "Invia su WhatsApp" }: { quo
     window.open(chatUrl, "_blank", "noopener,noreferrer");
 
     if (quote.status === "in_lavorazione") {
-      await adminApiFetch(`/api/quotes/${quote.id}`, {
+      const response = await adminApiFetch(`/api/quotes/${quote.id}`, {
         method: "POST",
         body: JSON.stringify({ action: "mark_sent" })
       }).catch(() => null);
+      if (response?.ok) {
+        const result = await readAdminApiJson<{ ok?: boolean; data?: Quote }>(response);
+        window.dispatchEvent(new CustomEvent("ischiastars:quote-updated", { detail: { quote: result?.data ?? null, quoteId: quote.id } }));
+        router.refresh();
+      }
     }
   }
 

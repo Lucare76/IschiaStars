@@ -66,6 +66,20 @@ export function QuoteFilters({
     return () => { cancelled.value = true; };
   }, [fetchQuotes]);
 
+  useEffect(() => {
+    const handleQuoteUpdated = (event: Event) => {
+      const updatedQuote = (event as CustomEvent<{ quote?: Quote | null; quoteId?: string }>).detail?.quote;
+      if (updatedQuote?.id) {
+        setQuotes((current) => current.map((quote) => (quote.id === updatedQuote.id ? updatedQuote : quote)));
+      }
+      void fetchQuotes();
+      router.refresh();
+    };
+
+    window.addEventListener("ischiastars:quote-updated", handleQuoteUpdated);
+    return () => window.removeEventListener("ischiastars:quote-updated", handleQuoteUpdated);
+  }, [fetchQuotes, router]);
+
   useBackofficePolling(30_000);
 
   const handleRefresh = useCallback(() => {

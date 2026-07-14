@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdminApiKey } from "@/lib/admin-api-guard";
 import { createQuoteFromRequest, listQuotes } from "@/lib/repositories/quotes";
 import { markQuoteRequestProcessed } from "@/lib/repositories/quoteRequests";
@@ -83,7 +84,10 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (result.data) return NextResponse.json({ ok: true, source: result.source, data: result.data });
+  if (result.data) {
+    revalidateQuoteAdminViews();
+    return NextResponse.json({ ok: true, source: result.source, data: result.data });
+  }
 
   const error = result.error ?? "Sistema non configurato per il salvataggio. Verifica le variabili ambiente.";
   return NextResponse.json({ ok: false, source: result.source, data: result.data, error }, { status: 503 });
@@ -91,4 +95,11 @@ export async function POST(request: NextRequest) {
 
 function isUuid(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function revalidateQuoteAdminViews() {
+  revalidatePath("/admin");
+  revalidatePath("/admin/preventivi");
+  revalidatePath("/admin/preventivi-da-evadere");
+  revalidatePath("/admin/conferme");
 }

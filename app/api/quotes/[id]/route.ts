@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 import { duplicateQuote, excludeQuoteFromStats, getQuoteById, restoreQuote, softDeleteQuote, updateQuote, updateQuoteStatus } from "@/lib/repositories/quotes";
 import { validateQuoteHotelOptions } from "@/lib/quote-validation";
@@ -127,10 +128,21 @@ function quoteMutationResponse<T extends { id?: string }>(result: { data: T | nu
     }, { status: 503 });
   }
 
+  if (result.data) {
+    revalidateQuoteAdminViews();
+  }
+
   return NextResponse.json({
     ok: Boolean(result.data),
     source: result.source,
     data: result.data,
     error: result.error
   }, { status: result.data ? 200 : 400 });
+}
+
+function revalidateQuoteAdminViews() {
+  revalidatePath("/admin");
+  revalidatePath("/admin/preventivi");
+  revalidatePath("/admin/preventivi-da-evadere");
+  revalidatePath("/admin/conferme");
 }
