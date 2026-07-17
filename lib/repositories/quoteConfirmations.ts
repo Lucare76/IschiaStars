@@ -57,7 +57,7 @@ export async function createQuoteConfirmation(quoteId: string, input: QuoteConfi
   const { error } = await supabase.rpc("confirm_quote", {
     p_quote_id: quoteId,
     p_option_id: input.selectedHotelOptionId ?? null,
-    p_treatment_key: input.selectedTreatmentKey ?? null,
+    p_treatment_key: resolveRpcTreatmentKey(input),
     p_confirmation_data: {
       first_name: input.firstName,
       last_name: input.lastName,
@@ -95,6 +95,23 @@ export async function createQuoteConfirmation(quoteId: string, input: QuoteConfi
   }
 
   return fromSupabase({ confirmedAt: now });
+}
+
+function resolveRpcTreatmentKey(input: QuoteConfirmationInput) {
+  if (input.selectedTreatmentKey !== "room_composition") return input.selectedTreatmentKey ?? null;
+
+  const selectedRooms = input.metadata?.selected_rooms;
+  if (!Array.isArray(selectedRooms)) return null;
+
+  const firstTreatmentKey = selectedRooms
+    .map((room) => {
+      if (!room || typeof room !== "object") return null;
+      const treatmentKey = (room as { treatmentKey?: unknown }).treatmentKey;
+      return typeof treatmentKey === "string" && treatmentKey ? treatmentKey : null;
+    })
+    .find(Boolean);
+
+  return firstTreatmentKey ?? null;
 }
 
 export async function getQuoteConfirmation(quoteId: string): Promise<RepositoryResult<Record<string, unknown> | null>> {
