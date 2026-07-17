@@ -24,7 +24,7 @@ export function StatsCards({ stats }: { stats: DashboardStats }) {
     {
       label: "Confermati",
       value: stats.confirmedQuotes,
-      href: "/admin/preventivi?filter=confermati",
+      href: "/admin/conferme",
       tone: stats.confirmedQuotes > 0 ? "green" : "navy"
     },
     {
