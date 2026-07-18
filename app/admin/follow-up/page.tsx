@@ -113,6 +113,7 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
             className="rounded-full bg-ischia-navy px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-ischia-blue"
             href={followUpHref(activeFilter, Math.min(activeLimit + FOLLOW_UP_PAGE_SIZE, FOLLOW_UP_MAX_LIMIT))}
             prefetch={false}
+            scroll={false}
           >
             Carica altri
           </Link>
@@ -281,8 +282,7 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
 
   return Array.from(map.entries()).map(([key, items]) => {
     const sorted = [...items].sort((a, b) =>
-      b.engagementScore - a.engagementScore ||
-      priorityWeight(b.priority) - priorityWeight(a.priority) ||
+      new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime() ||
       new Date(b.lastEventAt ?? b.sentAt).getTime() - new Date(a.lastEventAt ?? a.sentAt).getTime()
     );
     const primary = sorted[0];
@@ -333,8 +333,7 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
       emailInfo
     };
   }).sort((a, b) =>
-    b.engagementScore - a.engagementScore ||
-    priorityWeight(b.priority) - priorityWeight(a.priority) ||
+    new Date(b.primary.sentAt).getTime() - new Date(a.primary.sentAt).getTime() ||
     new Date(b.lastEventAt ?? b.primary.sentAt).getTime() - new Date(a.lastEventAt ?? a.primary.sentAt).getTime()
   );
 }

@@ -79,15 +79,6 @@ type FollowUpQuotesData = {
   limit: number;
 };
 
-const CUSTOMER_SIGNAL_EVENT_TYPES: QuoteEvent["eventType"][] = [
-  "quote_opened",
-  "email_link_clicked",
-  "whatsapp_clicked",
-  "hotel_link_clicked",
-  "details_opened",
-  "confirm_clicked"
-];
-
 const FOLLOW_UP_QUOTE_SELECT = [
   "id",
   "code",
@@ -171,30 +162,14 @@ async function getRecentFollowUpCandidateQuotes(candidateLimit: number): Promise
 
   const cutoffIso = new Date(Date.now() - FOLLOW_UP_LOOKBACK_DAYS * DAY_MS).toISOString();
   const todayIso = new Date().toISOString().slice(0, 10);
-  const recentEventQuoteIdsResult = await getRecentCustomerEventQuoteIds(cutoffIso);
-  if (recentEventQuoteIdsResult.error) return fallback([], recentEventQuoteIdsResult.error);
-
-  const rowsById = new Map<string, Record<string, unknown>>();
   const recentRowsResult = await baseFollowUpQuoteQuery(todayIso)
     .gte("created_at", cutoffIso)
     .order("created_at", { ascending: false })
     .limit(candidateLimit);
 
   if (recentRowsResult.error) return fallback([], recentRowsResult.error);
-  for (const row of rowsFromSupabase(recentRowsResult.data)) rowsById.set(String(row.id), row);
 
-  const eventQuoteIds = recentEventQuoteIdsResult.data.filter((id) => !rowsById.has(id)).slice(0, candidateLimit);
-  for (const chunk of chunkArray(eventQuoteIds, 100)) {
-    if (!chunk.length) continue;
-    const eventRowsResult = await baseFollowUpQuoteQuery(todayIso)
-      .in("id", chunk)
-      .order("created_at", { ascending: false })
-      .limit(candidateLimit);
-    if (eventRowsResult.error) return fallback([], eventRowsResult.error);
-    for (const row of rowsFromSupabase(eventRowsResult.data)) rowsById.set(String(row.id), row);
-  }
-
-  const rows = Array.from(rowsById.values())
+  const rows = rowsFromSupabase(recentRowsResult.data)
     .sort((a, b) => new Date(String(b.created_at ?? "")).getTime() - new Date(String(a.created_at ?? "")).getTime())
     .slice(0, candidateLimit);
   const quoteIds = rows.map((row) => String(row.id));
@@ -219,23 +194,6 @@ async function getRecentFollowUpCandidateQuotes(candidateLimit: number): Promise
   }
 }
 
-async function getRecentCustomerEventQuoteIds(cutoffIso: string): Promise<RepositoryResult<string[]>> {
-  const supabase = createSupabaseAdminClient();
-  if (!supabase) return fromSupabase([]);
-
-  const { data, error } = await supabase
-    .from("quote_events")
-    .select("quote_id,created_at,event_type,metadata")
-    .in("event_type", CUSTOMER_SIGNAL_EVENT_TYPES)
-    .gte("created_at", cutoffIso)
-    .order("created_at", { ascending: false })
-    .limit(300);
-
-  if (error) return fallback([], error);
-  const ids = Array.from(new Set((data ?? []).map((row) => String(row.quote_id)).filter(Boolean)));
-  return fromSupabase(ids);
-}
-
 async function getConfirmedFollowUpQuoteIds(quoteIds: string[]) {
   const supabase = createSupabaseAdminClient();
   const confirmed = new Set<string>();
@@ -254,9 +212,7 @@ async function getConfirmedFollowUpQuoteIds(quoteIds: string[]) {
 function isRecentOperationalFollowUp(quote: FollowUpQuote, now = Date.now()) {
   const cutoff = now - FOLLOW_UP_LOOKBACK_DAYS * DAY_MS;
   const sentTimestamp = new Date(quote.sentAt).getTime();
-  const lastEventTimestamp = quote.lastEventAt ? new Date(quote.lastEventAt).getTime() : 0;
-  if (lastEventTimestamp >= cutoff) return true;
-  return quote.openedCount === 0 && Number.isFinite(sentTimestamp) && sentTimestamp >= cutoff;
+  return Number.isFinite(sentTimestamp) && sentTimestamp >= cutoff;
 }
 
 function chunkArray<T>(items: T[], size: number): T[][] {
@@ -578,8 +534,7 @@ function scoreEngagement({
 }
 
 function compareFollowUpQuotes(a: FollowUpQuote, b: FollowUpQuote) {
-  return b.engagementScore - a.engagementScore ||
-    priorityWeight(b.priority) - priorityWeight(a.priority) ||
+  return new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime() ||
     new Date(b.lastEventAt ?? b.sentAt).getTime() - new Date(a.lastEventAt ?? a.sentAt).getTime();
 }
 
