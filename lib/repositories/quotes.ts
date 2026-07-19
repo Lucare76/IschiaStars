@@ -372,15 +372,8 @@ async function nextQuoteCode(supabase?: ReturnType<typeof createSupabaseAdminCli
 
   if (isLabTest) {
     if (supabase) {
-      const { data } = await supabase
-        .from("quotes")
-        .select("code")
-        .like("code", `LAB-${year}-%`)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const match = (data as { code?: string } | null)?.code?.match(/^LAB-\d{4}-(\d+)$/);
-      return `LAB-${year}-${String((match ? Number(match[1]) : 0) + 1).padStart(3, "0")}`;
+      const prefix = `LAB-${year}-`;
+      return `${prefix}${String(await nextQuoteCodeSequence(supabase, prefix)).padStart(3, "0")}`;
     }
     const max = allDemoQuotes().reduce((current, q) => {
       const match = q.code.match(/^LAB-\d{4}-(\d+)$/);
@@ -390,21 +383,36 @@ async function nextQuoteCode(supabase?: ReturnType<typeof createSupabaseAdminCli
   }
 
   if (supabase) {
-    const { data } = await supabase
-      .from("quotes")
-      .select("code")
-      .like("code", `IS-${year}-%`)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const match = (data as { code?: string } | null)?.code?.match(/^IS-\d{4}-(\d+)$/);
-    return `IS-${year}-${String((match ? Number(match[1]) : 0) + 1).padStart(3, "0")}`;
+    const prefix = `IS-${year}-`;
+    return `${prefix}${String(await nextQuoteCodeSequence(supabase, prefix)).padStart(3, "0")}`;
   }
   const max = allDemoQuotes().reduce((current, q) => {
     const match = q.code.match(/^IS-\d{4}-(\d+)$/);
     return match ? Math.max(current, Number(match[1])) : current;
   }, 0);
   return `IS-${year}-${String(max + 1).padStart(3, "0")}`;
+}
+
+async function nextQuoteCodeSequence(supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, prefix: string) {
+  let maxSequence = 0;
+  for (let from = 0; ; from += QUOTES_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("quotes")
+      .select("code")
+      .like("code", `${prefix}%`)
+      .range(from, from + QUOTES_PAGE_SIZE - 1);
+
+    if (error) break;
+
+    const page = (data ?? []) as { code?: string }[];
+    for (const row of page) {
+      const code = row.code ?? "";
+      const sequence = Number(code.slice(prefix.length));
+      if (Number.isFinite(sequence)) maxSequence = Math.max(maxSequence, sequence);
+    }
+    if (page.length < QUOTES_PAGE_SIZE) break;
+  }
+  return maxSequence + 1;
 }
 
 function secureToken() {
