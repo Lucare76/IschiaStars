@@ -226,11 +226,20 @@ export async function getQuoteById(id: string): Promise<RepositoryResult<Quote |
   if (!data) return fromSupabase(null);
 
   const hotelResult = await listHotels();
-  const [childRowsResult, hotelOptionsMap, confirmationsMap] = await Promise.all([
-    supabase.from("quote_children").select("*").eq("quote_id", id),
-    fetchHotelOptionsForQuotes([id]),
-    fetchConfirmationsForQuotes([id])
-  ]);
+  let childRowsResult: { data: unknown[] | null } = { data: [] };
+  let hotelOptionsMap: Record<string, QuoteHotelOption[]> = {};
+  let confirmationsMap: Record<string, Record<string, unknown>> = {};
+  try {
+    [childRowsResult, hotelOptionsMap, confirmationsMap] = await Promise.all([
+      supabase.from("quote_children").select("*").eq("quote_id", id),
+      fetchHotelOptionsForQuotes([id]),
+      fetchConfirmationsForQuotes([id])
+    ]);
+  } catch (relatedDataError) {
+    // Il preventivo principale e' gia' stato letto correttamente: non farlo sparire
+    // (es. subito dopo una creazione/duplicazione) per un errore transitorio su dati accessori.
+    console.error(`[getQuoteById] related data fetch failed for ${id}, returning quote with partial data`, relatedDataError);
+  }
 
   const hotelOpts = hotelOptionsMap[id] ?? [];
   const allHotels = hotelResult.data.length ? hotelResult.data : hotels;
