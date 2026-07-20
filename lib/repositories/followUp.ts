@@ -426,22 +426,22 @@ function resolveEmailInfo(emailStatus: FollowUpEmailStatus | undefined, hasPageO
   if (!emailStatus) return { delivered: false, opened: false, clicked: false, problem: false, label: "", actionHint: "" };
 
   if (emailStatus.problem) {
-    return { delivered: false, opened: false, clicked: false, problem: true, label: "Email non consegnata", actionHint: "Contatta via WhatsApp" };
+    return { delivered: false, opened: false, clicked: false, problem: true, label: "Email preventivo non consegnata", actionHint: "Contatta via WhatsApp" };
   }
   if (emailStatus.clicked) {
-    return { delivered: true, opened: true, clicked: true, problem: false, label: "Link email cliccato", actionHint: "Richiamare" };
+    return { delivered: true, opened: true, clicked: true, problem: false, label: "Link preventivo cliccato da email", actionHint: "Richiamare" };
   }
   if (emailStatus.opened && !hasPageOpening) {
-    return { delivered: true, opened: true, clicked: false, problem: false, label: "Email aperta, preventivo non visto", actionHint: "Invia WhatsApp con link" };
+    return { delivered: true, opened: true, clicked: false, problem: false, label: "Email preventivo aperta, pagina non vista", actionHint: "Invia WhatsApp con link" };
   }
   if (emailStatus.opened) {
-    return { delivered: true, opened: true, clicked: false, problem: false, label: "Email aperta", actionHint: "" };
+    return { delivered: true, opened: true, clicked: false, problem: false, label: "Email preventivo aperta", actionHint: "" };
   }
   if (emailStatus.delivered && !hasPageOpening) {
-    return { delivered: true, opened: false, clicked: false, problem: false, label: "Email consegnata, non aperta", actionHint: "Follow-up soft" };
+    return { delivered: true, opened: false, clicked: false, problem: false, label: "Email preventivo consegnata, non aperta", actionHint: "Follow-up soft" };
   }
   if (emailStatus.delivered) {
-    return { delivered: true, opened: false, clicked: false, problem: false, label: "Email consegnata", actionHint: "" };
+    return { delivered: true, opened: false, clicked: false, problem: false, label: "Email preventivo consegnata", actionHint: "" };
   }
   return { delivered: false, opened: false, clicked: false, problem: false, label: "", actionHint: "" };
 }

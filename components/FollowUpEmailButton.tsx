@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 
 type FollowUpEmailButtonProps = {
@@ -9,6 +10,7 @@ type FollowUpEmailButtonProps = {
 };
 
 export function FollowUpEmailButton({ quoteId, clientEmail }: FollowUpEmailButtonProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
 
@@ -37,7 +39,8 @@ export function FollowUpEmailButton({ quoteId, clientEmail }: FollowUpEmailButto
       return;
     }
 
-    setMessage({ type: "ok", text: "Follow-up email inviato" });
+    setMessage({ type: "ok", text: "Follow-up email inviato. Aggiorno i log..." });
+    router.refresh();
   }
 
   return (

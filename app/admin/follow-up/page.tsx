@@ -193,7 +193,7 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
       <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 lg:grid-cols-4">
         <Info label="Punteggio interesse" value={String(group.engagementScore)} />
         <Info label="Ultimo follow-up" value={group.lastFollowUpAt ? formatDateTime(group.lastFollowUpAt) : "Non ancora registrato"} />
-        {group.emailInfo.label ? <Info label="Stato email" value={group.emailInfo.label} /> : null}
+        {group.emailInfo.label ? <Info label="Stato email preventivo" value={group.emailInfo.label} /> : null}
         {group.emailInfo.actionHint ? <Info label="Azione consigliata" value={group.emailInfo.actionHint} /> : null}
       </div>
       <div className="mt-4 grid gap-3 text-sm">
