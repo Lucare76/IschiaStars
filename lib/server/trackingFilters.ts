@@ -10,7 +10,7 @@ const BOT_USER_AGENT_PATTERN = [
 const BOT_USER_AGENT_REGEX = new RegExp(BOT_USER_AGENT_PATTERN, "i");
 
 export const CUSTOMER_ACTIVITY_EVENT_TYPES: QuoteEvent["eventType"][] = [
-  "quote_opened", "whatsapp_clicked", "confirm_clicked", "quote_confirmed",
+  "quote_opened", "whatsapp_clicked", "quote_confirmed",
   "print_clicked", "hotel_link_clicked", "details_opened", "compare_opened",
   "reveal_options_clicked", "hesitant_whatsapp_clicked", "reaction_interested",
   "reaction_too_expensive", "email_link_clicked"
