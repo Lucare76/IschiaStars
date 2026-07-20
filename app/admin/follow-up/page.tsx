@@ -164,7 +164,7 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
           <p className="mt-1 text-sm font-semibold text-ischia-ink/65">
             {group.quotes.length} {group.quotes.length === 1 ? "preventivo" : "preventivi"} · ultimo invio {formatDate(quote.sentAt)}
           </p>
-          <p className="mt-3 text-sm text-ischia-ink/75">
+          <p className="mt-3 break-all text-sm text-ischia-ink/75">
             {quote.clientPhone || "Telefono assente"} · {quote.clientEmail || "Email assente"}
           </p>
         </div>
@@ -182,7 +182,7 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 text-sm md:grid-cols-5">
+      <div className="mt-5 grid grid-cols-2 gap-3 text-sm md:grid-cols-5">
         <Info label="Ultimo evento" value={group.lastEventAt ? `${group.lastEventLabel} · ${formatDateTime(group.lastEventAt)}` : group.lastEventLabel} />
         <Info label="Visualizzazioni" value={String(group.totalOpenings)} />
         <Info label="Provenienza" value={quote.openingSources.length ? quote.openingSources.join(", ") : "Non visualizzato"} />
@@ -190,13 +190,13 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
         <Info label="Click hotel / PDF" value={`${group.totalHotelClicks} / ${group.totalPrints}`} />
       </div>
 
-      <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
         <Info label="Punteggio interesse" value={String(group.engagementScore)} />
         <Info label="Ultimo follow-up" value={group.lastFollowUpAt ? formatDateTime(group.lastFollowUpAt) : "Non ancora registrato"} />
         {group.emailInfo.label ? <Info label="Stato email preventivo" value={group.emailInfo.label} /> : null}
         {group.emailInfo.actionHint ? <Info label="Azione consigliata" value={group.emailInfo.actionHint} /> : null}
       </div>
-      <div className="mt-4 grid gap-3 text-sm">
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <Info label="Date soggiorno" value={group.staySummary} />
         <Info label="Hotel proposti" value={quote.hotelsSummary || "Non indicati"} />
         {group.hotelClicks.length ? <Info label="Hotel cliccati" value={summarizeHotelClicks(group.hotelClicks)} /> : null}

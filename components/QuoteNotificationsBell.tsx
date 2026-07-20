@@ -129,7 +129,7 @@ export function QuoteNotificationsBell() {
   }
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div ref={containerRef}>
       <button
         aria-expanded={open}
         aria-label="Notifiche preventivi"
@@ -149,26 +149,25 @@ export function QuoteNotificationsBell() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-lg bg-white text-ischia-ink shadow-xl ring-1 ring-black/10">
+        <div className="absolute right-0 top-full z-50 mt-2 w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl bg-white text-ischia-ink shadow-xl ring-1 ring-black/10">
           <div className="border-b border-ischia-blue/10 px-4 py-3">
             <p className="font-black text-ischia-navy">Attività clienti</p>
             <p className="text-xs text-ischia-ink/55">Ultimi eventi sui preventivi</p>
           </div>
-          <div className="max-h-[70vh] overflow-y-auto">
+          <div className="max-h-[60vh] overflow-y-auto">
             {notifications.length ? notifications.map((notification) => (
               <Link
-                className={`flex gap-3 border-b border-ischia-blue/5 px-4 py-3 transition hover:bg-ischia-mist ${notification.isRead ? "bg-white" : "bg-amber-50/60"}`}
+                className={`flex gap-3 border-b border-ischia-blue/5 px-4 py-3.5 transition hover:bg-ischia-mist ${notification.isRead ? "bg-white" : "bg-amber-50/60"}`}
                 href={`/admin/preventivi/${notification.quoteCode}`}
                 key={notification.id}
                 onClick={() => setOpen(false)}
                 prefetch={false}
               >
-                <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${notificationColor(notification.type)}`} />
-                <span className="min-w-0">
-                  <span className="block text-sm leading-5">
-                    <strong className="text-ischia-navy">{notification.customerName}</strong> — {notification.description}
-                  </span>
-                  <span className="mt-1 block text-xs font-semibold text-ischia-ink/45">{relativeTime(notification.createdAt)}</span>
+                <span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${notificationColor(notification.type)}`} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold leading-snug text-ischia-navy">{notification.customerName}</span>
+                  <span className="mt-0.5 block text-sm leading-snug text-ischia-ink/80">{notification.description}</span>
+                  <span className="mt-1 block text-xs font-semibold text-ischia-ink/45">{notification.quoteCode} · {relativeTime(notification.createdAt)}</span>
                 </span>
               </Link>
             )) : (
