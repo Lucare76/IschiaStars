@@ -32,6 +32,16 @@ export function LabPageClient({
         🔬 Pannello Supervisor — Visibile solo a te
       </div>
 
+      <section className="rounded-2xl bg-white/90 p-6 shadow-soft">
+        <h2 className="text-xl font-black text-ischia-navy">Laboratori tecnici</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <Link href="/admin/lab/aleste" className="rounded-xl bg-ischia-mist p-4 transition hover:bg-ischia-sky/60">
+            <p className="font-black text-ischia-navy">Test booking Aleste</p>
+            <p className="mt-1 text-sm font-semibold text-ischia-ink/60">Prototipo isolato per verifiche tecniche sul booking engine pubblico.</p>
+          </Link>
+        </div>
+      </section>
+
       <FeatureFlagsSection initialFlags={initialFlags} />
       <AnnouncementSection initialSettings={initialAnnouncementSettings} />
       <TestQuotesSection initialTestQuotes={initialTestQuotes} />
