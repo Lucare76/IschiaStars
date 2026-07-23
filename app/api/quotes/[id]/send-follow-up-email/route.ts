@@ -26,12 +26,18 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     return NextResponse.json({ ok: false, error }, { status: 502 });
   }
 
-  await trackQuoteEvent(quote.id, "follow_up_whatsapp_click", {
+  const eventResult = await trackQuoteEvent(quote.id, "follow_up_whatsapp_click", {
     action: "email",
     source: "admin_follow_up",
     quote_code: quote.code,
     client_email: quote.customerEmail
   }, request.headers.get("user-agent") ?? undefined);
+  if (eventResult.source !== "supabase" || !eventResult.data) {
+    return NextResponse.json({
+      ok: false,
+      error: "Email inviata, ma follow-up non salvato nei log. Verifica prima di reinviare."
+    }, { status: 502 });
+  }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, source: eventResult.source, data: eventResult.data });
 }

@@ -1,18 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { FollowUpSegment } from "@/lib/repositories/followUp";
 import { normalizeItalianPhone } from "@/lib/utils";
 
 type FollowUpWhatsAppButtonProps = {
   message?: string;
-  quoteCode: string;
-  token: string;
-  segment: FollowUpSegment;
   clientPhone?: string;
 };
 
-export function FollowUpWhatsAppButton({ message, quoteCode, token, segment, clientPhone }: FollowUpWhatsAppButtonProps) {
+export function FollowUpWhatsAppButton({ message, clientPhone }: FollowUpWhatsAppButtonProps) {
   const [copied, setCopied] = useState(false);
 
   if (!message || !clientPhone) {
@@ -24,23 +20,6 @@ export function FollowUpWhatsAppButton({ message, quoteCode, token, segment, cli
   }
 
   async function handleClick() {
-    fetch("/api/quote-events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        quoteCode,
-        token,
-        eventType: "follow_up_whatsapp_click",
-        metadata: {
-          action: "whatsapp",
-          source: "admin_follow_up",
-          segment,
-          quote_code: quoteCode,
-          client_phone: clientPhone
-        }
-      })
-    }).catch(() => undefined);
-
     await navigator.clipboard.writeText(message!).catch(() => null);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
