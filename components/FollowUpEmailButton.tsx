@@ -39,7 +39,7 @@ export function FollowUpEmailButton({ quoteId, clientEmail }: FollowUpEmailButto
       return;
     }
 
-    setMessage({ type: "ok", text: "Follow-up email inviato. Aggiorno i log..." });
+    setMessage(null);
     router.refresh();
   }
 
