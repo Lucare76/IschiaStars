@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
+import { RequestMessageBox } from "@/components/RequestMessageBox";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { QuoteRequest } from "@/lib/types";
 
@@ -67,9 +68,7 @@ export function PendingRequestCard({ request }: { request: QuoteRequest }) {
         </p>
       ) : null}
 
-      {request.message ? (
-        <p className="mt-4 rounded-xl bg-ischia-mist p-4 text-sm text-ischia-ink/80">{request.message}</p>
-      ) : null}
+      <RequestMessageBox className="mt-4" message={request.message} />
 
       {error ? (
         <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">{error}</p>

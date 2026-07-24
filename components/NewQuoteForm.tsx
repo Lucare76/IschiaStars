@@ -17,6 +17,7 @@ import {
 } from "@/components/HotelOptionsEditor";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { adminApiHeaders } from "@/lib/admin-api-client";
+import { RequestMessageBox } from "@/components/RequestMessageBox";
 import { Hotel, Quote, QuoteRequest } from "@/lib/types";
 
 type ClientResult = { firstName: string; lastName: string; email: string; phone: string };
@@ -27,6 +28,11 @@ const PUBLIC_NOTE_CHIPS = [
   "Costi intesi per ogni camera",
   "Quota cane 20 euro al giorno da pagare in loco"
 ];
+
+function initialInternalNotesFromRequest(message?: string | null) {
+  const normalized = message?.trim();
+  return normalized ? `Note arrivate dal form cliente:\n${normalized}` : undefined;
+}
 
 function todayDateString() {
   return new Date().toISOString().split("T")[0];
@@ -280,6 +286,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
             Richiesta non trovata. Puoi comunque creare un preventivo manuale.
           </div>
         ) : null}
+        <RequestMessageBox message={initialRequest?.message} />
         {error ? <p className="rounded-2xl bg-rose-50 p-4 text-sm font-bold text-rose-700 ring-1 ring-rose-100">{error}</p> : null}
         {requestedHotelMissing ? (
           <p className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
@@ -357,7 +364,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
             <Input name="validUntil" label={manualConfirmation ? "Data registrazione" : "Validità offerta"} required type="date" min={todayDateString()} defaultValue={manualConfirmation ? todayDateString() : undefined} />
           </div>
           <Textarea name="publicNotes" label="Note visibili al cliente" noteChips={PUBLIC_NOTE_CHIPS} />
-          <Textarea name="internalNotes" label="Note interne" defaultValue={initialRequest?.message} />
+          <Textarea name="internalNotes" label="Note interne" defaultValue={initialInternalNotesFromRequest(initialRequest?.message)} />
         </Section>
 
         <button

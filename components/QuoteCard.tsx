@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CloneQuoteButton } from "@/components/CloneQuoteButton";
 import { QuoteStatusBadge } from "@/components/QuoteStatusBadge";
+import { RequestMessageBox } from "@/components/RequestMessageBox";
 import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { formatCurrency, formatDate, formatDateTime, publicQuoteUrl } from "@/lib/utils";
@@ -49,7 +50,7 @@ export function RequestCard({ request }: { request: QuoteRequest }) {
           }).join(", ")}
         </p>
       ) : null}
-      {request.message ? <p className="mt-4 rounded-xl bg-ischia-mist p-4 text-sm text-ischia-ink/80">{request.message}</p> : null}
+      <RequestMessageBox className="mt-4" message={request.message} />
       <div className="mt-5 flex flex-col items-stretch gap-3 border-t border-ischia-blue/10 pt-4 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <span>
           Ricevuta: {formatDateTime(request.receivedAt)}
