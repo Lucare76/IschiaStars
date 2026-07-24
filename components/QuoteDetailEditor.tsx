@@ -54,6 +54,8 @@ type ConfirmationEditForm = {
   phone: string;
   email: string;
   address: string;
+  checkIn: string;
+  checkOut: string;
   selectedHotelOptionId: string;
   selectedHotelName: string;
   selectedTreatmentKey: string;
@@ -78,6 +80,8 @@ function buildConfirmationEditForm(quote: Quote): ConfirmationEditForm {
     phone: confirmation?.phone ?? quote.customerPhone,
     email: confirmation?.email ?? quote.customerEmail,
     address: confirmation?.address ?? "",
+    checkIn: quote.arrivalDate,
+    checkOut: quote.departureDate,
     selectedHotelOptionId,
     selectedHotelName: confirmation?.selectedHotelName ?? quote.proposedHotel?.name ?? "",
     selectedTreatmentKey,
@@ -478,6 +482,27 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
                   <Input label="Email" required type="email" value={confirmationForm.email} onChange={(event) => updateConfirmationForm({ email: event.target.value })} />
                   <Input label="Codice fiscale" value={confirmationForm.fiscalCode} onChange={(event) => updateConfirmationForm({ fiscalCode: event.target.value })} />
                   <Input label="Indirizzo" value={confirmationForm.address} onChange={(event) => updateConfirmationForm({ address: event.target.value })} />
+                  <Input
+                    label="Data arrivo"
+                    required
+                    type="date"
+                    value={confirmationForm.checkIn}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      updateConfirmationForm({
+                        checkIn: value,
+                        checkOut: confirmationForm.checkOut && confirmationForm.checkOut <= value ? "" : confirmationForm.checkOut
+                      });
+                    }}
+                  />
+                  <Input
+                    label="Data partenza"
+                    required
+                    type="date"
+                    min={confirmationForm.checkIn || undefined}
+                    value={confirmationForm.checkOut}
+                    onChange={(event) => updateConfirmationForm({ checkOut: event.target.value })}
+                  />
                   <Input label="Hotel scelto" required value={confirmationForm.selectedHotelName} onChange={(event) => updateConfirmationForm({ selectedHotelName: event.target.value, selectionKey: "" })} />
                   <Input label="Trattamento" required value={confirmationForm.selectedTreatmentLabel} onChange={(event) => updateConfirmationForm({ selectedTreatmentLabel: event.target.value, selectionKey: "" })} />
                   <Input label="Modalità saldo" required value={confirmationForm.selectedBalanceMethod} onChange={(event) => updateConfirmationForm({ selectedBalanceMethod: event.target.value })} />

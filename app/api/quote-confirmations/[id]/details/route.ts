@@ -11,6 +11,8 @@ type UpdateConfirmationDetailsBody = {
   phone?: unknown;
   email?: unknown;
   address?: unknown;
+  checkIn?: unknown;
+  checkOut?: unknown;
   selectedHotelOptionId?: unknown;
   selectedHotelName?: unknown;
   selectedTreatmentKey?: unknown;
@@ -34,6 +36,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const phone = stringValue(body?.phone);
   const email = stringValue(body?.email).toLowerCase();
   const address = stringValue(body?.address);
+  const checkIn = stringValue(body?.checkIn);
+  const checkOut = stringValue(body?.checkOut);
   const selectedHotelName = stringValue(body?.selectedHotelName);
   const selectedTreatmentLabel = stringValue(body?.selectedTreatmentLabel);
   const selectedBalanceMethod = stringValue(body?.selectedBalanceMethod);
@@ -50,6 +54,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ success: false, error: "Indirizzo email non valido" }, { status: 400 });
+  }
+  if (!isValidDateOnly(checkIn) || !isValidDateOnly(checkOut) || checkOut <= checkIn) {
+    return NextResponse.json({ success: false, error: "Date soggiorno non valide" }, { status: 400 });
   }
   if (!selectedHotelName || !selectedTreatmentLabel || !selectedBalanceMethod) {
     return NextResponse.json({ success: false, error: "Compila hotel, trattamento e modalità saldo" }, { status: 400 });
@@ -117,6 +124,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     clientLastName: lastName,
     clientEmail: email,
     clientPhone: phone,
+    checkIn,
+    checkOut,
     totalPrice: selectedPrice,
     depositAmount: selectedDepositAmount
   });
@@ -128,6 +137,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     source: "confirmation_details_edit",
     selectedHotelName,
     selectedTreatmentLabel,
+    checkIn,
+    checkOut,
     selectedPrice,
     selectedDepositAmount,
     selectedBalanceAmount
@@ -144,4 +155,10 @@ function stringValue(value: unknown) {
 function optionalString(value: unknown) {
   const normalized = stringValue(value);
   return normalized || null;
+}
+
+function isValidDateOnly(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
