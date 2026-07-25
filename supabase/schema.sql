@@ -606,3 +606,98 @@ create policy "service role only" on public.email_logs using (false) with check 
 revoke all on public.email_logs from anon;
 revoke all on public.email_logs from authenticated;
 grant select, insert, update, delete on public.email_logs to service_role;
+
+-- RPC aggregata dashboard admin (migration 043)
+-- Sostituisce getDashboardQuoteRows, getConfirmedQuoteIds, getDashboardEventSummary,
+-- getOpeningCounts: restituisce scalari calcolati interamente in Postgres.
+create or replace function public.get_admin_dashboard_summary(
+  p_excluded_ips   text[]      default array['93.148.93.103']::text[],
+  p_tracking_from  timestamptz default '2026-06-19T16:55:52Z'
+)
+returns table (
+  created_quotes    bigint,
+  sent_quotes       bigint,
+  expired_quotes    bigint,
+  confirmed_quotes  bigint,
+  lost_quotes       bigint,
+  confirmed_value   numeric,
+  opened_quotes     bigint,
+  unopened_quotes   bigint,
+  whatsapp_clicks   bigint,
+  repeatedly_viewed bigint,
+  hot_customers     bigint
+)
+language sql
+stable
+set search_path = public
+as $$
+  with
+  active_quotes as (
+    select id, status, total_price, check_out, created_at, confirmed_at
+    from public.quotes
+    where deleted_at is null
+      and excluded_from_stats is not true
+      and coalesce(metadata->>'is_lab_test', '') <> 'true'
+  ),
+  confirmed_ids as (
+    select id as quote_id from active_quotes
+    where status = 'confermato' or confirmed_at is not null
+    union
+    select qc.quote_id from public.quote_confirmations qc
+    where qc.quote_id in (select id from active_quotes)
+    union
+    select distinct qe.quote_id from public.quote_events qe
+    where qe.event_type = 'quote_confirmed'
+      and qe.quote_id in (select id from active_quotes)
+  ),
+  evaded as (
+    select aq.id, aq.created_at from active_quotes aq
+    where aq.status = 'preventivo_inviato'
+      and aq.check_out >= (now() at time zone 'Europe/Rome')::date
+      and aq.id not in (select quote_id from confirmed_ids)
+  ),
+  trackable_events as (
+    select quote_id, event_type, metadata from public.quote_events
+    where coalesce(metadata->>'excluded_from_tracking', 'false') <> 'true'
+      and (created_at < '2026-06-12T15:20:14Z' or metadata->>'ip' is not null)
+      and not (coalesce(metadata->>'ip', '') = any(p_excluded_ips))
+  ),
+  evaded_opening_counts as (
+    select
+      te.quote_id,
+      count(distinct nullif(te.metadata->>'visitor_id', ''))
+        + case when bool_or(te.metadata->>'visitor_id' is null or te.metadata->>'visitor_id' = '')
+               then 1 else 0 end as opening_count
+    from trackable_events te
+    inner join evaded e on te.quote_id = e.id
+    where te.event_type = 'quote_opened'
+    group by te.quote_id
+  )
+  select
+    (select count(*) from active_quotes)::bigint,
+    (select count(*) from evaded)::bigint,
+    (select count(*) from active_quotes aq
+     where aq.status = 'preventivo_inviato'
+       and aq.check_out < (now() at time zone 'Europe/Rome')::date
+       and aq.id not in (select quote_id from confirmed_ids))::bigint,
+    (select count(*) from confirmed_ids)::bigint,
+    (select count(*) from active_quotes where status = 'perso_non_disponibile')::bigint,
+    coalesce((select sum(aq.total_price) from active_quotes aq
+              inner join confirmed_ids ci on aq.id = ci.quote_id), 0::numeric),
+    (select count(*) from evaded_opening_counts where opening_count >= 1)::bigint,
+    (select count(*) from evaded e
+     where e.created_at >= p_tracking_from
+       and e.id not in (select quote_id from evaded_opening_counts))::bigint,
+    (select count(*) from trackable_events te
+     inner join active_quotes aq on te.quote_id = aq.id
+     where te.event_type = 'whatsapp_clicked'
+       and coalesce(te.metadata->>'placement', '') <> 'admin_quote_card')::bigint,
+    (select count(*) from evaded_opening_counts where opening_count >= 2)::bigint,
+    (select count(*) from evaded_opening_counts where opening_count >= 3)::bigint
+$$;
+
+revoke execute on function public.get_admin_dashboard_summary(text[], timestamptz) from anon;
+revoke execute on function public.get_admin_dashboard_summary(text[], timestamptz) from authenticated;
+revoke execute on function public.get_admin_dashboard_summary(text[], timestamptz) from public;
+
+grant execute on function public.get_admin_dashboard_summary(text[], timestamptz) to service_role;
