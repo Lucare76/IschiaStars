@@ -10,6 +10,200 @@ import { Quote, QuoteHotelOption, QuoteStatus, TransportOffer } from "@/lib/type
 
 const QUOTES_PAGE_SIZE = 1000;
 
+export const LIST_QUOTES_PAGE_SIZE = 50;
+const MAX_LIST_QUOTES_PAGE_SIZE = 100;
+
+export type QuoteListPage = {
+  items: Quote[];
+  page: number;
+  pageSize: number;
+  hasNextPage: boolean;
+};
+
+export async function listQuotesPage({
+  page = 1,
+  pageSize = LIST_QUOTES_PAGE_SIZE,
+  filter = "evasi",
+  search = "",
+  sort = "date_desc",
+}: {
+  page?: number;
+  pageSize?: number;
+  filter?: string;
+  search?: string;
+  sort?: string;
+} = {}): Promise<RepositoryResult<QuoteListPage>> {
+  noStore();
+  const supabase = createSupabaseAdminClient();
+
+  const safePage = Math.max(1, Number.isFinite(page) ? page : 1);
+  const safeSize = Math.min(MAX_LIST_QUOTES_PAGE_SIZE, Math.max(1, Number.isFinite(pageSize) ? pageSize : LIST_QUOTES_PAGE_SIZE));
+  const from = (safePage - 1) * safeSize;
+  const today = new Date().toISOString().slice(0, 10);
+  const empty: QuoteListPage = { items: [], page: safePage, pageSize: safeSize, hasNextPage: false };
+
+  if (!supabase) {
+    const all = allDemoQuotes().filter((q) => !q.isLabTest);
+    const filtered = all.filter((q) => demoMatchesFilter(q, filter, today));
+    const sorted = demoSort(filtered, sort);
+    return fallback({
+      items: sorted.slice(from, from + safeSize),
+      page: safePage,
+      pageSize: safeSize,
+      hasNextPage: sorted.length > from + safeSize,
+    });
+  }
+
+  // Build the base query
+  let query = supabase
+    .from("quotes")
+    .select("*")
+    .or("metadata->>is_lab_test.is.null,metadata->>is_lab_test.neq.true");
+
+  // Apply filter — each case sets deleted_at conditions explicitly
+  const notExcluded = "excluded_from_stats.is.null,excluded_from_stats.eq.false";
+  switch (filter) {
+    case "evasi":
+    case "attivi":
+      query = query.is("deleted_at", null).eq("status", "preventivo_inviato").or(notExcluded).gte("check_out", today);
+      break;
+    case "preventivo_inviato":
+      query = query.is("deleted_at", null).eq("status", "preventivo_inviato").or(notExcluded);
+      break;
+    case "scaduti":
+      query = query.is("deleted_at", null).eq("status", "preventivo_inviato").or(notExcluded).lt("check_out", today);
+      break;
+    case "confermati":
+      query = query.is("deleted_at", null).eq("status", "confermato").or(notExcluded);
+      break;
+    case "cancellati":
+      query = query.not("deleted_at", "is", null);
+      break;
+    case "esclusi":
+      query = query.is("deleted_at", null).eq("excluded_from_stats", true);
+      break;
+    case "alternative":
+      query = query.is("deleted_at", null).eq("is_alternative_offer", true).or(notExcluded);
+      break;
+    case "perso_non_disponibile":
+      query = query.is("deleted_at", null).eq("status", "perso_non_disponibile").or(notExcluded);
+      break;
+    default: // "tutti"
+      query = query.is("deleted_at", null);
+      break;
+  }
+
+  // Apply search across text columns
+  const term = search.trim().replace(/[%_,]/g, "");
+  if (term) {
+    query = query.or(
+      [
+        `code.ilike.%${term}%`,
+        `client_first_name.ilike.%${term}%`,
+        `client_last_name.ilike.%${term}%`,
+        `client_email.ilike.%${term}%`,
+        `client_phone.ilike.%${term}%`,
+        `hotel_requested.ilike.%${term}%`,
+      ].join(",")
+    );
+  }
+
+  // Apply sort
+  const { col, asc } = listSortParams(sort);
+  query = query.order(col, { ascending: asc });
+  if (col !== "created_at") query = query.order("created_at", { ascending: false });
+
+  // Fetch pageSize+1 to detect hasNextPage
+  query = query.range(from, from + safeSize);
+
+  const { data, error } = await query;
+  if (error) return fallback(empty, error);
+
+  const rows = (data ?? []) as Record<string, unknown>[];
+  const hasNextPage = rows.length > safeSize;
+  const pageRows = rows.slice(0, safeSize);
+  const pageIds = pageRows.map((row) => String(row.id));
+
+  if (!pageIds.length) return fromSupabase(empty);
+
+  const [hotelResult, hotelOptionsMap, confirmationsMap] = await Promise.all([
+    listHotels(),
+    fetchHotelOptionsForQuotes(pageIds),
+    fetchConfirmationsForQuotes(pageIds),
+  ]);
+
+  const allHotels = hotelResult.data.length ? hotelResult.data : hotels;
+
+  const items = pageRows.map((row) => {
+    const quoteId = String(row.id);
+    const childrenCount = Number(row.children_count ?? 0);
+    // Build synthetic child rows — only length matters in the list card
+    const syntheticChildren: Record<string, unknown>[] = Array.from({ length: childrenCount }, (_, i) => ({
+      id: `${quoteId}-list-child-${i}`,
+      quote_id: quoteId,
+      first_name: `Bambino ${i + 1}`,
+      birth_date: null,
+      age: null,
+    }));
+    return withDemoStatus(
+      mapQuote(row, allHotels, syntheticChildren, hotelOptionsMap[quoteId] ?? [], confirmationsMap[quoteId])
+    );
+  });
+
+  return fromSupabase({ items, page: safePage, pageSize: safeSize, hasNextPage });
+}
+
+
+function listSortParams(sort: string): { col: string; asc: boolean } {
+  switch (sort) {
+    case "date_asc": return { col: "created_at", asc: true };
+    case "lastname": return { col: "client_last_name", asc: true };
+    case "arrival": return { col: "check_in", asc: true };
+    case "price": return { col: "total_price", asc: false };
+    default: return { col: "created_at", asc: false }; // date_desc
+  }
+}
+
+function demoMatchesFilter(quote: Quote, filter: string, today: string): boolean {
+  const isDeleted = Boolean(quote.deletedAt);
+  const isExpired = quote.departureDate < today;
+  const isExcluded = Boolean(quote.excludedFromStats);
+  const isConfirmed = quote.status === "confermato" || Boolean(quote.confirmation);
+  if (quote.isLabTest) return false;
+  switch (filter) {
+    case "evasi":
+    case "attivi":
+      return !isDeleted && !isExcluded && !isConfirmed && !isExpired && quote.status === "preventivo_inviato";
+    case "preventivo_inviato":
+      return !isDeleted && !isExcluded && quote.status === "preventivo_inviato";
+    case "scaduti":
+      return !isDeleted && !isExcluded && !isConfirmed && isExpired && quote.status === "preventivo_inviato";
+    case "confermati":
+      return !isDeleted && !isExcluded && isConfirmed;
+    case "cancellati":
+      return isDeleted;
+    case "esclusi":
+      return !isDeleted && isExcluded;
+    case "alternative":
+      return !isDeleted && !isExcluded && Boolean(quote.isAlternative);
+    case "perso_non_disponibile":
+      return !isDeleted && !isExcluded && quote.status === "perso_non_disponibile";
+    case "tutti":
+    default:
+      return !isDeleted;
+  }
+}
+
+function demoSort(quotes: Quote[], sort: string): Quote[] {
+  return [...quotes].sort((a, b) => {
+    if (sort === "date_asc") return a.createdAt.localeCompare(b.createdAt);
+    if (sort === "lastname") return a.customerLastName.localeCompare(b.customerLastName, "it");
+    if (sort === "arrival") return a.arrivalDate.localeCompare(b.arrivalDate);
+    if (sort === "price") return b.totalPrice - a.totalPrice;
+    return b.createdAt.localeCompare(a.createdAt);
+  });
+}
+
 export type QuoteInput = {
   quoteRequestId?: string;
   code?: string;

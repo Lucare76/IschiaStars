@@ -46,6 +46,14 @@ function tomorrowDateString() {
   return date.toISOString().split("T")[0];
 }
 
+function nextDateString(value: string) {
+  if (!value) return tomorrowDateString();
+  const date = new Date(`${value}T00:00:00`);
+  if (!Number.isFinite(date.getTime())) return tomorrowDateString();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().split("T")[0];
+}
+
 type ConfirmationEditForm = {
   selectionKey: string;
   firstName: string;
@@ -175,6 +183,10 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
   async function saveConfirmationDetails(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!currentQuote.confirmation?.id) return;
+    if (!confirmationForm.checkIn || !confirmationForm.checkOut || confirmationForm.checkOut <= confirmationForm.checkIn) {
+      setConfirmationMessage("Controlla le date: la partenza deve essere successiva all'arrivo.");
+      return;
+    }
     setConfirmationSaving(true);
     setConfirmationMessage(null);
 
@@ -460,6 +472,32 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
             </div>
             {confirmationEditOpen ? (
               <form className="mt-5 space-y-4 rounded-2xl bg-ischia-mist/50 p-4 ring-1 ring-ischia-blue/10" onSubmit={saveConfirmationDetails}>
+                <div className="rounded-2xl bg-white p-4 ring-1 ring-ischia-blue/15">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-ischia-blue">Modifica date soggiorno</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <Input
+                      label="Data arrivo"
+                      required
+                      type="date"
+                      value={confirmationForm.checkIn}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        updateConfirmationForm({
+                          checkIn: value,
+                          checkOut: confirmationForm.checkOut && confirmationForm.checkOut <= value ? "" : confirmationForm.checkOut
+                        });
+                      }}
+                    />
+                    <Input
+                      label="Data partenza"
+                      required
+                      type="date"
+                      min={nextDateString(confirmationForm.checkIn)}
+                      value={confirmationForm.checkOut}
+                      onChange={(event) => updateConfirmationForm({ checkOut: event.target.value })}
+                    />
+                  </div>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <label className="text-sm font-semibold text-ischia-ink lg:col-span-3">
                     Scegli una proposta del preventivo
@@ -482,27 +520,6 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
                   <Input label="Email" required type="email" value={confirmationForm.email} onChange={(event) => updateConfirmationForm({ email: event.target.value })} />
                   <Input label="Codice fiscale" value={confirmationForm.fiscalCode} onChange={(event) => updateConfirmationForm({ fiscalCode: event.target.value })} />
                   <Input label="Indirizzo" value={confirmationForm.address} onChange={(event) => updateConfirmationForm({ address: event.target.value })} />
-                  <Input
-                    label="Data arrivo"
-                    required
-                    type="date"
-                    value={confirmationForm.checkIn}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      updateConfirmationForm({
-                        checkIn: value,
-                        checkOut: confirmationForm.checkOut && confirmationForm.checkOut <= value ? "" : confirmationForm.checkOut
-                      });
-                    }}
-                  />
-                  <Input
-                    label="Data partenza"
-                    required
-                    type="date"
-                    min={confirmationForm.checkIn || undefined}
-                    value={confirmationForm.checkOut}
-                    onChange={(event) => updateConfirmationForm({ checkOut: event.target.value })}
-                  />
                   <Input label="Hotel scelto" required value={confirmationForm.selectedHotelName} onChange={(event) => updateConfirmationForm({ selectedHotelName: event.target.value, selectionKey: "" })} />
                   <Input label="Trattamento" required value={confirmationForm.selectedTreatmentLabel} onChange={(event) => updateConfirmationForm({ selectedTreatmentLabel: event.target.value, selectionKey: "" })} />
                   <Input label="Modalità saldo" required value={confirmationForm.selectedBalanceMethod} onChange={(event) => updateConfirmationForm({ selectedBalanceMethod: event.target.value })} />
