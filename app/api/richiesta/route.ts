@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { createQuoteRequest } from "@/lib/repositories/quoteRequests";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+const RATE_LIMIT_ROUTE = "/api/richiesta";
+const RATE_LIMIT_MAX_REQUESTS = 3;
+const RATE_LIMIT_WINDOW_MINUTES = 15;
+const RATE_LIMIT_ERROR = "Hai inviato troppe richieste in poco tempo. Riprova tra qualche minuto.";
+
 export async function POST(request: NextRequest) {
+  const rateLimit = await checkRateLimit(request);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ success: false, error: RATE_LIMIT_ERROR }, { status: 429 });
+  }
+
   const body = await request.json().catch(() => null);
 
   if (!body || typeof body !== "object") {
@@ -59,4 +71,56 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, data: { id: result.data.id } });
+}
+
+function clientIpFromRequest(request: NextRequest) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const firstForwardedIp = forwardedFor?.split(",")[0]?.trim();
+  if (firstForwardedIp) return firstForwardedIp;
+
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
+
+  return "unknown";
+}
+
+function hashIp(ip: string, secret: string) {
+  return createHash("sha256").update(`${ip}${secret}`).digest("hex");
+}
+
+async function checkRateLimit(request: NextRequest): Promise<{ allowed: boolean }> {
+  const secret = process.env.RATE_LIMIT_SECRET;
+  if (!secret) {
+    console.warn("[rate-limit] skipped route=/api/richiesta reason=missing_secret");
+    return { allowed: true };
+  }
+
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    console.warn("[rate-limit] skipped route=/api/richiesta reason=supabase_not_configured");
+    return { allowed: true };
+  }
+
+  try {
+    const ipHash = hashIp(clientIpFromRequest(request), secret);
+    const { data, error } = await supabase
+      .rpc("check_request_rate_limit", {
+        p_route: RATE_LIMIT_ROUTE,
+        p_ip_hash: ipHash,
+        p_limit: RATE_LIMIT_MAX_REQUESTS,
+        p_window_minutes: RATE_LIMIT_WINDOW_MINUTES
+      })
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[rate-limit] fail-open route=/api/richiesta reason=rpc_error");
+      return { allowed: true };
+    }
+
+    const row = data as { allowed?: boolean } | null;
+    return { allowed: row?.allowed !== false };
+  } catch {
+    console.warn("[rate-limit] fail-open route=/api/richiesta reason=unexpected_error");
+    return { allowed: true };
+  }
 }
