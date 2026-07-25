@@ -122,14 +122,12 @@ La tua proposta personalizzata per Ischia è pronta 🌊
 
 ${stayLines}
 
-${hotelsBlock}
-${mandatoryFeeBlock}
-${customerNotesBlock}
-Ecco il tuo preventivo personalizzato:
-
 Apri il link ⬇️
 ${quoteUrl}
 
+${hotelsBlock}
+${mandatoryFeeBlock}
+${customerNotesBlock}
 Dal link puoi vedere tutti i dettagli e confermare direttamente online.
 Se il link non si apre, tienilo premuto e scegli “Apri il link”.
 
