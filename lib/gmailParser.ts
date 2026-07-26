@@ -119,7 +119,28 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
   };
 
   const getMultiline = (field: string): string | null => {
-    const match = text.match(new RegExp(`${field}:\\s*([\\s\\S]*?)(?=\\n[A-Za-zÀ-ú][\\w\\s]*:|\\n\\n|$)`, 'i'));
+    const fieldLabels = [
+      "Nome",
+      "Cognome",
+      "Email",
+      "Telefono",
+      "Hotel",
+      "Data di arrivo",
+      "Data di partenza",
+      "Adulti",
+      "Bambini",
+      "Età Bambini",
+      "Eta Bambini",
+      "EtÃ  Bambini",
+      "Numero di Camere",
+      "Orario di preferenza chiamata",
+      "Page URL",
+    ];
+    const escapedLabels = fieldLabels
+      .filter((label) => label.toLowerCase() !== field.toLowerCase())
+      .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("|");
+    const match = text.match(new RegExp(`(?:^|\\n)${field}:\\s*([\\s\\S]*?)(?=\\n(?:${escapedLabels}):|$)`, 'i'));
     if (!match) return null;
     return match[1].trim() || null;
   };
