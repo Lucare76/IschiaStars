@@ -7,6 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import { CloneQuoteButton } from "@/components/CloneQuoteButton";
 import { ConfirmationAvailabilityPanel } from "@/components/ConfirmationAvailabilityPanel";
 import { EmailTrackingStatus } from "@/components/EmailTrackingStatus";
+import { InterestedFollowUpEmailButton } from "@/components/InterestedFollowUpEmailButton";
+import { InterestedFollowUpWhatsAppButton } from "@/components/InterestedFollowUpWhatsAppButton";
 import type { EmailLog } from "@/lib/repositories/emailLogs";
 import {
   HotelOptionState,
@@ -403,6 +405,9 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
   const reactionEvents = quoteEvents
     .filter((event) => event.eventType === "reaction_interested" || event.eventType === "reaction_too_expensive")
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const latestInterestedReaction = [...reactionEvents]
+    .reverse()
+    .find((event) => event.eventType === "reaction_interested" && typeof event.metadata?.hotelName === "string");
 
   return (
     <div className="space-y-6">
@@ -428,6 +433,17 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
               );
             })}
           </div>
+          {latestInterestedReaction && typeof latestInterestedReaction.metadata?.hotelName === "string" ? (
+            <div className="mt-4 border-t border-ischia-blue/10 pt-4">
+              <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-ischia-blue">
+                Azioni rapide per questo interesse
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <InterestedFollowUpWhatsAppButton quote={currentQuote} hotelName={latestInterestedReaction.metadata.hotelName} />
+                <InterestedFollowUpEmailButton quoteId={currentQuote.id} clientEmail={currentQuote.customerEmail} hotelName={latestInterestedReaction.metadata.hotelName} />
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

@@ -1442,6 +1442,127 @@ function formatDateTimeForEmail(value: string) {
 
 export type SendFollowUpEmailResult = { sent: boolean; skipReason?: string; error?: string };
 
+export type SendInterestedFollowUpEmailResult = { sent: boolean; skipReason?: string; error?: string };
+
+export async function sendInterestedFollowUpEmailToClient(quote: Quote, hotelName: string): Promise<SendInterestedFollowUpEmailResult> {
+  const missingEnvReason = brevoMissingEnvReason();
+  if (missingEnvReason) {
+    console.info(`[brevo] skipped interested follow-up email code=${quote.code} reason=${missingEnvReason}`);
+    return { sent: false, skipReason: missingEnvReason };
+  }
+
+  const email = quote.customerEmail?.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    console.warn(`[brevo] skipped interested follow-up email code=${quote.code} reason=missing_client_email`);
+    return { sent: false, skipReason: "missing_client_email" };
+  }
+
+  const normalizedHotelName = hotelName.trim() || "la struttura selezionata";
+  const quoteUrl = absoluteShortPublicQuoteUrl(quote);
+  const clientName = `${quote.customerFirstName} ${quote.customerLastName}`.trim();
+  const firstName = quote.customerFirstName?.trim() || "";
+  const greeting = firstName ? `Buonasera ${firstName},` : "Buonasera,";
+  const stars = interestedHotelStars(quote, normalizedHotelName);
+  const hotelLabel = `${normalizedHotelName}${stars ? ` ${stars}` : ""}`;
+  const replyEmail = process.env.BREVO_FROM_EMAIL || "info@ischiastars.it";
+  const replyName = process.env.BREVO_FROM_NAME || "IschiaStars";
+  const subject = `Informazioni su ${normalizedHotelName} - ${quote.code}`;
+
+  const text = [
+    `${greeting} abbiamo notato il Suo interesse per ${hotelLabel}.`,
+    "Per tutte le informazioni anche riguardo i trasferimenti e per procedere con la prenotazione può contattarci telefonicamente oppure procedere dal link e quindi confermare la Sua scelta.",
+    "",
+    quoteUrl,
+    "",
+    "Grazie",
+    "Cordiali saluti",
+    "",
+    "Diego Canestrino",
+    "Info e prenotazioni:",
+    "ISCHIA STARS VIAGGI",
+    "+39 3717590017 - +39 081 905481",
+    "info@ischiastars.it - www.ischiastars.it",
+    "P.IVA 10638421213",
+    "Codice univoco: PXQYICS"
+  ].join("\n");
+
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${emailSharedStyles()}
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f4f6f9;margin:0;padding:0;">
+  <div class="email-wrapper" style="padding:24px 16px;">
+  <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+    <tr>
+      <td class="email-body" style="padding:28px 32px 24px;">
+        <p style="margin:0 0 14px;font-size:16px;color:#1F2937;line-height:1.65;">
+          ${escapeHtml(greeting)} abbiamo notato il Suo interesse per <strong>${escapeHtml(hotelLabel)}</strong>.
+        </p>
+        <p style="margin:0 0 18px;font-size:16px;color:#1F2937;line-height:1.65;">
+          Per tutte le informazioni anche riguardo i trasferimenti e per procedere con la prenotazione può contattarci telefonicamente oppure procedere dal link e quindi confermare la Sua scelta.
+        </p>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${safeEmailUrl(quoteUrl)}" class="cta-button"
+             style="background:#1a3a5c;color:#ffffff;text-decoration:none;padding:13px 30px;border-radius:8px;font-size:15px;font-weight:bold;display:inline-block;">
+            Apri il preventivo
+          </a>
+        </div>
+        <p style="text-align:center;margin:0 0 24px;font-size:12px;word-break:break-all;">
+          <a href="${safeEmailUrl(quoteUrl)}" style="color:#1a3a5c;">${escapeHtml(quoteUrl)}</a>
+        </p>
+        <p style="margin:0 0 5px;font-size:16px;color:#1F2937;line-height:1.6;">Grazie</p>
+        <p style="margin:0 0 26px;font-size:16px;color:#1F2937;line-height:1.6;">Cordiali saluti</p>
+        <p style="margin:0 0 4px;font-size:14px;color:#111827;line-height:1.5;"><strong>Diego Canestrino</strong></p>
+        <p style="margin:0 0 4px;font-size:14px;color:#111827;line-height:1.5;"><strong>Info e prenotazioni:</strong></p>
+        <p style="margin:0 0 4px;font-size:14px;color:#111827;line-height:1.5;"><strong>ISCHIA STARS VIAGGI</strong> &nbsp; +39 3717590017 - +39 081 905481</p>
+        <p style="margin:0 0 4px;font-size:14px;color:#111827;line-height:1.5;">info@ischiastars.it - <a href="https://www.ischiastars.it" style="color:#1a3a5c;">www.ischiastars.it</a></p>
+        <p style="margin:0;font-size:14px;color:#111827;line-height:1.5;"><strong>P.IVA 10638421213</strong> &nbsp; Codice univoco: PXQYICS</p>
+      </td>
+    </tr>
+  </table>
+  </div>
+</body>
+</html>`;
+
+  console.info(`[brevo] sending interested follow-up email code=${quote.code} to=${maskEmail(email)} hotel="${normalizedHotelName}"`);
+  const sendResult = await sendBrevoEmailWithResult({
+    to: [{ email, name: clientName }],
+    subject,
+    html,
+    text,
+    replyTo: { email: replyEmail, name: replyName }
+  });
+
+  if (sendResult.ok) {
+    console.info(`[brevo] sent interested follow-up email code=${quote.code}`);
+    await logEmailAttempt({ quoteId: quote.id, emailType: "follow_up_to_client", recipientEmail: email, subject, brevoMessageId: sendResult.messageId, ok: true });
+    return { sent: true };
+  }
+
+  console.warn(`[brevo] failed interested follow-up email code=${quote.code} status=${sendResult.status ?? "fetch_error"} error=${sendResult.error ?? "-"}`);
+  await logEmailAttempt({ quoteId: quote.id, emailType: "follow_up_to_client", recipientEmail: email, subject, ok: false, errorMessage: sendResult.error });
+  return { sent: false, error: sendResult.error ?? `brevo_error_${sendResult.status ?? "fetch"}` };
+}
+
+function interestedHotelStars(quote: Quote, hotelName: string) {
+  const normalized = normalizeHotelNameForEmail(hotelName);
+  const stars = getEffectiveHotelOptions(quote).find((option) => normalizeHotelNameForEmail(option.hotelName) === normalized)?.hotelStars;
+  if (!stars || stars <= 0) return "";
+  return "⭐".repeat(Math.min(stars, 5));
+}
+
+function normalizeHotelNameForEmail(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export async function sendFollowUpEmailToClient(quote: Quote): Promise<SendFollowUpEmailResult> {
   const missingEnvReason = brevoMissingEnvReason();
   if (missingEnvReason) {
