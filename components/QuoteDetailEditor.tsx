@@ -129,6 +129,7 @@ function roundMoney(value: number) {
 export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags, quoteEvents = [], emailLogs = [] }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; quoteEvents?: QuoteEvent[]; emailLogs?: EmailLog[] }) {
   const router = useRouter();
   const effective = getEffectiveHotelOptions(quote);
+  const quoteFormRef = useRef<HTMLFormElement>(null);
   const [currentQuote, setCurrentQuote] = useState(quote);
   const [adultsCount, setAdultsCount] = useState(quote.adults);
   const [hasChildren, setHasChildren] = useState(quote.children.length > 0);
@@ -208,11 +209,11 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     router.refresh();
   }
 
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function persistQuoteForm(formElement: HTMLFormElement, successMessage: string) {
+    if (!formElement.reportValidity()) return null;
     setLoading(true);
     setMessage(null);
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(formElement);
 
     const optionsWithoutPrice = hotelOptions
       .map((option, index) => ({ option, index }))
@@ -220,7 +221,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     if (optionsWithoutPrice.length > 0) {
       setMessage(`Inserisci almeno un prezzo valido oppure rimuovi: ${optionsWithoutPrice.map(({ option, index }) => hotelOptionLabel(option, index)).join(", ")}.`);
       setLoading(false);
-      return;
+      return null;
     }
 
     const mappedOptions = mapHotelOptionsToPayload(hotelOptions, { preserveGroups: true });
@@ -234,13 +235,13 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     if (children.some((child) => !Number.isInteger(child.age) || child.age < 0 || child.age > 17)) {
       setMessage("Inserisci l'età (0-17 anni) per ogni bambino.");
       setLoading(false);
-      return;
+      return null;
     }
 
     if (mappedOptions.length === 0) {
       setMessage("Inserisci almeno un prezzo valido in almeno una struttura prima di salvare.");
       setLoading(false);
-      return;
+      return null;
     }
 
     const payload = {
@@ -272,11 +273,17 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
       setMessage(adminApiErrorMessage(response, result, "Salvataggio non riuscito."));
-      return;
+      return null;
     }
     setCurrentQuote(result.data);
-    setMessage("Preventivo aggiornato.");
+    setMessage(successMessage);
     router.refresh();
+    return result.data;
+  }
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await persistQuoteForm(event.currentTarget, "Preventivo aggiornato.");
   }
 
   async function changeStatus(status: QuoteStatus) {
@@ -308,7 +315,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
     if (response.ok && result?.data) {
       setCurrentQuote(result.data);
-      setMessage(next ? "Preventivo escluso dalle statistiche." : "Preventivo reinclueso nelle statistiche.");
+      setMessage(next ? "Preventivo escluso dalle statistiche." : "Preventivo reincluso nelle statistiche.");
       router.refresh();
     } else {
       setMessage("Operazione non riuscita.");
@@ -351,11 +358,20 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
 
   async function duplicateCurrentQuote() {
     setMessage(null);
-    const response = await adminApiFetch(`/api/quotes/${currentQuote.id}`, {
+    let quoteToDuplicate = currentQuote;
+    if (quoteFormRef.current) {
+      const savedQuote = await persistQuoteForm(quoteFormRef.current, "Modifiche salvate. Duplico il preventivo...");
+      if (!savedQuote) return;
+      quoteToDuplicate = savedQuote;
+    }
+
+    setLoading(true);
+    const response = await adminApiFetch(`/api/quotes/${quoteToDuplicate.id}`, {
       method: "POST",
       body: JSON.stringify({ action: "duplicate" })
     });
     const result = await readAdminApiJson<{ ok?: boolean; data?: Quote; error?: string }>(response);
+    setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
       setMessage(adminApiErrorMessage(response, result, "Duplicazione non riuscita."));
       return;
@@ -555,7 +571,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
           </section>
         </div>
       ) : (
-      <form className="space-y-5" onSubmit={save}>
+      <form className="space-y-5" ref={quoteFormRef} onSubmit={save}>
         {message ? <p className="rounded-2xl bg-ischia-mist p-4 text-sm font-bold text-ischia-navy">{message}</p> : null}
 
         <Section title="Cliente e soggiorno">
@@ -712,8 +728,8 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
                 Apri link cliente
               </Link>
               <WhatsAppSendButton quote={currentQuote} />
-              <button className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy" onClick={() => void duplicateCurrentQuote()} type="button">
-                Duplica preventivo
+              <button className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy disabled:opacity-60" disabled={loading} onClick={() => void duplicateCurrentQuote()} type="button">
+                {loading ? "Salvataggio..." : "Duplica preventivo"}
               </button>
             </div>
           ) : (
@@ -735,8 +751,8 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
                 {sending ? "Aggiornamento..." : "Invia preventivo"}
               </button>
               <WhatsAppSendButton quote={currentQuote} />
-              <button className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy" onClick={() => void duplicateCurrentQuote()} type="button">
-                Duplica preventivo
+              <button className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy disabled:opacity-60" disabled={loading} onClick={() => void duplicateCurrentQuote()} type="button">
+                {loading ? "Salvataggio..." : "Duplica preventivo"}
               </button>
             </div>
           )}
