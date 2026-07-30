@@ -212,6 +212,24 @@ export async function markDepositPaid(id: string): Promise<RepositoryResult<Reco
   return getQuoteConfirmationById(id);
 }
 
+export async function markFullBalancePaid(id: string): Promise<RepositoryResult<Record<string, unknown> | null>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(null);
+
+  const paidAt = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("quote_confirmations")
+    .update({ deposit_paid_at: paidAt, balance_paid_at: paidAt })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+
+  if (error) return fallback(null, error);
+  if (data) return fromSupabase(data as Record<string, unknown>);
+
+  return getQuoteConfirmationById(id);
+}
+
 export async function updateConfirmationAmounts(
   id: string,
   depositAmount: number,

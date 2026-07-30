@@ -4,10 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
-import { availabilityStatusLabel, defaultDepositDueAtForArrival, defaultUnavailabilityMessage, depositCoordinatesWhatsappMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
+import { availabilityStatusLabel, defaultPaymentDueAtForFinalConfirmation, defaultUnavailabilityMessage, depositCoordinatesWhatsappMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
 import { FeatureFlags } from "@/lib/feature-flags";
-import { getEffectiveBalancePaymentSchedule } from "@/lib/hotel-policies";
-import { buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
+import { getEffectiveBalancePaymentSchedule, isBalanceDueAtConfirmation } from "@/lib/hotel-policies";
+import { buildBalancePaymentReason, buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
 import { Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime, normalizeItalianPhone } from "@/lib/utils";
 
@@ -26,9 +26,21 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const confirmation = quote.confirmation;
   const defaultSelectedPrice = confirmation?.selectedPrice ?? quote.totalPrice;
   const defaultDepositAmount = confirmation?.selectedDepositAmount ?? quote.deposit;
+  const selectedHotelName = confirmation?.selectedHotelName ?? quote.proposedHotel.name;
+  const balanceSchedule = getEffectiveBalancePaymentSchedule({
+    balanceMethod: confirmation?.selectedBalanceMethod,
+    arrivalDate: quote.arrivalDate,
+    hotelName: selectedHotelName
+  });
+  const isFullBalanceDueAtConfirmation = isBalanceDueAtConfirmation(balanceSchedule);
+  const defaultPaymentDueAt = useMemo(() => defaultPaymentDueAtForFinalConfirmation({
+    arrivalDate: quote.arrivalDate,
+    balanceMethod: confirmation?.selectedBalanceMethod,
+    hotelName: selectedHotelName
+  }), [quote.arrivalDate, confirmation?.selectedBalanceMethod, selectedHotelName]);
   const [message, setMessage] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
-  const [depositDueAt, setDepositDueAt] = useState(() => confirmationDepositDueLocalInput(confirmation?.depositDueAt, quote.arrivalDate));
+  const [depositDueAt, setDepositDueAt] = useState(() => confirmationDepositDueLocalInput(confirmation?.depositDueAt, defaultPaymentDueAt));
   const [finalNotes, setFinalNotes] = useState("");
   const [unavailableReason, setUnavailableReason] = useState("");
   const [alternativeToPropose, setAlternativeToPropose] = useState(false);
@@ -66,11 +78,6 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const selectedPrice = defaultSelectedPrice;
   const depositAmount = confirmation?.selectedDepositAmount;
   const balanceAmount = confirmation?.selectedBalanceAmount;
-  const balanceSchedule = getEffectiveBalancePaymentSchedule({
-    balanceMethod: confirmation?.selectedBalanceMethod,
-    arrivalDate: quote.arrivalDate,
-    hotelName: confirmation?.selectedHotelName ?? quote.proposedHotel.name
-  });
   const isInHotelBalance = balanceSchedule.type === "in_structure";
   const parsedNewTotalPrice = Number(newTotalPrice);
   const parsedNewDepositAmount = Number(newDepositAmount);
@@ -79,6 +86,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     : 0;
 
   const finalPaymentSnapshot = confirmation?.finalConfirmationSentAt ? confirmation?.paymentSettingsSnapshot ?? {} : {};
+  const isFullBalancePaymentRequest = finalPaymentSnapshot.payment_request_type === "full_balance" || (!confirmation?.finalConfirmationSentAt && isFullBalanceDueAtConfirmation);
   const finalPaymentReason = typeof finalPaymentSnapshot.payment_reason === "string" ? finalPaymentSnapshot.payment_reason : "";
   const hasFinalCoordinates = finalPaymentSnapshot.configured === true;
   const hasCurrentCoordinates = isPaymentSettingsConfigured(paymentSettings);
@@ -92,6 +100,14 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     confirmation?.firstName ?? quote.customerFirstName,
     confirmation?.lastName ?? quote.customerLastName
   );
+  const confirmationPaymentReason = isFullBalanceDueAtConfirmation
+    ? buildBalancePaymentReason(
+      paymentSettings,
+      quote.code,
+      confirmation?.firstName ?? quote.customerFirstName,
+      confirmation?.lastName ?? quote.customerLastName
+    )
+    : currentPaymentReason;
 
   const depositDueIso = useMemo(() => {
     const parsed = new Date(depositDueAt);
@@ -110,7 +126,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     setNewDepositAmount(formatAmountInput(defaultDepositAmount));
     setTotalManuallyEdited(false);
     setVoucherNotes(confirmation?.voucherNotes ?? "");
-    setDepositDueAt(confirmationDepositDueLocalInput(confirmation?.depositDueAt, quote.arrivalDate));
+    setDepositDueAt(confirmationDepositDueLocalInput(confirmation?.depositDueAt, defaultPaymentDueAt));
     setDepositAmountOverride(formatAmountInput(defaultDepositAmount));
     setBalanceAmountOverride("");
     setCustomerFirstName(confirmation?.firstName ?? quote.customerFirstName);
@@ -121,7 +137,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     confirmationId,
     confirmation?.voucherNotes,
     confirmation?.depositDueAt,
-    quote.arrivalDate,
+    defaultPaymentDueAt,
     confirmation?.firstName,
     confirmation?.lastName,
     confirmation?.email,
@@ -147,19 +163,22 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
       treatmentLabel: confirmation?.selectedTreatmentLabel ?? quote.treatment,
       priceLabel: formatCurrency(selectedPrice),
       depositLabel: formatCurrency(depositAmount),
-      balanceLabel: balanceAmount != null ? formatCurrency(balanceAmount) : undefined,
-      balanceDueLabel: balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : undefined,
+      paymentRequestType: isFullBalanceDueAtConfirmation ? "full_balance" : "deposit",
+      paymentAmountLabel: formatCurrency(selectedPrice),
+      paymentDueLabel: isFullBalanceDueAtConfirmation && depositDueIso ? formatDate(depositDueIso) : undefined,
+      balanceLabel: !isFullBalanceDueAtConfirmation && balanceAmount != null ? formatCurrency(balanceAmount) : undefined,
+      balanceDueLabel: !isFullBalanceDueAtConfirmation && balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : undefined,
       balanceInStructure: balanceSchedule.type === "in_structure",
       bankAccountHolder: paymentSettings.bankAccountHolder,
       bankName: paymentSettings.bankName || undefined,
       iban: paymentSettings.iban,
       bicSwift: paymentSettings.bicSwift || undefined,
-      paymentReason: currentPaymentReason,
+      paymentReason: confirmationPaymentReason,
       paymentInstructions: paymentSettings.paymentInstructions || undefined
     });
     const phone = confirmation?.phone ?? quote.customerPhone;
     return { message, chatUrl: `https://wa.me/${normalizeItalianPhone(phone)}` };
-  }, [hasCurrentCoordinates, depositAmount, balanceAmount, confirmation, quote, selectedPrice, balanceSchedule, paymentSettings, currentPaymentReason]);
+  }, [hasCurrentCoordinates, depositAmount, balanceAmount, confirmation, quote, selectedPrice, isFullBalanceDueAtConfirmation, depositDueIso, balanceSchedule, paymentSettings, confirmationPaymentReason]);
 
   const balanceSummaryWhatsapp = useMemo(() => {
     if (!confirmation?.depositPaidAt || confirmation.balancePaidAt || isInHotelBalance || !balanceSchedule.dueDate) return null;
@@ -549,7 +568,7 @@ IschiaStars 🌊`;
           </p>
         </div>
         <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${(confirmation?.depositPaidAt || confirmation?.balancePaidAt) ? "bg-emerald-100 text-emerald-800 ring-emerald-200" : "bg-ischia-mist text-ischia-navy ring-ischia-blue/15"}`}>
-          {confirmation?.balancePaidAt ? "✓ Saldo ricevuto" : confirmation?.depositPaidAt ? "✓ Caparra ricevuta" : availabilityStatusLabel(status)}
+          {confirmation?.balancePaidAt ? "✓ Saldo ricevuto" : confirmation?.depositPaidAt ? isFullBalancePaymentRequest ? "✓ Saldo ricevuto" : "✓ Caparra ricevuta" : status === "deposit_waiting" && isFullBalancePaymentRequest ? "In attesa saldo" : availabilityStatusLabel(status)}
         </span>
       </div>
 
@@ -570,7 +589,7 @@ IschiaStars 🌊`;
         <Info label="Modalità saldo" value={balanceSchedule.dueDate ? `${balanceSchedule.title} entro il ${formatDate(balanceSchedule.dueDate)}` : balanceSchedule.title} />
         {balanceSchedule.dueDate ? <Info label="Scadenza saldo" value={formatDate(balanceSchedule.dueDate)} /> : null}
         <Info label="Coordinate" value={hasCurrentCoordinates ? "Configurate per invio definitivo" : "Non configurate"} />
-        <Info label="Causale" value={currentPaymentReason || "-"} />
+        <Info label="Causale" value={confirmationPaymentReason || "-"} />
         <Info label="Policy cancellazione" value={confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy ?? "-"} />
         {additionalServices.length ? <Info label="Servizi aggiuntivi" value={additionalServices.map(formatConfirmationAdditionalService).join(" · ")} /> : null}
         <Info label="Confermata il" value={formatDateTime(confirmation.confirmedAt)} />
@@ -739,7 +758,7 @@ IschiaStars 🌊`;
             <Info label="Banca" value={paymentSettings.bankName || "-"} />
             <Info label="IBAN" value={paymentSettings.iban || "-"} />
             <Info label="BIC/SWIFT" value={paymentSettings.bicSwift || "-"} />
-            <Info label="Causale" value={currentPaymentReason || "-"} />
+            <Info label="Causale" value={confirmationPaymentReason || "-"} />
             <Info label="Istruzioni" value={paymentSettings.paymentInstructions || "-"} />
           </div>
         ) : (
@@ -778,11 +797,11 @@ IschiaStars 🌊`;
           ) : null}
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="text-sm font-semibold text-ischia-ink">
-              Scadenza caparra
+              {isFullBalanceDueAtConfirmation ? "Scadenza saldo" : "Scadenza caparra"}
               <input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" type="datetime-local" value={depositDueAt} onChange={(event) => setDepositDueAt(event.target.value)} />
             </label>
             <label className="text-sm font-semibold text-ischia-ink">
-              Importo caparra (&euro;)
+              {isFullBalanceDueAtConfirmation ? "Importo acconto registrato (€)" : "Importo caparra (€)"}
               <input
                 className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
                 type="number"
@@ -820,7 +839,7 @@ IschiaStars 🌊`;
                 <p><strong>Coordinate che verranno inviate:</strong> {paymentSettings.bankAccountHolder} · {paymentSettings.iban}</p>
                 {paymentSettings.bankName ? <p><strong>Banca:</strong> {paymentSettings.bankName}</p> : null}
                 {paymentSettings.bicSwift ? <p><strong>BIC/SWIFT:</strong> {paymentSettings.bicSwift}</p> : null}
-                <p><strong>Causale:</strong> {currentPaymentReason}</p>
+                <p><strong>Causale:</strong> {confirmationPaymentReason}</p>
                 {paymentSettings.paymentInstructions ? <p><strong>Istruzioni:</strong> {paymentSettings.paymentInstructions}</p> : null}
               </>
             ) : (
@@ -861,7 +880,7 @@ IschiaStars 🌊`;
           onClick={() => void handleSendDepositCoordinatesWhatsapp()}
           type="button"
         >
-          {depositCoordinatesCopied ? "✓ Testo copiato — incolla su WhatsApp" : "📲 Invia coordinate acconto su WhatsApp"}
+          {depositCoordinatesCopied ? "✓ Testo copiato — incolla su WhatsApp" : isFullBalanceDueAtConfirmation ? "📲 Invia coordinate saldo su WhatsApp" : "📲 Invia coordinate acconto su WhatsApp"}
         </button>
       ) : null}
 
@@ -960,7 +979,7 @@ IschiaStars 🌊`;
 
       {status === "deposit_waiting" ? (
         <div className="mt-5 rounded-2xl bg-amber-50/60 p-4 ring-1 ring-amber-200/70">
-          <h3 className="font-black text-ischia-navy">Caparra e voucher cliente</h3>
+          <h3 className="font-black text-ischia-navy">{isFullBalancePaymentRequest ? "Saldo e voucher cliente" : "Caparra e voucher cliente"}</h3>
           <label className="mt-3 block text-sm font-semibold text-ischia-ink">
             Note voucher
             <textarea
@@ -1015,9 +1034,11 @@ IschiaStars 🌊`;
               </div>
             ) : confirmation.balancePaidAt ? (
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
-                  ✓ Caparra ricevuta il {formatDateTime(confirmation.depositPaidAt)}
-                </p>
+                {!isFullBalancePaymentRequest ? (
+                  <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
+                    ✓ Caparra ricevuta il {formatDateTime(confirmation.depositPaidAt)}
+                  </p>
+                ) : null}
                 <p className="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-black text-emerald-800">
                   ✓ Saldo ricevuto il {formatDateTime(confirmation.balancePaidAt)}
                 </p>
@@ -1087,10 +1108,10 @@ IschiaStars 🌊`;
               className="mt-3 rounded-full px-4 py-2 text-sm font-black text-white disabled:opacity-60"
               style={{ backgroundColor: "#16A34A" }}
               disabled={Boolean(loadingAction)}
-              onClick={() => void postDepositReceived("Caparra registrata e voucher inviato al cliente.")}
+              onClick={() => void postDepositReceived(isFullBalancePaymentRequest ? "Saldo registrato e voucher inviato al cliente." : "Caparra registrata e voucher inviato al cliente.")}
               type="button"
             >
-              Caparra ricevuta
+              {isFullBalancePaymentRequest ? "Saldo ricevuto" : "Caparra ricevuta"}
             </button>
           )}
         </div>
@@ -1139,10 +1160,10 @@ function paymentSavedLabelFromSuccess(success: string) {
   return success.toLowerCase().includes("saldo") ? "Saldo registrato" : "Caparra registrata";
 }
 
-function confirmationDepositDueLocalInput(value: string | undefined, arrivalDate?: string) {
-  if (!value) return formatDepositDueLocalInput(defaultDepositDueAtForArrival(arrivalDate));
+function confirmationDepositDueLocalInput(value: string | undefined, fallbackDate: Date) {
+  if (!value) return formatDepositDueLocalInput(fallbackDate);
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? formatDepositDueLocalInput(defaultDepositDueAtForArrival(arrivalDate)) : formatDepositDueLocalInput(date);
+  return Number.isNaN(date.getTime()) ? formatDepositDueLocalInput(fallbackDate) : formatDepositDueLocalInput(date);
 }
 
 function formatWhatsappFirstName(value: string) {

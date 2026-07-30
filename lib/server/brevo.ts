@@ -746,13 +746,19 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
   const totalPriceLabel = confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice);
   const depositLabel = confirmation?.selectedDepositAmount != null ? formatPrice(confirmation.selectedDepositAmount) : "";
   const balanceLabel = confirmation?.selectedBalanceAmount != null ? formatPrice(confirmation.selectedBalanceAmount) : "";
+  const isFullBalanceRequest = snapshot.payment_request_type === "full_balance";
+  const paymentRequestAmount = typeof snapshot.payment_request_amount === "number"
+    ? snapshot.payment_request_amount
+    : confirmation?.selectedPrice ?? quote.totalPrice;
+  const paymentRequestLabel = isFullBalanceRequest ? formatPrice(paymentRequestAmount) : depositLabel;
+  const paymentDueLabel = isFullBalanceRequest ? formatDate(String(snapshot.payment_due_at ?? details.depositDueAt)) : "";
   const balanceSchedule = getEffectiveBalancePaymentSchedule({
     balanceMethod: confirmation?.selectedBalanceMethod,
     arrivalDate: quote.arrivalDate,
     hotelName
   });
   const balanceDueLabel = balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : "";
-  const balanceInstruction = balanceLabel
+  const balanceInstruction = !isFullBalanceRequest && balanceLabel
     ? balanceDueLabel
       ? `Il saldo restante di <strong style="color:#1B3A5C;">${balanceLabel}</strong> dovrà essere versato entro il <strong style="color:#1B3A5C;">${balanceDueLabel}</strong>.`
       : balanceSchedule.type === "in_structure"
@@ -767,7 +773,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
   const coordinatesHtml = snapshot.configured === true
     ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;">
         <tr><td style="padding:16px 18px;">
-          <div style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#1B3A5C;text-transform:uppercase;letter-spacing:0.5px;">Coordinate caparra</div>
+          <div style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#1B3A5C;text-transform:uppercase;letter-spacing:0.5px;">${isFullBalanceRequest ? "Coordinate saldo" : "Coordinate caparra"}</div>
           ${snapshot.bank_account_holder ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Intestatario:</strong> ${escapeHtml(String(snapshot.bank_account_holder))}</div>` : ""}
           ${snapshot.bank_name ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Banca:</strong> ${escapeHtml(String(snapshot.bank_name))}</div>` : ""}
           ${snapshot.iban ? paymentCopyFieldHtml("IBAN", String(snapshot.iban), "Copia IBAN") : ""}
@@ -778,7 +784,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
         </td></tr>
       </table>`
     : `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;">
-        <tr><td style="padding:16px 18px;font-size:14px;color:#374151;">Le modalità operative per il versamento della caparra saranno comunicate dallo staff IschiaStars.</td></tr>
+        <tr><td style="padding:16px 18px;font-size:14px;color:#374151;">Le modalità operative per il versamento ${isFullBalanceRequest ? "del saldo" : "della caparra"} saranno comunicate dallo staff IschiaStars.</td></tr>
       </table>`;
 
   return `<!DOCTYPE html>
@@ -808,7 +814,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
     <tr><td class="email-body" style="background:#FFFFFF;padding:28px 32px;color:#374151;font-size:15px;line-height:1.6;">
       <p style="margin:0 0 18px;font-size:15px;">Ciao <strong>${escapeHtml(firstName)}</strong>,</p>
       <p style="margin:0 0 12px;font-size:15px;">la struttura ha confermato la disponibilità per la proposta selezionata.</p>
-      <p style="margin:0 0 12px;font-size:15px;">Per bloccare definitivamente il soggiorno è necessario versare la caparra.</p>
+      <p style="margin:0 0 12px;font-size:15px;">${isFullBalanceRequest ? "Per confermare definitivamente il soggiorno è necessario versare il saldo." : "Per bloccare definitivamente il soggiorno è necessario versare la caparra."}</p>
       ${balanceInstruction ? `<p style="margin:0 0 22px;font-size:15px;">${balanceInstruction}</p>` : ""}
 
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D9E2EC;border-radius:10px;overflow:hidden;margin:0 0 22px;">
@@ -828,15 +834,23 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
           <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Prezzo totale</td>
           <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#1B3A5C;">${totalPriceLabel}</td>
         </tr>
-        ${depositLabel ? `<tr>
+        ${isFullBalanceRequest && paymentRequestLabel ? `<tr>
+          <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Saldo da versare</td>
+          <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#15803D;">${paymentRequestLabel}</td>
+        </tr>` : ""}
+        ${isFullBalanceRequest && paymentDueLabel ? `<tr>
+          <td style="padding:12px 16px;font-size:13px;color:#6B7280;">Scadenza pagamento</td>
+          <td align="right" style="padding:12px 16px;font-size:13px;font-weight:bold;color:#374151;">Entro il ${paymentDueLabel}</td>
+        </tr>` : ""}
+        ${!isFullBalanceRequest && depositLabel ? `<tr>
           <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Caparra</td>
           <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#15803D;">${depositLabel}</td>
         </tr>` : ""}
-        ${balanceLabel ? `<tr>
+        ${!isFullBalanceRequest && balanceLabel ? `<tr>
           <td style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#6B7280;">Saldo restante</td>
           <td align="right" style="padding:12px 16px;border-bottom:1px solid #E5E7EB;font-size:14px;font-weight:bold;color:#1B3A5C;">${balanceLabel}</td>
         </tr>` : ""}
-        ${balanceLabel ? `<tr>
+        ${!isFullBalanceRequest && balanceLabel ? `<tr>
           <td style="padding:12px 16px;font-size:13px;color:#6B7280;">Scadenza saldo</td>
           <td align="right" style="padding:12px 16px;font-size:13px;font-weight:bold;color:#374151;">${balanceDueLabel ? `Entro il ${balanceDueLabel}` : balanceSchedule.title}</td>
         </tr>` : ""}
@@ -879,13 +893,19 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
   const departureLabel = formatDate(quote.departureDate);
   const hotelName = confirmation?.selectedHotelName ?? quote.proposedHotel.name;
   const balanceLabel = confirmation?.selectedBalanceAmount != null ? formatPrice(confirmation.selectedBalanceAmount) : "";
+  const isFullBalanceRequest = snapshot.payment_request_type === "full_balance";
+  const paymentRequestAmount = typeof snapshot.payment_request_amount === "number"
+    ? snapshot.payment_request_amount
+    : confirmation?.selectedPrice ?? quote.totalPrice;
+  const paymentRequestLabel = formatPrice(paymentRequestAmount);
+  const paymentDueLabel = isFullBalanceRequest ? formatDate(String(snapshot.payment_due_at ?? details.depositDueAt)) : "";
   const balanceSchedule = getEffectiveBalancePaymentSchedule({
     balanceMethod: confirmation?.selectedBalanceMethod,
     arrivalDate: quote.arrivalDate,
     hotelName
   });
   const balanceDueLabel = balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : "";
-  const balanceText = balanceLabel
+  const balanceText = !isFullBalanceRequest && balanceLabel
     ? balanceDueLabel
       ? `Saldo restante: ${balanceLabel} entro il ${balanceDueLabel}`
       : balanceSchedule.type === "in_structure"
@@ -894,7 +914,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     : "";
 
   const coordinatesHtml = snapshot.configured === true
-    ? `<p><strong>Coordinate caparra</strong><br>
+    ? `<p><strong>${isFullBalanceRequest ? "Coordinate saldo" : "Coordinate caparra"}</strong><br>
         ${snapshot.bank_account_holder ? `Intestatario: ${snapshot.bank_account_holder}<br>` : ""}
         ${snapshot.bank_name ? `Banca: ${snapshot.bank_name}<br>` : ""}
         ${snapshot.iban ? paymentCopyFieldHtml("IBAN", String(snapshot.iban), "Copia IBAN") : ""}
@@ -903,7 +923,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
         ${paymentReason ? paymentCopyFieldHtml("Causale bonifico", paymentReason, "Copia causale") : ""}
         ${snapshot.payment_instructions ? `${snapshot.payment_instructions}<br>` : ""}
       </p>`
-    : `<p>Le modalità operative per il versamento della caparra saranno comunicate dallo staff IschiaStars.</p>`;
+    : `<p>Le modalità operative per il versamento ${isFullBalanceRequest ? "del saldo" : "della caparra"} saranno comunicate dallo staff IschiaStars.</p>`;
 
   const html = `<!DOCTYPE html><html lang="it"><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
     <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
@@ -911,12 +931,12 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
         <tr><td style="background:#1a4a2a;padding:22px 32px;color:#fff;font-weight:bold;font-size:18px;">Conferma definitiva IschiaStars</td></tr>
         <tr><td style="padding:28px 32px;color:#333;font-size:15px;line-height:1.7;">
           <p>Ciao ${firstName},</p>
-          <p>la struttura ha confermato la disponibilità per la proposta selezionata. Per bloccare definitivamente il soggiorno è necessario versare la caparra.</p>
+          <p>la struttura ha confermato la disponibilità per la proposta selezionata. ${isFullBalanceRequest ? "Per confermare definitivamente il soggiorno è necessario versare il saldo." : "Per bloccare definitivamente il soggiorno è necessario versare la caparra."}</p>
           ${balanceText ? `<p><strong>${balanceText}</strong></p>` : ""}
           <p><strong>Hotel:</strong> ${hotelName}<br>
           <strong>Trattamento:</strong> ${confirmation?.selectedTreatmentLabel ?? quote.treatment}<br>
           <strong>Prezzo totale:</strong> ${confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice)}<br>
-          ${confirmation?.selectedDepositAmount != null ? `<strong>Caparra:</strong> ${formatPrice(confirmation.selectedDepositAmount)}<br>` : ""}
+          ${isFullBalanceRequest ? `<strong>Saldo da versare:</strong> ${paymentRequestLabel}<br>${paymentDueLabel ? `<strong>Scadenza pagamento:</strong> entro il ${paymentDueLabel}<br>` : ""}` : confirmation?.selectedDepositAmount != null ? `<strong>Caparra:</strong> ${formatPrice(confirmation.selectedDepositAmount)}<br>` : ""}
           ${balanceText ? `<strong>${balanceText}</strong>` : ""}</p>
           ${coordinatesHtml}
           ${confirmation?.selectedCancellationPolicy ? `<p><strong>Policy cancellazione:</strong> ${confirmation.selectedCancellationPolicy}</p>` : ""}
@@ -934,14 +954,15 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     `Ciao ${firstName},`,
     "",
     "La struttura ha confermato la disponibilità.",
-    "Caparra da versare per bloccare la prenotazione.",
+    isFullBalanceRequest ? "Saldo da versare per confermare la prenotazione." : "Caparra da versare per bloccare la prenotazione.",
     ...(balanceText ? [balanceText] : []),
     `Hotel: ${hotelName}`,
     `Arrivo: ${arrivalLabel}`,
     `Partenza: ${departureLabel}`,
     `Trattamento: ${confirmation?.selectedTreatmentLabel ?? quote.treatment}`,
     `Prezzo totale: ${confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice)}`,
-    ...(confirmation?.selectedDepositAmount != null ? [`Caparra: ${formatPrice(confirmation.selectedDepositAmount)}`] : []),
+    ...(isFullBalanceRequest ? [`Saldo da versare: ${paymentRequestLabel}`] : confirmation?.selectedDepositAmount != null ? [`Caparra: ${formatPrice(confirmation.selectedDepositAmount)}`] : []),
+    ...(isFullBalanceRequest && paymentDueLabel ? [`Scadenza pagamento: entro il ${paymentDueLabel}`] : []),
     ...(additionalServices.length ? ["", "Servizi aggiuntivi:", ...additionalServices.map((service) => `- ${formatConfirmationAdditionalService(service)}`)] : []),
     ...(snapshot.configured === true ? [
       snapshot.bank_account_holder ? `Intestatario: ${snapshot.bank_account_holder}` : "",
@@ -951,7 +972,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
       snapshot.bic_swift ? `BIC/SWIFT: ${snapshot.bic_swift}` : "",
       paymentReason ? `Causale: ${paymentReason}` : "",
       snapshot.payment_instructions ? `Istruzioni: ${snapshot.payment_instructions}` : ""
-    ].filter(Boolean) : ["Le modalità operative per il versamento della caparra saranno comunicate dallo staff IschiaStars."]),
+    ].filter(Boolean) : [`Le modalità operative per il versamento ${isFullBalanceRequest ? "del saldo" : "della caparra"} saranno comunicate dallo staff IschiaStars.`]),
     ...(confirmation?.selectedCancellationPolicy ? [`Policy cancellazione: ${confirmation.selectedCancellationPolicy}`] : []),
     ...(details.notes ? [`Note: ${details.notes}`] : []),
     "",

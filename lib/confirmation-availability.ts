@@ -1,4 +1,5 @@
 import { ConfirmationAvailabilityStatus } from "@/lib/types";
+import { getEffectiveBalancePaymentSchedule, isBalanceDueAtConfirmation } from "@/lib/hotel-policies";
 
 export const availabilityStatusLabels: Record<ConfirmationAvailabilityStatus, string> = {
   availability_to_check: "Da verificare con struttura",
@@ -28,6 +29,24 @@ export function defaultDepositDueAtForArrival(arrivalDate?: string) {
   return date;
 }
 
+export function defaultPaymentDueAtForFinalConfirmation(input: {
+  arrivalDate?: string;
+  balanceMethod?: string;
+  hotelName?: string;
+  now?: Date;
+}) {
+  const now = input.now ?? new Date();
+  if (input.arrivalDate) {
+    const schedule = getEffectiveBalancePaymentSchedule({
+      balanceMethod: input.balanceMethod,
+      arrivalDate: input.arrivalDate,
+      hotelName: input.hotelName
+    });
+    if (isBalanceDueAtConfirmation(schedule, now)) return now;
+  }
+  return defaultDepositDueAtForArrival(input.arrivalDate);
+}
+
 export function formatDepositDueLocalInput(date = defaultDepositDueAt()) {
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -43,6 +62,9 @@ export function depositCoordinatesWhatsappMessage(input: {
   treatmentLabel: string;
   priceLabel: string;
   depositLabel: string;
+  paymentRequestType?: "deposit" | "full_balance";
+  paymentAmountLabel?: string;
+  paymentDueLabel?: string;
   balanceLabel?: string;
   balanceDueLabel?: string;
   balanceInStructure?: boolean;
@@ -55,19 +77,26 @@ export function depositCoordinatesWhatsappMessage(input: {
 }) {
   const {
     firstName, code, hotelName, arrivalDate, departureDate, roomLabel, treatmentLabel, priceLabel,
-    depositLabel, balanceLabel, balanceDueLabel, balanceInStructure,
+    depositLabel, paymentRequestType, paymentAmountLabel, paymentDueLabel, balanceLabel, balanceDueLabel, balanceInStructure,
     bankAccountHolder, bankName, iban, bicSwift, paymentReason
   } = input;
+  const isFullBalanceRequest = paymentRequestType === "full_balance";
   const stayDetails = splitStayDetails(treatmentLabel, roomLabel);
   const formattedFirstName = formatFirstName(firstName);
   const formattedBankName = formatBankName(bankName);
-  const balanceSentence = balanceLabel
+  const balanceSentence = !isFullBalanceRequest && balanceLabel
     ? balanceDueLabel
       ? `Il saldo restante di *${balanceLabel}* dovrà essere versato entro il *${balanceDueLabel}*.`
       : balanceInStructure
         ? `Il saldo restante di *${balanceLabel}* dovrà essere versato in struttura.`
         : `Il saldo restante è di *${balanceLabel}*.`
     : "";
+  const paymentLine = isFullBalanceRequest
+    ? `Per confermare la prenotazione è richiesto il saldo di *${paymentAmountLabel ?? priceLabel}*${paymentDueLabel ? ` entro il *${paymentDueLabel}*` : ""}.`
+    : `Per bloccare la prenotazione è richiesto un acconto di *${depositLabel}*.`;
+  const receivedLine = isFullBalanceRequest
+    ? "Appena ricevuto il saldo, ti invieremo la conferma definitiva della prenotazione."
+    : "Appena ricevuto l’acconto, ti invieremo la conferma definitiva della prenotazione.";
 
   return `Ciao ${formattedFirstName} 👋
 
@@ -79,7 +108,7 @@ Ottime notizie: la disponibilità per la tua proposta *${code}* è stata conferm
 ${stayDetails.room ? `🛏️ ${stayDetails.room}\n` : ""}🍽️ ${stayDetails.treatment}
 💰 Totale soggiorno: *${priceLabel}*
 
-Per bloccare la prenotazione è richiesto un acconto di *${depositLabel}*.
+${paymentLine}
 ${balanceSentence ? `\n${balanceSentence}\n` : ""}
 💳 *Coordinate per il bonifico*
 Intestatario: *${bankAccountHolder}*
@@ -91,7 +120,7 @@ ${paymentReason}
 
 Ti chiediamo gentilmente di inviare copia del pagamento tramite email o WhatsApp.
 
-Appena ricevuto l’acconto, ti invieremo la conferma definitiva della prenotazione.
+${receivedLine}
 
 Per qualsiasi dubbio puoi scriverci qui su WhatsApp.
 

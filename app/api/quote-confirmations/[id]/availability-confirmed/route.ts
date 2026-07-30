@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { defaultDepositDueAtForArrival } from "@/lib/confirmation-availability";
-import { buildPaymentReason, isPaymentSettingsConfigured, paymentSettingsToDbValue } from "@/lib/payment-settings";
+import { defaultPaymentDueAtForFinalConfirmation } from "@/lib/confirmation-availability";
+import { getEffectiveBalancePaymentSchedule, isBalanceDueAtConfirmation } from "@/lib/hotel-policies";
+import { buildBalancePaymentReason, buildPaymentReason, isPaymentSettingsConfigured, paymentSettingsToDbValue } from "@/lib/payment-settings";
 import { updateQuoteConfirmationAvailability, getQuoteConfirmationById } from "@/lib/repositories/quoteConfirmations";
 import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
 import { getQuoteById } from "@/lib/repositories/quotes";
@@ -39,15 +40,34 @@ async function sendFinalConfirmationEmailAutomatically(confirmationId: string, q
     }
 
     const confirmation = quote.confirmation;
-    const depositDueAt = defaultDepositDueAtForArrival(quote.arrivalDate).toISOString();
-    const emailSentAt = new Date().toISOString();
-    const reason = buildPaymentReason(settings, quote.code, confirmation.firstName ?? quote.customerFirstName, confirmation.lastName ?? quote.customerLastName);
+    const now = new Date();
+    const depositDueAt = defaultPaymentDueAtForFinalConfirmation({
+      arrivalDate: quote.arrivalDate,
+      balanceMethod: confirmation.selectedBalanceMethod,
+      hotelName: confirmation.selectedHotelName ?? quote.proposedHotel.name,
+      now
+    }).toISOString();
+    const emailSentAt = now.toISOString();
+    const balanceSchedule = getEffectiveBalancePaymentSchedule({
+      balanceMethod: confirmation.selectedBalanceMethod,
+      arrivalDate: quote.arrivalDate,
+      hotelName: confirmation.selectedHotelName ?? quote.proposedHotel.name
+    });
+    const isFullBalanceRequest = isBalanceDueAtConfirmation(balanceSchedule, now);
+    const reason = isFullBalanceRequest
+      ? buildBalancePaymentReason(settings, quote.code, confirmation.firstName ?? quote.customerFirstName, confirmation.lastName ?? quote.customerLastName)
+      : buildPaymentReason(settings, quote.code, confirmation.firstName ?? quote.customerFirstName, confirmation.lastName ?? quote.customerLastName);
+    const totalPrice = confirmation.selectedPrice ?? quote.totalPrice ?? 0;
+    const depositAmount = confirmation.selectedDepositAmount ?? quote.deposit;
     const snapshot = {
       ...paymentSettingsToDbValue(settings),
       payment_reason: reason,
-      deposit_amount: confirmation.selectedDepositAmount ?? quote.deposit,
+      deposit_amount: depositAmount,
       balance_amount: confirmation.selectedBalanceAmount,
       deposit_due_at: depositDueAt,
+      payment_request_type: isFullBalanceRequest ? "full_balance" : "deposit",
+      payment_request_amount: isFullBalanceRequest ? totalPrice : depositAmount,
+      payment_due_at: isFullBalanceRequest ? depositDueAt : null,
       email_sent_at: emailSentAt,
       configured: true
     };

@@ -57,6 +57,21 @@ export function getEffectiveBalancePaymentSchedule(input: {
   return getBalancePaymentSchedule(effectiveMethod, input.arrivalDate);
 }
 
+export function isBalanceDueAtConfirmation(schedule: BalancePaymentSchedule, now = new Date()): boolean {
+  return schedule.type === "before_arrival" && Boolean(schedule.dueDate) && String(schedule.dueDate) <= formatRomeDateOnly(now);
+}
+
+export function formatRomeDateOnly(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 export const CANCELLATION_POLICY_7_DAYS =
   "La cancellazione o modifica della prenotazione è consentita senza penale entro 7 giorni prima della data di arrivo. L’eventuale acconto versato resterà valido come credito utilizzabile entro 12 mesi. Oltre tale termine e in caso di no-show, verrà applicata una penale pari al 100% del totale prenotato. In caso di arrivo posticipato, partenza anticipata o riduzione del numero di persone rispetto a quanto prenotato, l’intero importo della prenotazione resta dovuto. I pasti non fruiti non danno diritto a rimborso.";
 

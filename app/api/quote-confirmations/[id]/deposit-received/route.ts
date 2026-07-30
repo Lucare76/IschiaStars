@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getQuoteConfirmationById, markDepositPaid, updateQuoteConfirmationAvailability } from "@/lib/repositories/quoteConfirmations";
+import { getQuoteConfirmationById, markDepositPaid, markFullBalancePaid, updateQuoteConfirmationAvailability } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteById } from "@/lib/repositories/quotes";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 import { generateAndSendVoucherEmail } from "@/lib/server/voucher-email";
@@ -26,11 +26,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const quote = quoteResult.data;
   if (!quote?.confirmation) return NextResponse.json({ ok: false, error: "Preventivo non trovato" }, { status: 404 });
 
-  const update = await markDepositPaid(params.id);
-  if (!update.data) return NextResponse.json({ ok: false, error: update.error ?? "Caparra non registrata" }, { status: 500 });
+  const isFullBalancePaymentRequest = quote.confirmation.paymentSettingsSnapshot?.payment_request_type === "full_balance";
+  const update = isFullBalancePaymentRequest ? await markFullBalancePaid(params.id) : await markDepositPaid(params.id);
+  if (!update.data) return NextResponse.json({ ok: false, error: update.error ?? (isFullBalancePaymentRequest ? "Saldo non registrato" : "Caparra non registrata") }, { status: 500 });
 
   const depositPaidAt = String(update.data.deposit_paid_at);
-  const voucherEmail = await generateAndSendVoucherEmail(quote, { depositPaidAt });
+  const balancePaidAt = update.data.balance_paid_at ? String(update.data.balance_paid_at) : undefined;
+  const voucherEmail = await generateAndSendVoucherEmail(quote, {
+    depositPaidAt,
+    ...(balancePaidAt ? { balancePaidAt, isBalancePaid: true } : {})
+  });
   if (!voucherEmail.sent) {
     console.error("[deposit-received] voucher email failed", { quoteId: quote.id, confirmationId: params.id, error: voucherEmail.error });
   }
@@ -43,6 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     voucherEmailSent: voucherEmail.sent,
     voucherEmailError: voucherEmail.error,
     depositPaidAt,
+    balancePaidAt,
     quote: freshQuoteResult.data
   });
 }

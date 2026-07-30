@@ -58,6 +58,14 @@ export function buildPaymentReason(settings: PaymentSettings, quoteCode: string,
   return [settings.paymentReasonPrefix || emptyPaymentSettings.paymentReasonPrefix, `Preventivo ${quoteCode}`, clientName].filter(Boolean).join(" - ");
 }
 
+export function buildBalancePaymentReason(settings: PaymentSettings, quoteCode: string, firstName: string, lastName: string) {
+  const prefix = settings.paymentReasonPrefix || emptyPaymentSettings.paymentReasonPrefix;
+  const balancePrefix = /^caparra\b/i.test(prefix)
+    ? prefix.replace(/^caparra\b/i, "Saldo")
+    : "Saldo soggiorno IschiaStars";
+  return buildPaymentReason({ ...settings, paymentReasonPrefix: balancePrefix }, quoteCode, firstName, lastName);
+}
+
 export function validateIbanLight(value: string) {
   const compact = value.replace(/\s+/g, "").toUpperCase();
   if (!compact) return null;
