@@ -27,6 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
   const depositAmount = confirmation.selectedDepositAmount ?? quote.deposit;
   const balanceAmount = confirmation.selectedBalanceAmount;
+  const totalPrice = confirmation.selectedPrice ?? quote.totalPrice;
   const balanceSchedule = getBalancePaymentSchedule(confirmation.selectedBalanceMethod, quote.arrivalDate);
 
   const selectedOption = quote.hotelOptions.find(o => o.id === confirmation.selectedHotelOptionId);
@@ -44,6 +45,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   const isBalancePaid = Boolean(confirmation.balancePaidAt);
+  const isFullBalancePaid = isBalancePaid
+    && typeof depositAmount === "number"
+    && typeof totalPrice === "number"
+    && depositAmount >= totalPrice
+    && (balanceAmount == null || Number(balanceAmount) <= 0);
 
   const pdfBuffer = await generateVoucherPdf({
     quoteCode: quote.code,
@@ -60,11 +66,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     includedServices,
     depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
     depositPaidAtLabel: formatDateTime(depositPaidAt),
-    balanceAmountLabel: typeof balanceAmount === "number" ? formatCurrency(balanceAmount) : undefined,
+    balanceAmountLabel: !isFullBalancePaid && typeof balanceAmount === "number" ? formatCurrency(balanceAmount) : undefined,
     balanceTitleLabel: balanceSchedule.title,
     balanceDueDateLabel: balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : undefined,
     balanceMethodLabel: confirmation.selectedBalanceMethod,
     isBalancePaid,
+    isFullBalancePaid,
     balancePaidAtLabel: isBalancePaid ? formatDateTime(String(confirmation.balancePaidAt)) : undefined,
     cancellationPolicy: confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy,
     voucherNotes: confirmation.voucherNotes,

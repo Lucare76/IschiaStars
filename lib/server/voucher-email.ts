@@ -32,6 +32,12 @@ export async function generateAndSendVoucherEmail(
 
     const depositAmount = confirmation.selectedDepositAmount ?? quote.deposit;
     const balanceAmount = confirmation.selectedBalanceAmount;
+    const totalPrice = confirmation.selectedPrice ?? quote.totalPrice;
+    const isFullBalancePaid = isBalancePaid
+      && typeof depositAmount === "number"
+      && typeof totalPrice === "number"
+      && depositAmount >= totalPrice
+      && (balanceAmount == null || Number(balanceAmount) <= 0);
     const selectedOption = quote.hotelOptions.find((option) => option.id === confirmation.selectedHotelOptionId);
     const includedServices = selectedOption?.includedServices
       ? selectedOption.includedServices.split("\n").map((service) => service.trim()).filter(Boolean)
@@ -62,11 +68,12 @@ export async function generateAndSendVoucherEmail(
       includedServices,
       depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
       depositPaidAtLabel: formatDateTime(depositPaidAt),
-      balanceAmountLabel: typeof balanceAmount === "number" ? formatCurrency(balanceAmount) : undefined,
+      balanceAmountLabel: !isFullBalancePaid && typeof balanceAmount === "number" ? formatCurrency(balanceAmount) : undefined,
       balanceTitleLabel: balanceSchedule.title,
       balanceDueDateLabel: balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : undefined,
       balanceMethodLabel: confirmation.selectedBalanceMethod,
       isBalancePaid,
+      isFullBalancePaid,
       balancePaidAtLabel: isBalancePaid && balancePaidAt ? formatDateTime(balancePaidAt) : undefined,
       cancellationPolicy: confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy,
       voucherNotes: confirmation.voucherNotes,

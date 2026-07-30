@@ -385,6 +385,7 @@ export type VoucherDocumentData = {
   balanceDueDateLabel?: string;
   balanceMethodLabel?: string;
   isBalancePaid?: boolean;
+  isFullBalancePaid?: boolean;
   balancePaidAtLabel?: string;
   cancellationPolicy?: string;
   voucherNotes?: string;
@@ -516,11 +517,11 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
             <Text style={styles.sectionTitle}>Riepilogo pagamento</Text>
             <View style={styles.paymentContent}>
               <View style={styles.paymentPaid}>
-                <Text style={styles.paymentEyebrow}>Caparra versata</Text>
+                <Text style={styles.paymentEyebrow}>{data.isFullBalancePaid ? "Saldo versato" : "Caparra versata"}</Text>
                 <Text style={styles.paidAmount}>{data.depositAmountLabel}</Text>
                 <Text style={styles.paymentMeta}>Pagamento registrato il {data.depositPaidAtLabel}</Text>
               </View>
-              {data.balanceAmountLabel ? (
+              {!data.isFullBalancePaid && data.balanceAmountLabel ? (
                 data.isBalancePaid ? (
                   <View style={styles.paymentPaid}>
                     <Text style={styles.paymentEyebrow}>Saldo ricevuto</Text>
