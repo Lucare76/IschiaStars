@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
-import { CloneQuoteButton } from "@/components/CloneQuoteButton";
 import { ConfirmationAvailabilityPanel } from "@/components/ConfirmationAvailabilityPanel";
 import { EmailTrackingStatus } from "@/components/EmailTrackingStatus";
 import { InterestedFollowUpEmailButton } from "@/components/InterestedFollowUpEmailButton";
@@ -789,7 +788,9 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
                 {currentQuote.excludedFromStats ? "Reincludi nelle statistiche" : "Escludi dalle statistiche"}
               </button>
             ) : null}
-            <CloneQuoteButton quoteId={currentQuote.id} />
+            <button className="rounded-full bg-white px-4 py-2 text-center text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60" disabled={loading} onClick={() => void duplicateCurrentQuote()} type="button">
+              {loading ? "Salvataggio..." : "Duplica"}
+            </button>
             {currentQuote.deletedAt ? (
               <button className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white" onClick={() => void restoreCurrentQuote()} type="button">
                 Ripristina preventivo
