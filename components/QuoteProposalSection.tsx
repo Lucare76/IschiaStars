@@ -10,6 +10,7 @@ import { publicQuoteInfoWhatsappMessage } from "@/lib/message-templates";
 import type { PublicQuoteDTO, PublicQuoteHotelOptionDTO } from "@/lib/public-quote-dto";
 import type { QuoteRoomSelection, TreatmentOption } from "@/lib/types";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
+import { safeSessionStorageGet, safeSessionStorageSet } from "@/lib/safe-storage";
 import { formatCurrency, publicWhatsappLink } from "@/lib/utils";
 
 function hasDisplayablePrice(treatment: TreatmentOption) {
@@ -631,7 +632,7 @@ function HotelCard({
   const reactionKey = `reaction_${quoteCode}_${mainOption.hotelGroup}`;
 
   useEffect(() => {
-    const stored = sessionStorage.getItem(reactionKey);
+    const stored = safeSessionStorageGet(reactionKey);
     if (stored === "interested" || stored === "too_expensive") setReaction(stored);
     else setReaction(null);
   }, [reactionKey]);
@@ -639,7 +640,7 @@ function HotelCard({
   function handleReactionClick(value: "interested" | "too_expensive") {
     if (reaction === value) return;
     setReaction(value);
-    sessionStorage.setItem(reactionKey, value);
+    safeSessionStorageSet(reactionKey, value);
     trackQuoteEvent({ quoteCode, token }, value === "interested" ? "reaction_interested" : "reaction_too_expensive", {
       hotelGroup: mainOption.hotelGroup,
       hotelName: mainOption.hotelName

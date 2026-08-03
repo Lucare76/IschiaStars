@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { safeSessionStorageGet, safeSessionStorageSet } from "@/lib/safe-storage";
 
 type Props = {
   customerFirstName: string;
@@ -16,14 +17,11 @@ function capitalizeName(name: string): string {
 export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
   const storageKey = `welcome_shown_${quoteCode}`;
 
-  // Lazy init: sul server restituisce true (overlay nell'HTML iniziale → nessun flash).
-  // Sul client controlla sessionStorage prima del primo render.
-  const [visible] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    return !sessionStorage.getItem(storageKey);
-  });
-  const [fading, setFading] = useState(false);
+  // Stato iniziale identico su server e client (overlay presente nell'HTML → nessun flash).
+  // Nessun accesso a sessionStorage in fase di render: la verifica avviene in modo protetto
+  // dentro il primo useEffect, così un eventuale errore di storage non blocca l'hydration.
   const [gone, setGone] = useState(false);
+  const [fading, setFading] = useState(false);
   const [phase, setPhase] = useState<0 | 1 | 2 | 3 | 4>(0);
   const [progressMode, setProgressMode] = useState(false);
   const [progressWidth, setProgressWidth] = useState(0);
@@ -33,7 +31,7 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
   const handleDismiss = useCallback(() => {
     if (dismissed.current) return;
     dismissed.current = true;
-    sessionStorage.setItem(storageKey, "1");
+    safeSessionStorageSet(storageKey, "1");
     timers.current.forEach(clearTimeout);
     timers.current = [];
     setFading(true);
@@ -42,8 +40,11 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
   }, [storageKey]);
 
   useEffect(() => {
-    // Già mostrato: dismiss immediato senza animazione
-    if (!visible) {
+    const alreadyShown = Boolean(safeSessionStorageGet(storageKey));
+
+    // Già mostrato in questa sessione: dismiss immediato senza animazione.
+    // Se lo storage non è disponibile, l'overlay viene comunque mostrato normalmente.
+    if (alreadyShown) {
       setGone(true);
       return;
     }
@@ -63,10 +64,11 @@ export function WelcomeOverlay({ customerFirstName, quoteCode }: Props) {
 
     return () => {
       timers.current.forEach(clearTimeout);
+      timers.current = [];
     };
-  }, [visible, handleDismiss]);
+  }, [storageKey, handleDismiss]);
 
-  if (!visible || gone) return null;
+  if (gone) return null;
 
   const name = capitalizeName(customerFirstName);
   const activeDot = phase >= 4 ? 3 : phase >= 2 ? 2 : 1;
