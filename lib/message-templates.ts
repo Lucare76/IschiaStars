@@ -71,6 +71,8 @@ export function adminQuoteWhatsappMessage(input: {
 
   const adultsLabel = `${quote.adults} adult${quote.adults === 1 ? "o" : "i"}`;
   const childCount = quote.children.length;
+  const guestsCount = quote.adults + childCount;
+  const guestsPriceLabel = `${guestsCount} person${guestsCount === 1 ? "a" : "e"}`;
   const guestsLine = childCount > 0
     ? `${adultsLabel}, ${childCount} bambin${childCount === 1 ? "o" : "i"}`
     : adultsLabel;
@@ -89,6 +91,9 @@ export function adminQuoteWhatsappMessage(input: {
   }
 
   const hotelEntries = Array.from(groups.values());
+  const proposalTitle = hotelEntries.length > 1
+    ? "Le tue proposte personalizzate per Ischia sono pronte 🌊"
+    : "La tua proposta personalizzata per Ischia è pronta 🌊";
 
   const hotelBlocks = hotelEntries.map(group => {
     const first = group[0];
@@ -101,7 +106,7 @@ export function adminQuoteWhatsappMessage(input: {
         lines.push(`   🛏 ${optionLabel}`);
       }
       for (const treatment of first.treatments) {
-        lines.push(`${optionLabel && !roomTypeLine ? "      " : "   "}· ${treatment.label}: ${formatWAPrice(treatment.price)}`);
+        lines.push(`${optionLabel && !roomTypeLine ? "      " : "   "}· ${treatment.label}: ${formatWAPrice(treatment.price)} totale soggiorno per ${guestsPriceLabel}`);
       }
     } else {
       for (let index = 0; index < group.length; index++) {
@@ -109,7 +114,7 @@ export function adminQuoteWhatsappMessage(input: {
         const optionLabel = option.roomTypeLabel?.trim() || `Soluzione ${index + 1}`;
         lines.push(`   🛏 ${optionLabel}`);
         for (const treatment of option.treatments) {
-          lines.push(`      · ${treatment.label}: ${formatWAPrice(treatment.price)}`);
+          lines.push(`      · ${treatment.label}: ${formatWAPrice(treatment.price)} totale soggiorno per ${guestsPriceLabel}`);
         }
       }
     }
@@ -151,7 +156,7 @@ export function adminQuoteWhatsappMessage(input: {
   ].join("\n");
 
   return `👋 Ciao ${quote.customerFirstName}!
-La tua proposta personalizzata per Ischia è pronta 🌊
+${proposalTitle}
 
 ${stayLines}
 
