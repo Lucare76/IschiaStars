@@ -30,6 +30,36 @@ function formatWADateRange(arrival: string, departure: string): string {
   return `${startLabel} → ${endLabel} · ${nights} nott${nights === 1 ? "e" : "i"}`;
 }
 
+function stayIncludesAugust(arrival: string, departure: string): boolean {
+  const start = parseDateOnlyUtc(arrival);
+  const end = parseDateOnlyUtc(departure);
+  if (!start || !end) return false;
+
+  for (let year = start.getUTCFullYear(); year <= end.getUTCFullYear(); year += 1) {
+    const augustStart = Date.UTC(year, 7, 1);
+    const augustEnd = Date.UTC(year, 7, 31);
+    if (start.getTime() <= augustEnd && end.getTime() >= augustStart) return true;
+  }
+  return false;
+}
+
+function parseDateOnlyUtc(value: string): Date | null {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isAvailabilityReminderNote(value: string): boolean {
+  const normalized = value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return normalized === "ultime disponibilita" || normalized === "disponibilita limitata e su richiesta";
+}
+
 export function adminQuoteWhatsappMessage(input: {
   quote: Quote;
   options: QuoteHotelOption[];
@@ -106,10 +136,13 @@ export function adminQuoteWhatsappMessage(input: {
   const customerNotes = quote.customerNotes
     .split("\n")
     .map((note) => note.trim())
-    .filter(Boolean);
+    .filter((note) => note && !isAvailabilityReminderNote(note));
   const customerNotesBlock = customerNotes.length > 0
     ? `\n📝 Note:\n${customerNotes.map((note) => `· ${note}`).join("\n")}\n`
     : "";
+  const availabilityNotice = stayIncludesAugust(quote.arrivalDate, quote.departureDate)
+    ? "⚠️ Disponibilità limitata e su richiesta. Ti consigliamo di confermare appena possibile."
+    : "⚠️ Le disponibilità per questo periodo sono limitate. Ti consigliamo di confermare appena possibile.";
 
   const stayLines = [
     `🗒 ${stayLine}`,
@@ -129,9 +162,8 @@ ${hotelsBlock}
 ${mandatoryFeeBlock}
 ${customerNotesBlock}
 Dal link puoi vedere tutti i dettagli e confermare direttamente online.
-Se il link non si apre, tienilo premuto e scegli “Apri il link”.
 
-⚠️ Le disponibilità per questo periodo sono limitate. Ti consigliamo di confermare appena possibile.
+${availabilityNotice}
 
 Per dubbi o richieste:
 📞 081 90 54 81
