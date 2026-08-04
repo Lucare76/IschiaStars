@@ -7,6 +7,18 @@ export async function generateMetadata({ params }: { params: { code: string; tok
   return generateQuoteMetadata(params.code, params.token);
 }
 
-export default async function QuotePublicRouteWithToken({ params, searchParams }: { params: { code: string; token: string }; searchParams?: { source?: string } }) {
-  return QuotePublicRoute({ params: { code: params.code }, searchParams: { token: params.token, source: searchParams?.source } });
+export default async function QuotePublicRouteWithToken({
+  params,
+  searchParams
+}: {
+  params: { code: string; token: string };
+  searchParams?: { source?: string };
+}) {
+  return QuotePublicRoute({
+    params: { code: params.code },
+    searchParams: {
+      token: params.token,
+      source: searchParams?.source
+    }
+  });
 }

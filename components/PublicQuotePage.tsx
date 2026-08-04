@@ -34,7 +34,7 @@ export function PublicQuotePage({
   const hasMultipleOptions = options.length > 1;
 
   return (
-    <QuotePageWrapper customerFirstName={quote.customerFirstName} quoteCode={quote.code}>
+    <QuotePageWrapper>
     <main className="print-page mx-auto max-w-5xl px-5 py-6">
       {trackOpening ? <PublicEventTracker quoteCode={quote.code} token={quote.token} source={openingSource} /> : null}
 

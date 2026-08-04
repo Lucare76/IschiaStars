@@ -87,7 +87,13 @@ export function generateQuoteMetadataFromQuote(quote: Quote): Metadata {
   };
 }
 
-export default async function QuotePublicRoute({ params, searchParams }: { params: { code: string }; searchParams: { token?: string; source?: string } }) {
+export default async function QuotePublicRoute({
+  params,
+  searchParams
+}: {
+  params: { code: string };
+  searchParams: { token?: string; source?: string };
+}) {
   const result = await getQuoteByCodeAndToken(params.code, searchParams.token);
   const quote = result.data;
   if (!quote || quote.deletedAt) return <PublicQuoteLinkError />;
