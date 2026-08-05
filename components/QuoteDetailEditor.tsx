@@ -358,10 +358,13 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
   async function duplicateCurrentQuote() {
     setMessage(null);
     let quoteToDuplicate = currentQuote;
-    if (quoteFormRef.current) {
+    const quoteAlreadyShared = sent || currentQuote.status === "preventivo_inviato" || currentQuote.status === "confermato";
+    if (!quoteAlreadyShared && quoteFormRef.current) {
       const savedQuote = await persistQuoteForm(quoteFormRef.current, "Modifiche salvate. Duplico il preventivo...");
       if (!savedQuote) return;
       quoteToDuplicate = savedQuote;
+    } else if (quoteAlreadyShared) {
+      setMessage("Duplico il preventivo senza modificare l'originale già inviato.");
     }
 
     setLoading(true);
