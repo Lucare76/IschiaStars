@@ -51,15 +51,6 @@ function treatmentDescription(treatment: TreatmentOption) {
   return "Include pernottamento, prima colazione, pranzo e cena secondo le condizioni della struttura.";
 }
 
-function priceContextLabel(quote: PublicQuoteDTO) {
-  const guestsCount = quote.adults + quote.children.length;
-  const guestsLabel = guestsCount ? `${guestsCount} ${guestsCount === 1 ? "persona" : "persone"}` : null;
-  const nightsCount = Math.round((new Date(quote.departureDate).getTime() - new Date(quote.arrivalDate).getTime()) / 86400000);
-  const nightsLabel = nightsCount > 0 ? `${nightsCount} ${nightsCount === 1 ? "notte" : "notti"}` : "date selezionate";
-  const totalLabel = "Totale soggiorno";
-  return [totalLabel, guestsLabel, nightsLabel].filter(Boolean).join(" · ");
-}
-
 function splitLines(value?: string) {
   return value?.split("\n").map((item) => item.trim()).filter(Boolean) ?? [];
 }
@@ -662,6 +653,7 @@ function HotelCard({
   const stars = mainOption.hotelStars ? "★".repeat(mainOption.hotelStars) : null;
   const isAnySelected = allGroupOptions.some((o) => o.isSelected);
   const hasMultipleRoomTypes = allGroupOptions.length > 1;
+  const priceScopeLabel = hasMultipleRoomTypes || quote.rooms > 1 ? "totale camera" : "totale soggiorno";
   const imageUrl = sharperWordPressImageUrl(mainOption.hotelImageUrl);
   const badge = mainOption.badge?.trim();
   const hotelReason = mainOption.hotelReason?.trim();
@@ -811,9 +803,6 @@ function HotelCard({
 
         {/* Per ogni tipologia camera, mostra i trattamenti */}
         <div className={imageUrl ? "mt-4 space-y-4 px-5 pb-5 lg:col-span-2 lg:mt-0" : "mt-4 space-y-4 px-5 pb-5"}>
-          <p className="rounded-xl bg-ischia-mist/80 px-4 py-3 text-xs font-black uppercase tracking-wide text-ischia-blue/75">
-            {priceContextLabel(quote)}
-          </p>
           {allGroupOptions.map((opt) => (
             <div key={opt.id}>
               {hasMultipleRoomTypes && opt.roomTypeLabel && (
@@ -838,6 +827,7 @@ function HotelCard({
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
                           </div>
+                          <p className="mt-0.5 text-xs font-bold uppercase tracking-wide text-ischia-blue/70">{priceScopeLabel}</p>
                           {benefit ? (
                             <p className="mt-0.5 text-xs italic text-gray-500">{benefit}</p>
                           ) : null}
