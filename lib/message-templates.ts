@@ -98,7 +98,10 @@ export function adminQuoteWhatsappMessage(input: {
   const hotelBlocks = hotelEntries.map(group => {
     const first = group[0];
     const starsStr = first.hotelStars && first.hotelStars > 0 ? " " + "⭐".repeat(first.hotelStars) : "";
-    const lines: string[] = [`🏨 ${first.hotelName}${starsStr}`];
+    const lines: string[] = [
+      `🏨 ${first.hotelName}${starsStr}`,
+      `Totale soggiorno per ${guestsPriceLabel}`
+    ];
 
     if (group.length === 1) {
       const optionLabel = first.roomTypeLabel?.trim();
@@ -106,7 +109,7 @@ export function adminQuoteWhatsappMessage(input: {
         lines.push(`   🛏 ${optionLabel}`);
       }
       for (const treatment of first.treatments) {
-        lines.push(`${optionLabel && !roomTypeLine ? "      " : "   "}· ${treatment.label}: ${formatWAPrice(treatment.price)} totale soggiorno per ${guestsPriceLabel}`);
+        lines.push(`${optionLabel && !roomTypeLine ? "      " : "   "}· ${treatment.label}: ${formatWAPrice(treatment.price)}`);
       }
     } else {
       for (let index = 0; index < group.length; index++) {
@@ -114,7 +117,7 @@ export function adminQuoteWhatsappMessage(input: {
         const optionLabel = option.roomTypeLabel?.trim() || `Soluzione ${index + 1}`;
         lines.push(`   🛏 ${optionLabel}`);
         for (const treatment of option.treatments) {
-          lines.push(`      · ${treatment.label}: ${formatWAPrice(treatment.price)} totale soggiorno per ${guestsPriceLabel}`);
+          lines.push(`      · ${treatment.label}: ${formatWAPrice(treatment.price)}`);
         }
       }
     }
