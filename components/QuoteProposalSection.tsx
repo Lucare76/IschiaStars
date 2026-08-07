@@ -51,31 +51,13 @@ function treatmentDescription(treatment: TreatmentOption) {
   return "Include pernottamento, prima colazione, pranzo e cena secondo le condizioni della struttura.";
 }
 
-function priceContextLabel(quote: PublicQuoteDTO, option?: PublicQuoteHotelOptionDTO) {
-  const guestsCount = quote.rooms > 1
-    ? inferGuestsFromRoomType(option?.roomTypeLabel)
-    : quote.adults + quote.children.length;
+function priceContextLabel(quote: PublicQuoteDTO) {
+  const guestsCount = quote.adults + quote.children.length;
   const guestsLabel = guestsCount ? `${guestsCount} ${guestsCount === 1 ? "persona" : "persone"}` : null;
   const nightsCount = Math.round((new Date(quote.departureDate).getTime() - new Date(quote.arrivalDate).getTime()) / 86400000);
   const nightsLabel = nightsCount > 0 ? `${nightsCount} ${nightsCount === 1 ? "notte" : "notti"}` : "date selezionate";
-  const totalLabel = quote.rooms > 1 ? "Totale per questa camera" : "Totale soggiorno";
+  const totalLabel = "Totale soggiorno";
   return [totalLabel, guestsLabel, nightsLabel].filter(Boolean).join(" · ");
-}
-
-function inferGuestsFromRoomType(roomTypeLabel?: string) {
-  const normalized = roomTypeLabel
-    ?.toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim() ?? "";
-  if (!normalized) return null;
-  if (/\b(singola|single)\b/.test(normalized)) return 1;
-  if (/\b(matrimoniale|doppia|double|twin)\b/.test(normalized)) return 2;
-  if (/\b(tripla|triple)\b/.test(normalized)) return 3;
-  if (/\b(quadrupla|quadruple)\b/.test(normalized)) return 4;
-  if (/\b(quintupla|quintuple)\b/.test(normalized)) return 5;
-  return null;
 }
 
 function splitLines(value?: string) {
@@ -829,6 +811,9 @@ function HotelCard({
 
         {/* Per ogni tipologia camera, mostra i trattamenti */}
         <div className={imageUrl ? "mt-4 space-y-4 px-5 pb-5 lg:col-span-2 lg:mt-0" : "mt-4 space-y-4 px-5 pb-5"}>
+          <p className="rounded-xl bg-ischia-mist/80 px-4 py-3 text-xs font-black uppercase tracking-wide text-ischia-blue/75">
+            {priceContextLabel(quote)}
+          </p>
           {allGroupOptions.map((opt) => (
             <div key={opt.id}>
               {hasMultipleRoomTypes && opt.roomTypeLabel && (
@@ -853,7 +838,6 @@ function HotelCard({
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
                           </div>
-                          <p className="mt-0.5 text-xs font-bold uppercase tracking-wide text-ischia-blue/70">{priceContextLabel(quote, opt)}</p>
                           {benefit ? (
                             <p className="mt-0.5 text-xs italic text-gray-500">{benefit}</p>
                           ) : null}
