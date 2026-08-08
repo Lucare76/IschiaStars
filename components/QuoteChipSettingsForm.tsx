@@ -5,12 +5,17 @@ import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { QuoteChipSettings } from "@/lib/quote-chip-settings";
 
-type ChipGroup = "publicNoteChips" | "hotelNoteChips";
+type ChipGroup = "publicNoteChips" | "hotelNoteChips" | "hotelReasonPhrases" | "treatmentDetailPhrases";
 
 export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: QuoteChipSettings }) {
   const router = useRouter();
   const [form, setForm] = useState(initialSettings);
-  const [drafts, setDrafts] = useState<Record<ChipGroup, string>>({ publicNoteChips: "", hotelNoteChips: "" });
+  const [drafts, setDrafts] = useState<Record<ChipGroup, string>>({
+    publicNoteChips: "",
+    hotelNoteChips: "",
+    hotelReasonPhrases: "",
+    treatmentDetailPhrases: ""
+  });
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -53,11 +58,11 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
     const result = await readAdminApiJson<{ ok?: boolean; data?: QuoteChipSettings; error?: string }>(response);
     setLoading(false);
     if (!response.ok || !result?.ok || !result.data) {
-      setMessage(adminApiErrorMessage(response, result, "Chip non salvati."));
+      setMessage(adminApiErrorMessage(response, result, "Frasi rapide non salvate."));
       return;
     }
     setForm(result.data);
-    setMessage("Chip preventivi salvati.");
+    setMessage("Frasi rapide preventivi salvate.");
     router.refresh();
   }
 
@@ -65,11 +70,11 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
     <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black text-ischia-navy">Chip preventivi</h2>
-          <p className="mt-1 text-sm text-ischia-ink/68">Frasi rapide usate durante la creazione e modifica dei preventivi.</p>
+          <h2 className="text-xl font-black text-ischia-navy">Frasi rapide preventivi</h2>
+          <p className="mt-1 text-sm text-ischia-ink/68">Chip e frasi usate durante la creazione e modifica dei preventivi.</p>
         </div>
         <button className="rounded-full bg-ischia-navy px-5 py-2 text-sm font-black text-white disabled:opacity-60" disabled={loading} onClick={() => void save()} type="button">
-          {loading ? "Salvataggio..." : "Salva chip"}
+          {loading ? "Salvataggio..." : "Salva frasi"}
         </button>
       </div>
 
@@ -95,6 +100,26 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
           onAdd={() => addChip("hotelNoteChips")}
           onRemove={(index) => removeChip("hotelNoteChips", index)}
           onMove={(index, direction) => moveChip("hotelNoteChips", index, direction)}
+        />
+        <ChipList
+          title="Perché te lo proponiamo"
+          description="Frasi rapide mostrate nella motivazione commerciale della struttura."
+          chips={form.hotelReasonPhrases}
+          draft={drafts.hotelReasonPhrases}
+          onDraftChange={(value) => setDrafts((current) => ({ ...current, hotelReasonPhrases: value }))}
+          onAdd={() => addChip("hotelReasonPhrases")}
+          onRemove={(index) => removeChip("hotelReasonPhrases", index)}
+          onMove={(index, direction) => moveChip("hotelReasonPhrases", index, direction)}
+        />
+        <ChipList
+          title="Cosa include"
+          description="Frasi rapide per i dettagli di camera e trattamento."
+          chips={form.treatmentDetailPhrases}
+          draft={drafts.treatmentDetailPhrases}
+          onDraftChange={(value) => setDrafts((current) => ({ ...current, treatmentDetailPhrases: value }))}
+          onAdd={() => addChip("treatmentDetailPhrases")}
+          onRemove={(index) => removeChip("treatmentDetailPhrases", index)}
+          onMove={(index, direction) => moveChip("treatmentDetailPhrases", index, direction)}
         />
       </div>
     </section>

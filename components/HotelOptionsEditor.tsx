@@ -38,31 +38,6 @@ export type HotelOptionState = {
 
 const CUSTOM_ROOM_VALUE = "__custom__";
 
-const HOTEL_REASON_QUICK_PHRASES = [
-  "Struttura centrale, facile da raggiungere",
-  "Ottimo rapporto qualità/prezzo",
-  "Trattamento termale incluso",
-  "Ideale per famiglie con bambini",
-  "Vista mare garantita",
-  "Struttura tranquilla, lontana dal caos",
-  "Consigliato per coppie",
-  "Uno dei più richiesti della stagione",
-  "Struttura confortevole a 5 minuti dal centro"
-] as const;
-
-const TREATMENT_DETAIL_QUICK_PHRASES = [
-  "Bevande escluse",
-  "Bevande incluse ai pasti",
-  "Acqua ai pasti inclusa",
-  "Prima colazione a buffet",
-  "Cena con menù fisso",
-  "Accesso spa/terme incluso",
-  "Spiaggia convenzionata inclusa",
-  "Parcheggio incluso",
-  "Transfer incluso",
-  "Extra esclusi salvo diversa indicazione"
-] as const;
-
 const COMMITMENT_NOTE_TEXT = "Tariffa riservata ai clienti con impegnativa per fanghi e bagni termali";
 
 const ROOM_TYPE_PRESETS = [
@@ -234,6 +209,8 @@ export function HotelOptionsEditor({
   onChange,
   suggestedCapacity,
   noteChips = [],
+  hotelReasonPhrases = [],
+  treatmentDetailPhrases = [],
   preserveGroups = false,
   showDetectedPlus = false,
   showStars = true
@@ -243,6 +220,8 @@ export function HotelOptionsEditor({
   onChange: (next: HotelOptionState[]) => void;
   suggestedCapacity?: number;
   noteChips?: readonly string[];
+  hotelReasonPhrases?: readonly string[];
+  treatmentDetailPhrases?: readonly string[];
   preserveGroups?: boolean;
   showDetectedPlus?: boolean;
   showStars?: boolean;
@@ -318,6 +297,8 @@ export function HotelOptionsEditor({
             showDetectedPlus={showDetectedPlus}
             showStars={showStars}
             noteChips={noteChips}
+            hotelReasonPhrases={hotelReasonPhrases}
+            treatmentDetailPhrases={treatmentDetailPhrases}
             onSelectHotel={(id) => selectHotel(index, id)}
             onChange={(patch) => updateOption(index, patch)}
             onRemove={() => removeOption(index)}
@@ -349,6 +330,8 @@ function HotelOptionBlock({
   showDetectedPlus,
   showStars,
   noteChips,
+  hotelReasonPhrases,
+  treatmentDetailPhrases,
   onSelectHotel,
   onChange,
   onRemove,
@@ -364,6 +347,8 @@ function HotelOptionBlock({
   showDetectedPlus: boolean;
   showStars: boolean;
   noteChips: readonly string[];
+  hotelReasonPhrases: readonly string[];
+  treatmentDetailPhrases: readonly string[];
   onSelectHotel: (id: string) => void;
   onChange: (patch: Partial<HotelOptionState>) => void;
   onRemove: () => void;
@@ -432,7 +417,7 @@ function HotelOptionBlock({
         <div className="sm:col-span-2">
           <p className="text-xs font-bold uppercase tracking-wide text-ischia-blue/70">Frasi rapide</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {HOTEL_REASON_QUICK_PHRASES.map((phrase) => (
+            {hotelReasonPhrases.map((phrase) => (
               <button
                 key={phrase}
                 className="rounded-full border border-gray-300 bg-white px-3 py-1 text-xs text-ischia-ink transition hover:border-[#C9A84C] hover:bg-[#FBF5E6]"
@@ -566,6 +551,7 @@ function HotelOptionBlock({
             label="Camera e colazione"
             placeholder="Es. Pernottamento e colazione a buffet. Bevande escluse."
             value={opt.breakfastDetails ?? ""}
+            quickPhrases={treatmentDetailPhrases}
             onChange={(breakfastDetails) => onChange({ breakfastDetails })}
           />
         ) : null}
@@ -574,6 +560,7 @@ function HotelOptionBlock({
             label="Mezza pensione"
             placeholder="Es. Pernottamento, colazione e cena. Bevande escluse salvo diversa indicazione."
             value={opt.halfBoardDetails ?? ""}
+            quickPhrases={treatmentDetailPhrases}
             onChange={(halfBoardDetails) => onChange({ halfBoardDetails })}
           />
         ) : null}
@@ -582,6 +569,7 @@ function HotelOptionBlock({
             label="Pensione completa"
             placeholder="Es. Pernottamento, colazione, pranzo e cena. Bevande incluse ai pasti."
             value={opt.fullBoardDetails ?? ""}
+            quickPhrases={treatmentDetailPhrases}
             onChange={(fullBoardDetails) => onChange({ fullBoardDetails })}
           />
         ) : null}
@@ -676,18 +664,20 @@ function TreatmentDetailsEditor({
   label,
   placeholder,
   value,
+  quickPhrases,
   onChange
 }: {
   label: string;
   placeholder: string;
   value: string;
+  quickPhrases: readonly string[];
   onChange: (value: string) => void;
 }) {
   return (
     <div className="rounded-xl border border-ischia-blue/10 bg-white p-3">
       <p className="text-xs font-bold uppercase tracking-wide text-ischia-blue/70">Dettagli {label}</p>
       <div className="mt-2 flex flex-wrap gap-2">
-        {TREATMENT_DETAIL_QUICK_PHRASES.map((phrase) => (
+        {quickPhrases.map((phrase) => (
           <button
             key={phrase}
             className="rounded-full border border-gray-300 bg-white px-3 py-1 text-xs text-ischia-ink transition hover:border-[#C9A84C] hover:bg-[#FBF5E6]"

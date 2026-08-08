@@ -3,6 +3,8 @@ export const QUOTE_CHIP_SETTINGS_KEY = "quote_chip_settings";
 export type QuoteChipSettings = {
   publicNoteChips: string[];
   hotelNoteChips: string[];
+  hotelReasonPhrases: string[];
+  treatmentDetailPhrases: string[];
   updatedAt?: string;
 };
 
@@ -18,6 +20,29 @@ export const defaultQuoteChipSettings: QuoteChipSettings = {
     "Ultime disponibilità",
     "Costi intesi per ogni camera",
     "Quota cane 20 euro al giorno da pagare in loco"
+  ],
+  hotelReasonPhrases: [
+    "Struttura centrale, facile da raggiungere",
+    "Ottimo rapporto qualità/prezzo",
+    "Trattamento termale incluso",
+    "Ideale per famiglie con bambini",
+    "Vista mare garantita",
+    "Struttura tranquilla, lontana dal caos",
+    "Consigliato per coppie",
+    "Uno dei più richiesti della stagione",
+    "Struttura confortevole a 5 minuti dal centro"
+  ],
+  treatmentDetailPhrases: [
+    "Bevande escluse",
+    "Bevande incluse ai pasti",
+    "Acqua ai pasti inclusa",
+    "Prima colazione a buffet",
+    "Cena con menù fisso",
+    "Accesso spa/terme incluso",
+    "Spiaggia convenzionata inclusa",
+    "Parcheggio incluso",
+    "Transfer incluso",
+    "Extra esclusi salvo diversa indicazione"
   ]
 };
 
@@ -29,6 +54,8 @@ export function normalizeQuoteChipSettings(value: unknown): QuoteChipSettings {
   return {
     publicNoteChips: normalizeChipList(record.public_note_chips ?? record.publicNoteChips, defaultQuoteChipSettings.publicNoteChips),
     hotelNoteChips: normalizeChipList(record.hotel_note_chips ?? record.hotelNoteChips, defaultQuoteChipSettings.hotelNoteChips),
+    hotelReasonPhrases: normalizeChipList(record.hotel_reason_phrases ?? record.hotelReasonPhrases, defaultQuoteChipSettings.hotelReasonPhrases),
+    treatmentDetailPhrases: normalizeChipList(record.treatment_detail_phrases ?? record.treatmentDetailPhrases, defaultQuoteChipSettings.treatmentDetailPhrases),
     updatedAt: typeof record.updated_at === "string"
       ? record.updated_at
       : typeof record.updatedAt === "string"
@@ -42,6 +69,8 @@ export function quoteChipSettingsToDbValue(settings: QuoteChipSettings) {
   return {
     public_note_chips: normalized.publicNoteChips,
     hotel_note_chips: normalized.hotelNoteChips,
+    hotel_reason_phrases: normalized.hotelReasonPhrases,
+    treatment_detail_phrases: normalized.treatmentDetailPhrases,
     updated_at: normalized.updatedAt || new Date().toISOString()
   };
 }

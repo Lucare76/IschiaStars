@@ -349,6 +349,8 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
             hotelOptions={hotelOptions}
             onChange={setHotelOptions}
             noteChips={quoteChipSettings.hotelNoteChips}
+            hotelReasonPhrases={quoteChipSettings.hotelReasonPhrases}
+            treatmentDetailPhrases={quoteChipSettings.treatmentDetailPhrases}
             showDetectedPlus
             suggestedCapacity={roomCapacitySuggestion}
           />
