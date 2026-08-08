@@ -63,13 +63,6 @@ const TREATMENT_DETAIL_QUICK_PHRASES = [
   "Extra esclusi salvo diversa indicazione"
 ] as const;
 
-const CUSTOMER_NOTE_QUICK_PHRASES = [
-  "Traghetto da Napoli € 33 a persona a/r con transfer",
-  "Ultime disponibilità",
-  "Costi intesi per ogni camera",
-  "Quota cane 20 euro al giorno da pagare in loco"
-] as const;
-
 const COMMITMENT_NOTE_TEXT = "Tariffa riservata ai clienti con impegnativa per fanghi e bagni termali";
 
 const ROOM_TYPE_PRESETS = [
@@ -240,6 +233,7 @@ export function HotelOptionsEditor({
   activeHotels,
   onChange,
   suggestedCapacity,
+  noteChips = [],
   preserveGroups = false,
   showDetectedPlus = false,
   showStars = true
@@ -248,6 +242,7 @@ export function HotelOptionsEditor({
   activeHotels: Hotel[];
   onChange: (next: HotelOptionState[]) => void;
   suggestedCapacity?: number;
+  noteChips?: readonly string[];
   preserveGroups?: boolean;
   showDetectedPlus?: boolean;
   showStars?: boolean;
@@ -322,6 +317,7 @@ export function HotelOptionsEditor({
             suggestedCapacity={suggestedCapacity}
             showDetectedPlus={showDetectedPlus}
             showStars={showStars}
+            noteChips={noteChips}
             onSelectHotel={(id) => selectHotel(index, id)}
             onChange={(patch) => updateOption(index, patch)}
             onRemove={() => removeOption(index)}
@@ -352,6 +348,7 @@ function HotelOptionBlock({
   suggestedCapacity,
   showDetectedPlus,
   showStars,
+  noteChips,
   onSelectHotel,
   onChange,
   onRemove,
@@ -366,6 +363,7 @@ function HotelOptionBlock({
   suggestedCapacity?: number;
   showDetectedPlus: boolean;
   showStars: boolean;
+  noteChips: readonly string[];
   onSelectHotel: (id: string) => void;
   onChange: (patch: Partial<HotelOptionState>) => void;
   onRemove: () => void;
@@ -608,7 +606,7 @@ function HotelOptionBlock({
           label="Note per il cliente"
           value={opt.notes}
           onChange={(value) => onChange({ notes: value })}
-          noteChips={CUSTOMER_NOTE_QUICK_PHRASES}
+          noteChips={noteChips}
         />
       </div>
 

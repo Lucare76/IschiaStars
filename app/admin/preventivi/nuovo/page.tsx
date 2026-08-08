@@ -2,6 +2,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { NewQuoteForm } from "@/components/NewQuoteForm";
 import { listHotels } from "@/lib/repositories/hotels";
 import { getQuoteRequestById } from "@/lib/repositories/quoteRequests";
+import { getQuoteChipSettings } from "@/lib/repositories/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export default async function NewQuotePage({ searchParams }: { searchParams: { r
     listHotels(),
     searchParams.requestId ? getQuoteRequestById(searchParams.requestId) : Promise.resolve({ data: null, source: "mock" as const, error: undefined })
   ]);
+  const quoteChipSettings = await getQuoteChipSettings();
 
   const isLabTest = searchParams.lab === "true";
   const manualConfirmation = searchParams.manualConfirmation === "true";
@@ -21,7 +23,7 @@ export default async function NewQuotePage({ searchParams }: { searchParams: { r
       subtitle={manualConfirmation ? "Registra una vecchia prenotazione confermata e prepara il voucher cliente." : "Crea manualmente una proposta IschiaStars, anche con struttura alternativa se l'hotel richiesto non è disponibile."}
     >
       {hotelResult.source === "supabase" && !requestUnavailable ? (
-        <NewQuoteForm hotels={hotelResult.data} initialRequest={requestResult.data} requestedRequestId={searchParams.requestId} isLabTest={isLabTest} manualConfirmation={manualConfirmation} />
+        <NewQuoteForm hotels={hotelResult.data} initialRequest={requestResult.data} requestedRequestId={searchParams.requestId} isLabTest={isLabTest} manualConfirmation={manualConfirmation} quoteChipSettings={quoteChipSettings.data} />
       ) : (
         <DataUnavailable error={[hotelResult.error, requestUnavailable ? requestResult.error : undefined].filter(Boolean).join(" | ")} />
       )}

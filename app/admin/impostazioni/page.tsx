@@ -1,11 +1,15 @@
 import { AdminShell } from "@/components/AdminShell";
 import { PaymentSettingsForm } from "@/components/PaymentSettingsForm";
-import { getPaymentSettings } from "@/lib/repositories/settings";
+import { QuoteChipSettingsForm } from "@/components/QuoteChipSettingsForm";
+import { getPaymentSettings, getQuoteChipSettings } from "@/lib/repositories/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const paymentSettings = await getPaymentSettings();
+  const [paymentSettings, quoteChipSettings] = await Promise.all([
+    getPaymentSettings(),
+    getQuoteChipSettings()
+  ]);
 
   return (
     <AdminShell title="Impostazioni" subtitle="Gestisci i dati operativi mostrati nei preventivi e nelle conferme.">
@@ -22,6 +26,9 @@ export default async function SettingsPage() {
             I contatti restano gestiti nel codice; le coordinate pagamento qui sotto sono salvate nelle impostazioni operative.
           </p>
         </section>
+      </div>
+      <div className="mt-5">
+        <QuoteChipSettingsForm initialSettings={quoteChipSettings.data} />
       </div>
       <div className="mt-5">
         <PaymentSettingsForm initialSettings={paymentSettings.data} />

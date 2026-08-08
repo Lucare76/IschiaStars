@@ -6,16 +6,17 @@ import { getEmailLogsForQuote } from "@/lib/repositories/emailLogs";
 import { listHotels } from "@/lib/repositories/hotels";
 import { getQuoteEvents } from "@/lib/repositories/quoteEvents";
 import { getQuoteByCode } from "@/lib/repositories/quotes";
-import { getFeatureFlags, getPaymentSettings } from "@/lib/repositories/settings";
+import { getFeatureFlags, getPaymentSettings, getQuoteChipSettings } from "@/lib/repositories/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function QuoteDetailPage({ params, searchParams }: { params: { code: string }; searchParams?: { email_error?: string } }) {
-  const [quoteResult, hotelResult, paymentSettings, featureFlagsResult] = await Promise.all([
+  const [quoteResult, hotelResult, paymentSettings, featureFlagsResult, quoteChipSettings] = await Promise.all([
     getQuoteByCode(params.code),
     listHotels(),
     getPaymentSettings(),
-    getFeatureFlags()
+    getFeatureFlags(),
+    getQuoteChipSettings()
   ]);
   const quote = quoteResult.data;
   if (!quote) notFound();
@@ -40,7 +41,7 @@ export default async function QuoteDetailPage({ params, searchParams }: { params
           Preventivo creato, ma l&apos;email non è stata inviata. Puoi riprovare dal dettaglio preventivo con il pulsante &quot;Invia preventivo&quot;.
         </div>
       ) : null}
-      <QuoteDetailEditor quote={quote} hotels={hotelResult.data} paymentSettings={paymentSettings.data} featureFlags={featureFlagsResult.data} quoteEvents={quoteEventsResult.data} emailLogs={emailLogs} />
+      <QuoteDetailEditor quote={quote} hotels={hotelResult.data} paymentSettings={paymentSettings.data} featureFlags={featureFlagsResult.data} quoteEvents={quoteEventsResult.data} emailLogs={emailLogs} quoteChipSettings={quoteChipSettings.data} />
     </AdminShell>
   );
 }

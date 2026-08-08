@@ -2,12 +2,14 @@ import { revalidateTag, unstable_cache, unstable_noStore as noStore } from "next
 import { ANNOUNCEMENT_SETTINGS_KEY, AnnouncementSettings, normalizeAnnouncementSettings } from "@/lib/announcement-settings";
 import { emptyFeatureFlags, FEATURE_FLAGS_KEY, FeatureFlagKey, FeatureFlags, normalizeFeatureFlags } from "@/lib/feature-flags";
 import { emptyPaymentSettings, normalizePaymentSettings, PAYMENT_SETTINGS_KEY, PaymentSettings, paymentSettingsToDbValue } from "@/lib/payment-settings";
+import { defaultQuoteChipSettings, normalizeQuoteChipSettings, QUOTE_CHIP_SETTINGS_KEY, QuoteChipSettings, quoteChipSettingsToDbValue } from "@/lib/quote-chip-settings";
 import { fallback, fromSupabase, RepositoryResult } from "@/lib/repositories/shared";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const PAYMENT_SETTINGS_CACHE_TAG = "ischiastars-payment-settings";
 const FEATURE_FLAGS_CACHE_TAG = "ischiastars-feature-flags";
 const ANNOUNCEMENT_SETTINGS_CACHE_TAG = "ischiastars-announcement-settings";
+const QUOTE_CHIP_SETTINGS_CACHE_TAG = "ischiastars-quote-chip-settings";
 
 export async function getPaymentSettings(): Promise<RepositoryResult<PaymentSettings>> {
   return getCachedPaymentSettings();
@@ -51,6 +53,50 @@ export async function updatePaymentSettings(settings: PaymentSettings): Promise<
   if (error) return fallback(normalized, error);
   revalidateTag(PAYMENT_SETTINGS_CACHE_TAG);
   return fromSupabase(normalizePaymentSettings(data?.value));
+}
+
+export async function getQuoteChipSettings(): Promise<RepositoryResult<QuoteChipSettings>> {
+  return getCachedQuoteChipSettings();
+}
+
+const getCachedQuoteChipSettings = unstable_cache(
+  async (): Promise<RepositoryResult<QuoteChipSettings>> => getQuoteChipSettingsUncached(),
+  [QUOTE_CHIP_SETTINGS_CACHE_TAG],
+  { revalidate: 60, tags: [QUOTE_CHIP_SETTINGS_CACHE_TAG] }
+);
+
+async function getQuoteChipSettingsUncached(): Promise<RepositoryResult<QuoteChipSettings>> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return fallback(defaultQuoteChipSettings);
+
+  const { data, error } = await supabase
+    .from("settings")
+    .select("key,value")
+    .eq("key", QUOTE_CHIP_SETTINGS_KEY)
+    .maybeSingle();
+
+  if (error) return fallback(defaultQuoteChipSettings, error);
+  return fromSupabase(normalizeQuoteChipSettings(data?.value));
+}
+
+export async function updateQuoteChipSettings(settings: QuoteChipSettings): Promise<RepositoryResult<QuoteChipSettings>> {
+  noStore();
+  const supabase = createSupabaseAdminClient();
+  const normalized = normalizeQuoteChipSettings({ ...settings, updatedAt: new Date().toISOString() });
+  if (!supabase) return fallback(normalized);
+
+  const { data, error } = await supabase
+    .from("settings")
+    .upsert({
+      key: QUOTE_CHIP_SETTINGS_KEY,
+      value: quoteChipSettingsToDbValue(normalized)
+    }, { onConflict: "key" })
+    .select("value")
+    .single();
+
+  if (error) return fallback(normalized, error);
+  revalidateTag(QUOTE_CHIP_SETTINGS_CACHE_TAG);
+  return fromSupabase(normalizeQuoteChipSettings(data?.value));
 }
 
 export async function getFeatureFlags(): Promise<RepositoryResult<FeatureFlags>> {

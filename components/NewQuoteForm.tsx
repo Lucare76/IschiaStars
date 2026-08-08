@@ -18,16 +18,10 @@ import {
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { adminApiHeaders } from "@/lib/admin-api-client";
 import { RequestMessageBox } from "@/components/RequestMessageBox";
+import { defaultQuoteChipSettings, QuoteChipSettings } from "@/lib/quote-chip-settings";
 import { Hotel, Quote, QuoteRequest } from "@/lib/types";
 
 type ClientResult = { firstName: string; lastName: string; email: string; phone: string };
-
-const PUBLIC_NOTE_CHIPS = [
-  "Traghetto da Napoli € 33 a persona a/r con transfer",
-  "Ultime disponibilità",
-  "Costi intesi per ogni camera",
-  "Quota cane 20 euro al giorno da pagare in loco"
-];
 
 function initialInternalNotesFromRequest(message?: string | null) {
   const normalized = message?.trim();
@@ -102,7 +96,7 @@ function ClientSearch({ onSelect }: { onSelect: (c: ClientResult) => void }) {
   );
 }
 
-export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLabTest = false, manualConfirmation = false }: { hotels: Hotel[]; initialRequest?: QuoteRequest | null; requestedRequestId?: string; isLabTest?: boolean; manualConfirmation?: boolean }) {
+export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLabTest = false, manualConfirmation = false, quoteChipSettings = defaultQuoteChipSettings }: { hotels: Hotel[]; initialRequest?: QuoteRequest | null; requestedRequestId?: string; isLabTest?: boolean; manualConfirmation?: boolean; quoteChipSettings?: QuoteChipSettings }) {
   const router = useRouter();
   const activeHotels = hotels.filter((h) => h.active);
   const requestedHotelName = initialRequest?.requestedHotel?.trim() ?? "";
@@ -354,6 +348,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
             activeHotels={activeHotels}
             hotelOptions={hotelOptions}
             onChange={setHotelOptions}
+            noteChips={quoteChipSettings.hotelNoteChips}
             showDetectedPlus
             suggestedCapacity={roomCapacitySuggestion}
           />
@@ -363,7 +358,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
           <div className="grid gap-3 sm:grid-cols-2">
             <Input name="validUntil" label={manualConfirmation ? "Data registrazione" : "Validità offerta"} required type="date" min={todayDateString()} defaultValue={manualConfirmation ? todayDateString() : undefined} />
           </div>
-          <Textarea name="publicNotes" label="Note visibili al cliente" noteChips={PUBLIC_NOTE_CHIPS} />
+          <Textarea name="publicNotes" label="Note visibili al cliente" noteChips={quoteChipSettings.publicNoteChips} />
           <Textarea name="internalNotes" label="Note interne" defaultValue={initialInternalNotesFromRequest(initialRequest?.message)} />
         </Section>
 

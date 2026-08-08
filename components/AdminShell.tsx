@@ -16,6 +16,7 @@ const nav = [
   { href: "/admin/preventivi/nuovo", label: "+ Nuovo" },
   { href: "/admin/hotel", label: "Hotel" },
   { href: "/admin/servizi-extra", label: "Servizi extra" },
+  { href: "/admin/impostazioni", label: "Impostazioni" },
   { href: "/admin/statistiche", label: "Statistiche" }
 ];
 

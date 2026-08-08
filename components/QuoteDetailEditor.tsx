@@ -23,19 +23,13 @@ import { WhatsAppSendButton } from "@/components/WhatsAppSendButton";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 import { FeatureFlags } from "@/lib/feature-flags";
 import { PaymentSettings } from "@/lib/payment-settings";
+import { defaultQuoteChipSettings, QuoteChipSettings } from "@/lib/quote-chip-settings";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { getBalancePaymentSchedule, isBalanceMethodInStructure } from "@/lib/hotel-policies";
 import { Hotel, Quote, QuoteEvent, QuoteStatus, TransportOffer } from "@/lib/types";
 import { formatCurrency, formatDate, publicQuoteUrl } from "@/lib/utils";
 
 const statusOptions: QuoteStatus[] = ["in_lavorazione", "confermato", "perso_non_disponibile"];
-
-const PUBLIC_NOTE_CHIPS = [
-  "Traghetto da Napoli € 33 a persona a/r con transfer",
-  "Ultime disponibilità",
-  "Costi intesi per ogni camera",
-  "Quota cane 20 euro al giorno da pagare in loco"
-];
 
 function todayDateString() {
   return new Date().toISOString().split("T")[0];
@@ -125,7 +119,7 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags, quoteEvents = [], emailLogs = [] }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; quoteEvents?: QuoteEvent[]; emailLogs?: EmailLog[] }) {
+export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags, quoteEvents = [], emailLogs = [], quoteChipSettings = defaultQuoteChipSettings }: { quote: Quote; hotels: Hotel[]; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; quoteEvents?: QuoteEvent[]; emailLogs?: EmailLog[]; quoteChipSettings?: QuoteChipSettings }) {
   const router = useRouter();
   const effective = getEffectiveHotelOptions(quote);
   const quoteFormRef = useRef<HTMLFormElement>(null);
@@ -657,6 +651,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
             activeHotels={activeHotels}
             hotelOptions={hotelOptions}
             onChange={setHotelOptions}
+            noteChips={quoteChipSettings.hotelNoteChips}
             preserveGroups
             showStars={false}
             suggestedCapacity={roomCapacitySuggestion}
@@ -669,7 +664,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
             <Input name="depositAmount" label="Acconto" defaultValue={String(currentQuote.deposit)} required type="number" />
             <Input name="validUntil" label="Scadenza offerta" defaultValue={currentQuote.offerExpiresAt} required type="date" />
           </div>
-          <Textarea name="publicNotes" label="Note visibili al cliente" defaultValue={currentQuote.customerNotes} noteChips={PUBLIC_NOTE_CHIPS} />
+          <Textarea name="publicNotes" label="Note visibili al cliente" defaultValue={currentQuote.customerNotes} noteChips={quoteChipSettings.publicNoteChips} />
           <Textarea name="internalNotes" label="Note interne" defaultValue={currentQuote.internalNotes} />
         </Section>
 
