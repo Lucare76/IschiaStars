@@ -591,7 +591,7 @@ function HotelOptionBlock({
         <Textarea label="Policy cancellazione" value={opt.cancellationPolicy} onChange={(value) => onChange({ cancellationPolicy: value })} />
         <Textarea label="Note pagamento" value={opt.paymentNotes} onChange={(value) => onChange({ paymentNotes: value })} />
         <Textarea
-          label="Note per il cliente"
+          label="Note struttura/camera"
           value={opt.notes}
           onChange={(value) => onChange({ notes: value })}
           noteChips={noteChips}

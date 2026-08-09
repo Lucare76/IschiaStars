@@ -82,7 +82,7 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <ChipList
-          title="Note visibili al cliente"
+          title="Note generali preventivo"
           description="Chip mostrati nel campo note generali del preventivo."
           chips={form.publicNoteChips}
           draft={drafts.publicNoteChips}
@@ -93,7 +93,7 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
         />
         <ChipList
           title="Note per struttura/camera"
-          description="Chip mostrati nelle note cliente delle proposte hotel."
+          description="Chip mostrati nelle note struttura/camera delle proposte hotel."
           chips={form.hotelNoteChips}
           draft={drafts.hotelNoteChips}
           onDraftChange={(value) => setDrafts((current) => ({ ...current, hotelNoteChips: value }))}

@@ -666,7 +666,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
             <Input name="depositAmount" label="Acconto" defaultValue={String(currentQuote.deposit)} required type="number" />
             <Input name="validUntil" label="Scadenza offerta" defaultValue={currentQuote.offerExpiresAt} required type="date" />
           </div>
-          <Textarea name="publicNotes" label="Note visibili al cliente" defaultValue={currentQuote.customerNotes} noteChips={quoteChipSettings.publicNoteChips} />
+          <Textarea name="publicNotes" label="Note generali preventivo" defaultValue={currentQuote.customerNotes} noteChips={quoteChipSettings.publicNoteChips} />
           <Textarea name="internalNotes" label="Note interne" defaultValue={currentQuote.internalNotes} />
         </Section>
 

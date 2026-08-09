@@ -360,7 +360,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
           <div className="grid gap-3 sm:grid-cols-2">
             <Input name="validUntil" label={manualConfirmation ? "Data registrazione" : "Validità offerta"} required type="date" min={todayDateString()} defaultValue={manualConfirmation ? todayDateString() : undefined} />
           </div>
-          <Textarea name="publicNotes" label="Note visibili al cliente" noteChips={quoteChipSettings.publicNoteChips} />
+          <Textarea name="publicNotes" label="Note generali preventivo" noteChips={quoteChipSettings.publicNoteChips} />
           <Textarea name="internalNotes" label="Note interne" defaultValue={initialInternalNotesFromRequest(initialRequest?.message)} />
         </Section>
 

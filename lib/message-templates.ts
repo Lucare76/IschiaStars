@@ -60,6 +60,13 @@ function isAvailabilityReminderNote(value: string): boolean {
   return normalized === "ultime disponibilita" || normalized === "disponibilita limitata e su richiesta";
 }
 
+function visibleNoteLines(value: string | null | undefined): string[] {
+  return (value ?? "")
+    .split("\n")
+    .map((note) => note.trim())
+    .filter((note) => note && !isAvailabilityReminderNote(note));
+}
+
 export function adminQuoteWhatsappMessage(input: {
   quote: Quote;
   options: QuoteHotelOption[];
@@ -117,6 +124,11 @@ export function adminQuoteWhatsappMessage(input: {
         }
       }
     }
+    const optionNotes = Array.from(new Set(group.flatMap((option) => visibleNoteLines(option.notes))));
+    if (optionNotes.length > 0) {
+      lines.push("   📝 Note struttura/camera:");
+      lines.push(...optionNotes.map((note) => `      · ${note}`));
+    }
     const commitmentNote = first.commitmentNote?.trim();
     if (commitmentNote) {
       lines.push(`   ⚠️ *${commitmentNote}*`);
@@ -137,12 +149,9 @@ export function adminQuoteWhatsappMessage(input: {
   const mandatoryFeeBlock = mandatoryFeeNotes.length > 0
     ? `\n⚠️ ${mandatoryFeeNotes.join("\n⚠️ ")}\n`
     : "";
-  const customerNotes = quote.customerNotes
-    .split("\n")
-    .map((note) => note.trim())
-    .filter((note) => note && !isAvailabilityReminderNote(note));
+  const customerNotes = visibleNoteLines(quote.customerNotes);
   const customerNotesBlock = customerNotes.length > 0
-    ? `\n📝 Note:\n${customerNotes.map((note) => `· ${note}`).join("\n")}\n`
+    ? `\n📝 Note generali preventivo:\n${customerNotes.map((note) => `· ${note}`).join("\n")}\n`
     : "";
   const availabilityNotice = stayIncludesAugust(quote.arrivalDate, quote.departureDate)
     ? "⚠️ Disponibilità limitata e su richiesta. Ti consigliamo di confermare appena possibile."
