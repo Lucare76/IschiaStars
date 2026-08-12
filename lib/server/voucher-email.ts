@@ -1,9 +1,9 @@
-import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
 import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { generateVoucherPdf } from "@/lib/pdf/generateVoucher";
 import { sendVoucherEmailToClient } from "@/lib/server/brevo";
 import type { Quote } from "@/lib/types";
 import { formatClientName, formatCurrency, formatDate, formatDateTime, ischiastarsWhatsappNumber } from "@/lib/utils";
+import { buildVoucherIncludedServices } from "@/lib/voucher-services";
 
 export type VoucherEmailResult = {
   sent: boolean;
@@ -39,10 +39,14 @@ export async function generateAndSendVoucherEmail(
       && depositAmount >= totalPrice
       && (balanceAmount == null || Number(balanceAmount) <= 0);
     const selectedOption = quote.hotelOptions.find((option) => option.id === confirmation.selectedHotelOptionId);
-    const includedServices = selectedOption?.includedServices
+    const baseServices = selectedOption?.includedServices
       ? selectedOption.includedServices.split("\n").map((service) => service.trim()).filter(Boolean)
       : (quote.servicesIncluded ?? []);
-    includedServices.push(...getConfirmationAdditionalServices(confirmation.metadata).map(formatConfirmationAdditionalService));
+    const includedServices = buildVoucherIncludedServices({
+      baseServices,
+      selectedTreatmentLabel: confirmation.selectedTreatmentLabel,
+      metadata: confirmation.metadata
+    });
 
     let nightsCount: number | undefined;
     if (quote.arrivalDate && quote.departureDate) {

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
 import { generateVoucherPdf } from "@/lib/pdf/generateVoucher";
 import { getQuoteConfirmationById } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteById } from "@/lib/repositories/quotes";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { formatClientName, formatCurrency, formatDate, formatDateTime, ischiastarsWhatsappNumber } from "@/lib/utils";
+import { buildVoucherIncludedServices } from "@/lib/voucher-services";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const unauthorized = await requireAdminApiAccess(request);
@@ -31,10 +31,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const balanceSchedule = getBalancePaymentSchedule(confirmation.selectedBalanceMethod, quote.arrivalDate);
 
   const selectedOption = quote.hotelOptions.find(o => o.id === confirmation.selectedHotelOptionId);
-  const includedServices = selectedOption?.includedServices
+  const baseServices = selectedOption?.includedServices
     ? selectedOption.includedServices.split("\n").map(s => s.trim()).filter(Boolean)
     : (quote.servicesIncluded ?? []);
-  includedServices.push(...getConfirmationAdditionalServices(confirmation.metadata).map(formatConfirmationAdditionalService));
+  const includedServices = buildVoucherIncludedServices({
+    baseServices,
+    selectedTreatmentLabel: confirmation.selectedTreatmentLabel,
+    metadata: confirmation.metadata
+  });
 
   let nightsCount: number | undefined;
   if (quote.arrivalDate && quote.departureDate) {
