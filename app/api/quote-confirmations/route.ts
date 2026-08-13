@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
   }
   const ageComparison = buildChildrenAgeComparison(quoteResult.data.children, body!.children ?? [], quoteResult.data.arrivalDate);
   const hasAgeMismatch = ageComparison.some((c) => c.ageMismatch);
+  const confirmedAfterExpiry = isAfterOfferExpiry(new Date().toISOString(), quoteResult.data.offerExpiresAt);
 
   const result = await createQuoteConfirmation(quoteResult.data.id, {
     firstName: body!.firstName!.trim(),
@@ -83,6 +84,8 @@ export async function POST(request: NextRequest) {
       children: body!.children ?? [],
       children_age_comparison: ageComparison,
       has_age_mismatch: hasAgeMismatch,
+      confirmed_after_expiry: confirmedAfterExpiry,
+      offer_expires_at: quoteResult.data.offerExpiresAt,
       selected_rooms: selection.selectedRooms,
       source: "public_quote_page"
     }
@@ -161,6 +164,19 @@ function buildChildrenAgeComparison(
       noData: false
     };
   });
+}
+
+function isAfterOfferExpiry(confirmedAt: string, offerExpiresAt: string) {
+  if (!confirmedAt || !offerExpiresAt) return false;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date(confirmedAt));
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  const confirmedDate = `${part("year")}-${part("month")}-${part("day")}`;
+  return confirmedDate > offerExpiresAt;
 }
 
 function resolveSelection(quote: NonNullable<Awaited<ReturnType<typeof getQuoteByCodeAndToken>>["data"]>, body: ConfirmationPayload) {

@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { publicWhatsappLink } from "@/lib/utils";
 
 type CountdownBannerProps = {
   offerExpiresAt: string | null;
   isConfirmed: boolean;
 };
-
-const EXPIRED_MESSAGE = "Ciao, vorrei sapere se la proposta è ancora disponibile";
 
 function getRemainingMs(offerExpiresAt: string) {
   return new Date(offerExpiresAt).getTime() - Date.now();
@@ -111,15 +108,13 @@ export function CountdownBanner({ offerExpiresAt, isConfirmed }: CountdownBanner
       >
         <p className="font-semibold text-gray-700">Offerta scaduta</p>
         <p className="mt-1 text-sm leading-6 text-gray-600">
-          Puoi comunque inviare una richiesta di conferma. IschiaStars verificherà disponibilità, prezzo e condizioni aggiornate prima della conferma definitiva.
+          Puoi comunque confermare la tua preferenza. IschiaStars verificherà disponibilità, prezzo e condizioni aggiornate prima della conferma definitiva.
         </p>
         <a
-          className="mt-3 inline-flex rounded-full bg-[#25D366] px-5 py-2 text-sm font-semibold text-white"
-          href={publicWhatsappLink(EXPIRED_MESSAGE)}
-          rel="noopener noreferrer"
-          target="_blank"
+          className="mt-3 inline-flex rounded-full bg-ischia-sun px-5 py-2 text-sm font-black text-ischia-navy"
+          href="#conferma"
         >
-          Chiedi informazioni su WhatsApp
+          Conferma comunque
         </a>
       </div>
     );

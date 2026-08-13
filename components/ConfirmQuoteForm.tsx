@@ -5,6 +5,21 @@ import type { PublicQuoteDTO } from "@/lib/public-quote-dto";
 import type { QuoteRoomSelection } from "@/lib/types";
 import { formatCurrency, ischiastarsWhatsappNumber } from "@/lib/utils";
 
+function todayRomeDateString() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function isOfferExpired(offerExpiresAt: string | null | undefined) {
+  return Boolean(offerExpiresAt && offerExpiresAt < todayRomeDateString());
+}
+
 export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: PublicQuoteDTO; selectedRooms?: QuoteRoomSelection[] }) {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,6 +33,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: PublicQ
   const totalDeposit = selectedRooms.reduce((sum, room) => sum + (room.depositAmount ?? 0), 0);
   const totalBalance = selectedRooms.reduce((sum, room) => sum + (room.balanceAmount ?? 0), 0);
   const whatsappNumber = ischiastarsWhatsappNumber();
+  const expiredOffer = isOfferExpired(quote.offerExpiresAt);
 
   if (confirmed) {
     return (
@@ -85,6 +101,11 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: PublicQ
     >
       <h3 className="text-2xl font-black text-ischia-navy">Conferma il preventivo</h3>
       <p className="text-sm leading-6 text-ischia-ink/70">Completa i dati per confermare questa proposta. IschiaStars verificherà la disponibilità con la struttura prima dei passaggi definitivi.</p>
+      {expiredOffer ? (
+        <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
+          Questo preventivo risulta scaduto, ma puoi comunque confermare la tua preferenza. Prima della prenotazione definitiva verificheremo disponibilità, prezzo e condizioni aggiornate.
+        </div>
+      ) : null}
 
       {/* Riepilogo selezione */}
       {selectedOption && (
@@ -187,10 +208,10 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: PublicQ
         {loading
           ? "Conferma in corso..."
           : selectedOption
-            ? `Conferma — ${selectedOption.hotelName}`
+            ? expiredOffer ? `Conferma e richiedi verifica — ${selectedOption.hotelName}` : `Conferma — ${selectedOption.hotelName}`
             : requiresSelection
               ? "Seleziona prima una proposta"
-              : "Conferma il preventivo"}
+              : expiredOffer ? "Conferma e richiedi verifica" : "Conferma il preventivo"}
       </button>
     </form>
   );
