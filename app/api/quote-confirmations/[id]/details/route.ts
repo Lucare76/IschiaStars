@@ -3,6 +3,7 @@ import { getQuoteConfirmationById, updateConfirmationDetails } from "@/lib/repos
 import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
 import { getQuoteById, updateQuote } from "@/lib/repositories/quotes";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
+import type { Quote } from "@/lib/types";
 
 type UpdateConfirmationDetailsBody = {
   firstName?: unknown;
@@ -13,6 +14,9 @@ type UpdateConfirmationDetailsBody = {
   address?: unknown;
   checkIn?: unknown;
   checkOut?: unknown;
+  adults?: unknown;
+  children?: unknown;
+  roomTypeLabel?: unknown;
   selectedHotelOptionId?: unknown;
   selectedHotelName?: unknown;
   selectedTreatmentKey?: unknown;
@@ -38,6 +42,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const address = stringValue(body?.address);
   const checkIn = stringValue(body?.checkIn);
   const checkOut = stringValue(body?.checkOut);
+  const adults = Number(body?.adults);
+  const children = normalizeChildren(body?.children);
+  const roomTypeLabel = stringValue(body?.roomTypeLabel);
   const selectedHotelName = stringValue(body?.selectedHotelName);
   const selectedTreatmentLabel = stringValue(body?.selectedTreatmentLabel);
   const selectedBalanceMethod = stringValue(body?.selectedBalanceMethod);
@@ -57,6 +64,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
   if (!isValidDateOnly(checkIn) || !isValidDateOnly(checkOut) || checkOut <= checkIn) {
     return NextResponse.json({ success: false, error: "Date soggiorno non valide" }, { status: 400 });
+  }
+  if (!Number.isInteger(adults) || adults < 1 || adults > 20) {
+    return NextResponse.json({ success: false, error: "Numero adulti non valido" }, { status: 400 });
+  }
+  if (children.some((child) => child.age != null && (!Number.isInteger(child.age) || child.age < 0 || child.age > 17))) {
+    return NextResponse.json({ success: false, error: "Età bambini non valida" }, { status: 400 });
   }
   if (!selectedHotelName || !selectedTreatmentLabel || !selectedBalanceMethod) {
     return NextResponse.json({ success: false, error: "Compila hotel, trattamento e modalità saldo" }, { status: 400 });
@@ -80,18 +93,38 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 
   const quoteId = String(confirmationResult.data.quote_id);
+  const quoteResult = await getQuoteById(quoteId);
+  if (!quoteResult.data) {
+    return NextResponse.json({ success: false, error: "Preventivo non trovato" }, { status: 404 });
+  }
   const currentMetadata = confirmationResult.data.metadata && typeof confirmationResult.data.metadata === "object"
     ? confirmationResult.data.metadata as Record<string, unknown>
     : {};
   const selectedDepositPercent = selectedPrice > 0
     ? Math.round((selectedDepositAmount / selectedPrice) * 10000) / 100
     : null;
+  const finalTreatmentLabel = stripRoomTypeFromTreatment(selectedTreatmentLabel, roomTypeLabel);
   const metadata = {
     ...currentMetadata,
+    children: mergeConfirmationChildren(currentMetadata.children, children),
+    selected_rooms: buildSelectedRooms({
+      quote: quoteResult.data,
+      selectedHotelOptionId,
+      selectedHotelName,
+      selectedTreatmentKey,
+      selectedTreatmentLabel: finalTreatmentLabel,
+      roomTypeLabel,
+      selectedPrice,
+      selectedDepositAmount,
+      selectedBalanceAmount
+    }),
     manual_admin_edit: {
       updated_at: new Date().toISOString(),
       selected_hotel_option_id: selectedHotelOptionId,
-      selected_treatment_key: selectedTreatmentKey
+      selected_treatment_key: selectedTreatmentKey,
+      adults,
+      children_count: children.length,
+      room_type_label: roomTypeLabel
     }
   };
 
@@ -105,7 +138,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     selectedHotelOptionId,
     selectedHotelName,
     selectedTreatmentKey,
-    selectedTreatmentLabel,
+    selectedTreatmentLabel: finalTreatmentLabel,
     selectedPrice,
     selectedDepositPercent,
     selectedDepositAmount,
@@ -126,6 +159,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     clientPhone: phone,
     checkIn,
     checkOut,
+    adults,
+    children,
     totalPrice: selectedPrice,
     depositAmount: selectedDepositAmount
   });
@@ -136,7 +171,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   await trackQuoteEvent(quoteId, "amounts_updated", {
     source: "confirmation_details_edit",
     selectedHotelName,
-    selectedTreatmentLabel,
+    selectedTreatmentLabel: finalTreatmentLabel,
+    roomTypeLabel,
+    adults,
+    childrenCount: children.length,
     checkIn,
     checkOut,
     selectedPrice,
@@ -155,6 +193,74 @@ function stringValue(value: unknown) {
 function optionalString(value: unknown) {
   const normalized = stringValue(value);
   return normalized || null;
+}
+
+function normalizeChildren(value: unknown): { birthDate?: string; age?: number }[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((child) => {
+    if (!child || typeof child !== "object") return {};
+    const record = child as Record<string, unknown>;
+    const birthDate = stringValue(record.birthDate);
+    const rawAge = record.age === "" || record.age == null ? undefined : Number(record.age);
+    return {
+      ...(birthDate ? { birthDate } : {}),
+      ...(rawAge !== undefined && Number.isFinite(rawAge) ? { age: rawAge } : {})
+    };
+  });
+}
+
+function mergeConfirmationChildren(currentValue: unknown, children: { birthDate?: string; age?: number }[]) {
+  const currentChildren = Array.isArray(currentValue) ? currentValue : [];
+  return children.map((child, index) => {
+    const current = currentChildren[index];
+    const currentRecord = current && typeof current === "object" ? current as Record<string, unknown> : {};
+    const currentBirthDate = typeof currentRecord.birthDate === "string" ? currentRecord.birthDate : "";
+    return {
+      ...currentRecord,
+      ...(child.birthDate || currentBirthDate ? { birthDate: child.birthDate || currentBirthDate } : {}),
+      ...(child.age != null ? { age: child.age } : {})
+    };
+  });
+}
+
+function buildSelectedRooms(input: {
+  quote: Quote;
+  selectedHotelOptionId: string | null;
+  selectedHotelName: string;
+  selectedTreatmentKey: string | null;
+  selectedTreatmentLabel: string;
+  roomTypeLabel: string;
+  selectedPrice: number;
+  selectedDepositAmount: number;
+  selectedBalanceAmount: number;
+}) {
+  const selectedOption = input.selectedHotelOptionId
+    ? input.quote.hotelOptions.find((option) => option.id === input.selectedHotelOptionId)
+    : undefined;
+  const optionTreatment = selectedOption?.treatments.find((treatment) => treatment.key === input.selectedTreatmentKey);
+  const roomTypeLabel = input.roomTypeLabel || selectedOption?.roomTypeLabel || "Camera standard";
+  const treatmentLabel = optionTreatment?.label ?? stripRoomTypeFromTreatment(input.selectedTreatmentLabel, roomTypeLabel);
+
+  return [{
+    roomNumber: 1,
+    optionId: input.selectedHotelOptionId ?? selectedOption?.id,
+    hotelGroup: selectedOption?.hotelGroup ?? 1,
+    hotelName: input.selectedHotelName,
+    roomTypeLabel,
+    treatmentKey: input.selectedTreatmentKey ?? optionTreatment?.key,
+    treatmentLabel,
+    price: input.selectedPrice,
+    depositAmount: input.selectedDepositAmount,
+    balanceAmount: input.selectedBalanceAmount
+  }];
+}
+
+function stripRoomTypeFromTreatment(treatmentLabel: string, roomTypeLabel: string) {
+  const normalized = treatmentLabel.toLowerCase();
+  const normalizedRoom = roomTypeLabel.toLowerCase();
+  if (normalized.startsWith(`${normalizedRoom}, `)) return treatmentLabel.slice(roomTypeLabel.length + 2).trim();
+  if (normalized.startsWith(`${normalizedRoom} - `)) return treatmentLabel.slice(roomTypeLabel.length + 3).trim();
+  return treatmentLabel;
 }
 
 function isValidDateOnly(value: string) {

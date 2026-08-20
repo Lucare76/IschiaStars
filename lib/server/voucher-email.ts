@@ -2,6 +2,7 @@ import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { generateVoucherPdf } from "@/lib/pdf/generateVoucher";
 import { sendVoucherEmailToClient } from "@/lib/server/brevo";
 import type { Quote } from "@/lib/types";
+import { selectedConfirmationOption, selectedRoomTypeLabel, selectedTreatmentLabel, voucherGuestsLabel } from "@/lib/confirmation-stay-details";
 import { formatClientName, formatCurrency, formatDate, formatDateTime, ischiastarsWhatsappNumber } from "@/lib/utils";
 import { buildVoucherIncludedServices } from "@/lib/voucher-services";
 
@@ -26,10 +27,6 @@ export async function generateAndSendVoucherEmail(
     const balancePaidAt = options.balancePaidAt ?? confirmation.balancePaidAt ?? undefined;
     const isBalancePaid = options.isBalancePaid ?? Boolean(balancePaidAt);
 
-    const guestsParts: string[] = [];
-    if (quote.adults) guestsParts.push(`${quote.adults} ${quote.adults === 1 ? "adulto" : "adulti"}`);
-    if (quote.children?.length) guestsParts.push(`${quote.children.length} ${quote.children.length === 1 ? "bambino" : "bambini"}`);
-
     const depositAmount = confirmation.selectedDepositAmount ?? quote.deposit;
     const balanceAmount = confirmation.selectedBalanceAmount;
     const totalPrice = confirmation.selectedPrice ?? quote.totalPrice;
@@ -38,7 +35,7 @@ export async function generateAndSendVoucherEmail(
       && typeof totalPrice === "number"
       && depositAmount >= totalPrice
       && (balanceAmount == null || Number(balanceAmount) <= 0);
-    const selectedOption = quote.hotelOptions.find((option) => option.id === confirmation.selectedHotelOptionId);
+    const selectedOption = selectedConfirmationOption(quote);
     const baseServices = selectedOption?.includedServices
       ? selectedOption.includedServices.split("\n").map((service) => service.trim()).filter(Boolean)
       : (quote.servicesIncluded ?? []);
@@ -63,12 +60,12 @@ export async function generateAndSendVoucherEmail(
       clientEmail: confirmation.email ?? quote.customerEmail,
       clientPhone: confirmation.phone ?? quote.customerPhone,
       hotelName: confirmation.selectedHotelName,
-      roomTypeLabel: selectedOption?.roomTypeLabel ?? undefined,
-      treatmentLabel: confirmation.selectedTreatmentLabel,
+      roomTypeLabel: selectedRoomTypeLabel(quote),
+      treatmentLabel: selectedTreatmentLabel(quote),
       arrivalDate: quote.arrivalDate ? formatDate(quote.arrivalDate) : undefined,
       departureDate: quote.departureDate ? formatDate(quote.departureDate) : undefined,
       nightsCount,
-      guestsLabel: guestsParts.length ? guestsParts.join(", ") : undefined,
+      guestsLabel: voucherGuestsLabel(quote),
       includedServices,
       depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
       depositPaidAtLabel: formatDateTime(depositPaidAt),

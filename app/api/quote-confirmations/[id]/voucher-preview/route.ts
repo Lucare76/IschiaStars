@@ -4,6 +4,7 @@ import { getQuoteConfirmationById } from "@/lib/repositories/quoteConfirmations"
 import { getQuoteById } from "@/lib/repositories/quotes";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
+import { selectedConfirmationOption, selectedRoomTypeLabel, selectedTreatmentLabel, voucherGuestsLabel } from "@/lib/confirmation-stay-details";
 import { formatClientName, formatCurrency, formatDate, formatDateTime, ischiastarsWhatsappNumber } from "@/lib/utils";
 import { buildVoucherIncludedServices } from "@/lib/voucher-services";
 
@@ -21,16 +22,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const confirmation = quote.confirmation;
   const depositPaidAt = confirmation.depositPaidAt ?? new Date().toISOString();
 
-  const guestsParts: string[] = [];
-  if (quote.adults) guestsParts.push(`${quote.adults} ${quote.adults === 1 ? "adulto" : "adulti"}`);
-  if (quote.children?.length) guestsParts.push(`${quote.children.length} ${quote.children.length === 1 ? "bambino" : "bambini"}`);
-
   const depositAmount = confirmation.selectedDepositAmount ?? quote.deposit;
   const balanceAmount = confirmation.selectedBalanceAmount;
   const totalPrice = confirmation.selectedPrice ?? quote.totalPrice;
   const balanceSchedule = getBalancePaymentSchedule(confirmation.selectedBalanceMethod, quote.arrivalDate);
 
-  const selectedOption = quote.hotelOptions.find(o => o.id === confirmation.selectedHotelOptionId);
+  const selectedOption = selectedConfirmationOption(quote);
   const baseServices = selectedOption?.includedServices
     ? selectedOption.includedServices.split("\n").map(s => s.trim()).filter(Boolean)
     : (quote.servicesIncluded ?? []);
@@ -61,12 +58,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     clientEmail: confirmation.email ?? quote.customerEmail,
     clientPhone: confirmation.phone ?? quote.customerPhone,
     hotelName: confirmation.selectedHotelName,
-    roomTypeLabel: selectedOption?.roomTypeLabel ?? undefined,
-    treatmentLabel: confirmation.selectedTreatmentLabel,
+    roomTypeLabel: selectedRoomTypeLabel(quote),
+    treatmentLabel: selectedTreatmentLabel(quote),
     arrivalDate: quote.arrivalDate ? formatDate(quote.arrivalDate) : undefined,
     departureDate: quote.departureDate ? formatDate(quote.departureDate) : undefined,
     nightsCount,
-    guestsLabel: guestsParts.length ? guestsParts.join(", ") : undefined,
+    guestsLabel: voucherGuestsLabel(quote),
     includedServices,
     depositAmountLabel: typeof depositAmount === "number" ? formatCurrency(depositAmount) : "—",
     depositPaidAtLabel: formatDateTime(depositPaidAt),

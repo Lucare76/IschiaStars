@@ -26,6 +26,7 @@ import { PaymentSettings } from "@/lib/payment-settings";
 import { defaultQuoteChipSettings, QuoteChipSettings } from "@/lib/quote-chip-settings";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { getBalancePaymentSchedule, isBalanceMethodInStructure } from "@/lib/hotel-policies";
+import { selectedRoomTypeLabel as getSelectedRoomTypeLabel, selectedTreatmentLabel as getSelectedTreatmentLabel } from "@/lib/confirmation-stay-details";
 import { Hotel, Quote, QuoteEvent, QuoteStatus, TransportOffer } from "@/lib/types";
 import { formatCurrency, formatDate, publicQuoteUrl } from "@/lib/utils";
 
@@ -59,6 +60,10 @@ type ConfirmationEditForm = {
   address: string;
   checkIn: string;
   checkOut: string;
+  adults: string;
+  childrenCount: string;
+  childAges: string[];
+  roomTypeLabel: string;
   selectedHotelOptionId: string;
   selectedHotelName: string;
   selectedTreatmentKey: string;
@@ -85,10 +90,14 @@ function buildConfirmationEditForm(quote: Quote): ConfirmationEditForm {
     address: confirmation?.address ?? "",
     checkIn: quote.arrivalDate,
     checkOut: quote.departureDate,
+    adults: String(quote.adults || 1),
+    childrenCount: String(quote.children.length),
+    childAges: quote.children.map((child) => childAgeForForm(child, quote.arrivalDate)),
+    roomTypeLabel: getSelectedRoomTypeLabel(quote) ?? "",
     selectedHotelOptionId,
     selectedHotelName: confirmation?.selectedHotelName ?? quote.proposedHotel?.name ?? "",
     selectedTreatmentKey,
-    selectedTreatmentLabel: confirmation?.selectedTreatmentLabel ?? "",
+    selectedTreatmentLabel: getSelectedTreatmentLabel(quote) ?? confirmation?.selectedTreatmentLabel ?? "",
     selectedPrice: confirmation?.selectedPrice != null ? String(confirmation.selectedPrice) : String(quote.totalPrice || ""),
     selectedDepositAmount: confirmation?.selectedDepositAmount != null ? String(confirmation.selectedDepositAmount) : String(quote.deposit || ""),
     selectedBalanceAmount: confirmation?.selectedBalanceAmount != null ? String(confirmation.selectedBalanceAmount) : "",
@@ -105,7 +114,9 @@ function confirmationSelectionOptions(quote: Quote) {
       optionId: option.id,
       treatmentKey: treatment.key,
       hotelName: option.hotelName,
-      treatmentLabel: [option.roomTypeLabel, treatment.label].filter(Boolean).join(", "),
+      roomTypeLabel: option.roomTypeLabel ?? "",
+      treatmentLabel: treatment.label,
+      displayLabel: [option.roomTypeLabel, treatment.label].filter(Boolean).join(", "),
       price: treatment.price,
       depositPercent: option.depositPercent ?? quote.confirmation?.selectedDepositPercent ?? 20,
       balanceMethod: option.balanceMethod ?? quote.confirmation?.selectedBalanceMethod ?? "",
@@ -165,6 +176,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
       selectionKey,
       selectedHotelOptionId: selection.optionId,
       selectedHotelName: selection.hotelName,
+      roomTypeLabel: selection.roomTypeLabel,
       selectedTreatmentKey: selection.treatmentKey,
       selectedTreatmentLabel: selection.treatmentLabel,
       selectedPrice: String(selection.price),
@@ -185,10 +197,28 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     }
     setConfirmationSaving(true);
     setConfirmationMessage(null);
+    const adults = Number(confirmationForm.adults);
+    const childrenCount = Number(confirmationForm.childrenCount);
+    const children = confirmationForm.childAges.slice(0, childrenCount).map((age) => ({ age: age === "" ? undefined : Number(age) }));
+    if (!Number.isInteger(adults) || adults < 1) {
+      setConfirmationMessage("Inserisci almeno 1 adulto.");
+      setConfirmationSaving(false);
+      return;
+    }
+    if (!Number.isInteger(childrenCount) || childrenCount < 0) {
+      setConfirmationMessage("Numero bambini non valido.");
+      setConfirmationSaving(false);
+      return;
+    }
+    if (children.some((child) => child.age != null && (!Number.isInteger(child.age) || child.age < 0 || child.age > 17))) {
+      setConfirmationMessage("Inserisci età bambini da 0 a 17 anni.");
+      setConfirmationSaving(false);
+      return;
+    }
 
     const response = await adminApiFetch(`/api/quote-confirmations/${currentQuote.confirmation.id}/details`, {
       method: "PATCH",
-      body: JSON.stringify(confirmationForm)
+      body: JSON.stringify({ ...confirmationForm, adults, children })
     });
     const result = await readAdminApiJson<{ success?: boolean; quote?: Quote; error?: string }>(response);
     setConfirmationSaving(false);
@@ -537,19 +567,51 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
                       <option value="">Modifica manuale</option>
                       {confirmationSelections.map((selection) => (
                         <option key={selection.key} value={selection.key}>
-                          {selection.hotelName} - {selection.treatmentLabel} - {formatCurrency(selection.price)}
+                          {selection.hotelName} - {selection.displayLabel} - {formatCurrency(selection.price)}
                         </option>
                       ))}
                     </select>
                   </label>
+                  <Input label="Adulti" min="1" required type="number" value={confirmationForm.adults} onChange={(event) => updateConfirmationForm({ adults: event.target.value })} />
+                  <Input
+                    label="Bambini"
+                    min="0"
+                    required
+                    type="number"
+                    value={confirmationForm.childrenCount}
+                    onChange={(event) => {
+                      const count = Math.max(0, Number(event.target.value) || 0);
+                      updateConfirmationForm({
+                        childrenCount: String(count),
+                        childAges: Array.from({ length: count }, (_, index) => confirmationForm.childAges[index] ?? "")
+                      });
+                    }}
+                  />
+                  {Array.from({ length: Number(confirmationForm.childrenCount) || 0 }, (_, index) => (
+                    <Input
+                      key={index}
+                      label={`Età bambino ${index + 1}`}
+                      max="17"
+                      min="0"
+                      required
+                      type="number"
+                      value={confirmationForm.childAges[index] ?? ""}
+                      onChange={(event) => {
+                        const nextAges = [...confirmationForm.childAges];
+                        nextAges[index] = event.target.value;
+                        updateConfirmationForm({ childAges: nextAges });
+                      }}
+                    />
+                  ))}
                   <Input label="Nome" required value={confirmationForm.firstName} onChange={(event) => updateConfirmationForm({ firstName: event.target.value })} />
                   <Input label="Cognome" value={confirmationForm.lastName} onChange={(event) => updateConfirmationForm({ lastName: event.target.value })} />
                   <Input label="Telefono" required value={confirmationForm.phone} onChange={(event) => updateConfirmationForm({ phone: event.target.value })} />
                   <Input label="Email" required type="email" value={confirmationForm.email} onChange={(event) => updateConfirmationForm({ email: event.target.value })} />
                   <Input label="Codice fiscale" value={confirmationForm.fiscalCode} onChange={(event) => updateConfirmationForm({ fiscalCode: event.target.value })} />
                   <Input label="Indirizzo" value={confirmationForm.address} onChange={(event) => updateConfirmationForm({ address: event.target.value })} />
-                  <Input label="Hotel scelto" required value={confirmationForm.selectedHotelName} onChange={(event) => updateConfirmationForm({ selectedHotelName: event.target.value, selectionKey: "" })} />
-                  <Input label="Trattamento" required value={confirmationForm.selectedTreatmentLabel} onChange={(event) => updateConfirmationForm({ selectedTreatmentLabel: event.target.value, selectionKey: "" })} />
+                  <Input label="Hotel scelto" required value={confirmationForm.selectedHotelName} onChange={(event) => updateConfirmationForm({ selectedHotelName: event.target.value, selectionKey: "", selectedHotelOptionId: "", selectedTreatmentKey: "" })} />
+                  <Input label="Camera" value={confirmationForm.roomTypeLabel} onChange={(event) => updateConfirmationForm({ roomTypeLabel: event.target.value, selectionKey: "", selectedHotelOptionId: "", selectedTreatmentKey: "" })} />
+                  <Input label="Trattamento" required value={confirmationForm.selectedTreatmentLabel} onChange={(event) => updateConfirmationForm({ selectedTreatmentLabel: event.target.value, selectionKey: "", selectedHotelOptionId: "", selectedTreatmentKey: "" })} />
                   <Input label="Modalità saldo" required value={confirmationForm.selectedBalanceMethod} onChange={(event) => updateConfirmationForm({ selectedBalanceMethod: event.target.value })} />
                   <Input label="Prezzo" min="0" required step="0.01" type="number" value={confirmationForm.selectedPrice} onChange={(event) => updateConfirmationForm({ selectedPrice: event.target.value })} />
                   <Input label="Caparra" min="0" required step="0.01" type="number" value={confirmationForm.selectedDepositAmount} onChange={(event) => updateConfirmationForm({ selectedDepositAmount: event.target.value })} />

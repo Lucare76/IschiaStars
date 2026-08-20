@@ -8,6 +8,7 @@ import { availabilityStatusLabel, defaultPaymentDueAtForFinalConfirmation, defau
 import { FeatureFlags } from "@/lib/feature-flags";
 import { getEffectiveBalancePaymentSchedule, isBalanceDueAtConfirmation } from "@/lib/hotel-policies";
 import { buildBalancePaymentReason, buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
+import { selectedRoomTypeLabel, selectedTreatmentLabel } from "@/lib/confirmation-stay-details";
 import { Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime, normalizeItalianPhone } from "@/lib/utils";
 
@@ -152,15 +153,14 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
 
   const depositCoordinatesWhatsapp = useMemo(() => {
     if (!hasCurrentCoordinates || depositAmount == null) return null;
-    const selectedOption = quote.hotelOptions.find((option) => option.id === confirmation?.selectedHotelOptionId);
     const message = depositCoordinatesWhatsappMessage({
       firstName: confirmation?.firstName ?? quote.customerFirstName,
       code: quote.code,
       hotelName: confirmation?.selectedHotelName ?? quote.proposedHotel.name,
       arrivalDate: quote.arrivalDate,
       departureDate: quote.departureDate,
-      roomLabel: selectedOption?.roomTypeLabel,
-      treatmentLabel: confirmation?.selectedTreatmentLabel ?? quote.treatment,
+      roomLabel: selectedRoomTypeLabel(quote),
+      treatmentLabel: selectedTreatmentLabel(quote) ?? quote.treatment,
       priceLabel: formatCurrency(selectedPrice),
       depositLabel: formatCurrency(depositAmount),
       paymentRequestType: isFullBalanceDueAtConfirmation ? "full_balance" : "deposit",
@@ -580,9 +580,11 @@ IschiaStars 🌊`;
         <Info label="Email" value={confirmation.email ?? quote.customerEmail ?? "-"} />
         <Info label="Codice fiscale" value={confirmation.fiscalCode || "-"} />
         <Info label="Indirizzo" value={addressLine || "-"} />
+        <Info label="Adulti" value={String(quote.adults)} />
         <Info label="Bambini / età" value={confirmationChildren} />
         <Info label="Hotel scelto" value={confirmation.selectedHotelName ?? quote.proposedHotel.name} />
-        <Info label="Trattamento" value={confirmation.selectedTreatmentLabel ?? (quote.treatment || "-")} />
+        <Info label="Camera" value={selectedRoomTypeLabel(quote) ?? "-"} />
+        <Info label="Trattamento" value={selectedTreatmentLabel(quote) ?? (quote.treatment || "-")} />
         <Info label="Prezzo" value={selectedPrice > 0 ? formatCurrency(selectedPrice) : "-"} />
         <Info label="Caparra" value={depositAmount != null ? formatCurrency(depositAmount) : "-"} />
         <Info label="Saldo" value={balanceAmount != null ? formatCurrency(balanceAmount) : "-"} />
@@ -1202,8 +1204,10 @@ function getConfirmationChildren(metadata: Record<string, unknown> | undefined, 
     .map((child, index) => {
       if (!child || typeof child !== "object") return null;
       const birthDate = "birthDate" in child && typeof child.birthDate === "string" ? child.birthDate : "";
-      if (!birthDate) return null;
-      return `Bambino ${index + 1}: ${birthDate}`;
+      const age = "age" in child && typeof child.age === "number" ? child.age : undefined;
+      if (birthDate) return `Bambino ${index + 1}: ${birthDate}`;
+      if (age != null) return `Bambino ${index + 1}: ${age} anni`;
+      return null;
     })
     .filter(Boolean);
   return labels.length ? labels.join(" · ") : "-";
