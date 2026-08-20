@@ -25,6 +25,10 @@ function uniqueLabels(labels: Array<string | undefined>) {
 
 export function selectedRoomTypeLabel(quote: Quote): string | undefined {
   const confirmation = quote.confirmation;
+  const parsedStoredTreatment = parseStoredRoomComposition(confirmation?.selectedTreatmentLabel);
+  if (parsedStoredTreatment.roomLabels.length === 1) return parsedStoredTreatment.roomLabels[0];
+  if (parsedStoredTreatment.roomLabels.length > 1) return parsedStoredTreatment.roomLabels.join(" + ");
+
   const roomLabels = uniqueLabels(metadataRooms(confirmation?.metadata).map((room) => room.roomTypeLabel));
   if (roomLabels.length === 1) return roomLabels[0];
   if (roomLabels.length > 1) return roomLabels.join(" + ");
@@ -38,6 +42,10 @@ export function selectedRoomTypeLabel(quote: Quote): string | undefined {
 
 export function selectedTreatmentLabel(quote: Quote): string | undefined {
   const label = quote.confirmation?.selectedTreatmentLabel?.trim();
+  const parsedStoredTreatment = parseStoredRoomComposition(label);
+  if (parsedStoredTreatment.treatmentLabels.length === 1) return parsedStoredTreatment.treatmentLabels[0];
+  if (parsedStoredTreatment.treatmentLabels.length > 1) return parsedStoredTreatment.treatmentLabels.join(" + ");
+
   const roomLabel = selectedRoomTypeLabel(quote);
   if (!label) return undefined;
   if (!roomLabel) return label;
@@ -68,4 +76,31 @@ function roomTypeFromStoredTreatment(value: string | undefined) {
   if (!label) return undefined;
   const match = /^(camera\s+[^,;-]+)/i.exec(label);
   return match?.[1]?.trim();
+}
+
+function parseStoredRoomComposition(value: string | undefined) {
+  const roomLabels: string[] = [];
+  const treatmentLabels: string[] = [];
+  const segments = (value ?? "").split(";").map((segment) => segment.trim()).filter(Boolean);
+
+  for (const segment of segments) {
+    const withoutPrefix = segment.replace(/^camera\s+\d+\s*:\s*/i, "").trim();
+    if (withoutPrefix === segment) continue;
+
+    const commaIndex = withoutPrefix.indexOf(",");
+    if (commaIndex === -1) {
+      roomLabels.push(withoutPrefix);
+      continue;
+    }
+
+    const roomLabel = withoutPrefix.slice(0, commaIndex).trim();
+    const treatmentLabel = withoutPrefix.slice(commaIndex + 1).trim();
+    if (roomLabel) roomLabels.push(roomLabel);
+    if (treatmentLabel) treatmentLabels.push(treatmentLabel);
+  }
+
+  return {
+    roomLabels: uniqueLabels(roomLabels),
+    treatmentLabels: uniqueLabels(treatmentLabels)
+  };
 }
