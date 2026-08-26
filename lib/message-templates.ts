@@ -154,8 +154,8 @@ export function adminQuoteWhatsappMessage(input: {
     ? `\n📝 Note generali preventivo:\n${customerNotes.map((note) => `· ${note}`).join("\n")}\n`
     : "";
   const availabilityNotice = stayIncludesAugust(quote.arrivalDate, quote.departureDate)
-    ? "⚠️ Disponibilità limitata e su richiesta. Ti consigliamo di confermare appena possibile."
-    : "⚠️ Le disponibilità per questo periodo sono limitate. Ti consigliamo di confermare appena possibile.";
+    ? "⚠️ Disponibilità limitata e su richiesta. Ti consigliamo di contattarci telefonicamente."
+    : "⚠️ Le disponibilità per questo periodo sono limitate. Ti consigliamo di contattarci telefonicamente.";
 
   const stayLines = [
     `🗒 ${stayLine}`,
