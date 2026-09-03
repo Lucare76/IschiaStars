@@ -168,7 +168,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
     }
 
     const mappedOptions = mapHotelOptionsToPayload(hotelOptions, {
-      defaultRoomTypeLabel: suggestedRoomTypeLabel(roomCapacitySuggestion)
+      defaultRoomTypeLabel: suggestedRoomTypeLabel(roomCapacitySuggestion, quoteChipSettings.roomTypePresets)
     });
     if (manualConfirmation && countPricedTreatments(hotelOptions) !== 1) {
       setError("Per importare una conferma via email inserisci una sola struttura e un solo trattamento con prezzo.");
@@ -351,6 +351,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
             noteChips={quoteChipSettings.hotelNoteChips}
             hotelReasonPhrases={quoteChipSettings.hotelReasonPhrases}
             treatmentDetailPhrases={quoteChipSettings.treatmentDetailPhrases}
+            roomTypePresets={quoteChipSettings.roomTypePresets}
             showDetectedPlus
             suggestedCapacity={roomCapacitySuggestion}
           />

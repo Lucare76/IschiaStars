@@ -3,6 +3,7 @@
 import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { fillMissingHotelPolicies } from "@/lib/hotel-policies";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
+import type { RoomTypePresetSetting } from "@/lib/quote-chip-settings";
 import type { Hotel, QuoteHotelOption } from "@/lib/types";
 
 export type RoomTypeState = {
@@ -40,7 +41,7 @@ const CUSTOM_ROOM_VALUE = "__custom__";
 
 const COMMITMENT_NOTE_TEXT = "Tariffa riservata ai clienti con impegnativa per fanghi e bagni termali";
 
-const ROOM_TYPE_PRESETS = [
+const DEFAULT_ROOM_TYPE_PRESETS = [
   { label: "Camera singola standard", capacity: 1 },
   { label: "Camera matrimoniale standard", capacity: 2 },
   { label: "Camera matrimoniale con balcone", capacity: 2 },
@@ -198,9 +199,9 @@ export function suggestedGuestsPerRoom(totalGuests: number, rooms: number) {
   return Math.max(1, Math.ceil(Math.max(1, totalGuests) / Math.max(1, rooms)));
 }
 
-export function suggestedRoomTypeLabel(guestsPerRoom: number) {
+export function suggestedRoomTypeLabel(guestsPerRoom: number, roomTypePresets?: readonly RoomTypePresetSetting[]) {
   const capacity = Math.min(4, Math.max(1, guestsPerRoom));
-  return ROOM_TYPE_PRESETS.find((preset) => preset.capacity === capacity)?.label ?? "Tipologia camera da confermare";
+  return buildRoomTypePresets(roomTypePresets).find((preset) => preset.capacity === capacity)?.label ?? "Tipologia camera da confermare";
 }
 
 export function HotelOptionsEditor({
@@ -211,6 +212,7 @@ export function HotelOptionsEditor({
   noteChips = [],
   hotelReasonPhrases = [],
   treatmentDetailPhrases = [],
+  roomTypePresets = [],
   preserveGroups = false,
   showDetectedPlus = false,
   showStars = true
@@ -222,6 +224,7 @@ export function HotelOptionsEditor({
   noteChips?: readonly string[];
   hotelReasonPhrases?: readonly string[];
   treatmentDetailPhrases?: readonly string[];
+  roomTypePresets?: readonly RoomTypePresetSetting[];
   preserveGroups?: boolean;
   showDetectedPlus?: boolean;
   showStars?: boolean;
@@ -299,6 +302,7 @@ export function HotelOptionsEditor({
             noteChips={noteChips}
             hotelReasonPhrases={hotelReasonPhrases}
             treatmentDetailPhrases={treatmentDetailPhrases}
+            roomTypePresets={roomTypePresets}
             onSelectHotel={(id) => selectHotel(index, id)}
             onChange={(patch) => updateOption(index, patch)}
             onRemove={() => removeOption(index)}
@@ -332,6 +336,7 @@ function HotelOptionBlock({
   noteChips,
   hotelReasonPhrases,
   treatmentDetailPhrases,
+  roomTypePresets,
   onSelectHotel,
   onChange,
   onRemove,
@@ -349,6 +354,7 @@ function HotelOptionBlock({
   noteChips: readonly string[];
   hotelReasonPhrases: readonly string[];
   treatmentDetailPhrases: readonly string[];
+  roomTypePresets: readonly RoomTypePresetSetting[];
   onSelectHotel: (id: string) => void;
   onChange: (patch: Partial<HotelOptionState>) => void;
   onRemove: () => void;
@@ -510,6 +516,7 @@ function HotelOptionBlock({
                 label={opt.roomTypes.length > 1 ? `Tipologia ${roomIdx + 1}` : "Tipologia camera"}
                 roomLabel={rt.label}
                 suggestedCapacity={suggestedCapacity}
+                roomTypePresets={roomTypePresets}
                 onChange={(label) => onUpdateRoomType(roomIdx, { label })}
               />
               <label className="text-sm font-semibold text-ischia-ink">
@@ -618,17 +625,20 @@ function RoomTypeSelect({
   label,
   roomLabel,
   suggestedCapacity,
+  roomTypePresets,
   onChange
 }: {
   label: string;
   roomLabel: string;
   suggestedCapacity?: number;
+  roomTypePresets: readonly RoomTypePresetSetting[];
   onChange: (label: string) => void;
 }) {
   const normalizedCapacity = suggestedCapacity != null ? Math.min(4, Math.max(1, suggestedCapacity)) : undefined;
-  const recommended = normalizedCapacity ? ROOM_TYPE_PRESETS.filter((preset) => preset.capacity === normalizedCapacity) : [];
-  const otherPresets = ROOM_TYPE_PRESETS.filter((preset) => !recommended.some((item) => item.label === preset.label));
-  const selectedPreset = ROOM_TYPE_PRESETS.find((preset) => preset.label === roomLabel);
+  const presets = buildRoomTypePresets(roomTypePresets);
+  const recommended = normalizedCapacity ? presets.filter((preset) => preset.capacity === normalizedCapacity) : [];
+  const otherPresets = presets.filter((preset) => !recommended.some((item) => item.label === preset.label));
+  const selectedPreset = presets.find((preset) => preset.label === roomLabel);
   const selectedValue = selectedPreset?.label ?? CUSTOM_ROOM_VALUE;
 
   return (
@@ -658,6 +668,25 @@ function RoomTypeSelect({
       </select>
     </label>
   );
+}
+
+function buildRoomTypePresets(roomTypePresets?: readonly RoomTypePresetSetting[]): RoomTypePresetSetting[] {
+  const source = roomTypePresets?.length
+    ? roomTypePresets
+    : DEFAULT_ROOM_TYPE_PRESETS;
+  const seen = new Set<string>();
+
+  return source
+    .map((preset) => ({
+      label: preset.label.trim(),
+      capacity: Number.isInteger(preset.capacity) && preset.capacity >= 1 && preset.capacity <= 10 ? preset.capacity : 99
+    }))
+    .filter((preset) => {
+      const key = preset.label.toLowerCase();
+      if (!preset.label || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 function TreatmentDetailsEditor({

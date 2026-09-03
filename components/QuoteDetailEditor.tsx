@@ -716,6 +716,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
             noteChips={quoteChipSettings.hotelNoteChips}
             hotelReasonPhrases={quoteChipSettings.hotelReasonPhrases}
             treatmentDetailPhrases={quoteChipSettings.treatmentDetailPhrases}
+            roomTypePresets={quoteChipSettings.roomTypePresets}
             preserveGroups
             showStars={false}
             suggestedCapacity={roomCapacitySuggestion}
