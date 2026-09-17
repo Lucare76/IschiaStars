@@ -6,6 +6,8 @@ import { FollowUpWhatsAppButton } from "@/components/FollowUpWhatsAppButton";
 import { FOLLOW_UP_MAX_LIMIT, FOLLOW_UP_PAGE_SIZE, followUpGroupSegment, getDueFollowUpCustomerKeys, getFollowUpQuotes, FollowUpEmailInfo, FollowUpHotelClick, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
 import { followUpCustomerKey, isFollowUpStageDue } from "@/lib/follow-up-policy";
 import { formatDate, formatDateTime } from "@/lib/utils";
+import type { FollowUpRuleSettings } from "@/lib/follow-up-rule-settings";
+import { getFollowUpRuleSettings } from "@/lib/repositories/followUpRuleSettings";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -50,7 +52,11 @@ type FollowUpGroup = {
 export default async function FollowUpPage({ searchParams }: { searchParams?: { filter?: string; limit?: string } }) {
   const activeFilter = normalizeFilter(searchParams?.filter);
   const activeLimit = normalizeLimit(searchParams?.limit);
-  const followUpResult = await getFollowUpQuotes({ limit: activeLimit });
+  const [followUpResult, ruleSettingsResult] = await Promise.all([
+    getFollowUpQuotes({ limit: activeLimit }),
+    getFollowUpRuleSettings()
+  ]);
+  const rules = ruleSettingsResult.data;
 
   if (followUpResult.source !== "supabase") {
     return (
@@ -62,8 +68,8 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
 
   const quotes = followUpResult.data.quotes;
   const hasMore = followUpResult.data.hasMore;
-  const dueCustomerKeys = getDueFollowUpCustomerKeys(quotes);
-  const groups = groupFollowUps(quotes);
+  const dueCustomerKeys = getDueFollowUpCustomerKeys(quotes, Date.now(), rules);
+  const groups = groupFollowUps(quotes, rules);
   const visibleGroups = groups.filter((group) => matchesFilter(group, activeFilter, dueCustomerKeys));
 
   const stats = {
@@ -273,7 +279,7 @@ function matchesFilter(group: FollowUpGroup, filter: FollowUpFilter, dueCustomer
   return group.segment === "da_sollecitare";
 }
 
-function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
+function groupFollowUps(quotes: FollowUpQuote[], rules: FollowUpRuleSettings): FollowUpGroup[] {
   const map = new Map<string, FollowUpQuote[]>();
   for (const quote of quotes) {
     const key = followUpCustomerKey(quote);
@@ -294,7 +300,7 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
     const snoozedUntil = sorted.map((quote) => quote.snoozedUntil).filter(Boolean).sort().at(-1);
     const totalOpenings = sorted.reduce((sum, quote) => sum + quote.openedCount, 0);
     const engagementScore = sorted.reduce((sum, quote) => sum + quote.engagementScore, 0);
-    const segment = followUpGroupSegment(sorted, totalOpenings, engagementScore);
+    const segment = followUpGroupSegment(sorted, totalOpenings, engagementScore, Date.now(), rules);
     const priority = priorityForSegment(segment);
     const staySummary = summarizeStayDates(sorted);
     const emailInfo = sorted.reduce<FollowUpEmailInfo>(
@@ -329,7 +335,7 @@ function groupFollowUps(quotes: FollowUpQuote[]): FollowUpGroup[] {
       snoozedUntil,
       staySummary,
       isSnoozed: Boolean(snoozedUntil && new Date(snoozedUntil).getTime() > Date.now()),
-      isContactDue: sorted.some((quote) => isFollowUpStageDue(quote.sentAt, lastFollowUpAt)),
+      isContactDue: sorted.some((quote) => isFollowUpStageDue(quote.sentAt, lastFollowUpAt, Date.now(), rules)),
       emailInfo
     };
   }).sort((a, b) =>

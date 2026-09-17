@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { normalizeItalianPhone } from "@/lib/utils";
 
 type FollowUpWhatsAppButtonProps = {
@@ -10,6 +11,7 @@ type FollowUpWhatsAppButtonProps = {
 
 export function FollowUpWhatsAppButton({ message, clientPhone }: FollowUpWhatsAppButtonProps) {
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   if (!message || !clientPhone) {
     return (
@@ -20,19 +22,47 @@ export function FollowUpWhatsAppButton({ message, clientPhone }: FollowUpWhatsAp
   }
 
   async function handleClick() {
-    await navigator.clipboard.writeText(message!).catch(() => null);
+    setLoading(true);
+    let finalMessage = message!;
+
+    try {
+      const shortCode = extractShortCode(message!);
+      if (shortCode) {
+        const response = await adminApiFetch("/api/follow-up/render-message", {
+          method: "POST",
+          headers: adminApiHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ shortCode })
+        });
+        const payload = await readAdminApiJson<{ ok?: boolean; message?: string }>(response);
+        if (response.ok && payload?.ok && payload.message?.trim()) {
+          finalMessage = payload.message;
+        }
+      }
+    } catch {
+      // Mantiene il messaggio legacy come fallback: il follow-up non deve bloccarsi
+      // se le impostazioni personalizzate non sono temporaneamente disponibili.
+    }
+
+    await navigator.clipboard.writeText(finalMessage).catch(() => null);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
     window.open(`https://wa.me/${normalizeItalianPhone(clientPhone!)}`, "_blank", "noopener,noreferrer");
+    setLoading(false);
   }
 
   return (
     <button
-      className="inline-flex h-9 items-center justify-center rounded-full bg-ischia-leaf px-3.5 text-center text-xs font-black text-white transition hover:bg-ischia-navy"
+      className="inline-flex h-9 items-center justify-center rounded-full bg-ischia-leaf px-3.5 text-center text-xs font-black text-white transition hover:bg-ischia-navy disabled:opacity-60"
+      disabled={loading}
       onClick={() => void handleClick()}
       type="button"
     >
-      {copied ? "✓ Incolla il messaggio su WhatsApp" : "Scrivi su WhatsApp"}
+      {loading ? "Preparo messaggio..." : copied ? "✓ Incolla il messaggio su WhatsApp" : "Scrivi su WhatsApp"}
     </button>
   );
+}
+
+function extractShortCode(message: string) {
+  const match = message.match(/\/p\/([A-Za-z0-9_-]+)/);
+  return match?.[1] ?? "";
 }
