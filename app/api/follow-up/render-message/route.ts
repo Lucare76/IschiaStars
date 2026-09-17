@@ -4,7 +4,7 @@ import { getFollowUpQuotes } from "@/lib/repositories/followUp";
 import { getFollowUpSettings } from "@/lib/repositories/followUpSettings";
 import { getQuoteByShortCode } from "@/lib/repositories/quotes";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { absoluteShortPublicQuoteUrl, formatCurrency, formatDate } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
   const unauthorized = await requireAdminApiAccess(request);
@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
   const followUps = await getFollowUpQuotes({ limit: 120 });
   const followUp = followUps.data.quotes.find((item) => item.id === quote.id);
   const template = selectFollowUpTemplate(settingsResult.data, followUp?.segment);
-  const publicUrl = followUp?.publicUrl ?? `/p/${shortCode}`;
-  const hotel = followUp?.hotelsSummary || quote.proposedHotel?.name || quote.hotelRequested || "";
+  const publicUrl = absoluteShortPublicQuoteUrl(quote);
+  const hotel = followUp?.hotelsSummary || quote.proposedHotel?.name || quote.requestedHotel || "";
   const price = followUp?.mainOffer || formatCurrency(quote.totalPrice);
 
   const message = renderFollowUpTemplate(template.message, {
