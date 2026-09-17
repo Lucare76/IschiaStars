@@ -1,20 +1,23 @@
 import { AdminShell } from "@/components/AdminShell";
 import { BusinessContactSettingsForm } from "@/components/BusinessContactSettingsForm";
+import { FollowUpRuleSettingsForm } from "@/components/FollowUpRuleSettingsForm";
 import { FollowUpSettingsForm } from "@/components/FollowUpSettingsForm";
 import { PaymentSettingsForm } from "@/components/PaymentSettingsForm";
 import { QuoteChipSettingsForm } from "@/components/QuoteChipSettingsForm";
 import { getBusinessContactSettings } from "@/lib/repositories/businessContactSettings";
+import { getFollowUpRuleSettings } from "@/lib/repositories/followUpRuleSettings";
 import { getFollowUpSettings } from "@/lib/repositories/followUpSettings";
 import { getPaymentSettings, getQuoteChipSettings } from "@/lib/repositories/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const [paymentSettings, quoteChipSettings, followUpSettings, businessContacts] = await Promise.all([
+  const [paymentSettings, quoteChipSettings, followUpSettings, businessContacts, followUpRules] = await Promise.all([
     getPaymentSettings(),
     getQuoteChipSettings(),
     getFollowUpSettings(),
-    getBusinessContactSettings()
+    getBusinessContactSettings(),
+    getFollowUpRuleSettings()
   ]);
 
   return (
@@ -30,6 +33,9 @@ export default async function SettingsPage() {
       </div>
       <div className="mt-5">
         <FollowUpSettingsForm initialSettings={followUpSettings.data} />
+      </div>
+      <div className="mt-5">
+        <FollowUpRuleSettingsForm initialSettings={followUpRules.data} />
       </div>
       <div className="mt-5">
         <QuoteChipSettingsForm initialSettings={quoteChipSettings.data} />
