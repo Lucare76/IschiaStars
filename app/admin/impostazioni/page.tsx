@@ -4,20 +4,23 @@ import { FollowUpRuleSettingsForm } from "@/components/FollowUpRuleSettingsForm"
 import { FollowUpSettingsForm } from "@/components/FollowUpSettingsForm";
 import { PaymentSettingsForm } from "@/components/PaymentSettingsForm";
 import { QuoteChipSettingsForm } from "@/components/QuoteChipSettingsForm";
+import { QuoteContentSettingsForm } from "@/components/QuoteContentSettingsForm";
 import { getBusinessContactSettings } from "@/lib/repositories/businessContactSettings";
 import { getFollowUpRuleSettings } from "@/lib/repositories/followUpRuleSettings";
 import { getFollowUpSettings } from "@/lib/repositories/followUpSettings";
+import { getQuoteContentSettings } from "@/lib/repositories/quoteContentSettings";
 import { getPaymentSettings, getQuoteChipSettings } from "@/lib/repositories/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const [paymentSettings, quoteChipSettings, followUpSettings, businessContacts, followUpRules] = await Promise.all([
+  const [paymentSettings, quoteChipSettings, followUpSettings, businessContacts, followUpRules, quoteContentSettings] = await Promise.all([
     getPaymentSettings(),
     getQuoteChipSettings(),
     getFollowUpSettings(),
     getBusinessContactSettings(),
-    getFollowUpRuleSettings()
+    getFollowUpRuleSettings(),
+    getQuoteContentSettings()
   ]);
 
   return (
@@ -30,6 +33,9 @@ export default async function SettingsPage() {
             Qui concentriamo progressivamente tutto ciò che Diego deve poter modificare senza interventi sul codice: testi commerciali, categorie camere, coordinate di pagamento, contatti e regole operative semplici.
           </p>
         </section>
+      </div>
+      <div className="mt-5">
+        <QuoteContentSettingsForm initialSettings={quoteContentSettings.data} />
       </div>
       <div className="mt-5">
         <FollowUpSettingsForm initialSettings={followUpSettings.data} />
