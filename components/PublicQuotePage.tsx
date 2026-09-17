@@ -11,6 +11,7 @@ import type { PublicQuoteDTO } from "@/lib/public-quote-dto";
 import { formatClientName, formatDate } from "@/lib/utils";
 import { emptyFeatureFlags, FeatureFlags } from "@/lib/feature-flags";
 import type { ExtraServiceEmailItem } from "@/lib/extra-service-email-items";
+import { defaultQuoteContentSettings, type QuoteContentSettings } from "@/lib/quote-content-settings";
 
 export function PublicQuotePage({
   quote,
@@ -19,7 +20,8 @@ export function PublicQuotePage({
   featureFlags = emptyFeatureFlags,
   travelServices = [],
   trackOpening = true,
-  openingSource
+  openingSource,
+  contentSettings = defaultQuoteContentSettings
 }: {
   quote: PublicQuoteDTO;
   hotelPopularity?: Record<string, number>;
@@ -28,6 +30,7 @@ export function PublicQuotePage({
   travelServices?: ExtraServiceEmailItem[];
   trackOpening?: boolean;
   openingSource?: string;
+  contentSettings?: QuoteContentSettings;
 }) {
   const guests = `${quote.adults} adulti${quote.children.length ? `, ${quote.children.length} bambini` : ""}`;
   const options = quote.hotelOptions;
@@ -44,22 +47,18 @@ export function PublicQuotePage({
       </header>
 
       <section className="print-card overflow-hidden rounded-[28px] bg-white shadow-soft">
-        {/* Intestazione brand */}
         <div className="brand-shell p-6 text-white sm:p-9">
           <IschiaStarsLogo light />
           <p className="mt-10 text-sm font-bold uppercase tracking-[0.16em] text-ischia-sand">Preventivo {quote.code}</p>
           <h1 className="mt-2 max-w-2xl text-4xl font-black leading-tight sm:text-5xl">
-            {hasMultipleOptions ? "Le tue proposte di vacanza a Ischia" : "La tua proposta di vacanza a Ischia"}
+            {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
           </h1>
           <p className="mt-4 max-w-xl text-white/84">
             Ciao {quote.customerFirstName},{" "}
-            {hasMultipleOptions
-              ? "abbiamo preparato più proposte per il tuo soggiorno a Ischia. Confronta le opzioni e conferma quella che preferisci."
-              : "abbiamo preparato una proposta personalizzata per il tuo soggiorno."}
+            {hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro}
           </p>
         </div>
 
-        {/* Info soggiorno */}
         <div className="p-5 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -110,7 +109,6 @@ export function PublicQuotePage({
             </div>
           )}
 
-          {/* Azione stampa no-print */}
           <div className="no-print mt-5 flex justify-end">
             <PrintButton quoteCode={quote.code} token={quote.token} />
           </div>
@@ -123,15 +121,19 @@ export function PublicQuotePage({
         token={quote.token}
       />
 
-      {/* Sezione interattiva: hotel cards + conferma */}
       <section className="mt-6">
         <div className="mb-4">
-          <h2 className="text-3xl font-black text-ischia-navy">Le proposte selezionate per te</h2>
+          <h2 className="text-3xl font-black text-ischia-navy">{contentSettings.proposalsTitle}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-ischia-ink/70">
-            Confronta le soluzioni disponibili e conferma l&apos;opzione che preferisci.
+            {contentSettings.proposalsDescription}
           </p>
         </div>
-        <QuoteProposalSection quote={quote} hotelPopularity={hotelPopularity} featureFlags={featureFlags} travelServices={travelServices} />
+        <QuoteProposalSection
+          quote={quote}
+          hotelPopularity={hotelPopularity}
+          featureFlags={featureFlags}
+          travelServices={travelServices}
+        />
       </section>
 
       <MobileFloatingWhatsApp quote={quote} />
@@ -140,8 +142,6 @@ export function PublicQuotePage({
   );
 }
 
-// Il cliente non deve vedere gli stati tecnici di backoffice (in_lavorazione, preventivo_inviato...):
-// mostriamo solo l'esito che lo riguarda davvero.
 function PublicQuoteStatusBadge({ quote }: { quote: PublicQuoteDTO }) {
   if (quote.confirmationAvailabilityStatus === "availability_confirmed") {
     return <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">Confermato</span>;

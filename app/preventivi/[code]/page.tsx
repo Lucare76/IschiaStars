@@ -6,6 +6,7 @@ import { getConfirmedHotelCounts } from "@/lib/repositories/quoteConfirmations";
 import { getQuoteEventStats } from "@/lib/repositories/quoteEvents";
 import { getFeatureFlags } from "@/lib/repositories/settings";
 import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
+import { getQuoteContentSettings } from "@/lib/repositories/quoteContentSettings";
 import { getAdminSession } from "@/lib/server/auth-guard";
 import { toPublicQuoteDTO } from "@/lib/public-quote-dto";
 import { siteBaseUrl } from "@/lib/utils";
@@ -101,11 +102,12 @@ export default async function QuotePublicRoute({
 }
 
 export async function renderPublicQuote(quote: Quote, openingSource?: string) {
-  const [hotelPopularity, eventStats, featureFlagsResult, adminSession] = await Promise.all([
+  const [hotelPopularity, eventStats, featureFlagsResult, adminSession, quoteContentSettings] = await Promise.all([
     getConfirmedHotelCounts(),
     getQuoteEventStats(quote.id),
     getFeatureFlags(),
     getAdminSession(),
+    getQuoteContentSettings()
   ]);
 
   const travelServices = featureFlagsResult.data.emailTravelServicesBox
@@ -125,6 +127,7 @@ export async function renderPublicQuote(quote: Quote, openingSource?: string) {
       travelServices={travelServices}
       trackOpening={trackOpening}
       openingSource={openingSource}
+      contentSettings={quoteContentSettings.data}
     />
   );
 }
