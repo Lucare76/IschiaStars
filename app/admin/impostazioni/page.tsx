@@ -1,28 +1,26 @@
 import { AdminShell } from "@/components/AdminShell";
+import { BusinessContactSettingsForm } from "@/components/BusinessContactSettingsForm";
 import { FollowUpSettingsForm } from "@/components/FollowUpSettingsForm";
 import { PaymentSettingsForm } from "@/components/PaymentSettingsForm";
 import { QuoteChipSettingsForm } from "@/components/QuoteChipSettingsForm";
+import { getBusinessContactSettings } from "@/lib/repositories/businessContactSettings";
 import { getFollowUpSettings } from "@/lib/repositories/followUpSettings";
 import { getPaymentSettings, getQuoteChipSettings } from "@/lib/repositories/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const [paymentSettings, quoteChipSettings, followUpSettings] = await Promise.all([
+  const [paymentSettings, quoteChipSettings, followUpSettings, businessContacts] = await Promise.all([
     getPaymentSettings(),
     getQuoteChipSettings(),
-    getFollowUpSettings()
+    getFollowUpSettings(),
+    getBusinessContactSettings()
   ]);
 
   return (
     <AdminShell title="Impostazioni" subtitle="Gestisci i dati operativi mostrati nei preventivi, nelle conferme e nei follow-up.">
       <div className="grid gap-5 lg:grid-cols-2">
-        <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
-          <h2 className="text-xl font-black text-ischia-navy">Contatti IschiaStars</h2>
-          <label className="mt-4 block text-sm font-semibold">Telefono<input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" defaultValue="081 90 54 81" /></label>
-          <label className="mt-3 block text-sm font-semibold">WhatsApp<input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" defaultValue="371 75 90 017" /></label>
-          <label className="mt-3 block text-sm font-semibold">Email<input className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2" defaultValue="info@ischiastars.it" /></label>
-        </section>
+        <BusinessContactSettingsForm initialSettings={businessContacts.data} />
         <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
           <h2 className="text-xl font-black text-ischia-navy">Autonomia operativa</h2>
           <p className="mt-2 text-sm leading-6 text-ischia-ink/72">
