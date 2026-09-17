@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { FOLLOW_UP_VARIABLES, FollowUpSettings, FollowUpTemplate } from "@/lib/follow-up-settings";
+import { normalizeItalianPhone } from "@/lib/utils";
 
 const previewValues: Record<string, string> = {
   nome: "Maria",
@@ -26,6 +27,9 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
   const [selectedKey, setSelectedKey] = useState(form.templates[0]?.key ?? "default");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [testEmail, setTestEmail] = useState("");
+  const [testLoading, setTestLoading] = useState<"whatsapp" | "email" | null>(null);
 
   const selected = form.templates.find((item) => item.key === selectedKey) ?? form.templates[0];
   const preview = useMemo(() => selected ? renderPreview(selected.message) : "", [selected]);
@@ -65,6 +69,45 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
       setMessage(error instanceof Error ? error.message : "Salvataggio non riuscito");
     } finally {
       setLoading(false);
+    }
+  }
+
+  function testWhatsApp() {
+    const phone = normalizeItalianPhone(testPhone);
+    if (!phone || phone.length < 8) {
+      setMessage("Inserisci un numero WhatsApp valido per il test.");
+      return;
+    }
+    setTestLoading("whatsapp");
+    setMessage(null);
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(preview)}`, "_blank", "noopener,noreferrer");
+    setMessage("Test WhatsApp preparato con i dati di esempio. Il messaggio non è stato salvato né inviato automaticamente.");
+    setTestLoading(null);
+  }
+
+  async function testEmailSend() {
+    setTestLoading("email");
+    setMessage(null);
+    try {
+      const response = await adminApiFetch("/api/settings/follow-up/test-email", {
+        method: "POST",
+        headers: adminApiHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          to: testEmail,
+          subject: form.email.subject,
+          body: form.email.body,
+          signature: form.email.signature
+        })
+      });
+      const payload = await readAdminApiJson<{ ok?: boolean; error?: string }>(response);
+      if (!response.ok || !payload?.ok) {
+        throw new Error(adminApiErrorMessage(response, payload, "Invio test non riuscito"));
+      }
+      setMessage(`Email di test inviata a ${testEmail.trim()}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Invio test non riuscito");
+    } finally {
+      setTestLoading(null);
     }
   }
 
@@ -125,6 +168,16 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
           <div className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
             <p className="text-xs font-black uppercase tracking-wide text-ischia-ink/45">Anteprima WhatsApp</p>
             <div className="mt-3 whitespace-pre-wrap rounded-2xl bg-white p-4 text-sm leading-6 text-ischia-ink shadow-sm ring-1 ring-slate-200">{preview}</div>
+            <div className="mt-4 rounded-xl bg-white p-4 ring-1 ring-slate-200">
+              <p className="text-sm font-black text-ischia-navy">Invia test WhatsApp</p>
+              <p className="mt-1 text-xs leading-5 text-ischia-ink/55">Apre WhatsApp con il messaggio attuale già compilato. Non serve salvare prima.</p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input className="min-w-0 flex-1 rounded-xl border border-ischia-blue/20 px-3 py-2 text-sm" inputMode="tel" placeholder="Numero di test" value={testPhone} onChange={(event) => setTestPhone(event.target.value)} />
+                <button className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white disabled:opacity-50" disabled={testLoading !== null} onClick={testWhatsApp} type="button">
+                  {testLoading === "whatsapp" ? "Apro..." : "Invia test"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -168,6 +221,16 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
               <div className="mt-4 whitespace-pre-wrap border-t border-slate-100 pt-4 leading-6">{emailSignaturePreview}</div>
             </div>
             <p className="mt-3 text-xs leading-5 text-ischia-ink/55">L&apos;anteprima usa dati di esempio. Il layout definitivo dell&apos;email resta gestito dal sistema.</p>
+            <div className="mt-4 rounded-xl bg-white p-4 ring-1 ring-slate-200">
+              <p className="text-sm font-black text-ischia-navy">Invia email di test</p>
+              <p className="mt-1 text-xs leading-5 text-ischia-ink/55">Invia davvero l&apos;anteprima corrente all&apos;indirizzo indicato, senza salvare le modifiche.</p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input className="min-w-0 flex-1 rounded-xl border border-ischia-blue/20 px-3 py-2 text-sm" inputMode="email" placeholder="Email di test" type="email" value={testEmail} onChange={(event) => setTestEmail(event.target.value)} />
+                <button className="rounded-full bg-ischia-blue px-4 py-2 text-sm font-black text-white disabled:opacity-50" disabled={testLoading !== null} onClick={() => void testEmailSend()} type="button">
+                  {testLoading === "email" ? "Invio..." : "Invia test"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
