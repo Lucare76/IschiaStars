@@ -133,6 +133,7 @@ export function PublicQuotePage({
           hotelPopularity={hotelPopularity}
           featureFlags={featureFlags}
           travelServices={travelServices}
+          contentSettings={contentSettings}
         />
       </section>
 
