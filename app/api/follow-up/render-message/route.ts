@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     hotel,
     arrivo: formatDate(quote.arrivalDate),
     partenza: formatDate(quote.departureDate),
-    prezzo,
+    prezzo: price,
     link_preventivo: publicUrl
   });
 
