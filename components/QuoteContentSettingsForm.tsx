@@ -41,7 +41,7 @@ export function QuoteContentSettingsForm({ initialSettings }: { initialSettings:
         <div>
           <h2 className="text-xl font-black text-ischia-navy">Testi pagina preventivo</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-ischia-ink/70">
-            Modifica i testi commerciali ricorrenti della pagina cliente senza intervenire sul codice. La struttura grafica e la logica di conferma restano protette.
+            Modifica i testi commerciali ricorrenti e le CTA condivise della pagina cliente senza intervenire sul codice. La struttura grafica e la logica di conferma restano protette.
           </p>
         </div>
         <button
@@ -62,6 +62,16 @@ export function QuoteContentSettingsForm({ initialSettings }: { initialSettings:
           <TextArea label="Testo introduttivo con più proposte" value={form.multipleHeroIntro} onChange={(value) => update("multipleHeroIntro", value)} />
           <Field label="Titolo sezione proposte" value={form.proposalsTitle} onChange={(value) => update("proposalsTitle", value)} />
           <TextArea label="Descrizione sezione proposte" value={form.proposalsDescription} onChange={(value) => update("proposalsDescription", value)} />
+
+          <div className="border-t border-slate-200 pt-4">
+            <p className="mb-3 text-xs font-black uppercase tracking-wide text-ischia-ink/50">Pulsanti e CTA</p>
+            <div className="space-y-4">
+              <Field label="WhatsApp intestazione" value={form.headerWhatsappLabel} onChange={(value) => update("headerWhatsappLabel", value)} />
+              <Field label="CTA WhatsApp principale" value={form.mainWhatsappLabel} onChange={(value) => update("mainWhatsappLabel", value)} />
+              <Field label="CTA conferma principale" value={form.mainConfirmLabel} onChange={(value) => update("mainConfirmLabel", value)} />
+              <Field label="WhatsApp mobile" value={form.mobileWhatsappLabel} onChange={(value) => update("mobileWhatsappLabel", value)} />
+            </div>
+          </div>
         </div>
 
         <div className="rounded-2xl bg-ischia-mist/60 p-5 ring-1 ring-ischia-blue/10">
@@ -71,6 +81,12 @@ export function QuoteContentSettingsForm({ initialSettings }: { initialSettings:
           <div className="mt-6 border-t border-ischia-blue/10 pt-4">
             <p className="text-xl font-black text-ischia-navy">{form.proposalsTitle}</p>
             <p className="mt-2 text-sm leading-6 text-ischia-ink/70">{form.proposalsDescription}</p>
+          </div>
+          <div className="mt-6 grid gap-2 border-t border-ischia-blue/10 pt-4">
+            <PreviewButton>{form.headerWhatsappLabel}</PreviewButton>
+            <PreviewButton>{form.mainWhatsappLabel}</PreviewButton>
+            <PreviewButton>{form.mainConfirmLabel}</PreviewButton>
+            <PreviewButton>{form.mobileWhatsappLabel}</PreviewButton>
           </div>
         </div>
       </div>
@@ -96,4 +112,8 @@ function TextArea({ label, value, onChange }: { label: string; value: string; on
       <textarea className="mt-1 min-h-24 w-full rounded-xl border border-ischia-blue/20 px-3 py-3 leading-6" value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
+}
+
+function PreviewButton({ children }: { children: string }) {
+  return <div className="rounded-full bg-white px-3 py-2 text-center text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/10">{children}</div>;
 }

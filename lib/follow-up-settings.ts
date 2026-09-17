@@ -1,4 +1,6 @@
 export const FOLLOW_UP_SETTINGS_KEY = "follow_up_settings";
+export const FOLLOW_UP_SETTINGS_HISTORY_KEY = "follow_up_settings_history";
+export const FOLLOW_UP_HISTORY_LIMIT = 12;
 
 export type FollowUpTemplateKey =
   | "default"
@@ -24,6 +26,12 @@ export type FollowUpSettings = {
   templates: FollowUpTemplate[];
   email: FollowUpEmailSettings;
   updatedAt?: string;
+};
+
+export type FollowUpSettingsHistoryEntry = {
+  id: string;
+  savedAt: string;
+  settings: FollowUpSettings;
 };
 
 export const FOLLOW_UP_VARIABLES = [
@@ -97,6 +105,18 @@ export function normalizeFollowUpSettings(value: unknown): FollowUpSettings {
     },
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : undefined
   };
+}
+
+export function normalizeFollowUpSettingsHistory(value: unknown): FollowUpSettingsHistoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
+    .map((item) => ({
+      id: typeof item.id === "string" && item.id ? item.id : crypto.randomUUID(),
+      savedAt: typeof item.savedAt === "string" ? item.savedAt : new Date().toISOString(),
+      settings: normalizeFollowUpSettings(item.settings)
+    }))
+    .slice(0, FOLLOW_UP_HISTORY_LIMIT);
 }
 
 export function followUpSettingsToDbValue(settings: FollowUpSettings) {

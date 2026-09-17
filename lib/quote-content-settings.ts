@@ -7,6 +7,10 @@ export type QuoteContentSettings = {
   multipleHeroIntro: string;
   proposalsTitle: string;
   proposalsDescription: string;
+  headerWhatsappLabel: string;
+  mainWhatsappLabel: string;
+  mainConfirmLabel: string;
+  mobileWhatsappLabel: string;
   updatedAt?: string;
 };
 
@@ -16,7 +20,11 @@ export const defaultQuoteContentSettings: QuoteContentSettings = {
   singleHeroIntro: "abbiamo preparato una proposta personalizzata per il tuo soggiorno.",
   multipleHeroIntro: "abbiamo preparato più proposte per il tuo soggiorno a Ischia. Confronta le opzioni e conferma quella che preferisci.",
   proposalsTitle: "Le proposte selezionate per te",
-  proposalsDescription: "Confronta le soluzioni disponibili e conferma l'opzione che preferisci."
+  proposalsDescription: "Confronta le soluzioni disponibili e conferma l'opzione che preferisci.",
+  headerWhatsappLabel: "WhatsApp",
+  mainWhatsappLabel: "Hai domande? Scrivici su WhatsApp",
+  mainConfirmLabel: "Conferma il preventivo",
+  mobileWhatsappLabel: "Hai domande? WhatsApp"
 };
 
 function cleanText(value: unknown, fallback: string, maxLength: number) {
@@ -35,6 +43,10 @@ export function normalizeQuoteContentSettings(value: unknown): QuoteContentSetti
     multipleHeroIntro: cleanText(raw.multipleHeroIntro, defaultQuoteContentSettings.multipleHeroIntro, 500),
     proposalsTitle: cleanText(raw.proposalsTitle, defaultQuoteContentSettings.proposalsTitle, 140),
     proposalsDescription: cleanText(raw.proposalsDescription, defaultQuoteContentSettings.proposalsDescription, 500),
+    headerWhatsappLabel: cleanText(raw.headerWhatsappLabel, defaultQuoteContentSettings.headerWhatsappLabel, 60),
+    mainWhatsappLabel: cleanText(raw.mainWhatsappLabel, defaultQuoteContentSettings.mainWhatsappLabel, 100),
+    mainConfirmLabel: cleanText(raw.mainConfirmLabel, defaultQuoteContentSettings.mainConfirmLabel, 80),
+    mobileWhatsappLabel: cleanText(raw.mobileWhatsappLabel, defaultQuoteContentSettings.mobileWhatsappLabel, 80),
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : undefined
   };
 }

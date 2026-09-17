@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
-import { FOLLOW_UP_VARIABLES, FollowUpSettings, FollowUpTemplate } from "@/lib/follow-up-settings";
+import { FOLLOW_UP_VARIABLES, FollowUpSettings, FollowUpSettingsHistoryEntry, FollowUpTemplate } from "@/lib/follow-up-settings";
 import { normalizeItalianPhone } from "@/lib/utils";
 
 const previewValues: Record<string, string> = {
@@ -30,6 +30,10 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
   const [testPhone, setTestPhone] = useState("");
   const [testEmail, setTestEmail] = useState("");
   const [testLoading, setTestLoading] = useState<"whatsapp" | "email" | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [history, setHistory] = useState<FollowUpSettingsHistoryEntry[]>([]);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const selected = form.templates.find((item) => item.key === selectedKey) ?? form.templates[0];
   const preview = useMemo(() => selected ? renderPreview(selected.message) : "", [selected]);
@@ -50,6 +54,47 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
     updateTemplate({ message: `${selected.message}${selected.message.endsWith(" ") || !selected.message ? "" : " "}${token}` });
   }
 
+  async function loadHistory(open = true) {
+    setHistoryLoading(true);
+    if (open) setHistoryOpen(true);
+    try {
+      const response = await adminApiFetch("/api/settings/follow-up/history");
+      const payload = await readAdminApiJson<{ ok?: boolean; data?: FollowUpSettingsHistoryEntry[]; error?: string }>(response);
+      if (!response.ok || !payload?.ok || !payload.data) {
+        throw new Error(adminApiErrorMessage(response, payload, "Storico non disponibile"));
+      }
+      setHistory(payload.data);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Storico non disponibile");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function restoreVersion(id: string) {
+    setRestoringId(id);
+    setMessage(null);
+    try {
+      const response = await adminApiFetch("/api/settings/follow-up/history", {
+        method: "POST",
+        headers: adminApiHeaders(),
+        body: JSON.stringify({ id })
+      });
+      const payload = await readAdminApiJson<{ ok?: boolean; data?: FollowUpSettings; error?: string }>(response);
+      if (!response.ok || !payload?.ok || !payload.data) {
+        throw new Error(adminApiErrorMessage(response, payload, "Ripristino non riuscito"));
+      }
+      setForm(payload.data);
+      setSelectedKey(payload.data.templates[0]?.key ?? "default");
+      setMessage("Versione ripristinata. La configurazione precedente è stata salvata nello storico.");
+      await loadHistory(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Ripristino non riuscito");
+    } finally {
+      setRestoringId(null);
+    }
+  }
+
   async function save() {
     setLoading(true);
     setMessage(null);
@@ -65,6 +110,7 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
       }
       setForm(payload.data);
       setMessage("Impostazioni follow-up salvate.");
+      if (historyOpen) await loadHistory(false);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Salvataggio non riuscito");
     } finally {
@@ -124,13 +170,43 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
         <div>
           <h2 className="text-xl font-black text-ischia-navy">Comunicazioni follow-up</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-ischia-ink/70">
-            Diego può modificare WhatsApp ed email senza interventi sul codice. Le variabili vengono sostituite automaticamente con i dati reali del preventivo.
+            Diego può modificare WhatsApp ed email senza interventi sul codice. Ogni salvataggio conserva automaticamente la versione precedente.
           </p>
         </div>
-        <button className="rounded-full bg-ischia-navy px-5 py-2.5 text-sm font-black text-white disabled:opacity-50" disabled={loading} onClick={() => void save()} type="button">
-          {loading ? "Salvataggio..." : "Salva comunicazioni"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button className="rounded-full bg-white px-5 py-2.5 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-50" disabled={historyLoading} onClick={() => historyOpen ? setHistoryOpen(false) : void loadHistory()} type="button">
+            {historyLoading ? "Carico storico..." : historyOpen ? "Nascondi storico" : "Storico versioni"}
+          </button>
+          <button className="rounded-full bg-ischia-navy px-5 py-2.5 text-sm font-black text-white disabled:opacity-50" disabled={loading} onClick={() => void save()} type="button">
+            {loading ? "Salvataggio..." : "Salva comunicazioni"}
+          </button>
+        </div>
       </div>
+
+      {historyOpen ? (
+        <div className="mt-5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-black text-ischia-navy">Storico versioni</p>
+              <p className="mt-1 text-xs text-ischia-ink/55">Conserviamo fino a 12 versioni precedenti. Ripristinare una versione salva prima quella attuale.</p>
+            </div>
+            <button className="text-xs font-black text-ischia-blue" onClick={() => void loadHistory(false)} type="button">Aggiorna</button>
+          </div>
+          <div className="mt-3 space-y-2">
+            {history.length ? history.map((entry) => (
+              <div key={entry.id} className="flex flex-col gap-2 rounded-xl bg-white p-3 ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-black text-ischia-navy">{new Date(entry.savedAt).toLocaleString("it-IT")}</p>
+                  <p className="mt-1 text-xs text-ischia-ink/55">{entry.settings.templates[0]?.label ?? "Follow-up"} · {entry.settings.email.subject}</p>
+                </div>
+                <button className="rounded-full bg-ischia-sun px-4 py-2 text-xs font-black text-ischia-navy disabled:opacity-50" disabled={restoringId !== null} onClick={() => void restoreVersion(entry.id)} type="button">
+                  {restoringId === entry.id ? "Ripristino..." : "Ripristina"}
+                </button>
+              </div>
+            )) : <p className="text-sm text-ischia-ink/55">Nessuna versione precedente disponibile. Comparirà dopo il prossimo salvataggio.</p>}
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-6 border-t border-slate-200 pt-5">
         <h3 className="text-base font-black text-ischia-navy">WhatsApp</h3>
