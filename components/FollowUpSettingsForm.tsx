@@ -80,7 +80,9 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
     }
     setTestLoading("whatsapp");
     setMessage(null);
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(preview)}`, "_blank", "noopener,noreferrer");
+    const whatsappUrl = new URL(`https://wa.me/${phone}`);
+    whatsappUrl.searchParams.set("text", preview.normalize("NFC"));
+    window.open(whatsappUrl.toString(), "_blank", "noopener,noreferrer");
     setMessage("Test WhatsApp preparato con i dati di esempio. Il messaggio non è stato salvato né inviato automaticamente.");
     setTestLoading(null);
   }
@@ -239,3 +241,4 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
     </section>
   );
 }
+
