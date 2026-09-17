@@ -1,3 +1,5 @@
+import { defaultFollowUpRuleSettings, FollowUpRuleSettings } from "@/lib/follow-up-rule-settings";
+
 export const RELIABLE_QUOTE_TRACKING_FROM = "2026-06-19T16:55:52.000Z";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -9,11 +11,11 @@ export function hasReliableQuoteTracking(sentAt: string) {
   return Number.isFinite(timestamp) && timestamp >= new Date(RELIABLE_QUOTE_TRACKING_FROM).getTime();
 }
 
-export function followUpStage(sentAt: string, now = Date.now()): FollowUpStage {
+export function followUpStage(sentAt: string, now = Date.now(), settings: FollowUpRuleSettings = defaultFollowUpRuleSettings): FollowUpStage {
   const hours = (now - new Date(sentAt).getTime()) / HOUR_MS;
-  if (hours < 24) return "recente";
-  if (hours < 72) return "primo_sollecito";
-  if (hours < 168) return "secondo_sollecito";
+  if (!settings.enabled || hours < settings.firstReminderAfterHours) return "recente";
+  if (hours < settings.secondReminderAfterHours) return "primo_sollecito";
+  if (hours < settings.finalReminderAfterHours) return "secondo_sollecito";
   return "ultimo_contatto";
 }
 
@@ -27,12 +29,16 @@ export function followUpStageLabel(stage: FollowUpStage) {
   return labels[stage];
 }
 
-export function isFollowUpStageDue(sentAt: string, lastContactAt?: string, now = Date.now()) {
+export function isFollowUpStageDue(sentAt: string, lastContactAt?: string, now = Date.now(), settings: FollowUpRuleSettings = defaultFollowUpRuleSettings) {
   const sentTimestamp = new Date(sentAt).getTime();
-  if (!Number.isFinite(sentTimestamp)) return false;
-  const stage = followUpStage(sentAt, now);
+  if (!Number.isFinite(sentTimestamp) || !settings.enabled) return false;
+  const stage = followUpStage(sentAt, now, settings);
   if (stage === "recente") return false;
-  const stageOffsetHours = stage === "primo_sollecito" ? 24 : stage === "secondo_sollecito" ? 72 : 168;
+  const stageOffsetHours = stage === "primo_sollecito"
+    ? settings.firstReminderAfterHours
+    : stage === "secondo_sollecito"
+      ? settings.secondReminderAfterHours
+      : settings.finalReminderAfterHours;
   const stageStartedAt = sentTimestamp + stageOffsetHours * HOUR_MS;
   const lastContactTimestamp = lastContactAt ? new Date(lastContactAt).getTime() : 0;
   return !Number.isFinite(lastContactTimestamp) || lastContactTimestamp < stageStartedAt;
