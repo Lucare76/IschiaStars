@@ -7,13 +7,10 @@ export type QuoteContentSettings = {
   multipleHeroIntro: string;
   proposalsTitle: string;
   proposalsDescription: string;
-  compareOptionsLabel: string;
-  backToProposalsLabel: string;
-  selectHotelLabel: string;
-  selectRoomLabel: string;
-  whatsappCtaLabel: string;
-  confirmFormTitle: string;
-  confirmButtonLabel: string;
+  headerWhatsappLabel: string;
+  mainWhatsappLabel: string;
+  mainConfirmLabel: string;
+  mobileWhatsappLabel: string;
   updatedAt?: string;
 };
 
@@ -24,13 +21,10 @@ export const defaultQuoteContentSettings: QuoteContentSettings = {
   multipleHeroIntro: "abbiamo preparato più proposte per il tuo soggiorno a Ischia. Confronta le opzioni e conferma quella che preferisci.",
   proposalsTitle: "Le proposte selezionate per te",
   proposalsDescription: "Confronta le soluzioni disponibili e conferma l'opzione che preferisci.",
-  compareOptionsLabel: "Confronta le opzioni",
-  backToProposalsLabel: "Torna alle proposte",
-  selectHotelLabel: "Scegli questo hotel",
-  selectRoomLabel: "Scegli questa camera",
-  whatsappCtaLabel: "Hai domande? Scrivici su WhatsApp",
-  confirmFormTitle: "Conferma il preventivo",
-  confirmButtonLabel: "Conferma"
+  headerWhatsappLabel: "WhatsApp",
+  mainWhatsappLabel: "Hai domande? Scrivici su WhatsApp",
+  mainConfirmLabel: "Conferma il preventivo",
+  mobileWhatsappLabel: "Hai domande? WhatsApp"
 };
 
 function cleanText(value: unknown, fallback: string, maxLength: number) {
@@ -49,13 +43,10 @@ export function normalizeQuoteContentSettings(value: unknown): QuoteContentSetti
     multipleHeroIntro: cleanText(raw.multipleHeroIntro, defaultQuoteContentSettings.multipleHeroIntro, 500),
     proposalsTitle: cleanText(raw.proposalsTitle, defaultQuoteContentSettings.proposalsTitle, 140),
     proposalsDescription: cleanText(raw.proposalsDescription, defaultQuoteContentSettings.proposalsDescription, 500),
-    compareOptionsLabel: cleanText(raw.compareOptionsLabel, defaultQuoteContentSettings.compareOptionsLabel, 80),
-    backToProposalsLabel: cleanText(raw.backToProposalsLabel, defaultQuoteContentSettings.backToProposalsLabel, 80),
-    selectHotelLabel: cleanText(raw.selectHotelLabel, defaultQuoteContentSettings.selectHotelLabel, 80),
-    selectRoomLabel: cleanText(raw.selectRoomLabel, defaultQuoteContentSettings.selectRoomLabel, 80),
-    whatsappCtaLabel: cleanText(raw.whatsappCtaLabel, defaultQuoteContentSettings.whatsappCtaLabel, 100),
-    confirmFormTitle: cleanText(raw.confirmFormTitle, defaultQuoteContentSettings.confirmFormTitle, 100),
-    confirmButtonLabel: cleanText(raw.confirmButtonLabel, defaultQuoteContentSettings.confirmButtonLabel, 60),
+    headerWhatsappLabel: cleanText(raw.headerWhatsappLabel, defaultQuoteContentSettings.headerWhatsappLabel, 60),
+    mainWhatsappLabel: cleanText(raw.mainWhatsappLabel, defaultQuoteContentSettings.mainWhatsappLabel, 100),
+    mainConfirmLabel: cleanText(raw.mainConfirmLabel, defaultQuoteContentSettings.mainConfirmLabel, 80),
+    mobileWhatsappLabel: cleanText(raw.mobileWhatsappLabel, defaultQuoteContentSettings.mobileWhatsappLabel, 80),
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : undefined
   };
 }
