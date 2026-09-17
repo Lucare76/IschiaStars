@@ -41,7 +41,7 @@ export function QuoteContentSettingsForm({ initialSettings }: { initialSettings:
         <div>
           <h2 className="text-xl font-black text-ischia-navy">Testi pagina preventivo</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-ischia-ink/70">
-            Modifica i testi commerciali ricorrenti e le principali CTA visibili al cliente senza intervenire sul codice.
+            Modifica i testi commerciali ricorrenti della pagina cliente senza intervenire sul codice. La struttura grafica e la logica di conferma restano protette.
           </p>
         </div>
         <button
@@ -56,7 +56,6 @@ export function QuoteContentSettingsForm({ initialSettings }: { initialSettings:
 
       <div className="mt-6 grid gap-5 xl:grid-cols-2">
         <div className="space-y-4">
-          <h3 className="text-base font-black text-ischia-navy">Intestazione preventivo</h3>
           <Field label="Titolo con una proposta" value={form.singleHeroTitle} onChange={(value) => update("singleHeroTitle", value)} />
           <Field label="Titolo con più proposte" value={form.multipleHeroTitle} onChange={(value) => update("multipleHeroTitle", value)} />
           <TextArea label="Testo introduttivo con una proposta" value={form.singleHeroIntro} onChange={(value) => update("singleHeroIntro", value)} />
@@ -65,22 +64,13 @@ export function QuoteContentSettingsForm({ initialSettings }: { initialSettings:
           <TextArea label="Descrizione sezione proposte" value={form.proposalsDescription} onChange={(value) => update("proposalsDescription", value)} />
         </div>
 
-        <div className="space-y-4">
-          <h3 className="text-base font-black text-ischia-navy">Pulsanti e microtesti</h3>
-          <Field label="CTA WhatsApp" value={form.whatsappCta} onChange={(value) => update("whatsappCta", value)} />
-          <Field label="CTA confronto" value={form.compareCta} onChange={(value) => update("compareCta", value)} />
-          <Field label="CTA ritorno dalle comparazioni" value={form.compareBackCta} onChange={(value) => update("compareBackCta", value)} />
-          <Field label="CTA scelta hotel" value={form.chooseHotelCta} onChange={(value) => update("chooseHotelCta", value)} />
-          <TextArea label="Nota sotto la scelta hotel" value={form.noOnlinePaymentNote} onChange={(value) => update("noOnlinePaymentNote", value)} />
-
-          <div className="rounded-2xl bg-ischia-mist/60 p-4 ring-1 ring-ischia-blue/10">
-            <p className="text-xs font-black uppercase tracking-wide text-ischia-ink/50">Anteprima rapida</p>
-            <p className="mt-3 text-2xl font-black text-ischia-navy">{form.singleHeroTitle}</p>
-            <p className="mt-2 text-sm leading-6 text-ischia-ink/70">Ciao Maria, {form.singleHeroIntro}</p>
-            <button className="mt-4 rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy" type="button">
-              {form.chooseHotelCta}
-            </button>
-            <p className="mt-2 text-xs text-ischia-ink/55">{form.noOnlinePaymentNote}</p>
+        <div className="rounded-2xl bg-ischia-mist/60 p-5 ring-1 ring-ischia-blue/10">
+          <p className="text-xs font-black uppercase tracking-wide text-ischia-ink/50">Anteprima rapida</p>
+          <p className="mt-3 text-2xl font-black text-ischia-navy">{form.singleHeroTitle}</p>
+          <p className="mt-2 text-sm leading-6 text-ischia-ink/70">Ciao Maria, {form.singleHeroIntro}</p>
+          <div className="mt-6 border-t border-ischia-blue/10 pt-4">
+            <p className="text-xl font-black text-ischia-navy">{form.proposalsTitle}</p>
+            <p className="mt-2 text-sm leading-6 text-ischia-ink/70">{form.proposalsDescription}</p>
           </div>
         </div>
       </div>
