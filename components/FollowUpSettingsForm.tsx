@@ -151,7 +151,7 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
             {preview}
           </div>
           <p className="mt-3 text-xs leading-5 text-ischia-ink/55">
-            L'anteprima usa dati di esempio. Nel follow-up reale verranno inseriti nome, hotel, date, prezzo, codice e link del preventivo.
+            L&apos;anteprima usa dati di esempio. Nel follow-up reale verranno inseriti nome, hotel, date, prezzo, codice e link del preventivo.
           </p>
         </div>
       </div>
