@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 import { getQuoteById } from "@/lib/repositories/quotes";
-import { sendFollowUpEmailToClient } from "@/lib/server/brevo";
+import { sendConfiguredFollowUpEmailToClient } from "@/lib/server/configuredFollowUpEmail";
 import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -18,12 +18,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     return NextResponse.json({ ok: false, error: "Email cliente assente" }, { status: 400 });
   }
 
-  const result = await sendFollowUpEmailToClient(quote);
+  const result = await sendConfiguredFollowUpEmailToClient(quote);
   if (!result.sent) {
     const error = result.skipReason === "missing_client_email"
       ? "Email cliente assente"
-      : result.error ?? "Invio email non riuscito";
-    return NextResponse.json({ ok: false, error }, { status: 502 });
+      : result.skipReason === "disabled_by_admin"
+        ? "Follow-up email disattivato nelle impostazioni"
+        : result.error ?? "Invio email non riuscito";
+    return NextResponse.json({ ok: false, error }, { status: result.skipReason === "disabled_by_admin" ? 400 : 502 });
   }
 
   const eventResult = await trackQuoteEvent(quote.id, "follow_up_whatsapp_click", {
