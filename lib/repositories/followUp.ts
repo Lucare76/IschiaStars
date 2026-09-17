@@ -5,6 +5,8 @@ import { listHotels } from "@/lib/repositories/hotels";
 import { fetchHotelOptionsForQuotes } from "@/lib/repositories/quoteHotelOptions";
 import { fallback, fromSupabase, getEffectiveHotelOptions, mapQuote, RepositoryResult } from "@/lib/repositories/shared";
 import { followUpCustomerKey, followUpStage, followUpStageLabel, FollowUpStage, hasReliableQuoteTracking, isFollowUpStageDue } from "@/lib/follow-up-policy";
+import type { FollowUpRuleSettings } from "@/lib/follow-up-rule-settings";
+import { getFollowUpRuleSettings } from "@/lib/repositories/followUpRuleSettings";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { absolutePublicQuoteUrl, absoluteShortPublicQuoteUrl, formatCurrency } from "@/lib/utils";
 import type { Quote, QuoteEvent } from "@/lib/types";
@@ -122,9 +124,10 @@ export async function getFollowUpQuotes(options: { limit?: number } = {}): Promi
   const quotesResult = await getRecentFollowUpCandidateQuotes(candidateLimit);
   const now = Date.now();
   const quoteIds = quotesResult.data.map((quote) => quote.id);
-  const [eventsResult, emailStatusByQuote] = await Promise.all([
+  const [eventsResult, emailStatusByQuote, ruleSettingsResult] = await Promise.all([
     getQuoteEventsForQuoteIds(quoteIds),
-    getFollowUpEmailStatusByQuoteId(quoteIds)
+    getFollowUpEmailStatusByQuoteId(quoteIds),
+    getFollowUpRuleSettings()
   ]);
   const confirmedCustomerKeys = new Set(
     quotesResult.data
@@ -132,7 +135,7 @@ export async function getFollowUpQuotes(options: { limit?: number } = {}): Promi
       .map(followUpCustomerKey)
       .filter(Boolean)
   );
-  const mapped = quotesResult.data.map((quote) => toFollowUpQuote(quote, eventsResult.data[quote.id] ?? [], confirmedCustomerKeys, emailStatusByQuote[quote.id]));
+  const mapped = quotesResult.data.map((quote) => toFollowUpQuote(quote, eventsResult.data[quote.id] ?? [], confirmedCustomerKeys, emailStatusByQuote[quote.id], ruleSettingsResult.data));
   const allData = mapped
     .filter((quote): quote is FollowUpQuote => Boolean(quote))
     .filter((quote) => isRecentOperationalFollowUp(quote, now))
@@ -227,7 +230,7 @@ function rowsFromSupabase(data: unknown): Record<string, unknown>[] {
   return Array.isArray(data) ? data as Record<string, unknown>[] : [];
 }
 
-function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKeys: Set<string>, emailStatus?: FollowUpEmailStatus): FollowUpQuote | null {
+function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKeys: Set<string>, emailStatus: FollowUpEmailStatus | undefined, rules: FollowUpRuleSettings): FollowUpQuote | null {
   if (quote.deletedAt || quote.excludedFromStats || quote.status !== "preventivo_inviato" || quote.confirmation) return null;
   const customerKey = followUpCustomerKey(quote);
   if (customerKey && confirmedCustomerKeys.has(customerKey)) return null;
@@ -284,12 +287,13 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
     confirmClicks,
     detailsOpened,
     emailLinkClicks,
-    emailStatus
+    emailStatus,
+    rules
   });
   const clientName = [quote.customerFirstName, quote.customerLastName].filter(Boolean).join(" ").trim() || "Cliente";
   const clientPhone = quote.customerPhone.trim();
   const engagementScore = scoreEngagement({ opened, whatsappClicks, hotelLinkClicks, printClicks, confirmClicks, detailsOpened, emailStatus });
-  const stage = followUpStage(sentAt);
+  const stage = followUpStage(sentAt, Date.now(), rules);
 
   return {
     id: quote.id,
@@ -346,7 +350,8 @@ function resolveSegment({
   confirmClicks,
   detailsOpened,
   emailLinkClicks,
-  emailStatus
+  emailStatus,
+  rules
 }: {
   sentAt: string;
   opened: QuoteEvent[];
@@ -357,13 +362,14 @@ function resolveSegment({
   detailsOpened: QuoteEvent[];
   emailLinkClicks: QuoteEvent[];
   emailStatus?: FollowUpEmailStatus;
+  rules: FollowUpRuleSettings;
 }): FollowUpSegment {
   const lastOpening = opened.at(-1)?.createdAt;
   const isVeryInterested = opened.length > 1 || whatsappClicks.length > 0 || hotelLinkClicks.length > 0 || printClicks.length > 0 || confirmClicks.length > 0 || detailsOpened.length > 0 || emailLinkClicks.length > 0 || emailStatus?.clicked;
   if (isVeryInterested) return "molto_interessato";
-  if (lastOpening && hoursSince(lastOpening) >= 24) return "da_sollecitare";
+  if (lastOpening && hoursSince(lastOpening) >= rules.openedReminderAfterHours) return "da_sollecitare";
   if (opened.length > 0) return "aperto_non_confermato";
-  if (hoursSince(sentAt) >= 24) return "non_visualizzato";
+  if (hoursSince(sentAt) >= rules.unopenedAfterHours) return "non_visualizzato";
   return "recente";
 }
 
@@ -544,7 +550,7 @@ function hasActiveConfirmedBooking(quote: Quote) {
   return new Date(quote.departureDate).getTime() >= Date.now();
 }
 
-export function getDueFollowUpCustomerKeys(quotes: FollowUpQuote[], now = Date.now()) {
+export function getDueFollowUpCustomerKeys(quotes: FollowUpQuote[], now = Date.now(), rules?: FollowUpRuleSettings) {
   const grouped = new Map<string, FollowUpQuote[]>();
   for (const quote of quotes) {
     const key = followUpCustomerKey(quote);
@@ -556,13 +562,13 @@ export function getDueFollowUpCustomerKeys(quotes: FollowUpQuote[], now = Date.n
   for (const [key, group] of Array.from(grouped.entries())) {
     const totalOpenings = group.reduce((sum, quote) => sum + quote.openedCount, 0);
     const engagementScore = group.reduce((sum, quote) => sum + quote.engagementScore, 0);
-    if (followUpGroupSegment(group, totalOpenings, engagementScore, now) !== "non_visualizzato") continue;
+    if (followUpGroupSegment(group, totalOpenings, engagementScore, now, rules) !== "non_visualizzato") continue;
 
     const snoozedUntil = group.map((quote) => quote.snoozedUntil).filter(Boolean).sort().at(-1);
     if (snoozedUntil && new Date(snoozedUntil).getTime() > now) continue;
 
     const lastFollowUpAt = group.map((quote) => quote.lastFollowUpAt).filter(Boolean).sort().at(-1);
-    if (group.some((quote) => isFollowUpStageDue(quote.sentAt, lastFollowUpAt, now))) dueKeys.add(key);
+    if (group.some((quote) => isFollowUpStageDue(quote.sentAt, lastFollowUpAt, now, rules))) dueKeys.add(key);
   }
   return dueKeys;
 }
@@ -571,12 +577,13 @@ export function followUpGroupSegment(
   quotes: FollowUpQuote[],
   totalOpenings: number,
   engagementScore: number,
-  now = Date.now()
+  now = Date.now(),
+  rules?: FollowUpRuleSettings
 ): FollowUpSegment {
   if (quotes.every((quote) => quote.isClosed)) return "chiuso";
   if (totalOpenings > 1 || engagementScore > totalOpenings) return "molto_interessato";
   const lastOpenedAt = quotes.map((quote) => quote.lastOpenedAt).filter((value): value is string => Boolean(value)).sort().at(-1);
-  if (lastOpenedAt && now - new Date(lastOpenedAt).getTime() >= DAY_MS) return "da_sollecitare";
+  if (lastOpenedAt && now - new Date(lastOpenedAt).getTime() >= (rules?.openedReminderAfterHours ?? 24) * 60 * 60 * 1000) return "da_sollecitare";
   if (totalOpenings > 0) return "aperto_non_confermato";
   if (quotes.every((quote) => !quote.isTrackingReliable)) return "storico_non_affidabile";
   if (quotes.every((quote) => quote.segment === "recente")) return "recente";

@@ -1,5 +1,6 @@
 import { defaultFollowUpRuleSettings, FollowUpRuleSettings } from "@/lib/follow-up-rule-settings";
 
+
 export const RELIABLE_QUOTE_TRACKING_FROM = "2026-06-19T16:55:52.000Z";
 
 const HOUR_MS = 60 * 60 * 1000;
