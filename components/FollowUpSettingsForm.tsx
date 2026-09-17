@@ -48,11 +48,13 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
     try {
       const response = await adminApiFetch("/api/settings/follow-up", {
         method: "PATCH",
-        headers: adminApiHeaders({ "Content-Type": "application/json" }),
+        headers: adminApiHeaders(),
         body: JSON.stringify(form)
       });
       const payload = await readAdminApiJson<{ ok?: boolean; data?: FollowUpSettings; error?: string }>(response);
-      if (!response.ok || !payload?.ok || !payload.data) throw new Error(adminApiErrorMessage(payload, "Salvataggio non riuscito"));
+      if (!response.ok || !payload?.ok || !payload.data) {
+        throw new Error(adminApiErrorMessage(response, payload, "Salvataggio non riuscito"));
+      }
       setForm(payload.data);
       setMessage("Impostazioni follow-up salvate.");
     } catch (error) {
