@@ -21,6 +21,10 @@ function multilineHtml(value: string) {
   return escapeHtml(value).replaceAll("\n", "<br>");
 }
 
+function normalizeRenderedBody(value: string) {
+  return value.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 export async function sendConfiguredFollowUpEmailToClient(quote: Quote): Promise<SendConfiguredFollowUpEmailResult> {
   const recipient = quote.customerEmail?.trim();
   if (!recipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
@@ -49,7 +53,10 @@ export async function sendConfiguredFollowUpEmailToClient(quote: Quote): Promise
   };
 
   const subject = renderFollowUpTemplate(emailSettings.subject, values);
-  const body = renderFollowUpTemplate(emailSettings.body, values);
+  const body = normalizeRenderedBody(renderFollowUpTemplate(emailSettings.body, {
+    ...values,
+    link_preventivo: ""
+  }));
   const signature = renderFollowUpTemplate(emailSettings.signature, values);
   const quoteUrl = values.link_preventivo;
   const clientName = `${quote.customerFirstName ?? ""} ${quote.customerLastName ?? ""}`.trim();
