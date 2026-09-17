@@ -41,7 +41,7 @@ export function QuoteContentSettingsForm({ initialSettings }: { initialSettings:
         <div>
           <h2 className="text-xl font-black text-ischia-navy">Testi pagina preventivo</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-ischia-ink/70">
-            Modifica i testi commerciali ricorrenti e le principali CTA della pagina cliente senza intervenire sul codice. La struttura grafica e la logica di conferma restano protette.
+            Modifica i testi commerciali ricorrenti e le CTA condivise della pagina cliente senza intervenire sul codice. La struttura grafica e la logica di conferma restano protette.
           </p>
         </div>
         <button
@@ -66,13 +66,10 @@ export function QuoteContentSettingsForm({ initialSettings }: { initialSettings:
           <div className="border-t border-slate-200 pt-4">
             <p className="mb-3 text-xs font-black uppercase tracking-wide text-ischia-ink/50">Pulsanti e CTA</p>
             <div className="space-y-4">
-              <Field label="Confronta opzioni" value={form.compareOptionsLabel} onChange={(value) => update("compareOptionsLabel", value)} />
-              <Field label="Torna alle proposte" value={form.backToProposalsLabel} onChange={(value) => update("backToProposalsLabel", value)} />
-              <Field label="Scegli hotel" value={form.selectHotelLabel} onChange={(value) => update("selectHotelLabel", value)} />
-              <Field label="Scegli camera" value={form.selectRoomLabel} onChange={(value) => update("selectRoomLabel", value)} />
-              <Field label="CTA WhatsApp" value={form.whatsappCtaLabel} onChange={(value) => update("whatsappCtaLabel", value)} />
-              <Field label="Titolo box conferma" value={form.confirmFormTitle} onChange={(value) => update("confirmFormTitle", value)} />
-              <Field label="Testo pulsante conferma" value={form.confirmButtonLabel} onChange={(value) => update("confirmButtonLabel", value)} />
+              <Field label="WhatsApp intestazione" value={form.headerWhatsappLabel} onChange={(value) => update("headerWhatsappLabel", value)} />
+              <Field label="CTA WhatsApp principale" value={form.mainWhatsappLabel} onChange={(value) => update("mainWhatsappLabel", value)} />
+              <Field label="CTA conferma principale" value={form.mainConfirmLabel} onChange={(value) => update("mainConfirmLabel", value)} />
+              <Field label="WhatsApp mobile" value={form.mobileWhatsappLabel} onChange={(value) => update("mobileWhatsappLabel", value)} />
             </div>
           </div>
         </div>
@@ -85,17 +82,11 @@ export function QuoteContentSettingsForm({ initialSettings }: { initialSettings:
             <p className="text-xl font-black text-ischia-navy">{form.proposalsTitle}</p>
             <p className="mt-2 text-sm leading-6 text-ischia-ink/70">{form.proposalsDescription}</p>
           </div>
-          <div className="mt-6 grid gap-2 border-t border-ischia-blue/10 pt-4 sm:grid-cols-2">
-            <PreviewButton>{form.compareOptionsLabel}</PreviewButton>
-            <PreviewButton>{form.selectHotelLabel}</PreviewButton>
-            <PreviewButton>{form.selectRoomLabel}</PreviewButton>
-            <PreviewButton>{form.whatsappCtaLabel}</PreviewButton>
-          </div>
-          <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-ischia-blue/10">
-            <p className="font-black text-ischia-navy">{form.confirmFormTitle}</p>
-            <button className="mt-3 w-full rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy" type="button">
-              {form.confirmButtonLabel} — Hotel Terme Example
-            </button>
+          <div className="mt-6 grid gap-2 border-t border-ischia-blue/10 pt-4">
+            <PreviewButton>{form.headerWhatsappLabel}</PreviewButton>
+            <PreviewButton>{form.mainWhatsappLabel}</PreviewButton>
+            <PreviewButton>{form.mainConfirmLabel}</PreviewButton>
+            <PreviewButton>{form.mobileWhatsappLabel}</PreviewButton>
           </div>
         </div>
       </div>
