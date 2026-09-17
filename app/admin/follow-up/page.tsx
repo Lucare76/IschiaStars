@@ -163,7 +163,14 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
             {group.emailInfo.problem ? <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-black uppercase text-rose-800">{group.emailInfo.label}</span> : null}
             {!group.emailInfo.problem && group.emailInfo.clicked ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase text-emerald-800">{group.emailInfo.label}</span> : null}
             {!group.emailInfo.problem && !group.emailInfo.clicked && group.emailInfo.label ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-black uppercase text-sky-800">{group.emailInfo.label}</span> : null}
-            {quote.segment === "non_visualizzato" ? <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black uppercase text-violet-800">{quote.stageLabel}</span> : null}
+            <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${group.lastFollowUpAt ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700"}`}>
+              {group.lastFollowUpAt ? "Sollecito effettuato" : "Mai sollecitato"}
+            </span>
+            {group.isContactDue ? (
+              <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black uppercase text-violet-800">
+                Sollecito da fare
+              </span>
+            ) : null}
             {group.isSnoozed && group.snoozedUntil ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase text-slate-700">Rimandato a {formatDate(group.snoozedUntil)}</span> : null}
           </div>
           <h2 className="mt-3 text-2xl font-black text-ischia-navy">{quote.clientName}</h2>
