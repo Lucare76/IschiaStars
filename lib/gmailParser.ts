@@ -157,7 +157,7 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
   const checkIn = normalizeFormDate(rawCheckIn, yearFromDate(checkOut));
 
   const parsedAges = etaBambini && bambini > 0
-    ? etaBambini.split(/[,\/;\s\-]+/).map((eta: string) => parseInt(eta.trim())).filter((n) => !isNaN(n))
+    ? etaBambini.split(/[.,\/;\s\-]+/).map((eta: string) => parseInt(eta.trim())).filter((n) => !isNaN(n))
     : [];
 
   const parseWarnings: string[] = [];
