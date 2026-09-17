@@ -13,8 +13,16 @@ export type FollowUpTemplate = {
   message: string;
 };
 
+export type FollowUpEmailSettings = {
+  enabled: boolean;
+  subject: string;
+  body: string;
+  signature: string;
+};
+
 export type FollowUpSettings = {
   templates: FollowUpTemplate[];
+  email: FollowUpEmailSettings;
   updatedAt?: string;
 };
 
@@ -54,12 +62,19 @@ export const defaultFollowUpSettings: FollowUpSettings = {
       enabled: true,
       message: `Salve {nome},\nho visto che ha consultato la proposta per il soggiorno a Ischia. Se vuole posso verificare nuovamente la disponibilità prima della conferma.\n\nPreventivo:\n{link_preventivo}\n\nResto a disposizione.\nDiego - IschiaStars ☀️`
     }
-  ]
+  ],
+  email: {
+    enabled: true,
+    subject: "Promemoria proposta soggiorno a Ischia - {codice}",
+    body: `Ciao {nome},\n\nvolevo sapere se hai avuto modo di valutare la proposta che ti abbiamo preparato per il soggiorno a Ischia.\n\nPuoi rivederla qui:\n{link_preventivo}\n\nSe vuoi possiamo verificare nuovamente disponibilità, hotel o trattamento prima della conferma.`,
+    signature: "Diego\nIschiaStars"
+  }
 };
 
 export function normalizeFollowUpSettings(value: unknown): FollowUpSettings {
   const raw = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const incoming = Array.isArray(raw.templates) ? raw.templates : [];
+  const rawEmail = raw.email && typeof raw.email === "object" ? raw.email as Record<string, unknown> : {};
 
   const templates = defaultFollowUpSettings.templates.map((fallback) => {
     const candidate = incoming.find((item) => item && typeof item === "object" && (item as Record<string, unknown>).key === fallback.key) as Record<string, unknown> | undefined;
@@ -74,6 +89,12 @@ export function normalizeFollowUpSettings(value: unknown): FollowUpSettings {
 
   return {
     templates,
+    email: {
+      enabled: typeof rawEmail.enabled === "boolean" ? rawEmail.enabled : defaultFollowUpSettings.email.enabled,
+      subject: typeof rawEmail.subject === "string" && rawEmail.subject.trim() ? rawEmail.subject : defaultFollowUpSettings.email.subject,
+      body: typeof rawEmail.body === "string" && rawEmail.body.trim() ? rawEmail.body : defaultFollowUpSettings.email.body,
+      signature: typeof rawEmail.signature === "string" && rawEmail.signature.trim() ? rawEmail.signature : defaultFollowUpSettings.email.signature
+    },
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : undefined
   };
 }
