@@ -72,7 +72,7 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
     }
   }
 
-  function testWhatsApp() {
+  async function testWhatsApp() {
     const phone = normalizeItalianPhone(testPhone);
     if (!phone || phone.length < 8) {
       setMessage("Inserisci un numero WhatsApp valido per il test.");
@@ -80,10 +80,13 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
     }
     setTestLoading("whatsapp");
     setMessage(null);
-    const whatsappUrl = new URL(`https://wa.me/${phone}`);
-    whatsappUrl.searchParams.set("text", preview.normalize("NFC"));
-    window.open(whatsappUrl.toString(), "_blank", "noopener,noreferrer");
-    setMessage("Test WhatsApp preparato con i dati di esempio. Il messaggio non è stato salvato né inviato automaticamente.");
+
+    const copied = await navigator.clipboard.writeText(preview).then(() => true).catch(() => false);
+    window.open(`https://wa.me/${phone}`, "_blank", "noopener,noreferrer");
+    setMessage(copied
+      ? "Messaggio di test copiato. Incollalo nella chat WhatsApp appena aperta."
+      : "WhatsApp aperto. Copia manualmente il messaggio dall'anteprima e incollalo nella chat."
+    );
     setTestLoading(null);
   }
 
@@ -172,10 +175,10 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
             <div className="mt-3 whitespace-pre-wrap rounded-2xl bg-white p-4 text-sm leading-6 text-ischia-ink shadow-sm ring-1 ring-slate-200">{preview}</div>
             <div className="mt-4 rounded-xl bg-white p-4 ring-1 ring-slate-200">
               <p className="text-sm font-black text-ischia-navy">Invia test WhatsApp</p>
-              <p className="mt-1 text-xs leading-5 text-ischia-ink/55">Apre WhatsApp con il messaggio attuale già compilato. Non serve salvare prima.</p>
+              <p className="mt-1 text-xs leading-5 text-ischia-ink/55">Copia il messaggio corrente negli appunti e apre WhatsApp. Incollalo nella chat per verificare il testo esatto, senza salvare prima.</p>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <input className="min-w-0 flex-1 rounded-xl border border-ischia-blue/20 px-3 py-2 text-sm" inputMode="tel" placeholder="Numero di test" value={testPhone} onChange={(event) => setTestPhone(event.target.value)} />
-                <button className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white disabled:opacity-50" disabled={testLoading !== null} onClick={testWhatsApp} type="button">
+                <button className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white disabled:opacity-50" disabled={testLoading !== null} onClick={() => void testWhatsApp()} type="button">
                   {testLoading === "whatsapp" ? "Apro..." : "Invia test"}
                 </button>
               </div>
@@ -241,4 +244,3 @@ export function FollowUpSettingsForm({ initialSettings }: { initialSettings: Fol
     </section>
   );
 }
-
