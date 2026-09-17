@@ -43,7 +43,7 @@ export function PublicQuotePage({
 
       <header className="no-print mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/90 p-4 shadow-soft">
         <IschiaStarsLogo />
-        <PublicQuoteHeaderActions quote={quote} />
+        <PublicQuoteHeaderActions quote={quote} contentSettings={contentSettings} />
       </header>
 
       <section className="print-card overflow-hidden rounded-[28px] bg-white shadow-soft">
@@ -133,11 +133,10 @@ export function PublicQuotePage({
           hotelPopularity={hotelPopularity}
           featureFlags={featureFlags}
           travelServices={travelServices}
-          contentSettings={contentSettings}
         />
       </section>
 
-      <MobileFloatingWhatsApp quote={quote} />
+      <MobileFloatingWhatsApp quote={quote} contentSettings={contentSettings} />
     </main>
     </QuotePageWrapper>
   );
