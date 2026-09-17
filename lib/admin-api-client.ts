@@ -1,3 +1,16 @@
+function asciiSafeJsonBody(body: BodyInit | null | undefined) {
+  if (typeof body !== "string") return body;
+
+  try {
+    const parsed = JSON.parse(body);
+    return JSON.stringify(parsed).replace(/[\u007f-\uffff]/g, (character) =>
+      `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`
+    );
+  } catch {
+    return body;
+  }
+}
+
 export function adminApiHeaders(headers: HeadersInit = {}) {
   const baseHeaders = new Headers(headers);
   if (!baseHeaders.has("Content-Type")) baseHeaders.set("Content-Type", "application/json");
@@ -7,6 +20,7 @@ export function adminApiHeaders(headers: HeadersInit = {}) {
 export async function adminApiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   const requestInit: RequestInit = {
     ...init,
+    body: asciiSafeJsonBody(init.body),
     cache: init.cache ?? "no-store",
     credentials: init.credentials ?? "include",
     headers: adminApiHeaders(init.headers)
