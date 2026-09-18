@@ -104,7 +104,7 @@ export function PublicQuotePage({
             <div className="mt-4">
               <section className="rounded-2xl bg-ischia-navy p-5 shadow-sm">
                 <h3 className="text-xl font-black text-white">Note per te</h3>
-                <div className="mt-3 text-sm leading-6 text-white/90">{quote.customerNotes}</div>
+                <div className="mt-3 whitespace-pre-line text-sm leading-6 text-white/90">{quote.customerNotes}</div>
               </section>
             </div>
           )}
