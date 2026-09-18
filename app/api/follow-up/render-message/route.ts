@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { renderFollowUpTemplate, selectFollowUpTemplate } from "@/lib/follow-up-settings";
+import { renderFollowUpTemplate } from "@/lib/follow-up-settings";
 import { getFollowUpQuotes } from "@/lib/repositories/followUp";
-import { getFollowUpSettings } from "@/lib/repositories/followUpSettings";
+import { getFollowUpSettingsFresh } from "@/lib/repositories/followUpSettings";
 import { getQuoteByShortCode } from "@/lib/repositories/quotes";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 import { absoluteShortPublicQuoteUrl, formatCurrency, formatDate } from "@/lib/utils";
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
   const [quoteResult, settingsResult] = await Promise.all([
     getQuoteByShortCode(shortCode),
-    getFollowUpSettings()
+    getFollowUpSettingsFresh()
   ]);
   const quote = quoteResult.data;
   if (!quote || quote.deletedAt) {
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   const followUps = await getFollowUpQuotes({ limit: 120 });
   const followUp = followUps.data.quotes.find((item) => item.id === quote.id);
-  const template = selectFollowUpTemplate(settingsResult.data, followUp?.segment);
+  const template = settingsResult.data.templates.find((item) => item.key === "default" && item.enabled) ?? settingsResult.data.templates.find((item) => item.enabled) ?? settingsResult.data.templates[0];
   const publicUrl = absoluteShortPublicQuoteUrl(quote);
   const hotel = followUp?.hotelsSummary || quote.proposedHotel?.name || quote.requestedHotel || "";
   const price = followUp?.mainOffer || formatCurrency(quote.totalPrice);
