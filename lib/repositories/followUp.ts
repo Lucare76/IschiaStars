@@ -235,9 +235,6 @@ function toFollowUpQuote(quote: Quote, events: QuoteEvent[], confirmedCustomerKe
   const customerKey = followUpCustomerKey(quote);
   if (customerKey && confirmedCustomerKeys.has(customerKey)) return null;
 
-  const nights = Math.round((new Date(quote.departureDate).getTime() - new Date(quote.arrivalDate).getTime()) / DAY_MS);
-  if (nights < 4) return null;
-
   if (new Date(quote.arrivalDate).getTime() < Date.now()) return null;
 
   const sentAt = quote.sentAt ?? quote.createdAt;
