@@ -19,6 +19,11 @@ export async function getFollowUpSettings(): Promise<RepositoryResult<FollowUpSe
   return getCachedFollowUpSettings();
 }
 
+export async function getFollowUpSettingsFresh(): Promise<RepositoryResult<FollowUpSettings>> {
+  noStore();
+  return getFollowUpSettingsUncached();
+}
+
 const getCachedFollowUpSettings = unstable_cache(
   async (): Promise<RepositoryResult<FollowUpSettings>> => getFollowUpSettingsUncached(),
   [FOLLOW_UP_SETTINGS_CACHE_TAG],
