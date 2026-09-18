@@ -2,7 +2,7 @@ import type { Quote } from "@/lib/types";
 import { renderFollowUpTemplate } from "@/lib/follow-up-settings";
 import { getBusinessContactSettings } from "@/lib/repositories/businessContactSettings";
 import { logEmailAttempt } from "@/lib/repositories/emailLogs";
-import { getFollowUpSettings } from "@/lib/repositories/followUpSettings";
+import { getFollowUpSettingsFresh } from "@/lib/repositories/followUpSettings";
 import { sendBrevoEmail } from "@/lib/server/brevo";
 import { absoluteShortPublicQuoteUrl, formatCurrency, formatDate } from "@/lib/utils";
 
@@ -32,7 +32,7 @@ export async function sendConfiguredFollowUpEmailToClient(quote: Quote): Promise
   }
 
   const [settingsResult, contactsResult] = await Promise.all([
-    getFollowUpSettings(),
+    getFollowUpSettingsFresh(),
     getBusinessContactSettings()
   ]);
   const emailSettings = settingsResult.data.email;
