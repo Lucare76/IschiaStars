@@ -628,7 +628,7 @@ function HotelCard({
   // TODO: wow6_adaptive — da implementare
   // Quando featureFlags.wow6_adaptive === true, evidenziare l'hotel più visto dal cliente
   // nelle sessioni precedenti (leggi quote_events con eventType "hotel_view" o simile).
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [collapsedDetails, setCollapsedDetails] = useState<Set<string>>(() => new Set());
   const [pendingSelection, setPendingSelection] = useState<{ option: PublicQuoteHotelOptionDTO; treatment: TreatmentOption } | null>(null);
   const [reaction, setReaction] = useState<"interested" | "too_expensive" | null>(null);
   const reactionKey = `reaction_${quoteCode}_${mainOption.hotelGroup}`;
@@ -812,7 +812,7 @@ function HotelCard({
                 <div className="space-y-3">
                   {visibleTreatments(opt).map((treatment) => {
                     const detailKey = `${opt.id}-${treatment.key}`;
-                    const isExpanded = expanded === detailKey;
+                    const isExpanded = !collapsedDetails.has(detailKey);
                     const details = treatmentDetails(opt, treatment);
                     const priceDelta = treatmentPriceDeltas(opt).get(treatment.key);
                     const benefit = details ? undefined : treatmentBenefit(treatment);
@@ -837,9 +837,13 @@ function HotelCard({
                             aria-expanded={isExpanded}
                             className="no-print min-w-32 rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/15"
                             onClick={() => {
-                              const nextExpanded = isExpanded ? null : detailKey;
-                              setExpanded(nextExpanded);
-                              if (nextExpanded) {
+                              setCollapsedDetails((current) => {
+                                const next = new Set(current);
+                                if (isExpanded) next.add(detailKey);
+                                else next.delete(detailKey);
+                                return next;
+                              });
+                              if (!isExpanded) {
                                 trackQuoteEvent({ quoteCode, token }, "details_opened", {
                                   hotelOptionId: opt.id,
                                   hotelName: opt.hotelName,
@@ -850,7 +854,7 @@ function HotelCard({
                             }}
                             type="button"
                           >
-                            Cosa include
+                            {isExpanded ? "Nascondi dettagli" : "Cosa include"}
                           </button>
                           {!isConfirmed && (
                             <div className="no-print w-full text-center sm:w-64">
