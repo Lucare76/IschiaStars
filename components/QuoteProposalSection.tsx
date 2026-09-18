@@ -628,7 +628,6 @@ function HotelCard({
   // TODO: wow6_adaptive — da implementare
   // Quando featureFlags.wow6_adaptive === true, evidenziare l'hotel più visto dal cliente
   // nelle sessioni precedenti (leggi quote_events con eventType "hotel_view" o simile).
-  const [collapsedDetails, setCollapsedDetails] = useState<Set<string>>(() => new Set());
   const [pendingSelection, setPendingSelection] = useState<{ option: PublicQuoteHotelOptionDTO; treatment: TreatmentOption } | null>(null);
   const [reaction, setReaction] = useState<"interested" | "too_expensive" | null>(null);
   const reactionKey = `reaction_${quoteCode}_${mainOption.hotelGroup}`;
@@ -812,19 +811,23 @@ function HotelCard({
                 <div className="space-y-3">
                   {visibleTreatments(opt).map((treatment) => {
                     const detailKey = `${opt.id}-${treatment.key}`;
-                    const isExpanded = !collapsedDetails.has(detailKey);
                     const details = treatmentDetails(opt, treatment);
                     const priceDelta = treatmentPriceDeltas(opt).get(treatment.key);
                     const benefit = details ? undefined : treatmentBenefit(treatment);
+                    const frontDetails = details || treatmentDescription(treatment);
                     return (
                     <div key={detailKey} className="rounded-2xl bg-ischia-mist p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="min-w-0 flex-1">
+                      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-end">
+                        <div className="min-w-0">
                           {opt.roomTypeLabel ? (
                             <p className="text-xs font-bold uppercase tracking-wide text-ischia-blue/60">{opt.roomTypeLabel}</p>
                           ) : null}
                           <p className="font-black text-ischia-navy">{treatment.label}</p>
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="mt-2 rounded-xl bg-ischia-navy px-4 py-3 text-sm leading-6 text-white">
+                            <p className="text-xs font-black uppercase tracking-wide text-white/70">Cosa include</p>
+                            <p className="mt-1 whitespace-pre-line">{frontDetails}</p>
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
                             <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
                           </div>
                           <p className="mt-0.5 text-xs font-bold uppercase tracking-wide text-ischia-blue/70">{priceScopeLabel}</p>
@@ -832,32 +835,9 @@ function HotelCard({
                             <p className="mt-0.5 text-xs italic text-gray-500">{benefit}</p>
                           ) : null}
                         </div>
-                        <div className="flex w-full flex-wrap items-start gap-3 sm:w-auto sm:justify-end">
-                          <button
-                            aria-expanded={isExpanded}
-                            className="no-print min-w-32 rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/15"
-                            onClick={() => {
-                              setCollapsedDetails((current) => {
-                                const next = new Set(current);
-                                if (isExpanded) next.add(detailKey);
-                                else next.delete(detailKey);
-                                return next;
-                              });
-                              if (!isExpanded) {
-                                trackQuoteEvent({ quoteCode, token }, "details_opened", {
-                                  hotelOptionId: opt.id,
-                                  hotelName: opt.hotelName,
-                                  treatmentKey: treatment.key,
-                                  treatmentLabel: treatment.label
-                                });
-                              }
-                            }}
-                            type="button"
-                          >
-                            {isExpanded ? "Nascondi dettagli" : "Cosa include"}
-                          </button>
+                        <div className="flex w-full flex-wrap items-start gap-3 sm:justify-end">
                           {!isConfirmed && (
-                            <div className="no-print w-full text-center sm:w-64">
+                            <div className="no-print w-full text-center">
                               <button
                                 className="w-full rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
                                 onClick={() => setPendingSelection({ option: opt, treatment })}
@@ -873,7 +853,6 @@ function HotelCard({
                           )}
                         </div>
                       </div>
-                      <TreatmentDetails className={`${isExpanded ? "block" : "hidden"} print:block`} option={opt} treatment={treatment} details={details} />
                     </div>
                   );})}
                 </div>
