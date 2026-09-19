@@ -6,6 +6,7 @@ import { FollowUpWhatsAppButton } from "@/components/FollowUpWhatsAppButton";
 import { FOLLOW_UP_MAX_LIMIT, FOLLOW_UP_PAGE_SIZE, followUpGroupSegment, getDueFollowUpCustomerKeys, getFollowUpQuotes, FollowUpEmailInfo, FollowUpHotelClick, FollowUpQuote, FollowUpSegment } from "@/lib/repositories/followUp";
 import { followUpCustomerKey, isFollowUpStageDue } from "@/lib/follow-up-policy";
 import { formatDate, formatDateTime } from "@/lib/utils";
+import { getFollowUpSentEmailStatusByQuoteId, type FollowUpEmailStatus as SentFollowUpEmailStatus } from "@/lib/repositories/emailLogs";
 import type { FollowUpRuleSettings } from "@/lib/follow-up-rule-settings";
 import { getFollowUpRuleSettings } from "@/lib/repositories/followUpRuleSettings";
 
@@ -67,6 +68,7 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
   }
 
   const quotes = followUpResult.data.quotes;
+  const followUpEmailStatusByQuote = await getFollowUpSentEmailStatusByQuoteId(quotes.map((quote) => quote.id));
   const hasMore = followUpResult.data.hasMore;
   const dueCustomerKeys = getDueFollowUpCustomerKeys(quotes, Date.now(), rules);
   const groups = groupFollowUps(quotes, rules);
@@ -109,7 +111,7 @@ export default async function FollowUpPage({ searchParams }: { searchParams?: { 
         {visibleGroups.length === 0 ? (
           <div className="rounded-2xl bg-white p-6 text-ischia-ink/70 ring-1 ring-slate-200">Nessun preventivo in questa lista.</div>
         ) : (
-          visibleGroups.map((group) => <FollowUpCard key={group.key} group={group} />)
+          visibleGroups.map((group) => <FollowUpCard key={group.key} group={group} followUpEmailStatus={followUpEmailStatusByQuote[group.primary.id]} />)
         )}
       </section>
 
@@ -150,7 +152,7 @@ function Kpi({ label, value }: { label: string; value: number }) {
   );
 }
 
-function FollowUpCard({ group }: { group: FollowUpGroup }) {
+function FollowUpCard({ group, followUpEmailStatus }: { group: FollowUpGroup; followUpEmailStatus?: SentFollowUpEmailStatus }) {
   const quote = group.primary;
   return (
     <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
@@ -207,6 +209,7 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
         <Info label="Punteggio interesse" value={String(group.engagementScore)} />
         <Info label="Ultimo follow-up" value={group.lastFollowUpAt ? formatDateTime(group.lastFollowUpAt) : "Non ancora registrato"} />
         {group.emailInfo.label ? <Info label="Stato email preventivo" value={group.emailInfo.label} /> : null}
+        {followUpEmailStatus ? <Info label="Email follow-up" value={followUpEmailStatusLabel(followUpEmailStatus)} /> : null}
         {group.emailInfo.actionHint ? <Info label="Azione consigliata" value={group.emailInfo.actionHint} /> : null}
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -228,6 +231,14 @@ function FollowUpCard({ group }: { group: FollowUpGroup }) {
       ) : null}
     </article>
   );
+}
+
+function followUpEmailStatusLabel(status: SentFollowUpEmailStatus) {
+  if (status.problem) return "Problema di consegna";
+  if (status.clicked) return "Link cliccato";
+  if (status.opened) return "Aperta";
+  if (status.delivered) return "Consegnata";
+  return "Inviata";
 }
 
 function Info({ label, value }: { label: string; value: string }) {
