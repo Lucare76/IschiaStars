@@ -3,7 +3,7 @@ import { renderFollowUpTemplate } from "@/lib/follow-up-settings";
 import { getBusinessContactSettings } from "@/lib/repositories/businessContactSettings";
 import { logEmailAttempt } from "@/lib/repositories/emailLogs";
 import { getFollowUpSettingsFresh } from "@/lib/repositories/followUpSettings";
-import { sendBrevoEmail } from "@/lib/server/brevo";
+import { sendBrevoEmailWithResult } from "@/lib/server/brevo";
 import { absoluteShortPublicQuoteUrl, formatCurrency, formatDate } from "@/lib/utils";
 
 export type SendConfiguredFollowUpEmailResult = { sent: boolean; skipReason?: string; error?: string };
@@ -82,8 +82,13 @@ export async function sendConfiguredFollowUpEmailToClient(quote: Quote): Promise
 </html>`;
 
   const text = [body, "", quoteUrl, "", signature, "", `${contacts.phone} · ${contacts.email}`].join("\n");
-  const sent = await sendBrevoEmail({
+  const ccRecipients = contacts.email && contacts.email.toLowerCase() !== recipient.toLowerCase()
+    ? [{ email: contacts.email, name: "IschiaStars" }]
+    : undefined;
+
+  const sendResult = await sendBrevoEmailWithResult({
     to: [{ email: recipient, name: clientName || undefined }],
+    cc: ccRecipients,
     subject,
     html,
     text,
@@ -95,11 +100,12 @@ export async function sendConfiguredFollowUpEmailToClient(quote: Quote): Promise
     emailType: "follow_up_to_client",
     recipientEmail: recipient,
     subject,
-    ok: sent,
-    errorMessage: sent ? undefined : "configured_follow_up_send_failed"
+    brevoMessageId: sendResult.messageId,
+    ok: sendResult.ok,
+    errorMessage: sendResult.ok ? undefined : sendResult.error ?? "configured_follow_up_send_failed"
   });
 
-  return sent
+  return sendResult.ok
     ? { sent: true }
     : { sent: false, error: "Invio email non riuscito" };
 }
