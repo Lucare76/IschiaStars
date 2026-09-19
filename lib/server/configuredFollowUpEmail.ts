@@ -82,13 +82,8 @@ export async function sendConfiguredFollowUpEmailToClient(quote: Quote): Promise
 </html>`;
 
   const text = [body, "", quoteUrl, "", signature, "", `${contacts.phone} · ${contacts.email}`].join("\n");
-  const ccRecipients = contacts.email && contacts.email.toLowerCase() !== recipient.toLowerCase()
-    ? [{ email: contacts.email, name: "IschiaStars" }]
-    : undefined;
-
   const sendResult = await sendBrevoEmailWithResult({
     to: [{ email: recipient, name: clientName || undefined }],
-    cc: ccRecipients,
     subject,
     html,
     text,
