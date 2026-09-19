@@ -408,6 +408,40 @@ export async function getFollowUpEmailStatusByQuoteId(quoteIds: string[]): Promi
   return result;
 }
 
+
+export async function getFollowUpSentEmailStatusByQuoteId(quoteIds: string[]): Promise<Record<string, FollowUpEmailStatus>> {
+  if (!quoteIds.length) return {};
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return {};
+
+  const result: Record<string, FollowUpEmailStatus> = {};
+  for (let i = 0; i < quoteIds.length; i += 100) {
+    const chunk = quoteIds.slice(i, i + 100);
+    const { data } = await supabase
+      .from("email_logs")
+      .select("quote_id,status,delivered_at,opened_at,clicked_at,error_message,sent_at,created_at")
+      .eq("email_type", "follow_up_to_client")
+      .in("quote_id", chunk)
+      .order("created_at", { ascending: true });
+
+    for (const row of data ?? []) {
+      const qid = String(row.quote_id);
+      const current = result[qid];
+      const status = String(row.status ?? "");
+      result[qid] = {
+        delivered: (current?.delivered ?? false) || Boolean(row.delivered_at),
+        opened: (current?.opened ?? false) || Boolean(row.opened_at),
+        clicked: (current?.clicked ?? false) || Boolean(row.clicked_at),
+        problem: (current?.problem ?? false) || isDeliveryProblem(status),
+        errorMessage: isDeliveryProblem(status)
+          ? (String(row.error_message ?? "") || (current?.errorMessage ?? null))
+          : (current?.errorMessage ?? null)
+      };
+    }
+  }
+  return result;
+}
+
 function emptyQuoteEmailDashboardData(): QuoteEmailDashboardData {
   return {
     sent: 0,

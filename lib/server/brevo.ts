@@ -69,7 +69,7 @@ function brevoMissingEnvReason() {
   return null;
 }
 
-async function sendBrevoEmailWithResult(params: SendBrevoEmailParams): Promise<BrevoSendResult> {
+export async function sendBrevoEmailWithResult(params: SendBrevoEmailParams): Promise<BrevoSendResult> {
   const apiKey = process.env.BREVO_API_KEY;
   const fromEmail = process.env.BREVO_FROM_EMAIL;
   const fromName = process.env.BREVO_FROM_NAME || "IschiaStars";
