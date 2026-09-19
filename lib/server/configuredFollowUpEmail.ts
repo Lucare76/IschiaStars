@@ -21,6 +21,11 @@ function multilineHtml(value: string) {
   return escapeHtml(value).replaceAll("\n", "<br>");
 }
 
+function multilineHtmlWithQuoteLink(value: string, quoteUrl: string) {
+  const escapedUrl = escapeHtml(quoteUrl);
+  return multilineHtml(value).replaceAll(escapedUrl, `<a href="${escapedUrl}" style="color:#0b67a3;text-decoration:underline;font-weight:700;">${escapedUrl}</a>`);
+}
+
 function normalizeRenderedBody(value: string) {
   return value.replace(/\n{3,}/g, "\n\n").trim();
 }
@@ -53,10 +58,7 @@ export async function sendConfiguredFollowUpEmailToClient(quote: Quote): Promise
   };
 
   const subject = renderFollowUpTemplate(emailSettings.subject, values);
-  const body = normalizeRenderedBody(renderFollowUpTemplate(emailSettings.body, {
-    ...values,
-    link_preventivo: ""
-  }));
+  const body = normalizeRenderedBody(renderFollowUpTemplate(emailSettings.body, values));
   const signature = renderFollowUpTemplate(emailSettings.signature, values);
   const quoteUrl = values.link_preventivo;
   const clientName = `${quote.customerFirstName ?? ""} ${quote.customerLastName ?? ""}`.trim();
@@ -69,7 +71,7 @@ export async function sendConfiguredFollowUpEmailToClient(quote: Quote): Promise
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 18px rgba(15,23,42,.08);">
       <tr><td style="background:#1a3a5c;padding:24px 28px;color:#fff;"><div style="font-size:20px;font-weight:800;">IschiaStars</div><div style="margin-top:4px;font-size:13px;color:#dbeafe;">Promemoria preventivo</div></td></tr>
       <tr><td style="padding:28px;font-size:15px;line-height:1.7;">
-        <div>${multilineHtml(body)}</div>
+        <div>${multilineHtmlWithQuoteLink(body, quoteUrl)}</div>
         <div style="margin:24px 0;text-align:center;"><a href="${escapeHtml(quoteUrl)}" style="display:inline-block;background:#0b67a3;color:#fff;text-decoration:none;font-weight:800;padding:12px 20px;border-radius:999px;">Apri il preventivo</a></div>
         <div style="padding-top:18px;border-top:1px solid #e5e7eb;">${multilineHtml(signature)}</div>
       </td></tr>
