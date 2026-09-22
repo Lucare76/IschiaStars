@@ -21,8 +21,8 @@ export function WhatsAppSendButton({ quote, label = "Invia su WhatsApp" }: { quo
     }
     if (message) await copyToClipboard(message);
     setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
-    window.open(buildWhatsAppUrl(quote.customerPhone, message), "_blank", "noopener,noreferrer");
+    setTimeout(() => setCopied(false), 4000);
+    window.open(buildWhatsAppUrl(quote.customerPhone), "_blank", "noopener,noreferrer");
 
     if (quote.status === "in_lavorazione") {
       const response = await adminApiFetch(`/api/quotes/${quote.id}`, {
@@ -43,15 +43,13 @@ export function WhatsAppSendButton({ quote, label = "Invia su WhatsApp" }: { quo
       onClick={() => void handleClick()}
       type="button"
     >
-      {copied ? "✓ Messaggio pronto su WhatsApp" : label}
+      {copied ? "✓ Copiato: incolla su WhatsApp" : label}
     </button>
   );
 }
 
-function buildWhatsAppUrl(phone: string, message: string) {
-  const normalizedPhone = normalizeItalianPhone(phone);
-  if (!message.trim()) return `https://wa.me/${normalizedPhone}`;
-  return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
+function buildWhatsAppUrl(phone: string) {
+  return `https://wa.me/${normalizeItalianPhone(phone)}`;
 }
 
 async function copyToClipboard(message: string) {
