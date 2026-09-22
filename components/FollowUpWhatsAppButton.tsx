@@ -46,10 +46,10 @@ export function FollowUpWhatsAppButton({ message, clientPhone }: FollowUpWhatsAp
     }
 
     const didCopy = await copyToClipboard(finalMessage);
-    setCopied(true);
+    setCopied(didCopy);
     setCopyFailed(!didCopy);
-    setTimeout(() => setCopied(false), 3000);
-    window.open(buildWhatsAppUrl(clientPhone!, finalMessage), "_blank", "noopener,noreferrer");
+    setTimeout(() => setCopied(false), 4000);
+    window.open(buildWhatsAppUrl(clientPhone!), "_blank", "noopener,noreferrer");
     setLoading(false);
   }
 
@@ -61,11 +61,11 @@ export function FollowUpWhatsAppButton({ message, clientPhone }: FollowUpWhatsAp
         onClick={() => void handleClick()}
         type="button"
       >
-        {loading ? "Preparo messaggio..." : copied ? "✓ Messaggio pronto su WhatsApp" : "Scrivi su WhatsApp"}
+        {loading ? "Copio messaggio..." : copied ? "✓ Copiato: incolla su WhatsApp" : "Copia e apri WhatsApp"}
       </button>
       {copyFailed ? (
         <span className="max-w-64 text-right text-[11px] font-bold leading-4 text-amber-700">
-          Se WhatsApp non mostra il testo, copialo manualmente dal template.
+          Copia automatica non riuscita: copia il messaggio dal template e incollalo in WhatsApp.
         </span>
       ) : null}
     </span>
@@ -77,10 +77,8 @@ function extractShortCode(message: string) {
   return match?.[1] ?? "";
 }
 
-function buildWhatsAppUrl(phone: string, message: string) {
-  const normalizedPhone = normalizeItalianPhone(phone);
-  const encodedMessage = encodeURIComponent(message);
-  return `https://wa.me/${normalizedPhone}?text=${encodedMessage}`;
+function buildWhatsAppUrl(phone: string) {
+  return `https://wa.me/${normalizeItalianPhone(phone)}`;
 }
 
 async function copyToClipboard(message: string) {
