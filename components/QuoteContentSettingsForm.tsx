@@ -72,6 +72,17 @@ export function QuoteContentSettingsForm({ initialSettings }: { initialSettings:
               <Field label="WhatsApp mobile" value={form.mobileWhatsappLabel} onChange={(value) => update("mobileWhatsappLabel", value)} />
             </div>
           </div>
+
+          <div className="border-t border-slate-200 pt-4">
+            <p className="mb-3 text-xs font-black uppercase tracking-wide text-ischia-ink/50">Sezione viaggio e collegamenti</p>
+            <div className="space-y-4">
+              <Field label="Etichetta sezione viaggio" value={form.travelEyebrow} onChange={(value) => update("travelEyebrow", value)} />
+              <Field label="Titolo sezione viaggio" value={form.travelTitle} onChange={(value) => update("travelTitle", value)} />
+              <TextArea label="Descrizione sezione viaggio" value={form.travelDescription} onChange={(value) => update("travelDescription", value)} />
+              <TextArea label="Nota tariffe viaggio" value={form.travelDisclaimer} onChange={(value) => update("travelDisclaimer", value)} />
+              <TextArea label="CTA finale viaggio" value={form.travelCta} onChange={(value) => update("travelCta", value)} />
+            </div>
+          </div>
         </div>
 
         <div className="rounded-2xl bg-ischia-mist/60 p-5 ring-1 ring-ischia-blue/10">
@@ -87,6 +98,13 @@ export function QuoteContentSettingsForm({ initialSettings }: { initialSettings:
             <PreviewButton>{form.mainWhatsappLabel}</PreviewButton>
             <PreviewButton>{form.mainConfirmLabel}</PreviewButton>
             <PreviewButton>{form.mobileWhatsappLabel}</PreviewButton>
+          </div>
+          <div className="mt-6 border-t border-ischia-blue/10 pt-4">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-ischia-blue">{form.travelEyebrow}</p>
+            <p className="mt-1 text-xl font-black text-ischia-navy">{form.travelTitle}</p>
+            <p className="mt-2 text-sm leading-6 text-ischia-ink/70">{form.travelDescription}</p>
+            <p className="mt-3 text-xs text-ischia-ink/55">{form.travelDisclaimer}</p>
+            <p className="mt-2 text-sm font-semibold text-ischia-navy">{form.travelCta}</p>
           </div>
         </div>
       </div>
