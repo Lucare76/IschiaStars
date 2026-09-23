@@ -8,7 +8,7 @@ export default async function ExtraServicesPage() {
   const result = await listExtraServiceEmailItems();
 
   return (
-    <AdminShell title="Servizi extra" subtitle="Gestisci le voci commerciali dei collegamenti mostrate in fondo alle email preventivo.">
+    <AdminShell title="Servizi extra" subtitle="Gestisci i collegamenti viaggio mostrati nella pagina preventivo e nelle email cliente.">
       <ExtraServiceEmailItemsEditor initialItems={result.data} />
     </AdminShell>
   );
