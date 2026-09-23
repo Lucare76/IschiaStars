@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import {
   getRequestIp,
   getTrackingExcludedIps,
+  hasClientVisitorId,
+  isCustomerActivityEvent,
   isExcludedTrackingEvent,
   isLikelyBotUserAgent,
-  isTrackingExcludedIp
+  isTrackingExcludedIp,
+  shouldIgnoreBotTracking
 } from "../lib/server/trackingFilters";
 
 assert.ok(getTrackingExcludedIps().includes("93.148.93.103"));
@@ -29,5 +32,29 @@ assert.equal(isExcludedTrackingEvent({ metadata: { ip: "8.8.8.8", excluded_from_
 assert.equal(isLikelyBotUserAgent("WhatsApp/2.24.7"), true);
 assert.equal(isLikelyBotUserAgent("facebookexternalhit/1.1"), true);
 assert.equal(isLikelyBotUserAgent("Mozilla/5.0 Chrome/125 Safari/537.36"), false);
+
+assert.equal(hasClientVisitorId({ visitor_id: "visitor-12345678" }), true);
+assert.equal(hasClientVisitorId({}), false);
+assert.equal(shouldIgnoreBotTracking("WhatsApp/2.24.7", {}), true);
+assert.equal(shouldIgnoreBotTracking("WhatsApp/2.24.7", { visitor_id: "visitor-12345678" }), false);
+assert.equal(shouldIgnoreBotTracking("facebookexternalhit/1.1", {}), true);
+
+assert.equal(isCustomerActivityEvent({
+  id: "evt-whatsapp-client",
+  quoteId: "quote-1",
+  eventType: "quote_opened",
+  createdAt: new Date().toISOString(),
+  userAgent: "WhatsApp/2.24.7",
+  metadata: { visitor_id: "visitor-12345678", ip: "8.8.8.8" }
+}), true);
+
+assert.equal(isCustomerActivityEvent({
+  id: "evt-whatsapp-preview",
+  quoteId: "quote-1",
+  eventType: "quote_opened",
+  createdAt: new Date().toISOString(),
+  userAgent: "WhatsApp/2.24.7",
+  metadata: { ip: "8.8.8.8" }
+}), false);
 
 console.log("tracking filters: ok");

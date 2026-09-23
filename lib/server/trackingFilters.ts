@@ -50,6 +50,18 @@ export function isLikelyBotUserAgent(userAgent: string | undefined) {
   return Boolean(userAgent && BOT_USER_AGENT_REGEX.test(userAgent));
 }
 
+export function hasClientVisitorId(metadata: Record<string, unknown> | undefined) {
+  const visitorId = typeof metadata?.visitor_id === "string" ? metadata.visitor_id.trim() : "";
+  return visitorId.length >= 8;
+}
+
+export function shouldIgnoreBotTracking(userAgent: string | undefined, metadata: Record<string, unknown> | undefined) {
+  // I crawler/preview sociali non eseguono normalmente il tracker client e quindi
+  // non possiedono il visitor_id generato nel browser. I browser in-app (es. WhatsApp)
+  // possono invece avere "WhatsApp" nello User-Agent pur essendo utenti reali.
+  return isLikelyBotUserAgent(userAgent) && !hasClientVisitorId(metadata);
+}
+
 export function isExcludedTrackingEvent(event: Pick<QuoteEvent, "metadata">) {
   const metadata = event.metadata ?? {};
   const ip = typeof metadata.ip === "string" ? normalizeIp(metadata.ip) : undefined;
@@ -61,7 +73,7 @@ export function isCustomerActivityEvent(event: QuoteEvent) {
   const metadata = event.metadata ?? {};
   const userAgent = event.userAgent
     ?? (typeof metadata.user_agent === "string" ? metadata.user_agent : undefined);
-  if (metadata.seed === true || metadata.seed === "true" || isLikelyBotUserAgent(userAgent)) return false;
+  if (metadata.seed === true || metadata.seed === "true" || shouldIgnoreBotTracking(userAgent, metadata)) return false;
   const placement = typeof event.metadata?.placement === "string" ? event.metadata.placement : "";
   const source = typeof event.metadata?.source === "string" ? event.metadata.source : "";
   return placement !== "admin_quote_card" && !source.startsWith("admin_") && !source.startsWith("supervisor_");
