@@ -8,6 +8,7 @@ import type { ExtraServiceEmailItem } from "@/lib/extra-service-email-items";
 import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown, getMandatoryHotelFeeNote } from "@/lib/hotel-policies";
 import { publicQuoteInfoWhatsappMessage } from "@/lib/message-templates";
 import type { PublicQuoteDTO, PublicQuoteHotelOptionDTO } from "@/lib/public-quote-dto";
+import { defaultQuoteContentSettings, type QuoteContentSettings } from "@/lib/quote-content-settings";
 import type { QuoteRoomSelection, TreatmentOption } from "@/lib/types";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
 import { safeSessionStorageGet, safeSessionStorageSet } from "@/lib/safe-storage";
@@ -153,12 +154,14 @@ export function QuoteProposalSection({
   quote,
   hotelPopularity = {},
   featureFlags = emptyFeatureFlags,
-  travelServices = []
+  travelServices = [],
+  contentSettings = defaultQuoteContentSettings
 }: {
   quote: PublicQuoteDTO;
   hotelPopularity?: Record<string, number>;
   featureFlags?: FeatureFlags;
   travelServices?: ExtraServiceEmailItem[];
+  contentSettings?: QuoteContentSettings;
 }) {
   const [selectedRooms, setSelectedRooms] = useState<QuoteRoomSelection[]>([]);
   const [compareMode, setCompareMode] = useState(false);
@@ -306,10 +309,10 @@ export function QuoteProposalSection({
 
       {travelServices.length > 0 ? (
         <div className="no-print rounded-2xl bg-ischia-mist p-6 ring-1 ring-ischia-blue/15">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">Organizza anche il viaggio</p>
-          <h2 className="mt-1 text-2xl font-black text-ischia-navy">Vuoi arrivare a Ischia senza pensieri?</h2>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{contentSettings.travelEyebrow}</p>
+          <h2 className="mt-1 text-2xl font-black text-ischia-navy">{contentSettings.travelTitle}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-ischia-ink/70">
-            Oltre al soggiorno, possiamo aiutarti a scegliere il collegamento più comodo per raggiungere la struttura.
+            {contentSettings.travelDescription}
           </p>
           <div className="mt-4 divide-y divide-ischia-blue/10 rounded-2xl bg-white ring-1 ring-ischia-blue/10">
             {travelServices.map((item) => (
@@ -328,8 +331,8 @@ export function QuoteProposalSection({
               </div>
             ))}
           </div>
-          <p className="mt-4 text-xs text-ischia-ink/55">Le tariffe sono indicative e possono variare in base a data, disponibilità e orari.</p>
-          <p className="mt-2 text-sm font-semibold text-ischia-navy">Rispondi a questa email o scrivici su WhatsApp: ti consiglieremo la soluzione più adatta al tuo viaggio.</p>
+          <p className="mt-4 text-xs text-ischia-ink/55">{contentSettings.travelDisclaimer}</p>
+          <p className="mt-2 text-sm font-semibold text-ischia-navy">{contentSettings.travelCta}</p>
         </div>
       ) : null}
 
