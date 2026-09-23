@@ -36,6 +36,13 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
     setForm((current) => ({ ...current, [group]: current[group].filter((_, itemIndex) => itemIndex !== index) }));
   }
 
+  function updateChip(group: ChipGroup, index: number, value: string) {
+    setForm((current) => ({
+      ...current,
+      [group]: current[group].map((chip, itemIndex) => itemIndex === index ? value : chip)
+    }));
+  }
+
   function moveChip(group: ChipGroup, index: number, direction: -1 | 1) {
     const nextIndex = index + direction;
     if (nextIndex < 0 || nextIndex >= form[group].length) return;
@@ -133,6 +140,7 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
           draft={drafts.publicNoteChips}
           onDraftChange={(value) => setDrafts((current) => ({ ...current, publicNoteChips: value }))}
           onAdd={() => addChip("publicNoteChips")}
+          onUpdate={(index, value) => updateChip("publicNoteChips", index, value)}
           onRemove={(index) => removeChip("publicNoteChips", index)}
           onMove={(index, direction) => moveChip("publicNoteChips", index, direction)}
         />
@@ -143,6 +151,7 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
           draft={drafts.hotelNoteChips}
           onDraftChange={(value) => setDrafts((current) => ({ ...current, hotelNoteChips: value }))}
           onAdd={() => addChip("hotelNoteChips")}
+          onUpdate={(index, value) => updateChip("hotelNoteChips", index, value)}
           onRemove={(index) => removeChip("hotelNoteChips", index)}
           onMove={(index, direction) => moveChip("hotelNoteChips", index, direction)}
         />
@@ -153,6 +162,7 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
           draft={drafts.hotelReasonPhrases}
           onDraftChange={(value) => setDrafts((current) => ({ ...current, hotelReasonPhrases: value }))}
           onAdd={() => addChip("hotelReasonPhrases")}
+          onUpdate={(index, value) => updateChip("hotelReasonPhrases", index, value)}
           onRemove={(index) => removeChip("hotelReasonPhrases", index)}
           onMove={(index, direction) => moveChip("hotelReasonPhrases", index, direction)}
         />
@@ -163,6 +173,7 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
           draft={drafts.treatmentDetailPhrases}
           onDraftChange={(value) => setDrafts((current) => ({ ...current, treatmentDetailPhrases: value }))}
           onAdd={() => addChip("treatmentDetailPhrases")}
+          onUpdate={(index, value) => updateChip("treatmentDetailPhrases", index, value)}
           onRemove={(index) => removeChip("treatmentDetailPhrases", index)}
           onMove={(index, direction) => moveChip("treatmentDetailPhrases", index, direction)}
         />
@@ -279,6 +290,7 @@ function ChipList({
   draft,
   onDraftChange,
   onAdd,
+  onUpdate,
   onRemove,
   onMove
 }: {
@@ -288,6 +300,7 @@ function ChipList({
   draft: string;
   onDraftChange: (value: string) => void;
   onAdd: () => void;
+  onUpdate: (index: number, value: string) => void;
   onRemove: (index: number) => void;
   onMove: (index: number, direction: -1 | 1) => void;
 }) {
@@ -316,8 +329,12 @@ function ChipList({
 
       <div className="mt-3 space-y-2">
         {chips.length ? chips.map((chip, index) => (
-          <div key={`${chip}-${index}`} className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm shadow-sm ring-1 ring-ischia-blue/10">
-            <span className="min-w-0 flex-1 break-words font-semibold text-ischia-ink">{chip}</span>
+          <div key={index} className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm shadow-sm ring-1 ring-ischia-blue/10">
+            <input
+              className="min-w-0 flex-1 rounded-lg border border-ischia-blue/15 px-2 py-1 font-semibold text-ischia-ink"
+              value={chip}
+              onChange={(event) => onUpdate(index, event.target.value)}
+            />
             <button className="rounded-lg px-2 py-1 text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/15 disabled:opacity-30" disabled={index === 0} onClick={() => onMove(index, -1)} type="button">↑</button>
             <button className="rounded-lg px-2 py-1 text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/15 disabled:opacity-30" disabled={index === chips.length - 1} onClick={() => onMove(index, 1)} type="button">↓</button>
             <button className="rounded-lg px-2 py-1 text-xs font-black text-rose-700 ring-1 ring-rose-200" onClick={() => onRemove(index)} type="button">Elimina</button>
