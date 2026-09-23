@@ -52,9 +52,9 @@ export function ExtraServiceEmailItemsEditor({ initialItems }: { initialItems: E
     <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black text-ischia-navy">Collegamenti mostrati nelle email</h2>
+          <h2 className="text-xl font-black text-ischia-navy">Collegamenti viaggio</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-ischia-ink/65">
-            Modifica prezzi e testi commerciali. Le voci disattivate non compaiono nelle email preventivo.
+            Modifica prezzi e testi commerciali mostrati nella pagina preventivo e nelle email. Le voci disattivate non compaiono al cliente.
           </p>
         </div>
         <button type="button" onClick={addItem} className="rounded-full bg-ischia-mist px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-blue/15">
