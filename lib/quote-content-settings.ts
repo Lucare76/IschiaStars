@@ -11,6 +11,11 @@ export type QuoteContentSettings = {
   mainWhatsappLabel: string;
   mainConfirmLabel: string;
   mobileWhatsappLabel: string;
+  travelEyebrow: string;
+  travelTitle: string;
+  travelDescription: string;
+  travelDisclaimer: string;
+  travelCta: string;
   updatedAt?: string;
 };
 
@@ -24,7 +29,12 @@ export const defaultQuoteContentSettings: QuoteContentSettings = {
   headerWhatsappLabel: "WhatsApp",
   mainWhatsappLabel: "Hai domande? Scrivici su WhatsApp",
   mainConfirmLabel: "Conferma il preventivo",
-  mobileWhatsappLabel: "Hai domande? WhatsApp"
+  mobileWhatsappLabel: "Hai domande? WhatsApp",
+  travelEyebrow: "Organizza anche il viaggio",
+  travelTitle: "Vuoi arrivare a Ischia senza pensieri?",
+  travelDescription: "Oltre al soggiorno, possiamo aiutarti a scegliere il collegamento più comodo per raggiungere la struttura.",
+  travelDisclaimer: "Le tariffe sono indicative e possono variare in base a data, disponibilità e orari.",
+  travelCta: "Rispondi a questa email o scrivici su WhatsApp: ti consiglieremo la soluzione più adatta al tuo viaggio."
 };
 
 function cleanText(value: unknown, fallback: string, maxLength: number) {
@@ -47,6 +57,11 @@ export function normalizeQuoteContentSettings(value: unknown): QuoteContentSetti
     mainWhatsappLabel: cleanText(raw.mainWhatsappLabel, defaultQuoteContentSettings.mainWhatsappLabel, 100),
     mainConfirmLabel: cleanText(raw.mainConfirmLabel, defaultQuoteContentSettings.mainConfirmLabel, 80),
     mobileWhatsappLabel: cleanText(raw.mobileWhatsappLabel, defaultQuoteContentSettings.mobileWhatsappLabel, 80),
+    travelEyebrow: cleanText(raw.travelEyebrow, defaultQuoteContentSettings.travelEyebrow, 80),
+    travelTitle: cleanText(raw.travelTitle, defaultQuoteContentSettings.travelTitle, 140),
+    travelDescription: cleanText(raw.travelDescription, defaultQuoteContentSettings.travelDescription, 500),
+    travelDisclaimer: cleanText(raw.travelDisclaimer, defaultQuoteContentSettings.travelDisclaimer, 300),
+    travelCta: cleanText(raw.travelCta, defaultQuoteContentSettings.travelCta, 300),
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : undefined
   };
 }
