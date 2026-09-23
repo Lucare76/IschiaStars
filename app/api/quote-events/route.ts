@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getQuoteByCodeAndToken } from "@/lib/repositories/quotes";
 import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
 import { ADMIN_ACCESS_COOKIE, getAdminUserFromToken } from "@/lib/server/auth-guard";
-import { getRequestIp, isLikelyBotUserAgent, isTrackingExcludedIp } from "@/lib/server/trackingFilters";
+import { getRequestIp, isTrackingExcludedIp, shouldIgnoreBotTracking } from "@/lib/server/trackingFilters";
 import { QuoteEvent } from "@/lib/types";
 
 const allowedEvents: QuoteEvent["eventType"][] = [
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Evento preventivo non valido" }, { status: 400 });
   }
 
-  if (isLikelyBotUserAgent(userAgent)) {
+  if (shouldIgnoreBotTracking(userAgent, body.metadata)) {
     return NextResponse.json({ ok: true, ignored: "bot" });
   }
 
