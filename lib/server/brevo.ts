@@ -4,6 +4,7 @@ import { formatConfirmationAdditionalService, getConfirmationAdditionalServices 
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmailItems";
 import { getFeatureFlags } from "@/lib/repositories/settings";
+import { getQuoteContentSettings } from "@/lib/repositories/quoteContentSettings";
 import { getEffectiveBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { absoluteShortPublicQuoteUrl, ischiastarsWhatsappNumber, siteBaseUrl } from "@/lib/utils";
 
@@ -252,7 +253,12 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
 
   const options = getEffectiveHotelOptions(quote);
   const hasMultiple = options.length > 1;
-  const featureFlags = (await getFeatureFlags()).data;
+  const [featureFlagsResult, quoteContentSettingsResult] = await Promise.all([
+    getFeatureFlags(),
+    getQuoteContentSettings()
+  ]);
+  const featureFlags = featureFlagsResult.data;
+  const quoteContentSettings = quoteContentSettingsResult.data;
   const travelServices = featureFlags.emailTravelServicesBox
     ? (await listExtraServiceEmailItems(true)).data
     : [];
@@ -261,9 +267,9 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f8fc;border:1px solid #d9e5ef;border-radius:10px;margin:28px 0 24px;">
               <tr>
                 <td style="padding:22px 20px;">
-                  <p style="margin:0 0 6px;font-size:11px;font-weight:bold;letter-spacing:1.2px;text-transform:uppercase;color:#0b67a3;">Organizza anche il viaggio</p>
-                  <p class="section-title" style="margin:0 0 9px;font-size:19px;font-weight:bold;color:#1a3a5c;line-height:1.3;">Vuoi arrivare a Ischia senza pensieri?</p>
-                  <p style="margin:0 0 16px;font-size:14px;color:#4b5563;line-height:1.65;">Oltre al soggiorno, possiamo aiutarti a scegliere il collegamento più comodo per raggiungere la struttura.</p>
+                  <p style="margin:0 0 6px;font-size:11px;font-weight:bold;letter-spacing:1.2px;text-transform:uppercase;color:#0b67a3;">${escapeHtml(quoteContentSettings.travelEyebrow)}</p>
+                  <p class="section-title" style="margin:0 0 9px;font-size:19px;font-weight:bold;color:#1a3a5c;line-height:1.3;">${escapeHtml(quoteContentSettings.travelTitle)}</p>
+                  <p style="margin:0 0 16px;font-size:14px;color:#4b5563;line-height:1.65;">${escapeHtml(quoteContentSettings.travelDescription)}</p>
                   <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #d9e5ef;">
                     ${travelServices.map((item, index) => `
                     <tr>
@@ -275,19 +281,19 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
                       <td class="travel-service-price" valign="top" style="padding:11px 0;font-size:14px;color:#1a3a5c;text-align:right;font-weight:bold;white-space:nowrap;${index ? "border-top:1px solid #e4ecf3;" : ""}">da € ${formatPriceFrom(item.priceFrom)} <span style="font-size:12px;font-weight:normal;color:#60758a;">${escapeHtml(item.priceSuffix)}</span></td>
                     </tr>`).join("")}
                   </table>
-                  <p style="margin:16px 0 0;padding-top:14px;border-top:1px solid #d9e5ef;font-size:12px;color:#66717d;line-height:1.65;">Le tariffe sono indicative e possono variare in base a data, disponibilità e orari.</p>
-                  <p style="margin:9px 0 0;font-size:13px;font-weight:600;color:#1a3a5c;line-height:1.55;">Rispondi a questa email o scrivici su WhatsApp: ti consiglieremo la soluzione più adatta al tuo viaggio.</p>
+                  <p style="margin:16px 0 0;padding-top:14px;border-top:1px solid #d9e5ef;font-size:12px;color:#66717d;line-height:1.65;">${escapeHtml(quoteContentSettings.travelDisclaimer)}</p>
+                  <p style="margin:9px 0 0;font-size:13px;font-weight:600;color:#1a3a5c;line-height:1.55;">${escapeHtml(quoteContentSettings.travelCta)}</p>
                 </td>
               </tr>
             </table>` : "";
 
   const travelServicesBoxText = travelServices.length ? [
-    "Vuoi arrivare a Ischia senza pensieri?",
+    quoteContentSettings.travelTitle,
     "",
-    "Oltre al soggiorno, possiamo aiutarti anche a organizzare il collegamento più comodo per raggiungere la struttura:",
+    quoteContentSettings.travelDescription,
     ...travelServices.map((item) => `• ${item.title}: da € ${formatPriceFrom(item.priceFrom)} ${item.priceSuffix}${item.description ? ` — ${item.description}` : ""}`),
     "",
-    "Le tariffe sono indicative e possono variare in base a data, disponibilità e orari. Per ricevere la soluzione più adatta al tuo viaggio, rispondi a questa email o contattaci su WhatsApp."
+    `${quoteContentSettings.travelDisclaimer} ${quoteContentSettings.travelCta}`
   ].join("\n") : "";
 
   // Riepilogo opzioni per email
