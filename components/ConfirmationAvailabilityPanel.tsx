@@ -773,29 +773,39 @@ IschiaStars 🌊`;
 
       <div className="mt-4 rounded-2xl bg-ischia-mist p-4 text-sm text-ischia-ink">
         <h3 className="font-black text-ischia-navy">Coordinate pagamento</h3>
-        {hasFinalCoordinates ? (
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <Info label="Snapshot inviato" value="Coordinate salvate nella conferma definitiva" />
-            <Info label="Conto utilizzato" value={String(finalPaymentSnapshot.payment_account_label ?? "-")} />
-            <Info label="Intestatario" value={String(finalPaymentSnapshot.bank_account_holder ?? "-")} />
-            <Info label="Banca" value={String(finalPaymentSnapshot.bank_name ?? "-")} />
-            <Info label="IBAN" value={String(finalPaymentSnapshot.iban ?? "-")} />
-            <Info label="BIC/SWIFT" value={String(finalPaymentSnapshot.bic_swift ?? "-")} />
-            <Info label="Causale" value={finalPaymentReason || "-"} />
-          </div>
-        ) : hasCurrentCoordinates ? (
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <Info label="Conto selezionato" value={selectedPaymentAccount.label} />
-            <Info label="Intestatario" value={selectedPaymentSettings.bankAccountHolder || "-"} />
-            <Info label="Banca" value={selectedPaymentSettings.bankName || "-"} />
-            <Info label="IBAN" value={selectedPaymentSettings.iban || "-"} />
-            <Info label="BIC/SWIFT" value={selectedPaymentSettings.bicSwift || "-"} />
-            <Info label="Causale" value={confirmationPaymentReason || "-"} />
-            <Info label="Istruzioni" value={selectedPaymentSettings.paymentInstructions || "-"} />
+
+        {hasCurrentCoordinates ? (
+          <div className="mt-3 rounded-xl bg-white p-3 ring-1 ring-emerald-200">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-700">
+              {confirmation?.finalConfirmationSentAt ? "IBAN che verrà usato al prossimo reinvio" : "IBAN che verrà inviato al cliente"}
+            </p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <Info label="Conto selezionato" value={selectedPaymentAccount.label} />
+              <Info label="Intestatario" value={selectedPaymentSettings.bankAccountHolder || "-"} />
+              <Info label="Banca" value={selectedPaymentSettings.bankName || "-"} />
+              <Info label="IBAN" value={selectedPaymentSettings.iban || "-"} />
+              <Info label="BIC/SWIFT" value={selectedPaymentSettings.bicSwift || "-"} />
+              <Info label="Causale" value={confirmationPaymentReason || "-"} />
+              <Info label="Istruzioni" value={selectedPaymentSettings.paymentInstructions || "-"} />
+            </div>
           </div>
         ) : (
           <p className="mt-2 font-semibold text-amber-800">Coordinate pagamento non configurate. Vai in Impostazioni.</p>
         )}
+
+        {hasFinalCoordinates ? (
+          <div className="mt-3 rounded-xl bg-white/70 p-3 ring-1 ring-ischia-blue/10">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-ischia-blue/70">Ultimo IBAN già inviato</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <Info label="Conto utilizzato" value={String(finalPaymentSnapshot.payment_account_label ?? "-")} />
+              <Info label="Intestatario" value={String(finalPaymentSnapshot.bank_account_holder ?? "-")} />
+              <Info label="Banca" value={String(finalPaymentSnapshot.bank_name ?? "-")} />
+              <Info label="IBAN" value={String(finalPaymentSnapshot.iban ?? "-")} />
+              <Info label="BIC/SWIFT" value={String(finalPaymentSnapshot.bic_swift ?? "-")} />
+              <Info label="Causale" value={finalPaymentReason || "-"} />
+            </div>
+          </div>
+        ) : null}
 
         {paymentAccounts.length > 1 ? (
           <label className="mt-4 block rounded-xl bg-white p-3 text-sm font-semibold text-ischia-ink ring-1 ring-ischia-blue/15">
@@ -812,7 +822,7 @@ IschiaStars 🌊`;
               ))}
             </select>
             <span className="mt-1 block text-xs font-normal text-ischia-ink/60">
-              L&apos;email userà solo il conto selezionato. In caso di reinvio, il nuovo IBAN sostituirà lo snapshot della conferma.
+              La scelta sopra aggiorna subito il riquadro "IBAN che verrà usato". L&apos;email userà solo questo conto.
             </span>
           </label>
         ) : null}
