@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { defaultPaymentDueAtForFinalConfirmation } from "@/lib/confirmation-availability";
 import { getEffectiveBalancePaymentSchedule, isBalanceDueAtConfirmation } from "@/lib/hotel-policies";
-import { buildBalancePaymentReason, buildPaymentReason, isPaymentSettingsConfigured, paymentSettingsToDbValue } from "@/lib/payment-settings";
+import { buildBalancePaymentReason, buildPaymentReason, isPaymentAccountConfigured, paymentAccount, paymentSettingsForAccount, paymentSettingsToDbValue, type PaymentAccountId } from "@/lib/payment-settings";
 import { getQuoteConfirmationById, updateConfirmationAmounts, updateQuoteConfirmationAvailability } from "@/lib/repositories/quoteConfirmations";
 import { trackQuoteEvent } from "@/lib/repositories/quoteEvents";
 import { getQuoteById } from "@/lib/repositories/quotes";
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const unauthorized = await requireAdminApiAccess(request);
   if (unauthorized) return unauthorized;
 
-  const body = await request.json().catch(() => null) as { depositDueAt?: string; notes?: string; depositAmountOverride?: number; balanceAmountOverride?: number } | null;
+  const body = await request.json().catch(() => null) as { depositDueAt?: string; notes?: string; depositAmountOverride?: number; balanceAmountOverride?: number; paymentAccountId?: PaymentAccountId } | null;
   if (!body?.depositDueAt) return NextResponse.json({ ok: false, error: "Scadenza caparra obbligatoria" }, { status: 400 });
 
   const confirmationResult = await getQuoteConfirmationById(params.id);
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const effectiveDepositDueAt = resolveEffectivePaymentDueAt(quoteResult.data, body.depositDueAt, new Date(now));
   const depositAmountOverride = typeof body.depositAmountOverride === "number" && body.depositAmountOverride > 0 ? body.depositAmountOverride : undefined;
   const balanceAmountOverride = typeof body.balanceAmountOverride === "number" && body.balanceAmountOverride > 0 ? body.balanceAmountOverride : undefined;
-  const snapshot = await resolvePaymentSnapshot(quoteResult.data, effectiveDepositDueAt, now, depositAmountOverride, balanceAmountOverride);
+  const snapshot = await resolvePaymentSnapshot(quoteResult.data, effectiveDepositDueAt, now, depositAmountOverride, balanceAmountOverride, body.paymentAccountId);
   if (snapshot.configured !== true) {
     return NextResponse.json({ ok: false, error: "Coordinate pagamento non configurate. Completa le impostazioni prima di inviare la conferma definitiva." }, { status: 400 });
   }
@@ -80,14 +80,29 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   return NextResponse.json({ ok: true, source: update.source, data: update.data, quote: freshQuoteResult.data });
 }
 
-async function resolvePaymentSnapshot(quote: NonNullable<Awaited<ReturnType<typeof getQuoteById>>["data"]>, depositDueAt: string, emailSentAt: string, depositAmountOverride?: number, balanceAmountOverride?: number) {
+async function resolvePaymentSnapshot(
+  quote: NonNullable<Awaited<ReturnType<typeof getQuoteById>>["data"]>,
+  depositDueAt: string,
+  emailSentAt: string,
+  depositAmountOverride?: number,
+  balanceAmountOverride?: number,
+  requestedAccountId?: PaymentAccountId
+) {
   const settings = (await getPaymentSettings()).data;
+  const requested = requestedAccountId === "secondary" ? "secondary" : requestedAccountId === "primary" ? "primary" : settings.defaultPaymentAccount;
+  const accountId: PaymentAccountId = isPaymentAccountConfigured(settings, requested)
+    ? requested
+    : isPaymentAccountConfigured(settings, "primary")
+      ? "primary"
+      : "secondary";
+  const selectedSettings = paymentSettingsForAccount(settings, accountId);
+  const selectedAccount = paymentAccount(settings, accountId);
   const firstName = quote.confirmation?.firstName ?? quote.customerFirstName;
   const lastName = quote.confirmation?.lastName ?? quote.customerLastName;
   const paymentRequest = getPaymentRequestForQuote(quote, new Date(emailSentAt));
   const reason = paymentRequest.type === "full_balance"
-    ? buildBalancePaymentReason(settings, quote.code, firstName, lastName)
-    : buildPaymentReason(settings, quote.code, firstName, lastName);
+    ? buildBalancePaymentReason(selectedSettings, quote.code, firstName, lastName)
+    : buildPaymentReason(selectedSettings, quote.code, firstName, lastName);
   const depositAmount = depositAmountOverride ?? quote.confirmation?.selectedDepositAmount ?? quote.deposit;
   const totalPrice = quote.confirmation?.selectedPrice ?? quote.totalPrice ?? 0;
   const balanceAmount = balanceAmountOverride
@@ -101,11 +116,13 @@ async function resolvePaymentSnapshot(quote: NonNullable<Awaited<ReturnType<type
     payment_request_type: paymentRequest.type,
     payment_request_amount: paymentRequest.type === "full_balance" ? totalPrice : depositAmount,
     payment_due_at: paymentRequest.type === "full_balance" ? depositDueAt : null,
-    email_sent_at: emailSentAt
+    email_sent_at: emailSentAt,
+    payment_account_id: accountId,
+    payment_account_label: selectedAccount.label
   };
 
-  return isPaymentSettingsConfigured(settings)
-    ? { ...paymentSettingsToDbValue(settings), ...base, configured: true }
+  return isPaymentAccountConfigured(settings, accountId)
+    ? { ...paymentSettingsToDbValue(selectedSettings), ...base, configured: true }
     : { ...base, configured: false, updated_at: settings.updatedAt };
 }
 
