@@ -822,7 +822,7 @@ IschiaStars 🌊`;
               ))}
             </select>
             <span className="mt-1 block text-xs font-normal text-ischia-ink/60">
-              La scelta sopra aggiorna subito il riquadro "IBAN che verrà usato". L&apos;email userà solo questo conto.
+              La scelta sopra aggiorna subito il riquadro &quot;IBAN che verrà usato&quot;. L&apos;email userà solo questo conto.
             </span>
           </label>
         ) : null}
