@@ -19,7 +19,11 @@ export async function PATCH(request: NextRequest) {
   if (!body) return NextResponse.json({ ok: false, error: "Payload non valido" }, { status: 400 });
 
   const settings = normalizePaymentSettings(body);
-  const ibanWarning = validateIbanLight(settings.iban);
+  const ibanWarnings = [
+    validateIbanLight(settings.iban),
+    validateIbanLight(settings.secondaryIban)
+  ].filter((warning): warning is string => Boolean(warning));
+  const ibanWarning = ibanWarnings.length ? Array.from(new Set(ibanWarnings)).join(" ") : null;
   const result = await updatePaymentSettings(settings);
 
   return NextResponse.json({
