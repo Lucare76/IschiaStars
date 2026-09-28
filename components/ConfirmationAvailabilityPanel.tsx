@@ -57,11 +57,17 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [balanceSummaryCopied, setBalanceSummaryCopied] = useState(false);
   const [depositAmountOverride, setDepositAmountOverride] = useState(formatAmountInput(defaultDepositAmount));
   const [balanceAmountOverride, setBalanceAmountOverride] = useState("");
-  const [selectedPaymentAccountId, setSelectedPaymentAccountId] = useState<PaymentAccountId>(() =>
-    isPaymentAccountConfigured(paymentSettings, paymentSettings.defaultPaymentAccount)
+  const [selectedPaymentAccountId, setSelectedPaymentAccountId] = useState<PaymentAccountId>(() => {
+    const previousAccountId = confirmation?.paymentSettingsSnapshot?.payment_account_id === "secondary"
+      ? "secondary"
+      : confirmation?.paymentSettingsSnapshot?.payment_account_id === "primary"
+        ? "primary"
+        : undefined;
+    if (previousAccountId && isPaymentAccountConfigured(paymentSettings, previousAccountId)) return previousAccountId;
+    return isPaymentAccountConfigured(paymentSettings, paymentSettings.defaultPaymentAccount)
       ? paymentSettings.defaultPaymentAccount
-      : isPaymentAccountConfigured(paymentSettings, "primary") ? "primary" : "secondary"
-  );
+      : isPaymentAccountConfigured(paymentSettings, "primary") ? "primary" : "secondary";
+  });
   const [serviceLabel, setServiceLabel] = useState("");
   const [serviceCost, setServiceCost] = useState("");
   const [newTotalPrice, setNewTotalPrice] = useState(formatAmountInput(defaultSelectedPrice));
@@ -138,10 +144,17 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     setDepositDueAt(confirmationDepositDueLocalInput(confirmation?.depositDueAt, defaultPaymentDueAt));
     setDepositAmountOverride(formatAmountInput(defaultDepositAmount));
     setBalanceAmountOverride("");
+    const previousAccountId = confirmation?.paymentSettingsSnapshot?.payment_account_id === "secondary"
+      ? "secondary"
+      : confirmation?.paymentSettingsSnapshot?.payment_account_id === "primary"
+        ? "primary"
+        : undefined;
     setSelectedPaymentAccountId(
-      isPaymentAccountConfigured(paymentSettings, paymentSettings.defaultPaymentAccount)
-        ? paymentSettings.defaultPaymentAccount
-        : isPaymentAccountConfigured(paymentSettings, "primary") ? "primary" : "secondary"
+      previousAccountId && isPaymentAccountConfigured(paymentSettings, previousAccountId)
+        ? previousAccountId
+        : isPaymentAccountConfigured(paymentSettings, paymentSettings.defaultPaymentAccount)
+          ? paymentSettings.defaultPaymentAccount
+          : isPaymentAccountConfigured(paymentSettings, "primary") ? "primary" : "secondary"
     );
     setCustomerFirstName(confirmation?.firstName ?? quote.customerFirstName);
     setCustomerLastName(confirmation?.lastName ?? quote.customerLastName);
@@ -162,7 +175,8 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     quote.customerPhone,
     defaultSelectedPrice,
     defaultDepositAmount,
-    paymentSettings.defaultPaymentAccount
+    paymentSettings.defaultPaymentAccount,
+    confirmation?.paymentSettingsSnapshot?.payment_account_id
   ]);
 
   const depositCoordinatesWhatsapp = useMemo(() => {
@@ -782,6 +796,26 @@ IschiaStars 🌊`;
         ) : (
           <p className="mt-2 font-semibold text-amber-800">Coordinate pagamento non configurate. Vai in Impostazioni.</p>
         )}
+
+        {paymentAccounts.length > 1 ? (
+          <label className="mt-4 block rounded-xl bg-white p-3 text-sm font-semibold text-ischia-ink ring-1 ring-ischia-blue/15">
+            IBAN da usare per {confirmation?.finalConfirmationSentAt ? "il prossimo reinvio" : "la conferma definitiva"}
+            <select
+              className="mt-2 w-full rounded-xl border border-ischia-blue/20 bg-white px-3 py-2 sm:max-w-lg"
+              value={selectedPaymentAccountId}
+              onChange={(event) => setSelectedPaymentAccountId(event.target.value === "secondary" ? "secondary" : "primary")}
+            >
+              {paymentAccounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.label} — {account.iban}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs font-normal text-ischia-ink/60">
+              L&apos;email userà solo il conto selezionato. In caso di reinvio, il nuovo IBAN sostituirà lo snapshot della conferma.
+            </span>
+          </label>
+        ) : null}
       </div>
 
       {!confirmation?.finalConfirmationSentAt ? (
@@ -808,25 +842,6 @@ IschiaStars 🌊`;
       {canSendFinal ? (
         <div className="mt-5 rounded-2xl bg-emerald-50/60 p-4 ring-1 ring-emerald-200/70">
           <h3 className="font-black text-ischia-navy">Invia conferma definitiva al cliente</h3>
-          {paymentAccounts.length > 0 ? (
-            <label className="mt-3 block text-sm font-semibold text-ischia-ink">
-              IBAN da comunicare al cliente
-              <select
-                className="mt-1 w-full rounded-xl border border-ischia-blue/20 bg-white px-3 py-2 sm:max-w-lg"
-                value={selectedPaymentAccountId}
-                onChange={(event) => setSelectedPaymentAccountId(event.target.value === "secondary" ? "secondary" : "primary")}
-              >
-                {paymentAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.label} — {account.iban}
-                  </option>
-                ))}
-              </select>
-              <span className="mt-1 block text-xs font-normal text-ischia-ink/60">
-                Nell&apos;email verrà mostrato solo il conto selezionato e la scelta resterà salvata nella pratica.
-              </span>
-            </label>
-          ) : null}
           {!hasCurrentCoordinates ? (
             <p className="mt-2 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
               Coordinate pagamento non configurate. Vai in Impostazioni.
