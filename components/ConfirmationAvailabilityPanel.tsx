@@ -57,7 +57,11 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [balanceSummaryCopied, setBalanceSummaryCopied] = useState(false);
   const [depositAmountOverride, setDepositAmountOverride] = useState(formatAmountInput(defaultDepositAmount));
   const [balanceAmountOverride, setBalanceAmountOverride] = useState("");
-  const [selectedPaymentAccountId, setSelectedPaymentAccountId] = useState<PaymentAccountId>(() => paymentSettings.defaultPaymentAccount);
+  const [selectedPaymentAccountId, setSelectedPaymentAccountId] = useState<PaymentAccountId>(() =>
+    isPaymentAccountConfigured(paymentSettings, paymentSettings.defaultPaymentAccount)
+      ? paymentSettings.defaultPaymentAccount
+      : isPaymentAccountConfigured(paymentSettings, "primary") ? "primary" : "secondary"
+  );
   const [serviceLabel, setServiceLabel] = useState("");
   const [serviceCost, setServiceCost] = useState("");
   const [newTotalPrice, setNewTotalPrice] = useState(formatAmountInput(defaultSelectedPrice));
@@ -134,7 +138,11 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     setDepositDueAt(confirmationDepositDueLocalInput(confirmation?.depositDueAt, defaultPaymentDueAt));
     setDepositAmountOverride(formatAmountInput(defaultDepositAmount));
     setBalanceAmountOverride("");
-    setSelectedPaymentAccountId(paymentSettings.defaultPaymentAccount);
+    setSelectedPaymentAccountId(
+      isPaymentAccountConfigured(paymentSettings, paymentSettings.defaultPaymentAccount)
+        ? paymentSettings.defaultPaymentAccount
+        : isPaymentAccountConfigured(paymentSettings, "primary") ? "primary" : "secondary"
+    );
     setCustomerFirstName(confirmation?.firstName ?? quote.customerFirstName);
     setCustomerLastName(confirmation?.lastName ?? quote.customerLastName);
     setCustomerEmail(confirmation?.email ?? quote.customerEmail);
