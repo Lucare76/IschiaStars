@@ -7,7 +7,7 @@ import { formatConfirmationAdditionalService, getConfirmationAdditionalServices 
 import { availabilityStatusLabel, defaultPaymentDueAtForFinalConfirmation, defaultUnavailabilityMessage, depositCoordinatesWhatsappMessage, formatDepositDueLocalInput } from "@/lib/confirmation-availability";
 import { FeatureFlags } from "@/lib/feature-flags";
 import { getEffectiveBalancePaymentSchedule, isBalanceDueAtConfirmation } from "@/lib/hotel-policies";
-import { buildBalancePaymentReason, buildPaymentReason, isPaymentSettingsConfigured, PaymentSettings } from "@/lib/payment-settings";
+import { buildBalancePaymentReason, buildPaymentReason, configuredPaymentAccounts, isPaymentAccountConfigured, paymentAccount, paymentSettingsForAccount, type PaymentAccountId, PaymentSettings } from "@/lib/payment-settings";
 import { selectedRoomTypeLabel, selectedTreatmentLabel } from "@/lib/confirmation-stay-details";
 import { Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime, normalizeItalianPhone } from "@/lib/utils";
@@ -57,6 +57,11 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [balanceSummaryCopied, setBalanceSummaryCopied] = useState(false);
   const [depositAmountOverride, setDepositAmountOverride] = useState(formatAmountInput(defaultDepositAmount));
   const [balanceAmountOverride, setBalanceAmountOverride] = useState("");
+  const [selectedPaymentAccountId, setSelectedPaymentAccountId] = useState<PaymentAccountId>(() =>
+    isPaymentAccountConfigured(paymentSettings, paymentSettings.defaultPaymentAccount)
+      ? paymentSettings.defaultPaymentAccount
+      : isPaymentAccountConfigured(paymentSettings, "primary") ? "primary" : "secondary"
+  );
   const [serviceLabel, setServiceLabel] = useState("");
   const [serviceCost, setServiceCost] = useState("");
   const [newTotalPrice, setNewTotalPrice] = useState(formatAmountInput(defaultSelectedPrice));
@@ -90,20 +95,23 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const isFullBalancePaymentRequest = finalPaymentSnapshot.payment_request_type === "full_balance" || (!confirmation?.finalConfirmationSentAt && isFullBalanceDueAtConfirmation);
   const finalPaymentReason = typeof finalPaymentSnapshot.payment_reason === "string" ? finalPaymentSnapshot.payment_reason : "";
   const hasFinalCoordinates = finalPaymentSnapshot.configured === true;
-  const hasCurrentCoordinates = isPaymentSettingsConfigured(paymentSettings);
+  const paymentAccounts = configuredPaymentAccounts(paymentSettings);
+  const selectedPaymentSettings = paymentSettingsForAccount(paymentSettings, selectedPaymentAccountId);
+  const selectedPaymentAccount = paymentAccount(paymentSettings, selectedPaymentAccountId);
+  const hasCurrentCoordinates = isPaymentAccountConfigured(paymentSettings, selectedPaymentAccountId);
   const confirmationChildren = getConfirmationChildren(confirmation?.metadata, quote.children);
   const additionalServices = getConfirmationAdditionalServices(confirmation?.metadata);
   const confirmationName = `${confirmation?.firstName ?? quote.customerFirstName} ${confirmation?.lastName ?? quote.customerLastName}`.trim();
   const addressLine = [confirmation?.address, confirmation?.zip, confirmation?.city, confirmation?.province].filter(Boolean).join(" ");
   const currentPaymentReason = buildPaymentReason(
-    paymentSettings,
+    selectedPaymentSettings,
     quote.code,
     confirmation?.firstName ?? quote.customerFirstName,
     confirmation?.lastName ?? quote.customerLastName
   );
   const confirmationPaymentReason = isFullBalanceDueAtConfirmation
     ? buildBalancePaymentReason(
-      paymentSettings,
+      selectedPaymentSettings,
       quote.code,
       confirmation?.firstName ?? quote.customerFirstName,
       confirmation?.lastName ?? quote.customerLastName
@@ -130,6 +138,11 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     setDepositDueAt(confirmationDepositDueLocalInput(confirmation?.depositDueAt, defaultPaymentDueAt));
     setDepositAmountOverride(formatAmountInput(defaultDepositAmount));
     setBalanceAmountOverride("");
+    setSelectedPaymentAccountId(
+      isPaymentAccountConfigured(paymentSettings, paymentSettings.defaultPaymentAccount)
+        ? paymentSettings.defaultPaymentAccount
+        : isPaymentAccountConfigured(paymentSettings, "primary") ? "primary" : "secondary"
+    );
     setCustomerFirstName(confirmation?.firstName ?? quote.customerFirstName);
     setCustomerLastName(confirmation?.lastName ?? quote.customerLastName);
     setCustomerEmail(confirmation?.email ?? quote.customerEmail);
@@ -148,7 +161,8 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     quote.customerEmail,
     quote.customerPhone,
     defaultSelectedPrice,
-    defaultDepositAmount
+    defaultDepositAmount,
+    paymentSettings.defaultPaymentAccount
   ]);
 
   const depositCoordinatesWhatsapp = useMemo(() => {
@@ -169,16 +183,16 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
       balanceLabel: !isFullBalanceDueAtConfirmation && balanceAmount != null ? formatCurrency(balanceAmount) : undefined,
       balanceDueLabel: !isFullBalanceDueAtConfirmation && balanceSchedule.dueDate ? formatDate(balanceSchedule.dueDate) : undefined,
       balanceInStructure: balanceSchedule.type === "in_structure",
-      bankAccountHolder: paymentSettings.bankAccountHolder,
-      bankName: paymentSettings.bankName || undefined,
-      iban: paymentSettings.iban,
-      bicSwift: paymentSettings.bicSwift || undefined,
+      bankAccountHolder: selectedPaymentSettings.bankAccountHolder,
+      bankName: selectedPaymentSettings.bankName || undefined,
+      iban: selectedPaymentSettings.iban,
+      bicSwift: selectedPaymentSettings.bicSwift || undefined,
       paymentReason: confirmationPaymentReason,
-      paymentInstructions: paymentSettings.paymentInstructions || undefined
+      paymentInstructions: selectedPaymentSettings.paymentInstructions || undefined
     });
     const phone = confirmation?.phone ?? quote.customerPhone;
     return { message, chatUrl: `https://wa.me/${normalizeItalianPhone(phone)}` };
-  }, [hasCurrentCoordinates, depositAmount, balanceAmount, confirmation, quote, selectedPrice, isFullBalanceDueAtConfirmation, depositDueIso, balanceSchedule, paymentSettings, confirmationPaymentReason]);
+  }, [hasCurrentCoordinates, depositAmount, balanceAmount, confirmation, quote, selectedPrice, isFullBalanceDueAtConfirmation, depositDueIso, balanceSchedule, selectedPaymentSettings, confirmationPaymentReason]);
 
   const balanceSummaryWhatsapp = useMemo(() => {
     if (!confirmation?.depositPaidAt || confirmation.balancePaidAt || isInHotelBalance || !balanceSchedule.dueDate) return null;
@@ -734,7 +748,7 @@ IschiaStars 🌊`;
             <button
               className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[#1B3A5C] ring-1 ring-[#1B3A5C]/30 hover:bg-[#EFF6FF] disabled:opacity-60"
               disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
-              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(Number(depositAmountOverride) > 0 ? { depositAmountOverride: Number(depositAmountOverride) } : {}), ...(finalBalanceAmount > 0 ? { balanceAmountOverride: finalBalanceAmount } : {}) }, "Conferma definitiva reinviata al cliente.")}
+              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(Number(depositAmountOverride) > 0 ? { depositAmountOverride: Number(depositAmountOverride) } : {}), ...(finalBalanceAmount > 0 ? { balanceAmountOverride: finalBalanceAmount } : {}), paymentAccountId: selectedPaymentAccountId }, "Conferma definitiva reinviata al cliente.")}
               type="button"
             >
               Reinvia conferma al cliente
@@ -748,6 +762,7 @@ IschiaStars 🌊`;
         {hasFinalCoordinates ? (
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             <Info label="Snapshot inviato" value="Coordinate salvate nella conferma definitiva" />
+            <Info label="Conto utilizzato" value={String(finalPaymentSnapshot.payment_account_label ?? "-")} />
             <Info label="Intestatario" value={String(finalPaymentSnapshot.bank_account_holder ?? "-")} />
             <Info label="Banca" value={String(finalPaymentSnapshot.bank_name ?? "-")} />
             <Info label="IBAN" value={String(finalPaymentSnapshot.iban ?? "-")} />
@@ -756,12 +771,13 @@ IschiaStars 🌊`;
           </div>
         ) : hasCurrentCoordinates ? (
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <Info label="Intestatario" value={paymentSettings.bankAccountHolder || "-"} />
-            <Info label="Banca" value={paymentSettings.bankName || "-"} />
-            <Info label="IBAN" value={paymentSettings.iban || "-"} />
-            <Info label="BIC/SWIFT" value={paymentSettings.bicSwift || "-"} />
+            <Info label="Conto selezionato" value={selectedPaymentAccount.label} />
+            <Info label="Intestatario" value={selectedPaymentSettings.bankAccountHolder || "-"} />
+            <Info label="Banca" value={selectedPaymentSettings.bankName || "-"} />
+            <Info label="IBAN" value={selectedPaymentSettings.iban || "-"} />
+            <Info label="BIC/SWIFT" value={selectedPaymentSettings.bicSwift || "-"} />
             <Info label="Causale" value={confirmationPaymentReason || "-"} />
-            <Info label="Istruzioni" value={paymentSettings.paymentInstructions || "-"} />
+            <Info label="Istruzioni" value={selectedPaymentSettings.paymentInstructions || "-"} />
           </div>
         ) : (
           <p className="mt-2 font-semibold text-amber-800">Coordinate pagamento non configurate. Vai in Impostazioni.</p>
@@ -792,6 +808,25 @@ IschiaStars 🌊`;
       {canSendFinal ? (
         <div className="mt-5 rounded-2xl bg-emerald-50/60 p-4 ring-1 ring-emerald-200/70">
           <h3 className="font-black text-ischia-navy">Invia conferma definitiva al cliente</h3>
+          {paymentAccounts.length > 0 ? (
+            <label className="mt-3 block text-sm font-semibold text-ischia-ink">
+              IBAN da comunicare al cliente
+              <select
+                className="mt-1 w-full rounded-xl border border-ischia-blue/20 bg-white px-3 py-2 sm:max-w-lg"
+                value={selectedPaymentAccountId}
+                onChange={(event) => setSelectedPaymentAccountId(event.target.value === "secondary" ? "secondary" : "primary")}
+              >
+                {paymentAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.label} — {account.iban}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs font-normal text-ischia-ink/60">
+                Nell&apos;email verrà mostrato solo il conto selezionato e la scelta resterà salvata nella pratica.
+              </span>
+            </label>
+          ) : null}
           {!hasCurrentCoordinates ? (
             <p className="mt-2 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
               Coordinate pagamento non configurate. Vai in Impostazioni.
@@ -856,7 +891,7 @@ IschiaStars 🌊`;
               <button
                 className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ischia-navy ring-1 ring-ischia-blue/20 disabled:opacity-60"
                 disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
-                onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(Number(depositAmountOverride) > 0 ? { depositAmountOverride: Number(depositAmountOverride) } : {}), ...(finalBalanceAmount > 0 ? { balanceAmountOverride: finalBalanceAmount } : {}) }, "Conferma definitiva reinviata al cliente.")}
+                onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(Number(depositAmountOverride) > 0 ? { depositAmountOverride: Number(depositAmountOverride) } : {}), ...(finalBalanceAmount > 0 ? { balanceAmountOverride: finalBalanceAmount } : {}), paymentAccountId: selectedPaymentAccountId }, "Conferma definitiva reinviata al cliente.")}
                 type="button"
               >
                 Reinvia conferma al cliente
@@ -866,7 +901,7 @@ IschiaStars 🌊`;
             <button
               className="mt-3 rounded-full bg-ischia-navy px-4 py-2 text-sm font-black text-white disabled:opacity-60"
               disabled={Boolean(loadingAction) || !depositDueIso || !hasCurrentCoordinates}
-              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(Number(depositAmountOverride) > 0 ? { depositAmountOverride: Number(depositAmountOverride) } : {}), ...(finalBalanceAmount > 0 ? { balanceAmountOverride: finalBalanceAmount } : {}) }, "Conferma definitiva inviata al cliente.")}
+              onClick={() => void postAction("send-final-confirmation", { depositDueAt: depositDueIso, notes: finalNotes, ...(Number(depositAmountOverride) > 0 ? { depositAmountOverride: Number(depositAmountOverride) } : {}), ...(finalBalanceAmount > 0 ? { balanceAmountOverride: finalBalanceAmount } : {}), paymentAccountId: selectedPaymentAccountId }, "Conferma definitiva inviata al cliente.")}
               type="button"
             >
               Invia conferma definitiva al cliente
