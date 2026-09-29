@@ -281,30 +281,36 @@ IschiaStars 🌊`;
     const firstName = confirmation?.firstName ?? quote.customerFirstName;
     const whatsappMessage = `Ciao ${firstName}, ti invio il voucher della prenotazione ${quote.code}.`;
 
-    if (navigator.canShare?.({ files: [voucherFile] })) {
+    // Scarica sempre il PDF prima di qualsiasi condivisione:
+    // su Windows navigator.share() apre il pannello Condividi ma non salva il file.
+    const downloadUrl = URL.createObjectURL(voucherBlob);
+    const downloadLink = document.createElement("a");
+    downloadLink.href = downloadUrl;
+    downloadLink.download = voucherFile.name;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+
+    const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobileDevice && navigator.canShare?.({ files: [voucherFile] })) {
       try {
         await navigator.share({
           files: [voucherFile],
           title: `Voucher ${quote.code}`,
           text: whatsappMessage
         });
-        setMessage("Voucher condiviso.");
+        setMessage("Voucher scaricato e condiviso.");
         setLoadingAction(null);
         return;
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
+          setMessage("Voucher scaricato. Condivisione annullata.");
           setLoadingAction(null);
           return;
         }
       }
     }
-
-    const downloadUrl = URL.createObjectURL(voucherBlob);
-    const downloadLink = document.createElement("a");
-    downloadLink.href = downloadUrl;
-    downloadLink.download = voucherFile.name;
-    downloadLink.click();
-    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
 
     await navigator.clipboard.writeText(whatsappMessage).catch(() => null);
     const phone = confirmation?.phone ?? quote.customerPhone;
