@@ -67,6 +67,34 @@ function visibleNoteLines(value: string | null | undefined): string[] {
     .filter((note) => note && !isAvailabilityReminderNote(note));
 }
 
+function formatGuestTotalLabel(guestCount: number): string {
+  if (guestCount === 1) return "totale per una persona";
+
+  const words: Record<number, string> = {
+    2: "due",
+    3: "tre",
+    4: "quattro",
+    5: "cinque",
+    6: "sei",
+    7: "sette",
+    8: "otto",
+    9: "nove",
+    10: "dieci",
+    11: "undici",
+    12: "dodici",
+    13: "tredici",
+    14: "quattordici",
+    15: "quindici",
+    16: "sedici",
+    17: "diciassette",
+    18: "diciotto",
+    19: "diciannove",
+    20: "venti"
+  };
+
+  return `totale per ${words[guestCount] ?? guestCount} persone`;
+}
+
 export function adminQuoteWhatsappMessage(input: {
   quote: Quote;
   options: QuoteHotelOption[];
@@ -78,6 +106,7 @@ export function adminQuoteWhatsappMessage(input: {
 
   const adultsLabel = `${quote.adults} adult${quote.adults === 1 ? "o" : "i"}`;
   const childCount = quote.children.length;
+  const guestCount = quote.adults + childCount;
   const guestsLine = childCount > 0
     ? `${adultsLabel}, ${childCount} bambin${childCount === 1 ? "o" : "i"}`
     : adultsLabel;
@@ -104,7 +133,7 @@ export function adminQuoteWhatsappMessage(input: {
     const first = group[0];
     const starsStr = first.hotelStars && first.hotelStars > 0 ? " " + "⭐".repeat(first.hotelStars) : "";
     const lines: string[] = [`🏨 ${first.hotelName}${starsStr}`];
-    const priceScopeLabel = group.length > 1 || quote.rooms > 1 ? "totale camera" : "totale soggiorno";
+    const priceScopeLabel = group.length > 1 || quote.rooms > 1 ? "totale camera" : formatGuestTotalLabel(guestCount);
 
     if (group.length === 1) {
       const optionLabel = first.roomTypeLabel?.trim();
