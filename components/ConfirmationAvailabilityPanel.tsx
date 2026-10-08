@@ -904,11 +904,11 @@ IschiaStars 🌊`;
           <div className="mt-3 rounded-xl bg-white p-3 text-sm text-ischia-ink/75 ring-1 ring-emerald-200/60">
             {hasCurrentCoordinates ? (
               <>
-                <p><strong>Coordinate che verranno inviate:</strong> {paymentSettings.bankAccountHolder} · {paymentSettings.iban}</p>
-                {paymentSettings.bankName ? <p><strong>Banca:</strong> {paymentSettings.bankName}</p> : null}
-                {paymentSettings.bicSwift ? <p><strong>BIC/SWIFT:</strong> {paymentSettings.bicSwift}</p> : null}
+                <p><strong>Coordinate che verranno inviate:</strong> {selectedPaymentSettings.bankAccountHolder} · {selectedPaymentSettings.iban}</p>
+                {selectedPaymentSettings.bankName ? <p><strong>Banca:</strong> {selectedPaymentSettings.bankName}</p> : null}
+                {selectedPaymentSettings.bicSwift ? <p><strong>BIC/SWIFT:</strong> {selectedPaymentSettings.bicSwift}</p> : null}
                 <p><strong>Causale:</strong> {confirmationPaymentReason}</p>
-                {paymentSettings.paymentInstructions ? <p><strong>Istruzioni:</strong> {paymentSettings.paymentInstructions}</p> : null}
+                {selectedPaymentSettings.paymentInstructions ? <p><strong>Istruzioni:</strong> {selectedPaymentSettings.paymentInstructions}</p> : null}
               </>
             ) : (
               <p className="font-semibold text-amber-800">Coordinate pagamento non configurate. Completa le impostazioni prima di inviare la conferma definitiva.</p>
