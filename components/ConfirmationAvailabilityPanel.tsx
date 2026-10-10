@@ -144,18 +144,6 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     setDepositDueAt(confirmationDepositDueLocalInput(confirmation?.depositDueAt, defaultPaymentDueAt));
     setDepositAmountOverride(formatAmountInput(defaultDepositAmount));
     setBalanceAmountOverride("");
-    const previousAccountId = confirmation?.paymentSettingsSnapshot?.payment_account_id === "secondary"
-      ? "secondary"
-      : confirmation?.paymentSettingsSnapshot?.payment_account_id === "primary"
-        ? "primary"
-        : undefined;
-    setSelectedPaymentAccountId(
-      previousAccountId && isPaymentAccountConfigured(paymentSettings, previousAccountId)
-        ? previousAccountId
-        : isPaymentAccountConfigured(paymentSettings, paymentSettings.defaultPaymentAccount)
-          ? paymentSettings.defaultPaymentAccount
-          : isPaymentAccountConfigured(paymentSettings, "primary") ? "primary" : "secondary"
-    );
     setCustomerFirstName(confirmation?.firstName ?? quote.customerFirstName);
     setCustomerLastName(confirmation?.lastName ?? quote.customerLastName);
     setCustomerEmail(confirmation?.email ?? quote.customerEmail);
@@ -174,9 +162,31 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     quote.customerEmail,
     quote.customerPhone,
     defaultSelectedPrice,
-    defaultDepositAmount,
+    defaultDepositAmount
+  ]);
+
+  useEffect(() => {
+    const previousAccountId = confirmation?.paymentSettingsSnapshot?.payment_account_id === "secondary"
+      ? "secondary"
+      : confirmation?.paymentSettingsSnapshot?.payment_account_id === "primary"
+        ? "primary"
+        : undefined;
+
+    setSelectedPaymentAccountId(
+      previousAccountId && isPaymentAccountConfigured(paymentSettings, previousAccountId)
+        ? previousAccountId
+        : isPaymentAccountConfigured(paymentSettings, paymentSettings.defaultPaymentAccount)
+          ? paymentSettings.defaultPaymentAccount
+          : isPaymentAccountConfigured(paymentSettings, "primary") ? "primary" : "secondary"
+    );
+  }, [
+    confirmationId,
+    confirmation?.paymentSettingsSnapshot?.payment_account_id,
     paymentSettings.defaultPaymentAccount,
-    confirmation?.paymentSettingsSnapshot?.payment_account_id
+    paymentSettings.bankAccountHolder,
+    paymentSettings.iban,
+    paymentSettings.secondaryBankAccountHolder,
+    paymentSettings.secondaryIban
   ]);
 
   const depositCoordinatesWhatsapp = useMemo(() => {
