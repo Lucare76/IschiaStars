@@ -18,7 +18,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   const confirmationResult = await getQuoteConfirmationById(params.id);
   if (!confirmationResult.data) return NextResponse.json({ ok: false, error: "Conferma non trovata" }, { status: 404 });
-  if (confirmationResult.data.availability_status !== "availability_confirmed") {
+  const canSendFinalConfirmation =
+    confirmationResult.data.availability_status === "availability_confirmed"
+    || (confirmationResult.data.availability_status === "deposit_waiting" && Boolean(confirmationResult.data.final_confirmation_sent_at));
+
+  if (!canSendFinalConfirmation) {
     return NextResponse.json({ ok: false, error: "Conferma definitiva disponibile solo dopo disponibilità struttura confermata" }, { status: 409 });
   }
 
