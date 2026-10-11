@@ -6,6 +6,7 @@ import { listExtraServiceEmailItems } from "@/lib/repositories/extraServiceEmail
 import { getFeatureFlags } from "@/lib/repositories/settings";
 import { getQuoteContentSettings } from "@/lib/repositories/quoteContentSettings";
 import { getEffectiveBalancePaymentSchedule } from "@/lib/hotel-policies";
+import { selectedRoomTypeLabel } from "@/lib/confirmation-stay-details";
 import { absoluteShortPublicQuoteUrl, ischiastarsWhatsappNumber, siteBaseUrl } from "@/lib/utils";
 
 type BrevoRecipient = { email: string; name?: string };
@@ -1294,6 +1295,7 @@ export async function sendSupplierConfirmationEmail(params: {
   const phone = confirmation.phone ?? quote.customerPhone;
   const email = confirmation.email ?? quote.customerEmail;
   const whatsapp = ischiastarsWhatsappNumber();
+  const roomTypeLabel = selectedRoomTypeLabel(quote);
 
   const childrenRows = (quote.children ?? [])
     .map((child, index) => {
@@ -1335,6 +1337,7 @@ export async function sendSupplierConfirmationEmail(params: {
             <tr><td colspan="2" style="font-weight:bold;color:#1B3A5C;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">Dati soggiorno</td></tr>
             <tr><td style="padding:6px 0;color:#555;">Hotel/Struttura</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${escapeHtml(confirmation.selectedHotelName ?? "-")}</td></tr>
             <tr><td style="padding:6px 0;color:#555;">Trattamento</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${escapeHtml(confirmation.selectedTreatmentLabel ?? "-")}</td></tr>
+            <tr><td style="padding:6px 0;color:#555;">Tipologia camera</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${escapeHtml(roomTypeLabel ?? "-")}</td></tr>
             <tr><td style="padding:6px 0;color:#555;">Check-in</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${formatDate(quote.arrivalDate)}</td></tr>
             <tr><td style="padding:6px 0;color:#555;">Check-out</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${formatDate(quote.departureDate)}</td></tr>
             <tr><td style="padding:6px 0;color:#555;">Adulti</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${quote.adults}</td></tr>
@@ -1368,6 +1371,7 @@ export async function sendSupplierConfirmationEmail(params: {
     "Dati soggiorno",
     `Hotel/Struttura: ${confirmation.selectedHotelName ?? "-"}`,
     `Trattamento: ${confirmation.selectedTreatmentLabel ?? "-"}`,
+    `Tipologia camera: ${roomTypeLabel ?? "-"}`,
     `Check-in: ${formatDate(quote.arrivalDate)}`,
     `Check-out: ${formatDate(quote.departureDate)}`,
     `Adulti: ${quote.adults}`,
