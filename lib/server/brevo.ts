@@ -1405,6 +1405,7 @@ export async function sendSupplierConfirmationEmail(params: {
   const supplierSubject = `Conferma prenotazione — ${confirmation.selectedHotelName ?? quote.proposedHotel.name} — ${quote.code}`;
   const supplierResult = await sendBrevoEmailWithResult({
     to: [{ email: to }],
+    cc: [{ email: "info@ischiastars.it", name: "IschiaStars" }],
     subject: supplierSubject,
     html,
     text,
