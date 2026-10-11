@@ -1296,6 +1296,7 @@ export async function sendSupplierConfirmationEmail(params: {
   const email = confirmation.email ?? quote.customerEmail;
   const whatsapp = ischiastarsWhatsappNumber();
   const roomTypeLabel = selectedRoomTypeLabel(quote);
+  const logoUrl = `${siteBaseUrl()}/ischiastars-logo.png`;
 
   const childrenRows = (quote.children ?? [])
     .map((child, index) => {
@@ -1323,8 +1324,15 @@ export async function sendSupplierConfirmationEmail(params: {
   <div class="email-wrapper" style="padding:24px 16px;">
   <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">
         <tr><td class="header-padding" style="background:#1B3A5C;padding:22px 32px;color:#fff;">
-          <div class="section-title" style="font-weight:bold;font-size:22px;">IschiaStars — Conferma Prenotazione</div>
-          <div style="margin-top:6px;font-size:13px;color:#dbe5f0;">Gentile fornitore, confermiamo la seguente prenotazione:</div>
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td width="78" style="width:78px;vertical-align:middle;">
+              <img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:999px;background:#ffffff;">
+            </td>
+            <td style="vertical-align:middle;">
+              <div class="section-title" style="font-weight:bold;font-size:22px;">IschiaStars — Conferma Prenotazione</div>
+              <div style="margin-top:6px;font-size:13px;color:#dbe5f0;">Gentile fornitore, confermiamo la seguente prenotazione:</div>
+            </td>
+          </tr></table>
         </td></tr>
         <tr><td class="email-body" style="padding:24px 32px;color:#1F2937;font-size:14px;line-height:1.6;">
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
