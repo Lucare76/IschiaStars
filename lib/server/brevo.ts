@@ -1280,9 +1280,9 @@ export async function sendSupplierConfirmationEmail(params: {
   to: string;
   quote: Quote;
   confirmation: QuoteConfirmation;
-  grossPrice: number;
-  netPrice: number;
-  commission: number;
+  grossPrice?: number;
+  netPrice?: number;
+  commission?: number;
   notes?: string;
 }): Promise<boolean> {
   const { to, quote, confirmation, grossPrice, netPrice, commission, notes } = params;
@@ -1313,9 +1313,15 @@ export async function sendSupplierConfirmationEmail(params: {
     })
     .join("; ");
 
-  const grossPriceFormatted = formatPrice(grossPrice);
-  const netPriceFormatted = formatPrice(netPrice);
-  const commissionFormatted = formatPrice(commission);
+  const grossPriceFormatted = grossPrice != null ? formatPrice(grossPrice) : undefined;
+  const netPriceFormatted = netPrice != null ? formatPrice(netPrice) : undefined;
+  const commissionFormatted = commission != null ? formatPrice(commission) : undefined;
+  const supplierCostsHtml = [grossPriceFormatted ? `<tr><td style="padding:10px 18px;font-weight:bold;color:#7a5a12;">Costo lordo: ${grossPriceFormatted}</td></tr>` : "", netPriceFormatted ? `<tr><td style="padding:10px 18px;font-weight:bold;color:#7a5a12;">Costo netto: ${netPriceFormatted}</td></tr>` : "", commissionFormatted ? `<tr><td style="padding:10px 18px;font-weight:bold;color:#7a5a12;">Commissione trattenuta: ${commissionFormatted}</td></tr>` : ""].filter(Boolean).join("");
+  const supplierCostsText = [
+    ...(grossPriceFormatted ? [`Costo lordo: ${grossPriceFormatted}`] : []),
+    ...(netPriceFormatted ? [`Costo netto: ${netPriceFormatted}`] : []),
+    ...(commissionFormatted ? [`Commissione trattenuta: ${commissionFormatted}`] : [])
+  ];
 
   const html = `<!DOCTYPE html>
 <html lang="it">
@@ -1356,11 +1362,7 @@ export async function sendSupplierConfirmationEmail(params: {
             <tr><td style="padding:6px 0;color:#555;">Camere</td><td style="padding:6px 0;font-weight:bold;text-align:right;">${quote.rooms}</td></tr>
             ${childrenRows}
           </table>
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#FBF5E6;border:1px solid #C9A84C;border-radius:8px;margin-bottom:18px;">
-            <tr><td style="padding:10px 18px;font-weight:bold;color:#7a5a12;">Costo lordo: ${grossPriceFormatted}</td></tr>
-            <tr><td style="padding:10px 18px;font-weight:bold;color:#7a5a12;">Costo netto: ${netPriceFormatted}</td></tr>
-            <tr><td style="padding:10px 18px;font-weight:bold;color:#7a5a12;">Commissione trattenuta: ${commissionFormatted}</td></tr>
-          </table>
+          ${supplierCostsHtml ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#FBF5E6;border:1px solid #C9A84C;border-radius:8px;margin-bottom:18px;">${supplierCostsHtml}</table>` : ""}
           ${notes?.trim() ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6;border-radius:8px;margin-bottom:18px;">
             <tr><td style="padding:14px 18px;color:#374151;"><strong>Note:</strong> ${escapeHtml(notes.trim())}</td></tr>
           </table>` : ""}
@@ -1392,9 +1394,7 @@ export async function sendSupplierConfirmationEmail(params: {
     `Camere: ${quote.rooms}`,
     ...(childrenText ? [childrenText] : []),
     "",
-    `Costo lordo: ${grossPriceFormatted}`,
-    `Costo netto: ${netPriceFormatted}`,
-    `Commissione trattenuta: ${commissionFormatted}`,
+    ...supplierCostsText,
     ...(notes?.trim() ? ["", `Note: ${notes.trim()}`] : []),
     "",
     "Per conferma rispondere a questa email.",

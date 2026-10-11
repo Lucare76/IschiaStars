@@ -358,23 +358,23 @@ IschiaStars 🌊`;
 
   async function submitSupplierConfirmation() {
     setSupplierError(null);
-    const grossPriceValue = Number(supplierGrossPrice);
-    const netPriceValue = Number(supplierNetPrice);
-    const commissionValue = Number(supplierCommission);
+    const grossPriceValue = supplierGrossPrice.trim() === "" ? undefined : Number(supplierGrossPrice);
+    const netPriceValue = supplierNetPrice.trim() === "" ? undefined : Number(supplierNetPrice);
+    const commissionValue = supplierCommission.trim() === "" ? undefined : Number(supplierCommission);
     if (!supplierRecipientEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplierRecipientEmail.trim())) {
       setSupplierError("Inserisci un indirizzo email valido.");
       return;
     }
-    if (!Number.isFinite(grossPriceValue) || grossPriceValue <= 0) {
-      setSupplierError("Inserisci un costo lordo valido.");
+    if (grossPriceValue !== undefined && (!Number.isFinite(grossPriceValue) || grossPriceValue <= 0)) {
+      setSupplierError("Inserisci un costo lordo valido oppure lascia il campo vuoto.");
       return;
     }
-    if (!Number.isFinite(netPriceValue) || netPriceValue <= 0) {
-      setSupplierError("Inserisci un costo netto valido.");
+    if (netPriceValue !== undefined && (!Number.isFinite(netPriceValue) || netPriceValue <= 0)) {
+      setSupplierError("Inserisci un costo netto valido oppure lascia il campo vuoto.");
       return;
     }
-    if (!Number.isFinite(commissionValue) || commissionValue < 0) {
-      setSupplierError("Inserisci una commissione trattenuta valida.");
+    if (commissionValue !== undefined && (!Number.isFinite(commissionValue) || commissionValue < 0)) {
+      setSupplierError("Inserisci una commissione trattenuta valida oppure lascia il campo vuoto.");
       return;
     }
 
@@ -384,9 +384,9 @@ IschiaStars 🌊`;
       headers: adminApiHeaders(),
       body: JSON.stringify({
         recipientEmail: supplierRecipientEmail.trim(),
-        grossPrice: grossPriceValue,
-        netPrice: netPriceValue,
-        commission: commissionValue,
+        ...(grossPriceValue !== undefined ? { grossPrice: grossPriceValue } : {}),
+        ...(netPriceValue !== undefined ? { netPrice: netPriceValue } : {}),
+        ...(commissionValue !== undefined ? { commission: commissionValue } : {}),
         notes: supplierNotes.trim() || undefined
       })
     });
