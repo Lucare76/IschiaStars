@@ -11,15 +11,23 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const unauthorized = await requireAdminApiAccess(request);
   if (unauthorized) return unauthorized;
 
-  const body = await request.json().catch(() => null) as { recipientEmail?: string; netPrice?: number; notes?: string } | null;
+  const body = await request.json().catch(() => null) as { recipientEmail?: string; grossPrice?: number; netPrice?: number; commission?: number; notes?: string } | null;
   const recipientEmail = body?.recipientEmail?.trim();
+  const grossPrice = typeof body?.grossPrice === "number" ? body.grossPrice : Number(body?.grossPrice);
   const netPrice = typeof body?.netPrice === "number" ? body.netPrice : Number(body?.netPrice);
+  const commission = typeof body?.commission === "number" ? body.commission : Number(body?.commission);
 
   if (!recipientEmail || !EMAIL_PATTERN.test(recipientEmail)) {
     return NextResponse.json({ ok: false, error: "Email destinatario non valida" }, { status: 400 });
   }
+  if (!Number.isFinite(grossPrice) || grossPrice <= 0) {
+    return NextResponse.json({ ok: false, error: "Costo lordo obbligatorio" }, { status: 400 });
+  }
   if (!Number.isFinite(netPrice) || netPrice <= 0) {
-    return NextResponse.json({ ok: false, error: "Prezzo netto obbligatorio" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "Costo netto obbligatorio" }, { status: 400 });
+  }
+  if (!Number.isFinite(commission) || commission < 0) {
+    return NextResponse.json({ ok: false, error: "Commissione trattenuta non valida" }, { status: 400 });
   }
 
   const confirmationResult = await getQuoteConfirmationById(params.id);
@@ -33,13 +41,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     to: recipientEmail,
     quote,
     confirmation: quote.confirmation,
+    grossPrice,
     netPrice,
+    commission,
     notes: body?.notes
   });
   if (!sent) return NextResponse.json({ ok: false, error: "Invio email non riuscito. Riprova." }, { status: 500 });
 
   const sentAt = new Date().toISOString();
-  await trackQuoteEvent(quote.id, "supplier_confirmation_sent", { recipientEmail, netPrice, sentAt });
+  await trackQuoteEvent(quote.id, "supplier_confirmation_sent", { recipientEmail, grossPrice, netPrice, commission, sentAt });
 
   return NextResponse.json({ success: true, sentAt, recipientEmail });
 }

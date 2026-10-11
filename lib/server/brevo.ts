@@ -1280,10 +1280,12 @@ export async function sendSupplierConfirmationEmail(params: {
   to: string;
   quote: Quote;
   confirmation: QuoteConfirmation;
+  grossPrice: number;
   netPrice: number;
+  commission: number;
   notes?: string;
 }): Promise<boolean> {
-  const { to, quote, confirmation, netPrice, notes } = params;
+  const { to, quote, confirmation, grossPrice, netPrice, commission, notes } = params;
 
   const missingEnvReason = brevoMissingEnvReason();
   if (missingEnvReason) {
@@ -1311,7 +1313,9 @@ export async function sendSupplierConfirmationEmail(params: {
     })
     .join("; ");
 
+  const grossPriceFormatted = formatPrice(grossPrice);
   const netPriceFormatted = formatPrice(netPrice);
+  const commissionFormatted = formatPrice(commission);
 
   const html = `<!DOCTYPE html>
 <html lang="it">
@@ -1353,7 +1357,9 @@ export async function sendSupplierConfirmationEmail(params: {
             ${childrenRows}
           </table>
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#FBF5E6;border:1px solid #C9A84C;border-radius:8px;margin-bottom:18px;">
-            <tr><td style="padding:14px 18px;font-weight:bold;color:#7a5a12;">Prezzo netto concordato: ${netPriceFormatted}</td></tr>
+            <tr><td style="padding:10px 18px;font-weight:bold;color:#7a5a12;">Costo lordo: ${grossPriceFormatted}</td></tr>
+            <tr><td style="padding:10px 18px;font-weight:bold;color:#7a5a12;">Costo netto: ${netPriceFormatted}</td></tr>
+            <tr><td style="padding:10px 18px;font-weight:bold;color:#7a5a12;">Commissione trattenuta: ${commissionFormatted}</td></tr>
           </table>
           ${notes?.trim() ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6;border-radius:8px;margin-bottom:18px;">
             <tr><td style="padding:14px 18px;color:#374151;"><strong>Note:</strong> ${escapeHtml(notes.trim())}</td></tr>
@@ -1386,7 +1392,9 @@ export async function sendSupplierConfirmationEmail(params: {
     `Camere: ${quote.rooms}`,
     ...(childrenText ? [childrenText] : []),
     "",
-    `Prezzo netto concordato: ${netPriceFormatted}`,
+    `Costo lordo: ${grossPriceFormatted}`,
+    `Costo netto: ${netPriceFormatted}`,
+    `Commissione trattenuta: ${commissionFormatted}`,
     ...(notes?.trim() ? ["", `Note: ${notes.trim()}`] : []),
     "",
     "Per conferma rispondere a questa email.",
