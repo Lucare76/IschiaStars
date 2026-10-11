@@ -49,7 +49,9 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [supplierSentInfo, setSupplierSentInfo] = useState<{ email: string; sentAt: string } | null>(null);
   const [supplierRecipientEmail, setSupplierRecipientEmail] = useState("");
+  const [supplierGrossPrice, setSupplierGrossPrice] = useState("");
   const [supplierNetPrice, setSupplierNetPrice] = useState("");
+  const [supplierCommission, setSupplierCommission] = useState("");
   const [supplierNotes, setSupplierNotes] = useState("");
   const [supplierSending, setSupplierSending] = useState(false);
   const [supplierError, setSupplierError] = useState<string | null>(null);
@@ -330,7 +332,7 @@ IschiaStars 🌊`;
   }
 
   useEffect(() => {
-    if (!confirmationId || !confirmation?.finalConfirmationSentAt || !featureFlags.supplier_confirmation) return;
+    if (!confirmationId || !featureFlags.supplier_confirmation) return;
     let cancelled = false;
     void (async () => {
       const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/send-supplier-confirmation`, {
@@ -345,7 +347,7 @@ IschiaStars 🌊`;
     return () => {
       cancelled = true;
     };
-  }, [confirmationId, confirmation?.finalConfirmationSentAt, featureFlags.supplier_confirmation]);
+  }, [confirmationId, featureFlags.supplier_confirmation]);
 
   if (!confirmation || !confirmationId) return null;
 
@@ -356,13 +358,23 @@ IschiaStars 🌊`;
 
   async function submitSupplierConfirmation() {
     setSupplierError(null);
+    const grossPriceValue = Number(supplierGrossPrice);
     const netPriceValue = Number(supplierNetPrice);
+    const commissionValue = Number(supplierCommission);
     if (!supplierRecipientEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplierRecipientEmail.trim())) {
       setSupplierError("Inserisci un indirizzo email valido.");
       return;
     }
+    if (!Number.isFinite(grossPriceValue) || grossPriceValue <= 0) {
+      setSupplierError("Inserisci un costo lordo valido.");
+      return;
+    }
     if (!Number.isFinite(netPriceValue) || netPriceValue <= 0) {
-      setSupplierError("Inserisci un prezzo netto valido.");
+      setSupplierError("Inserisci un costo netto valido.");
+      return;
+    }
+    if (!Number.isFinite(commissionValue) || commissionValue < 0) {
+      setSupplierError("Inserisci una commissione trattenuta valida.");
       return;
     }
 
@@ -370,7 +382,13 @@ IschiaStars 🌊`;
     const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/send-supplier-confirmation`, {
       method: "POST",
       headers: adminApiHeaders(),
-      body: JSON.stringify({ recipientEmail: supplierRecipientEmail.trim(), netPrice: netPriceValue, notes: supplierNotes.trim() || undefined })
+      body: JSON.stringify({
+        recipientEmail: supplierRecipientEmail.trim(),
+        grossPrice: grossPriceValue,
+        netPrice: netPriceValue,
+        commission: commissionValue,
+        notes: supplierNotes.trim() || undefined
+      })
     });
     const result = await readAdminApiJson<{ success?: boolean; error?: string; sentAt?: string; recipientEmail?: string }>(response);
     setSupplierSending(false);
@@ -383,7 +401,9 @@ IschiaStars 🌊`;
     setSupplierSentInfo({ email: result.recipientEmail ?? supplierRecipientEmail.trim(), sentAt: result.sentAt ?? new Date().toISOString() });
     setShowSupplierModal(false);
     setSupplierRecipientEmail("");
+    setSupplierGrossPrice("");
     setSupplierNetPrice("");
+    setSupplierCommission("");
     setSupplierNotes("");
   }
 
@@ -962,10 +982,10 @@ IschiaStars 🌊`;
         </button>
       ) : null}
 
-      {confirmation?.finalConfirmationSentAt && featureFlags.supplier_confirmation ? (
+      {featureFlags.supplier_confirmation ? (
         <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-ischia-blue/15">
           <h3 className="font-black text-ischia-navy">Conferma a hotel / agenzia</h3>
-          <p className="mt-1 text-sm text-ischia-ink/65">Invia una email di conferma prenotazione al fornitore, con il prezzo netto concordato (non visibile al cliente).</p>
+          <p className="mt-1 text-sm text-ischia-ink/65">Invia una email di conferma prenotazione al fornitore in qualsiasi momento dopo la conferma del cliente, con i dati economici concordati.</p>
           {supplierSentInfo ? (
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <p className="rounded-xl bg-ischia-mist px-3 py-2 text-sm font-black text-ischia-navy">
@@ -993,7 +1013,7 @@ IschiaStars 🌊`;
         </div>
       ) : null}
 
-      {showSupplierModal && confirmation?.finalConfirmationSentAt && featureFlags.supplier_confirmation ? (
+      {showSupplierModal && featureFlags.supplier_confirmation ? (
         <div aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5" role="dialog">
           <div className="mx-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <h3 className="text-xl font-black text-ischia-navy">Invia conferma a hotel/agenzia</h3>
@@ -1013,13 +1033,39 @@ IschiaStars 🌊`;
                 />
               </label>
               <label className="block text-sm font-semibold text-ischia-ink">
-                Prezzo netto (visibile solo al fornitore)
+                Costo lordo
+                <input
+                  className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+                  placeholder="es. 1500"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={supplierGrossPrice}
+                  onChange={(event) => setSupplierGrossPrice(event.target.value)}
+                />
+              </label>
+              <label className="block text-sm font-semibold text-ischia-ink">
+                Costo netto
                 <input
                   className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
                   placeholder="es. 1200"
                   type="number"
+                  min="0"
+                  step="0.01"
                   value={supplierNetPrice}
                   onChange={(event) => setSupplierNetPrice(event.target.value)}
+                />
+              </label>
+              <label className="block text-sm font-semibold text-ischia-ink">
+                Commissione trattenuta
+                <input
+                  className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+                  placeholder="es. 300"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={supplierCommission}
+                  onChange={(event) => setSupplierCommission(event.target.value)}
                 />
               </label>
               <label className="block text-sm font-semibold text-ischia-ink">
