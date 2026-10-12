@@ -1338,8 +1338,10 @@ function supplierRoomCostDefaults(quote: Quote) {
   if (parsed.length) return parsed;
 
   const fallbackLabel = selectedRoomTypeLabel(quote) ?? "Camera";
-  return Array.from({ length: Math.max(quote.rooms || 1, 1) }, (_, index) => ({
-    label: quote.rooms > 1 ? `${fallbackLabel} ${index + 1}` : fallbackLabel,
+  return Array.from({ length: Math.max(quote.rooms || 1, 1) }, () => ({
+    // In multicamera mantieni una riga distinta per ogni camera anche quando
+    // la tipologia è identica: nell'email le righe non devono essere accorpate.
+    label: fallbackLabel,
     grossPrice: "",
     netPrice: ""
   }));
