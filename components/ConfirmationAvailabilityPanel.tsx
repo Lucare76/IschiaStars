@@ -52,6 +52,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [supplierGrossPrice, setSupplierGrossPrice] = useState("");
   const [supplierNetPrice, setSupplierNetPrice] = useState("");
   const [supplierCommission, setSupplierCommission] = useState("");
+  const [supplierRoomCosts, setSupplierRoomCosts] = useState(() => supplierRoomCostDefaults(quote));
   const [supplierNotes, setSupplierNotes] = useState("");
   const [supplierSending, setSupplierSending] = useState(false);
   const [supplierError, setSupplierError] = useState<string | null>(null);
@@ -353,6 +354,8 @@ IschiaStars 🌊`;
 
   function openSupplierModal() {
     setSupplierError(null);
+    if (!supplierGrossPrice) setSupplierGrossPrice(formatAmountInput(confirmation?.selectedPrice ?? quote.totalPrice));
+    if (!supplierRoomCosts.length) setSupplierRoomCosts(supplierRoomCostDefaults(quote));
     setShowSupplierModal(true);
   }
 
@@ -361,6 +364,11 @@ IschiaStars 🌊`;
     const grossPriceValue = supplierGrossPrice.trim() === "" ? undefined : Number(supplierGrossPrice);
     const netPriceValue = supplierNetPrice.trim() === "" ? undefined : Number(supplierNetPrice);
     const commissionValue = supplierCommission.trim() === "" ? undefined : Number(supplierCommission);
+    const roomCosts = supplierRoomCosts.map((room) => ({
+      label: room.label.trim(),
+      grossPrice: room.grossPrice.trim() === "" ? undefined : Number(room.grossPrice),
+      netPrice: room.netPrice.trim() === "" ? undefined : Number(room.netPrice)
+    }));
     if (!supplierRecipientEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplierRecipientEmail.trim())) {
       setSupplierError("Inserisci un indirizzo email valido.");
       return;
@@ -377,6 +385,10 @@ IschiaStars 🌊`;
       setSupplierError("Inserisci una commissione trattenuta valida oppure lascia il campo vuoto.");
       return;
     }
+    if (roomCosts.some((room) => !room.label || (room.grossPrice !== undefined && (!Number.isFinite(room.grossPrice) || room.grossPrice < 0)) || (room.netPrice !== undefined && (!Number.isFinite(room.netPrice) || room.netPrice < 0)))) {
+      setSupplierError("Controlla i valori lordo/netto delle singole camere.");
+      return;
+    }
 
     setSupplierSending(true);
     const response = await adminApiFetch(`/api/quote-confirmations/${confirmationId}/send-supplier-confirmation`, {
@@ -387,6 +399,7 @@ IschiaStars 🌊`;
         ...(grossPriceValue !== undefined ? { grossPrice: grossPriceValue } : {}),
         ...(netPriceValue !== undefined ? { netPrice: netPriceValue } : {}),
         ...(commissionValue !== undefined ? { commission: commissionValue } : {}),
+        roomCosts: roomCosts.filter((room) => room.grossPrice !== undefined || room.netPrice !== undefined),
         notes: supplierNotes.trim() || undefined
       })
     });
@@ -404,6 +417,7 @@ IschiaStars 🌊`;
     setSupplierGrossPrice("");
     setSupplierNetPrice("");
     setSupplierCommission("");
+    setSupplierRoomCosts(supplierRoomCostDefaults(quote));
     setSupplierNotes("");
   }
 
@@ -1033,7 +1047,7 @@ IschiaStars 🌊`;
                 />
               </label>
               <label className="block text-sm font-semibold text-ischia-ink">
-                Costo lordo
+                Costo totale lordo
                 <input
                   className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
                   placeholder="es. 1500"
@@ -1045,7 +1059,7 @@ IschiaStars 🌊`;
                 />
               </label>
               <label className="block text-sm font-semibold text-ischia-ink">
-                Costo netto
+                Saldo totale netto in struttura
                 <input
                   className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
                   placeholder="es. 1200"
@@ -1068,6 +1082,43 @@ IschiaStars 🌊`;
                   onChange={(event) => setSupplierCommission(event.target.value)}
                 />
               </label>
+              {supplierRoomCosts.length ? (
+                <div className="rounded-xl bg-ischia-mist/60 p-3">
+                  <p className="text-sm font-black text-ischia-navy">Dettaglio camere</p>
+                  <p className="mt-1 text-xs text-ischia-ink/65">Lordo e netto per camera sono facoltativi. Il lordo viene precompilato quando disponibile dalla prenotazione.</p>
+                  <div className="mt-3 space-y-3">
+                    {supplierRoomCosts.map((room, index) => (
+                      <div className="rounded-xl bg-white p-3 ring-1 ring-ischia-blue/15" key={`${room.label}-${index}`}>
+                        <p className="text-sm font-bold text-ischia-navy">{room.label}</p>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <label className="text-xs font-semibold text-ischia-ink">
+                            Lordo
+                            <input
+                              className="mt-1 w-full rounded-lg border border-ischia-blue/20 px-2 py-2"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={room.grossPrice}
+                              onChange={(event) => setSupplierRoomCosts((current) => current.map((item, roomIndex) => roomIndex === index ? { ...item, grossPrice: event.target.value } : item))}
+                            />
+                          </label>
+                          <label className="text-xs font-semibold text-ischia-ink">
+                            Netto
+                            <input
+                              className="mt-1 w-full rounded-lg border border-ischia-blue/20 px-2 py-2"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={room.netPrice}
+                              onChange={(event) => setSupplierRoomCosts((current) => current.map((item, roomIndex) => roomIndex === index ? { ...item, netPrice: event.target.value } : item))}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <label className="block text-sm font-semibold text-ischia-ink">
                 Note aggiuntive
                 <textarea
@@ -1266,6 +1317,32 @@ IschiaStars 🌊`;
       </div>
     </section>
   );
+}
+
+function supplierRoomCostDefaults(quote: Quote) {
+  const rooms = Array.isArray(quote.confirmation?.metadata?.selected_rooms)
+    ? quote.confirmation?.metadata?.selected_rooms
+    : [];
+  const parsed = rooms
+    .map((room, index) => {
+      if (!room || typeof room !== "object") return null;
+      const record = room as Record<string, unknown>;
+      const label = typeof record.roomTypeLabel === "string" && record.roomTypeLabel.trim()
+        ? record.roomTypeLabel.trim()
+        : `Camera ${index + 1}`;
+      const price = typeof record.price === "number" && Number.isFinite(record.price) ? record.price : undefined;
+      return { label, grossPrice: price == null ? "" : formatAmountInput(price), netPrice: "" };
+    })
+    .filter((room): room is { label: string; grossPrice: string; netPrice: string } => Boolean(room));
+
+  if (parsed.length) return parsed;
+
+  const fallbackLabel = selectedRoomTypeLabel(quote) ?? "Camera";
+  return Array.from({ length: Math.max(quote.rooms || 1, 1) }, (_, index) => ({
+    label: quote.rooms > 1 ? `${fallbackLabel} ${index + 1}` : fallbackLabel,
+    grossPrice: "",
+    netPrice: ""
+  }));
 }
 
 function formatAmountInput(value: number | undefined) {

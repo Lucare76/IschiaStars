@@ -89,7 +89,19 @@ export function whatsappQuoteLink(quote: Quote) {
   return `https://wa.me/${normalizeItalianPhone(quote.customerPhone)}?text=${encodeURIComponent(whatsappQuoteMessage(quote))}`;
 }
 export function ischiastarsWhatsappNumber() {
-  return (process.env.NEXT_PUBLIC_ISCHIASTARS_WHATSAPP || "393717590017").replace(/\D/g, "");
+  const fallback = "393717590017";
+  const configured = (process.env.NEXT_PUBLIC_ISCHIASTARS_WHATSAPP || "").replace(/\D/g, "");
+  if (!configured) return fallback;
+
+  const normalized = configured.startsWith("0039")
+    ? configured.slice(2)
+    : configured.startsWith("39")
+      ? configured
+      : `39${configured}`;
+
+  // Numero mobile italiano completo: 39 + 10 cifre.
+  // Se la variabile ambiente è incompleta o malformata, usa il numero ufficiale IschiaStars.
+  return /^39\d{10}$/.test(normalized) ? normalized : fallback;
 }
 
 export function publicWhatsappLink(message: string) {

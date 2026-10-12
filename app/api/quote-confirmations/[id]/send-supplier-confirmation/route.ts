@@ -11,11 +11,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const unauthorized = await requireAdminApiAccess(request);
   if (unauthorized) return unauthorized;
 
-  const body = await request.json().catch(() => null) as { recipientEmail?: string; grossPrice?: number; netPrice?: number; commission?: number; notes?: string } | null;
+  const body = await request.json().catch(() => null) as { recipientEmail?: string; grossPrice?: number; netPrice?: number; commission?: number; roomCosts?: { label?: string; grossPrice?: number; netPrice?: number }[]; notes?: string } | null;
   const recipientEmail = body?.recipientEmail?.trim();
   const grossPrice = body?.grossPrice == null ? undefined : (typeof body.grossPrice === "number" ? body.grossPrice : Number(body.grossPrice));
   const netPrice = body?.netPrice == null ? undefined : (typeof body.netPrice === "number" ? body.netPrice : Number(body.netPrice));
   const commission = body?.commission == null ? undefined : (typeof body.commission === "number" ? body.commission : Number(body.commission));
+  const roomCosts = Array.isArray(body?.roomCosts) ? body.roomCosts.map((room) => ({
+    label: typeof room?.label === "string" ? room.label.trim() : "",
+    grossPrice: room?.grossPrice == null ? undefined : Number(room.grossPrice),
+    netPrice: room?.netPrice == null ? undefined : Number(room.netPrice)
+  })) : [];
 
   if (!recipientEmail || !EMAIL_PATTERN.test(recipientEmail)) {
     return NextResponse.json({ ok: false, error: "Email destinatario non valida" }, { status: 400 });
@@ -28,6 +33,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }
   if (commission !== undefined && (!Number.isFinite(commission) || commission < 0)) {
     return NextResponse.json({ ok: false, error: "Commissione trattenuta non valida" }, { status: 400 });
+  }
+  if (roomCosts.some((room) => !room.label || (room.grossPrice !== undefined && (!Number.isFinite(room.grossPrice) || room.grossPrice < 0)) || (room.netPrice !== undefined && (!Number.isFinite(room.netPrice) || room.netPrice < 0)))) {
+    return NextResponse.json({ ok: false, error: "Dettaglio costi camere non valido" }, { status: 400 });
   }
 
   const confirmationResult = await getQuoteConfirmationById(params.id);
@@ -44,6 +52,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     grossPrice,
     netPrice,
     commission,
+    roomCosts,
     notes: body?.notes
   });
   if (!sent) return NextResponse.json({ ok: false, error: "Invio email non riuscito. Riprova." }, { status: 500 });
@@ -54,6 +63,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     ...(grossPrice !== undefined ? { grossPrice } : {}),
     ...(netPrice !== undefined ? { netPrice } : {}),
     ...(commission !== undefined ? { commission } : {}),
+    ...(roomCosts.length ? { roomCosts } : {}),
     sentAt
   });
 
