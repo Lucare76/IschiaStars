@@ -1371,7 +1371,7 @@ export async function sendSupplierConfirmationEmail(params: {
               <img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:999px;background:#ffffff;">
             </td>
             <td style="vertical-align:middle;">
-              <div class="section-title" style="font-weight:bold;font-size:21px;">Richiesta disponibilità / conferma prenotazione</div>
+              <div class="section-title" style="font-weight:bold;font-size:21px;">Conferma prenotazione</div>
               <div style="margin-top:5px;font-size:13px;color:#dbe5f0;">IschiaStars</div>
             </td>
           </tr></table>
