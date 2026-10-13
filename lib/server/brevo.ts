@@ -784,7 +784,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
           ${snapshot.bank_account_holder ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Intestatario:</strong> ${escapeHtml(String(snapshot.bank_account_holder))}</div>` : ""}
           ${snapshot.bank_name ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>Banca:</strong> ${escapeHtml(String(snapshot.bank_name))}</div>` : ""}
           ${snapshot.iban ? paymentCopyFieldHtml("IBAN", String(snapshot.iban), "Copia IBAN") : ""}
-          ${snapshot.iban ? `<div style="margin:0 0 5px;font-size:13px;font-weight:bold;color:#1B3A5C;">La quinta lettera è la I di Imola.</div>` : ""}
+          ${snapshot.iban && snapshot.payment_account_id !== "secondary" ? `<div style="margin:0 0 5px;font-size:13px;font-weight:bold;color:#1B3A5C;">La quinta lettera è la I di Imola.</div>` : ""}
           ${snapshot.bic_swift ? `<div style="margin:0 0 5px;font-size:14px;color:#374151;"><strong>BIC/SWIFT:</strong> ${escapeHtml(String(snapshot.bic_swift))}</div>` : ""}
           ${paymentReason ? paymentCopyFieldHtml("Causale bonifico", paymentReason, "Copia causale") : ""}
           ${snapshot.payment_instructions ? `<div style="margin:10px 0 0;font-size:13px;color:#6B7280;">${escapeHtml(String(snapshot.payment_instructions))}</div>` : ""}
@@ -975,7 +975,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
       snapshot.bank_account_holder ? `Intestatario: ${snapshot.bank_account_holder}` : "",
       snapshot.bank_name ? `Banca: ${snapshot.bank_name}` : "",
       snapshot.iban ? `IBAN: ${snapshot.iban}` : "",
-      snapshot.iban ? "La quinta lettera è la I di Imola." : "",
+      snapshot.iban && snapshot.payment_account_id !== "secondary" ? "La quinta lettera è la I di Imola." : "",
       snapshot.bic_swift ? `BIC/SWIFT: ${snapshot.bic_swift}` : "",
       paymentReason ? `Causale: ${paymentReason}` : "",
       snapshot.payment_instructions ? `Istruzioni: ${snapshot.payment_instructions}` : ""
@@ -1280,13 +1280,14 @@ export async function sendSupplierConfirmationEmail(params: {
   to: string;
   quote: Quote;
   confirmation: QuoteConfirmation;
+  customerPhone?: string;
   grossPrice?: number;
   netPrice?: number;
   commission?: number;
   roomCosts?: { label: string; grossPrice?: number; netPrice?: number }[];
   notes?: string;
 }): Promise<boolean> {
-  const { to, quote, confirmation, grossPrice, netPrice, commission, roomCosts = [], notes } = params;
+  const { to, quote, confirmation, customerPhone, grossPrice, netPrice, commission, roomCosts = [], notes } = params;
 
   const missingEnvReason = brevoMissingEnvReason();
   if (missingEnvReason) {
@@ -1295,7 +1296,7 @@ export async function sendSupplierConfirmationEmail(params: {
   }
 
   const fullName = `${confirmation.firstName ?? quote.customerFirstName} ${confirmation.lastName ?? quote.customerLastName}`.trim();
-  const phone = confirmation.phone ?? quote.customerPhone;
+  const phone = customerPhone?.trim() || "";
   const hotelName = confirmation.selectedHotelName ?? quote.proposedHotel.name;
   const treatmentLabel = selectedTreatmentLabel(quote) ?? confirmation.selectedTreatmentLabel ?? quote.treatment;
   const roomTypeLabel = selectedRoomTypeLabel(quote);
