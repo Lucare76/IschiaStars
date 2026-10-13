@@ -76,6 +76,12 @@ export async function listQuotesPage({
     case "confermati":
       query = query.is("deleted_at", null).eq("status", "confermato").or(notExcluded);
       break;
+    case "confermati_attivi":
+      query = query.is("deleted_at", null).eq("status", "confermato").or(notExcluded).gte("check_out", today);
+      break;
+    case "confermati_passati":
+      query = query.is("deleted_at", null).eq("status", "confermato").or(notExcluded).lt("check_out", today);
+      break;
     case "cancellati":
       query = query.not("deleted_at", "is", null);
       break;
