@@ -197,7 +197,7 @@ ${proposalTitle}
 
 ${stayLines}
 
-Apri il link ⬇️
+Apri il link per i dettagli ⬇️
 ${quoteUrl}
 
 ${hotelsBlock}
