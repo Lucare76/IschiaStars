@@ -3,7 +3,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { availabilityStatusLabel, availabilityStatusLabels } from "@/lib/confirmation-availability";
 import { isPaymentSettingsConfigured } from "@/lib/payment-settings";
 import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
-import { listQuotes } from "@/lib/repositories/quotes";
+import { listQuotesPage } from "@/lib/repositories/quotes";
 import { getPaymentSettings } from "@/lib/repositories/settings";
 import { ConfirmationAvailabilityStatus, Quote } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
@@ -23,9 +23,15 @@ export const dynamic = "force-dynamic";
 const filters = ["tutte", "availability_to_check", "availability_confirmed", "deposit_waiting", "availability_unavailable", "alternative_to_propose"] as const;
 type Filter = (typeof filters)[number];
 
-export default async function ConfirmationsPage({ searchParams }: { searchParams?: { filter?: string } }) {
+export default async function ConfirmationsPage({ searchParams }: { searchParams?: { filter?: string; scope?: string; q?: string } }) {
   const selectedFilter = filters.includes(searchParams?.filter as Filter) ? searchParams?.filter as Filter : "tutte";
-  const [result, paymentSettings] = await Promise.all([listQuotes({ includeLabTests: true }), getPaymentSettings()]);
+  const selectedScope = searchParams?.scope === "passate" ? "passate" : "attive";
+  const search = searchParams?.q?.trim() ?? "";
+  const quoteFilter = selectedScope === "passate" ? "confermati_passati" : "confermati_attivi";
+  const [result, paymentSettings] = await Promise.all([
+    listQuotesPage({ filter: quoteFilter, search, pageSize: 100, sort: "arrival" }),
+    getPaymentSettings()
+  ]);
 
   if (result.source !== "supabase" || paymentSettings.source !== "supabase") {
     const error = [result.error, paymentSettings.error].filter(Boolean).join(" | ");
@@ -37,29 +43,71 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
   }
 
   const missingPaymentSettings = !isPaymentSettingsConfigured(paymentSettings.data);
-  const confirmations = result.data
-    .filter((quote) => quote.confirmation && !quote.deletedAt && (!quote.excludedFromStats || quote.isLabTest))
+  const confirmations = result.data.items
+    .filter((quote) => quote.confirmation && !quote.deletedAt && !quote.excludedFromStats)
     .filter((quote) => selectedFilter === "tutte" || (quote.confirmation?.availabilityStatus ?? "availability_to_check") === selectedFilter)
-    .sort((a, b) => confirmationTimestamp(b.confirmation?.confirmedAt) - confirmationTimestamp(a.confirmation?.confirmedAt));
+    .sort((a, b) => selectedScope === "attive"
+      ? a.arrivalDate.localeCompare(b.arrivalDate)
+      : confirmationTimestamp(b.confirmation?.confirmedAt) - confirmationTimestamp(a.confirmation?.confirmedAt));
 
   return (
     <AdminShell title="Conferme cliente" subtitle="Verifica manuale disponibilità struttura e invio comunicazioni definitive.">
-      <div className="mb-5 flex flex-wrap gap-2">
-        <Link
-          className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-sun/40"
-          href="/admin/preventivi/nuovo?manualConfirmation=true"
-        >
-          Importa conferma via email
-        </Link>
-        {filters.map((filter) => (
+      <div className="mb-5 space-y-3">
+        <div className="flex flex-wrap gap-2">
           <Link
-            key={filter}
-            className={`rounded-full px-4 py-2 text-sm font-black ring-1 ${selectedFilter === filter ? "bg-ischia-navy text-white ring-ischia-navy" : "bg-white text-ischia-navy ring-ischia-blue/20"}`}
-            href={`/admin/conferme?filter=${filter}`}
+            className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy ring-1 ring-ischia-sun/40"
+            href="/admin/preventivi/nuovo?manualConfirmation=true"
           >
-            {filter === "tutte" ? "Tutte" : availabilityStatusLabel(filter)}
+            Importa conferma via email
           </Link>
-        ))}
+          <Link
+            className={`rounded-full px-4 py-2 text-sm font-black ring-1 ${selectedScope === "attive" ? "bg-emerald-700 text-white ring-emerald-700" : "bg-white text-ischia-navy ring-ischia-blue/20"}`}
+            href={confirmationListHref({ scope: "attive", filter: selectedFilter, q: search })}
+          >
+            Attive
+          </Link>
+          <Link
+            className={`rounded-full px-4 py-2 text-sm font-black ring-1 ${selectedScope === "passate" ? "bg-ischia-navy text-white ring-ischia-navy" : "bg-white text-ischia-navy ring-ischia-blue/20"}`}
+            href={confirmationListHref({ scope: "passate", filter: selectedFilter, q: search })}
+          >
+            Passate
+          </Link>
+        </div>
+
+        <form className="flex w-full max-w-2xl flex-col gap-2 sm:flex-row" method="get">
+          <input type="hidden" name="scope" value={selectedScope} />
+          <input type="hidden" name="filter" value={selectedFilter} />
+          <input
+            className="min-w-0 flex-1 rounded-xl border border-ischia-blue/20 bg-white px-4 py-2.5 text-sm text-ischia-ink outline-none focus:border-ischia-blue"
+            defaultValue={search}
+            name="q"
+            placeholder="Cerca nome, cognome, codice, email, telefono o hotel..."
+            type="search"
+          />
+          <button className="rounded-xl bg-ischia-navy px-5 py-2.5 text-sm font-black text-white" type="submit">
+            Cerca
+          </button>
+          {search ? (
+            <Link
+              className="rounded-xl bg-white px-4 py-2.5 text-center text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20"
+              href={confirmationListHref({ scope: selectedScope, filter: selectedFilter })}
+            >
+              Azzera
+            </Link>
+          ) : null}
+        </form>
+
+        <div className="flex flex-wrap gap-2">
+          {filters.map((filter) => (
+            <Link
+              key={filter}
+              className={`rounded-full px-4 py-2 text-sm font-black ring-1 ${selectedFilter === filter ? "bg-ischia-navy text-white ring-ischia-navy" : "bg-white text-ischia-navy ring-ischia-blue/20"}`}
+              href={confirmationListHref({ scope: selectedScope, filter, q: search })}
+            >
+              {filter === "tutte" ? "Tutte" : availabilityStatusLabel(filter)}
+            </Link>
+          ))}
+        </div>
       </div>
 
       {missingPaymentSettings ? (
@@ -129,12 +177,20 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
         })}
         {!confirmations.length ? (
           <div className="rounded-2xl bg-white/90 p-6 text-sm font-semibold text-ischia-ink/70 shadow-soft">
-            Nessuna conferma per questo filtro.
+            {search ? `Nessuna prenotazione ${selectedScope === "attive" ? "attiva" : "passata"} trovata per “${search}”.` : `Nessuna prenotazione ${selectedScope === "attive" ? "attiva" : "passata"} per questo filtro.`}
           </div>
         ) : null}
       </div>
     </AdminShell>
   );
+}
+
+function confirmationListHref({ scope, filter, q }: { scope: "attive" | "passate"; filter: Filter; q?: string }) {
+  const params = new URLSearchParams();
+  params.set("scope", scope);
+  if (filter !== "tutte") params.set("filter", filter);
+  if (q?.trim()) params.set("q", q.trim());
+  return `/admin/conferme?${params.toString()}`;
 }
 
 function confirmationTimestamp(value: string | undefined) {
