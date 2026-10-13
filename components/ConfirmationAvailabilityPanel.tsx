@@ -49,6 +49,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [supplierSentInfo, setSupplierSentInfo] = useState<{ email: string; sentAt: string } | null>(null);
   const [supplierRecipientEmail, setSupplierRecipientEmail] = useState("");
+  const [supplierCustomerPhone, setSupplierCustomerPhone] = useState(confirmation?.phone ?? quote.customerPhone ?? "");
   const [supplierGrossPrice, setSupplierGrossPrice] = useState("");
   const [supplierNetPrice, setSupplierNetPrice] = useState("");
   const [supplierCommission, setSupplierCommission] = useState("");
@@ -396,6 +397,7 @@ IschiaStars 🌊`;
       headers: adminApiHeaders(),
       body: JSON.stringify({
         recipientEmail: supplierRecipientEmail.trim(),
+        customerPhone: supplierCustomerPhone.trim() || undefined,
         ...(grossPriceValue !== undefined ? { grossPrice: grossPriceValue } : {}),
         ...(netPriceValue !== undefined ? { netPrice: netPriceValue } : {}),
         ...(commissionValue !== undefined ? { commission: commissionValue } : {}),
@@ -414,6 +416,7 @@ IschiaStars 🌊`;
     setSupplierSentInfo({ email: result.recipientEmail ?? supplierRecipientEmail.trim(), sentAt: result.sentAt ?? new Date().toISOString() });
     setShowSupplierModal(false);
     setSupplierRecipientEmail("");
+    setSupplierCustomerPhone(confirmation?.phone ?? quote.customerPhone ?? "");
     setSupplierGrossPrice("");
     setSupplierNetPrice("");
     setSupplierCommission("");
@@ -1044,6 +1047,16 @@ IschiaStars 🌊`;
                   type="email"
                   value={supplierRecipientEmail}
                   onChange={(event) => setSupplierRecipientEmail(event.target.value)}
+                />
+              </label>
+              <label className="block text-sm font-semibold text-ischia-ink">
+                Telefono cliente <span className="font-normal text-ischia-ink/55">(facoltativo)</span>
+                <input
+                  className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
+                  placeholder="Lascia vuoto per non inserirlo nella mail"
+                  type="tel"
+                  value={supplierCustomerPhone}
+                  onChange={(event) => setSupplierCustomerPhone(event.target.value)}
                 />
               </label>
               <label className="block text-sm font-semibold text-ischia-ink">

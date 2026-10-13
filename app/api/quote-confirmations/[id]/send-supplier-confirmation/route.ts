@@ -11,8 +11,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const unauthorized = await requireAdminApiAccess(request);
   if (unauthorized) return unauthorized;
 
-  const body = await request.json().catch(() => null) as { recipientEmail?: string; grossPrice?: number; netPrice?: number; commission?: number; roomCosts?: { label?: string; grossPrice?: number; netPrice?: number }[]; notes?: string } | null;
+  const body = await request.json().catch(() => null) as { recipientEmail?: string; customerPhone?: string; grossPrice?: number; netPrice?: number; commission?: number; roomCosts?: { label?: string; grossPrice?: number; netPrice?: number }[]; notes?: string } | null;
   const recipientEmail = body?.recipientEmail?.trim();
+  const customerPhone = body?.customerPhone?.trim() || undefined;
   const grossPrice = body?.grossPrice == null ? undefined : (typeof body.grossPrice === "number" ? body.grossPrice : Number(body.grossPrice));
   const netPrice = body?.netPrice == null ? undefined : (typeof body.netPrice === "number" ? body.netPrice : Number(body.netPrice));
   const commission = body?.commission == null ? undefined : (typeof body.commission === "number" ? body.commission : Number(body.commission));
@@ -49,6 +50,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     to: recipientEmail,
     quote,
     confirmation: quote.confirmation,
+    customerPhone,
     grossPrice,
     netPrice,
     commission,
