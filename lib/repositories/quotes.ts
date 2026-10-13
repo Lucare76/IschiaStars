@@ -186,6 +186,10 @@ function demoMatchesFilter(quote: Quote, filter: string, today: string): boolean
       return !isDeleted && !isExcluded && !isConfirmed && isExpired && quote.status === "preventivo_inviato";
     case "confermati":
       return !isDeleted && !isExcluded && isConfirmed;
+    case "confermati_attivi":
+      return !isDeleted && !isExcluded && isConfirmed && !isExpired;
+    case "confermati_passati":
+      return !isDeleted && !isExcluded && isConfirmed && isExpired;
     case "cancellati":
       return isDeleted;
     case "esclusi":
