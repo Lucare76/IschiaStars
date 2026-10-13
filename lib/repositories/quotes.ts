@@ -76,6 +76,12 @@ export async function listQuotesPage({
     case "confermati":
       query = query.is("deleted_at", null).eq("status", "confermato").or(notExcluded);
       break;
+    case "confermati_attivi":
+      query = query.is("deleted_at", null).eq("status", "confermato").or(notExcluded).gte("check_out", today);
+      break;
+    case "confermati_passati":
+      query = query.is("deleted_at", null).eq("status", "confermato").or(notExcluded).lt("check_out", today);
+      break;
     case "cancellati":
       query = query.not("deleted_at", "is", null);
       break;
@@ -180,6 +186,10 @@ function demoMatchesFilter(quote: Quote, filter: string, today: string): boolean
       return !isDeleted && !isExcluded && !isConfirmed && isExpired && quote.status === "preventivo_inviato";
     case "confermati":
       return !isDeleted && !isExcluded && isConfirmed;
+    case "confermati_attivi":
+      return !isDeleted && !isExcluded && isConfirmed && !isExpired;
+    case "confermati_passati":
+      return !isDeleted && !isExcluded && isConfirmed && isExpired;
     case "cancellati":
       return isDeleted;
     case "esclusi":
