@@ -46,9 +46,7 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
   const confirmations = result.data.items
     .filter((quote) => quote.confirmation && !quote.deletedAt && !quote.excludedFromStats)
     .filter((quote) => selectedFilter === "tutte" || (quote.confirmation?.availabilityStatus ?? "availability_to_check") === selectedFilter)
-    .sort((a, b) => selectedScope === "attive"
-      ? a.arrivalDate.localeCompare(b.arrivalDate)
-      : confirmationTimestamp(b.confirmation?.confirmedAt) - confirmationTimestamp(a.confirmation?.confirmedAt));
+    .sort((a, b) => confirmationTimestamp(b.confirmation?.confirmedAt) - confirmationTimestamp(a.confirmation?.confirmedAt));
 
   return (
     <AdminShell title="Conferme cliente" subtitle="Verifica manuale disponibilità struttura e invio comunicazioni definitive.">
