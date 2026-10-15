@@ -43,12 +43,12 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
   }
 
   const missingPaymentSettings = !isPaymentSettingsConfigured(paymentSettings.data);
+  const today = romeDateOnly(new Date());
   const confirmations = result.data.items
     .filter((quote) => quote.confirmation && !quote.deletedAt && !quote.excludedFromStats)
+    .filter((quote) => selectedScope === "attive" ? quote.departureDate >= today : quote.departureDate < today)
     .filter((quote) => selectedFilter === "tutte" || (quote.confirmation?.availabilityStatus ?? "availability_to_check") === selectedFilter)
-    .sort((a, b) => selectedScope === "attive"
-      ? a.arrivalDate.localeCompare(b.arrivalDate)
-      : confirmationTimestamp(b.confirmation?.confirmedAt) - confirmationTimestamp(a.confirmation?.confirmedAt));
+    .sort((a, b) => confirmationTimestamp(b.confirmation?.confirmedAt) - confirmationTimestamp(a.confirmation?.confirmedAt));
 
   return (
     <AdminShell title="Conferme cliente" subtitle="Verifica manuale disponibilità struttura e invio comunicazioni definitive.">
@@ -104,7 +104,7 @@ export default async function ConfirmationsPage({ searchParams }: { searchParams
               className={`rounded-full px-4 py-2 text-sm font-black ring-1 ${selectedFilter === filter ? "bg-ischia-navy text-white ring-ischia-navy" : "bg-white text-ischia-navy ring-ischia-blue/20"}`}
               href={confirmationListHref({ scope: selectedScope, filter, q: search })}
             >
-              {filter === "tutte" ? "Tutte" : availabilityStatusLabel(filter)}
+              {filter === "tutte" ? (selectedScope === "attive" ? "Tutte attive" : "Tutte passate") : availabilityStatusLabel(filter)}
             </Link>
           ))}
         </div>
@@ -191,6 +191,17 @@ function confirmationListHref({ scope, filter, q }: { scope: "attive" | "passate
   if (filter !== "tutte") params.set("filter", filter);
   if (q?.trim()) params.set("q", q.trim());
   return `/admin/conferme?${params.toString()}`;
+}
+
+function romeDateOnly(value: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(value);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
 function confirmationTimestamp(value: string | undefined) {
