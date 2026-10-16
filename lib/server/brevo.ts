@@ -221,6 +221,13 @@ function emailSharedStyles(): string {
       .footer-padding { padding: 14px 16px !important; }
       .travel-service-name, .travel-service-price { display: block !important; width: auto !important; text-align: left !important; }
       .travel-service-price { padding: 2px 0 10px 26px !important; }
+      .supplier-header-logo { width: 52px !important; height: 52px !important; }
+      .supplier-header-logo-cell { width: 62px !important; }
+      .supplier-client-name { font-size: 16px !important; line-height: 1.4 !important; }
+      .supplier-client-phone { display: block !important; margin-top: 4px !important; }
+      .supplier-contact-box td { padding: 14px !important; }
+      .supplier-contact-link { display: inline-block !important; margin-top: 2px !important; }
+      .supplier-room-row { font-size: 14px !important; line-height: 1.5 !important; }
     }
   </style>`;
 }
@@ -1341,7 +1348,7 @@ export async function sendSupplierConfirmationEmail(params: {
         room.grossPrice != null ? `lordo ${formatPrice(room.grossPrice)}` : "",
         room.netPrice != null ? `netto ${formatPrice(room.netPrice)}` : ""
       ].filter(Boolean).join(" - ");
-      return `<p style="margin:0 0 8px;font-size:15px;color:#1F2937;">- ${escapeHtml(room.label)}: ${escapeHtml(parts)}</p>`;
+      return `<p class="supplier-room-row" style="margin:0 0 8px;font-size:15px;line-height:1.55;color:#1F2937;">- ${escapeHtml(room.label)}: ${escapeHtml(parts)}</p>`;
     })
     .join("");
 
@@ -1368,8 +1375,8 @@ export async function sendSupplierConfirmationEmail(params: {
       <tr>
         <td class="header-padding" style="background:#1B3A5C;padding:20px 30px;color:#fff;">
           <table width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td width="78" style="width:78px;vertical-align:middle;">
-              <img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:999px;background:#ffffff;">
+            <td class="supplier-header-logo-cell" width="78" style="width:78px;vertical-align:middle;">
+              <img class="supplier-header-logo" src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:999px;background:#ffffff;">
             </td>
             <td style="vertical-align:middle;">
               <div class="section-title" style="font-weight:bold;font-size:21px;">Conferma prenotazione</div>
@@ -1383,7 +1390,7 @@ export async function sendSupplierConfirmationEmail(params: {
           <p style="margin:0 0 18px;"><strong>Buongiorno,</strong> si richiede disponibilità come segue presso la vostra struttura: <strong>${escapeHtml(hotelDisplay)}</strong></p>
 
           <p style="margin:0 0 6px;"><strong>Signori:</strong></p>
-          <p style="margin:0 0 22px;font-size:18px;font-weight:bold;">${escapeHtml(fullName)}${phone ? ` &nbsp; ${escapeHtml(phone)}` : ""}</p>
+          <p class="supplier-client-name" style="margin:0 0 22px;font-size:18px;font-weight:bold;line-height:1.45;">${escapeHtml(fullName)}${phone ? `<span class="supplier-client-phone" style="margin-left:10px;font-size:15px;font-weight:600;color:#374151;">${escapeHtml(phone)}</span>` : ""}</p>
 
           <p style="margin:0 0 6px;"><strong>Ospiti:</strong> ${totalGuests}</p>
           <p style="margin:0 0 6px;"><strong>Sistemazione:</strong> ${escapeHtml(accommodationLabel || roomTypeLabel || "-")}</p>
@@ -1400,7 +1407,19 @@ export async function sendSupplierConfirmationEmail(params: {
           <p style="margin:0 0 26px;white-space:pre-line;">${notes?.trim() ? escapeHtml(notes.trim()) : ""}</p>
 
           <p style="margin:0 0 18px;"><strong>Restiamo in attesa di Vs. gradita conferma.</strong></p>
-          <p style="margin:0;"><strong>Grazie per la disponibilità</strong></p>
+          <p style="margin:0 0 22px;"><strong>Grazie per la disponibilità</strong></p>
+
+          <table class="supplier-contact-box" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;">
+            <tr>
+              <td style="padding:16px 18px;">
+                <div style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#1B3A5C;text-transform:uppercase;letter-spacing:0.5px;">Recapiti IschiaStars</div>
+                <div style="font-size:14px;line-height:1.8;color:#374151;">
+                  <strong>Telefono:</strong> <a class="supplier-contact-link" href="tel:+39081905481" style="color:#0B67A3;text-decoration:none;">081 90 54 81</a><br>
+                  <strong>WhatsApp:</strong> <a class="supplier-contact-link" href="https://wa.me/393717590017" style="color:#0B67A3;text-decoration:none;">371 75 90 017</a>
+                </div>
+              </td>
+            </tr>
+          </table>
         </td>
       </tr>
     </table>
@@ -1429,7 +1448,11 @@ export async function sendSupplierConfirmationEmail(params: {
     "",
     "Restiamo in attesa di Vs. gradita conferma.",
     "",
-    "Grazie per la disponibilità"
+    "Grazie per la disponibilità",
+    "",
+    "Recapiti IschiaStars:",
+    "Telefono: 081 90 54 81",
+    "WhatsApp: 371 75 90 017"
   ].join("\n");
 
   const supplierSubject = `Richiesta disponibilità — ${hotelName} — ${quote.code}`;
