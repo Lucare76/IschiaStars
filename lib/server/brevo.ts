@@ -360,145 +360,78 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   ${emailSharedStyles()}
 </head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#EEF3F8;margin:0;padding:0;">
-  <div class="email-wrapper" style="padding:24px 12px;">
-    <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(27,58,92,0.08);">
-      <tr>
-        <td style="height:5px;background:#C9A84C;font-size:0;line-height:0;">&nbsp;</td>
-      </tr>
-      <tr>
-        <td class="header-padding" style="background:#1B3A5C;padding:24px 30px;color:#fff;">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td class="supplier-header-logo-cell" width="82" style="width:82px;vertical-align:middle;">
-                <img class="supplier-header-logo" src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="66" height="66" style="display:block;width:66px;height:66px;border-radius:999px;background:#ffffff;">
-              </td>
-              <td style="vertical-align:middle;">
-                <div class="section-title" style="font-size:22px;font-weight:800;line-height:1.2;color:#ffffff;">Conferma prenotazione</div>
-                <div style="margin-top:5px;font-size:13px;color:#D8E6F2;">Richiesta hotel / agenzia</div>
-              </td>
-              <td align="right" style="vertical-align:middle;">
-                <span style="display:inline-block;border:1px solid rgba(255,255,255,0.28);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:700;color:#ffffff;">${escapeHtml(quote.code)}</span>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f4f6f9;margin:0;padding:0;">
+  <div class="email-wrapper" style="padding:24px 16px;">
+  <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
 
-      <tr>
-        <td class="email-body" style="padding:28px 30px 30px;color:#26384A;font-size:15px;line-height:1.6;">
-          <p style="margin:0 0 22px;font-size:15px;">
-            <strong style="color:#1B3A5C;">Buongiorno,</strong><br>
-            si richiede disponibilità come segue presso la vostra struttura.
-          </p>
+        <tr>
+          <td class="header-padding" style="background:#1a3a5c;padding:28px 32px;text-align:center;">
+            <img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="120" style="display:block;width:120px;max-width:100%;height:auto;margin:0 auto 8px;">
+            <p class="section-title" style="margin:0;color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:1px;">Preventivi IschiaStars</p>
+            <p style="margin:6px 0 0;color:#a8c4e0;font-size:13px;">Soggiorni a Ischia</p>
+          </td>
+        </tr>
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border:1px solid #D9E2EC;border-radius:12px;overflow:hidden;">
-            <tr>
-              <td style="background:#F6F9FC;padding:16px 18px;">
-                <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#6B7C8E;">Struttura</div>
-                <div style="margin-top:4px;font-size:19px;font-weight:800;line-height:1.3;color:#1B3A5C;">${escapeHtml(hotelDisplay)}</div>
-              </td>
-            </tr>
-          </table>
+        <tr>
+          <td class="email-body" style="padding:28px 32px 24px;">
+            <p style="margin:0 0 18px;font-size:15px;color:#1F2937;line-height:1.6;">Ciao ${escapeHtml(firstName)},</p>
+            <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">${introText}</p>
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border:1px solid #E3EAF1;border-radius:12px;overflow:hidden;">
-            <tr>
-              <td style="padding:15px 18px;border-bottom:1px solid #E8EDF2;">
-                <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#6B7C8E;">Cliente</div>
-                <div class="supplier-client-name" style="margin-top:4px;font-size:17px;font-weight:800;color:#1B3A5C;">${escapeHtml(fullName)}</div>
-                ${phone ? `<div class="supplier-client-phone" style="margin-top:3px;font-size:14px;font-weight:600;color:#506273;">${escapeHtml(phone)}</div>` : ""}
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:15px 18px;">
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="width:50%;padding:0 8px 10px 0;vertical-align:top;">
-                      <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#6B7C8E;">Ospiti</div>
-                      <div style="margin-top:3px;font-weight:700;color:#26384A;">${totalGuests}</div>
-                    </td>
-                    <td style="width:50%;padding:0 0 10px 8px;vertical-align:top;">
-                      <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#6B7C8E;">Trattamento</div>
-                      <div style="margin-top:3px;font-weight:700;color:#26384A;">${escapeHtml(treatmentLabel || "-")}</div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td colspan="2" style="padding-top:4px;">
-                      <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#6B7C8E;">Sistemazione</div>
-                      <div style="margin-top:3px;font-weight:700;color:#26384A;">${escapeHtml(accommodationLabel || roomTypeLabel || "-")}</div>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
+            ${staySummaryBoxHtml}
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:#1B3A5C;border-radius:12px;overflow:hidden;">
-            <tr>
-              <td style="padding:14px 18px;color:#ffffff;">
-                <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#C9A84C;">Periodo</div>
-                <div style="margin-top:4px;font-size:17px;font-weight:800;">Dal ${formatDate(quote.arrivalDate)} al ${formatDate(quote.departureDate)}</div>
-              </td>
-            </tr>
-          </table>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f6ff;border-radius:6px;padding:20px 20px 12px;margin-bottom:28px;">
+              <tr>
+                <td style="padding:6px 0;font-size:14px;color:#555;"><strong style="color:#1a3a5c;">Codice preventivo</strong></td>
+                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;font-weight:600;">${quote.code}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;font-size:14px;color:#555;"><strong style="color:#1a3a5c;">Arrivo</strong></td>
+                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${formatDate(quote.arrivalDate)}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;font-size:14px;color:#555;"><strong style="color:#1a3a5c;">Partenza</strong></td>
+                <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${formatDate(quote.departureDate)}</td>
+              </tr>
+              ${optionsSummaryHtml}
+              ${quote.offerExpiresAt ? `<tr>
+                <td style="padding:10px 0 6px;font-size:13px;color:#c05000;border-top:1px solid #cdd8e8;"><strong>Offerta valida fino al</strong></td>
+                <td style="padding:10px 0 6px;font-size:13px;color:#c05000;text-align:right;font-weight:600;border-top:1px solid #cdd8e8;">${formatDate(quote.offerExpiresAt)}</td>
+              </tr>` : ""}
+            </table>
 
-          ${grossPriceFormatted || netPriceFormatted || commissionFormatted ? `
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border:1px solid #D9E2EC;border-radius:12px;overflow:hidden;">
-            <tr><td style="background:#F6F9FC;padding:12px 18px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#1B3A5C;">Riepilogo economico</td></tr>
-            ${grossPriceFormatted ? `<tr><td style="padding:12px 18px;border-top:1px solid #E8EDF2;"><strong>Costo totale:</strong> ${grossPriceFormatted}</td></tr>` : ""}
-            ${netPriceFormatted ? `<tr><td style="padding:12px 18px;border-top:1px solid #E8EDF2;"><strong>Saldo totale in struttura all'arrivo:</strong> ${netPriceFormatted}</td></tr>` : ""}
-            ${commissionFormatted ? `<tr><td style="padding:12px 18px;border-top:1px solid #E8EDF2;"><strong>Commissione trattenuta:</strong> ${commissionFormatted}</td></tr>` : ""}
-          </table>` : ""}
+            <div style="text-align:center;margin:28px 0 20px;">
+              <a href="${safeEmailUrl(quoteUrl)}" class="cta-button"
+                 style="background:#1a3a5c;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block;letter-spacing:0.5px;">
+                ${hasMultiple ? "Vedi le proposte e conferma" : "Apri il preventivo"}
+              </a>
+            </div>
 
-          ${roomCostRowsHtml ? `
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border:1px solid #D9E2EC;border-radius:12px;overflow:hidden;">
-            <tr><td style="background:#F6F9FC;padding:12px 18px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#1B3A5C;">Dettaglio camere</td></tr>
-            <tr><td style="padding:14px 18px;">${roomCostRowsHtml}</td></tr>
-          </table>` : ""}
+            <p style="text-align:center;margin:0 0 6px;font-size:12px;color:#999;">
+              Se il pulsante non funziona, copia e incolla questo link nel browser:
+            </p>
+            <p style="text-align:center;margin:0 0 28px;font-size:12px;word-break:break-all;">
+              <a href="${safeEmailUrl(quoteUrl)}" style="color:#1a3a5c;">${escapeHtml(quoteUrl)}</a>
+            </p>
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;background:#FFFDF7;border:1px solid #E9DFC0;border-radius:12px;">
-            <tr>
-              <td style="padding:15px 18px;">
-                <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#8A6F2E;">Note</div>
-                <div style="margin-top:5px;white-space:pre-line;color:#4C4C45;">${notes?.trim() ? escapeHtml(notes.trim()) : "Nessuna nota aggiuntiva."}</div>
-              </td>
-            </tr>
-          </table>
+            ${travelServicesBoxHtml}
 
-          <p style="margin:0 0 8px;font-weight:800;color:#1B3A5C;">Restiamo in attesa di Vs. gradita conferma.</p>
-          <p style="margin:0 0 24px;">Grazie per la disponibilità.</p>
+            <p style="margin:0 0 12px;font-size:14px;color:#444444;line-height:1.7;">
+              Dal preventivo potrai visualizzare i dettagli, confrontare le proposte e confermare direttamente online.
+            </p>
+            <p style="margin:0;font-size:14px;color:#444444;line-height:1.7;">
+              Per domande puoi rispondere a questa email oppure scriverci su WhatsApp.
+            </p>
+          </td>
+        </tr>
 
-          <table class="supplier-contact-box" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F9FC;border:1px solid #D9E2EC;border-radius:12px;overflow:hidden;">
-            <tr>
-              <td style="padding:18px;">
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td width="58" style="width:58px;vertical-align:middle;">
-                      <img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="46" height="46" style="display:block;width:46px;height:46px;border-radius:999px;background:#ffffff;">
-                    </td>
-                    <td style="vertical-align:middle;">
-                      <div style="font-size:13px;font-weight:800;color:#1B3A5C;text-transform:uppercase;letter-spacing:0.05em;">Recapiti IschiaStars</div>
-                      <div style="margin-top:5px;font-size:14px;line-height:1.75;color:#374151;">
-                        <strong>Telefono:</strong> <a class="supplier-contact-link" href="tel:+39081905481" style="color:#0B67A3;text-decoration:none;">081 90 54 81</a><br>
-                        <strong>WhatsApp:</strong> <a class="supplier-contact-link" href="https://wa.me/393717590017" style="color:#0B67A3;text-decoration:none;">371 75 90 017</a><br>
-                        <strong>Email:</strong> <a class="supplier-contact-link" href="mailto:info@ischiastars.it" style="color:#0B67A3;text-decoration:none;">info@ischiastars.it</a><br>
-                        <strong>Sito:</strong> <a class="supplier-contact-link" href="https://ischiastars.it/" style="color:#0B67A3;text-decoration:none;">ischiastars.it</a>
-                      </div>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
+        <tr>
+          <td class="footer-padding" style="background:#f0f6ff;padding:20px 32px;text-align:center;border-top:1px solid #e0e8f0;">
+            <p style="margin:0;font-size:13px;color:#666;">Il team IschiaStars</p>
+            <p style="margin:4px 0 0;font-size:12px;color:#999;">info@ischiastars.it</p>
+          </td>
+        </tr>
 
-      <tr>
-        <td style="background:#1B3A5C;padding:12px 18px;text-align:center;font-size:11px;color:#C8D6E3;">
-          IschiaStars · Ischia
-        </td>
-      </tr>
-    </table>
+  </table>
   </div>
 </body>
 </html>`;
@@ -1436,58 +1369,125 @@ export async function sendSupplierConfirmationEmail(params: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   ${emailSharedStyles()}
 </head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f4f6f9;margin:0;padding:0;">
-  <div class="email-wrapper" style="padding:24px 16px;">
-    <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:660px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#EEF3F8;margin:0;padding:0;">
+  <div class="email-wrapper" style="padding:24px 12px;">
+    <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;">
       <tr>
-        <td class="header-padding" style="background:#1B3A5C;padding:20px 30px;color:#fff;">
-          <table width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td class="supplier-header-logo-cell" width="78" style="width:78px;vertical-align:middle;">
-              <img class="supplier-header-logo" src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:999px;background:#ffffff;">
-            </td>
-            <td style="vertical-align:middle;">
-              <div class="section-title" style="font-weight:bold;font-size:21px;">Conferma prenotazione</div>
-              <div style="margin-top:5px;font-size:13px;color:#dbe5f0;">IschiaStars</div>
-            </td>
-          </tr></table>
-        </td>
+        <td style="height:5px;background:#C9A84C;font-size:0;line-height:0;">&nbsp;</td>
       </tr>
       <tr>
-        <td class="email-body" style="padding:28px 32px;color:#1F2937;font-size:15px;line-height:1.65;">
-          <p style="margin:0 0 18px;"><strong>Buongiorno,</strong> si richiede disponibilità come segue presso la vostra struttura: <strong>${escapeHtml(hotelDisplay)}</strong></p>
-
-          <p style="margin:0 0 6px;"><strong>Signori:</strong></p>
-          <p class="supplier-client-name" style="margin:0 0 22px;font-size:18px;font-weight:bold;line-height:1.45;">${escapeHtml(fullName)}${phone ? `<span class="supplier-client-phone" style="margin-left:10px;font-size:15px;font-weight:600;color:#374151;">${escapeHtml(phone)}</span>` : ""}</p>
-
-          <p style="margin:0 0 6px;"><strong>Ospiti:</strong> ${totalGuests}</p>
-          <p style="margin:0 0 6px;"><strong>Sistemazione:</strong> ${escapeHtml(accommodationLabel || roomTypeLabel || "-")}</p>
-          <p style="margin:0 0 6px;"><strong>Trattamento:</strong> ${escapeHtml(treatmentLabel || "-")}</p>
-          <p style="margin:0 0 24px;"><strong>Periodo:</strong> Dal ${formatDate(quote.arrivalDate)} al ${formatDate(quote.departureDate)}</p>
-
-          ${grossPriceFormatted ? `<p style="margin:0 0 10px;font-size:17px;"><strong>Costo totale:</strong> ${grossPriceFormatted}</p>` : ""}
-          ${netPriceFormatted ? `<p style="margin:0 0 10px;font-size:17px;"><strong>Saldo totale in struttura all'arrivo:</strong> ${netPriceFormatted}</p>` : ""}
-          ${commissionFormatted ? `<p style="margin:0 0 22px;font-size:15px;"><strong>Commissione trattenuta:</strong> ${commissionFormatted}</p>` : (grossPriceFormatted || netPriceFormatted ? '<div style="height:12px;"></div>' : "")}
-
-          ${roomCostRowsHtml ? `<div style="margin:4px 0 22px;">${roomCostRowsHtml}</div>` : ""}
-
-          <p style="margin:0 0 6px;"><strong>Note:</strong></p>
-          <p style="margin:0 0 26px;white-space:pre-line;">${notes?.trim() ? escapeHtml(notes.trim()) : ""}</p>
-
-          <p style="margin:0 0 18px;"><strong>Restiamo in attesa di Vs. gradita conferma.</strong></p>
-          <p style="margin:0 0 22px;"><strong>Grazie per la disponibilità</strong></p>
-
-          <table class="supplier-contact-box" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;">
+        <td class="header-padding" style="background:#1B3A5C;padding:24px 30px;color:#fff;">
+          <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td style="padding:16px 18px;">
-                <div style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#1B3A5C;text-transform:uppercase;letter-spacing:0.5px;">Recapiti IschiaStars</div>
-                <div style="font-size:14px;line-height:1.8;color:#374151;">
-                  <strong>Telefono:</strong> <a class="supplier-contact-link" href="tel:+39081905481" style="color:#0B67A3;text-decoration:none;">081 90 54 81</a><br>
-                  <strong>WhatsApp:</strong> <a class="supplier-contact-link" href="https://wa.me/393717590017" style="color:#0B67A3;text-decoration:none;">371 75 90 017</a>
-                </div>
+              <td class="supplier-header-logo-cell" width="82" style="width:82px;vertical-align:middle;">
+                <img class="supplier-header-logo" src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="66" height="66" style="display:block;width:66px;height:66px;border-radius:999px;background:#ffffff;">
+              </td>
+              <td style="vertical-align:middle;">
+                <div class="section-title" style="font-size:22px;font-weight:800;line-height:1.2;color:#ffffff;">Conferma prenotazione</div>
+                <div style="margin-top:5px;font-size:13px;color:#D8E6F2;">IschiaStars · Hotel / Agenzie</div>
+              </td>
+              <td class="supplier-code-cell" align="right" style="vertical-align:middle;">
+                <span style="display:inline-block;border:1px solid #66819A;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:700;color:#ffffff;">${escapeHtml(quote.code)}</span>
               </td>
             </tr>
           </table>
         </td>
+      </tr>
+
+      <tr>
+        <td class="email-body" style="padding:28px 30px 30px;color:#26384A;font-size:15px;line-height:1.6;">
+          <p style="margin:0 0 22px;">
+            <strong style="color:#1B3A5C;">Buongiorno,</strong><br>
+            si richiede disponibilità come segue presso la vostra struttura.
+          </p>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #D9E2EC;border-radius:12px;">
+            <tr>
+              <td style="background:#F6F9FC;padding:16px 18px;">
+                <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#6B7C8E;">Struttura</div>
+                <div style="margin-top:4px;font-size:19px;font-weight:800;line-height:1.3;color:#1B3A5C;">${escapeHtml(hotelDisplay)}</div>
+              </td>
+            </tr>
+          </table>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #E3EAF1;border-radius:12px;">
+            <tr>
+              <td style="padding:15px 18px;border-bottom:1px solid #E8EDF2;">
+                <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#6B7C8E;">Cliente</div>
+                <div class="supplier-client-name" style="margin-top:4px;font-size:17px;font-weight:800;color:#1B3A5C;">${escapeHtml(fullName)}</div>
+                ${phone ? `<div class="supplier-client-phone" style="margin-top:3px;font-size:14px;font-weight:600;color:#506273;">${escapeHtml(phone)}</div>` : ""}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:15px 18px;">
+                <p style="margin:0 0 7px;"><strong>Ospiti:</strong> ${totalGuests}</p>
+                <p style="margin:0 0 7px;"><strong>Sistemazione:</strong> ${escapeHtml(accommodationLabel || roomTypeLabel || "-")}</p>
+                <p style="margin:0;"><strong>Trattamento:</strong> ${escapeHtml(treatmentLabel || "-")}</p>
+              </td>
+            </tr>
+          </table>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;background:#1B3A5C;border-radius:12px;">
+            <tr>
+              <td style="padding:14px 18px;color:#ffffff;">
+                <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#E3C66E;">Periodo</div>
+                <div style="margin-top:4px;font-size:17px;font-weight:800;">Dal ${formatDate(quote.arrivalDate)} al ${formatDate(quote.departureDate)}</div>
+              </td>
+            </tr>
+          </table>
+
+          ${grossPriceFormatted || netPriceFormatted || commissionFormatted ? `
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #D9E2EC;border-radius:12px;">
+            <tr><td style="background:#F6F9FC;padding:12px 18px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#1B3A5C;">Riepilogo economico</td></tr>
+            ${grossPriceFormatted ? `<tr><td style="padding:11px 18px;border-top:1px solid #E8EDF2;"><strong>Costo totale:</strong> ${grossPriceFormatted}</td></tr>` : ""}
+            ${netPriceFormatted ? `<tr><td style="padding:11px 18px;border-top:1px solid #E8EDF2;"><strong>Saldo totale in struttura all'arrivo:</strong> ${netPriceFormatted}</td></tr>` : ""}
+            ${commissionFormatted ? `<tr><td style="padding:11px 18px;border-top:1px solid #E8EDF2;"><strong>Commissione trattenuta:</strong> ${commissionFormatted}</td></tr>` : ""}
+          </table>` : ""}
+
+          ${roomCostRowsHtml ? `
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #D9E2EC;border-radius:12px;">
+            <tr><td style="background:#F6F9FC;padding:12px 18px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#1B3A5C;">Dettaglio camere</td></tr>
+            <tr><td style="padding:14px 18px;">${roomCostRowsHtml}</td></tr>
+          </table>` : ""}
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;background:#FFFDF7;border:1px solid #E9DFC0;border-radius:12px;">
+            <tr>
+              <td style="padding:15px 18px;">
+                <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#8A6F2E;">Note</div>
+                <div style="margin-top:5px;white-space:pre-line;color:#4C4C45;">${notes?.trim() ? escapeHtml(notes.trim()) : "Nessuna nota aggiuntiva."}</div>
+              </td>
+            </tr>
+          </table>
+
+          <p style="margin:0 0 8px;font-weight:800;color:#1B3A5C;">Restiamo in attesa di Vs. gradita conferma.</p>
+          <p style="margin:0 0 24px;">Grazie per la disponibilità.</p>
+
+          <table class="supplier-contact-box" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F9FC;border:1px solid #D9E2EC;border-radius:12px;">
+            <tr>
+              <td style="padding:18px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td width="58" style="width:58px;vertical-align:middle;">
+                      <img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="46" height="46" style="display:block;width:46px;height:46px;border-radius:999px;background:#ffffff;">
+                    </td>
+                    <td style="vertical-align:middle;">
+                      <div style="font-size:13px;font-weight:800;color:#1B3A5C;text-transform:uppercase;letter-spacing:0.05em;">Recapiti IschiaStars</div>
+                      <div style="margin-top:5px;font-size:14px;line-height:1.75;color:#374151;">
+                        <strong>Telefono:</strong> <a class="supplier-contact-link" href="tel:+39081905481" style="color:#0B67A3;text-decoration:none;">081 90 54 81</a><br>
+                        <strong>WhatsApp:</strong> <a class="supplier-contact-link" href="https://wa.me/393717590017" style="color:#0B67A3;text-decoration:none;">371 75 90 017</a><br>
+                        <strong>Email:</strong> <a class="supplier-contact-link" href="mailto:info@ischiastars.it" style="color:#0B67A3;text-decoration:none;">info@ischiastars.it</a><br>
+                        <strong>Sito:</strong> <a class="supplier-contact-link" href="https://ischiastars.it/" style="color:#0B67A3;text-decoration:none;">ischiastars.it</a>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:#1B3A5C;padding:12px 18px;text-align:center;font-size:11px;color:#C8D6E3;">IschiaStars · Ischia</td>
       </tr>
     </table>
   </div>
