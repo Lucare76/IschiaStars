@@ -1400,7 +1400,19 @@ export async function sendSupplierConfirmationEmail(params: {
           <p style="margin:0 0 26px;white-space:pre-line;">${notes?.trim() ? escapeHtml(notes.trim()) : ""}</p>
 
           <p style="margin:0 0 18px;"><strong>Restiamo in attesa di Vs. gradita conferma.</strong></p>
-          <p style="margin:0;"><strong>Grazie per la disponibilità</strong></p>
+          <p style="margin:0 0 22px;"><strong>Grazie per la disponibilità</strong></p>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;">
+            <tr>
+              <td style="padding:16px 18px;">
+                <div style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#1B3A5C;text-transform:uppercase;letter-spacing:0.5px;">Recapiti IschiaStars</div>
+                <div style="font-size:14px;line-height:1.8;color:#374151;">
+                  <strong>Telefono:</strong> <a href="tel:+39081905481" style="color:#0B67A3;text-decoration:none;">081 90 54 81</a><br>
+                  <strong>WhatsApp:</strong> <a href="https://wa.me/393717590017" style="color:#0B67A3;text-decoration:none;">371 75 90 017</a>
+                </div>
+              </td>
+            </tr>
+          </table>
         </td>
       </tr>
     </table>
@@ -1429,7 +1441,11 @@ export async function sendSupplierConfirmationEmail(params: {
     "",
     "Restiamo in attesa di Vs. gradita conferma.",
     "",
-    "Grazie per la disponibilità"
+    "Grazie per la disponibilità",
+    "",
+    "Recapiti IschiaStars:",
+    "Telefono: 081 90 54 81",
+    "WhatsApp: 371 75 90 017"
   ].join("\n");
 
   const supplierSubject = `Richiesta disponibilità — ${hotelName} — ${quote.code}`;
