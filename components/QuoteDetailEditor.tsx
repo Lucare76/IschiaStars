@@ -481,7 +481,11 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
                 Azioni rapide per questo interesse
               </p>
               <div className="flex flex-wrap gap-2">
-                <InterestedFollowUpWhatsAppButton quote={currentQuote} hotelName={latestInterestedReaction.metadata.hotelName} />
+                <InterestedFollowUpWhatsAppButton
+                  quote={currentQuote}
+                  hotelName={latestInterestedReaction.metadata.hotelName}
+                  hotelGroup={typeof latestInterestedReaction.metadata.hotelGroup === "number" ? latestInterestedReaction.metadata.hotelGroup : undefined}
+                />
                 <InterestedFollowUpEmailButton quoteId={currentQuote.id} clientEmail={currentQuote.customerEmail} hotelName={latestInterestedReaction.metadata.hotelName} />
               </div>
             </div>
