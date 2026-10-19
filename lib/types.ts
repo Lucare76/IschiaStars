@@ -169,6 +169,7 @@ export type QuoteHotelOption = {
   badge?: string | null;
   hotelReason?: string | null;
   roomTypeLabel?: string;
+  roomImageUrl?: string;
   hotelName: string;
   hotelLocation?: string;
   hotelStars?: number;

@@ -759,6 +759,7 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
       hotelReason: o.hotelReason,
       commitmentNote: o.commitmentNote,
       roomTypeLabel: o.roomTypeLabel,
+      roomImageUrl: o.roomImageUrl,
       hotelName: o.hotelName,
       hotelLocation: o.hotelLocation,
       hotelStars: o.hotelStars,

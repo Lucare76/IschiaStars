@@ -12,6 +12,7 @@ export type PublicQuoteHotelOptionDTO = {
   badge?: string | null;
   hotelReason?: string | null;
   roomTypeLabel?: string;
+  roomImageUrl?: string;
   hotelName: string;
   hotelLocation?: string;
   hotelStars?: number;
@@ -87,6 +88,7 @@ export function toPublicQuoteDTO(quote: Quote): PublicQuoteDTO {
       badge: option.badge,
       hotelReason: option.hotelReason,
       roomTypeLabel: option.roomTypeLabel,
+      roomImageUrl: option.roomImageUrl,
       hotelName: option.hotelName,
       hotelLocation: option.hotelLocation,
       hotelStars: option.hotelStars,
