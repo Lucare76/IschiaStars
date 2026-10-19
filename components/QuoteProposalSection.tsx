@@ -11,6 +11,7 @@ import type { PublicQuoteDTO, PublicQuoteHotelOptionDTO } from "@/lib/public-quo
 import { defaultQuoteContentSettings, type QuoteContentSettings } from "@/lib/quote-content-settings";
 import type { QuoteRoomSelection, TreatmentOption } from "@/lib/types";
 import { extractHighlightedFeatures } from "@/lib/highlight-features";
+import { buildHotelNotes } from "@/lib/hotel-notes";
 import { safeSessionStorageGet, safeSessionStorageSet } from "@/lib/safe-storage";
 import { formatCurrency, publicWhatsappLink } from "@/lib/utils";
 
@@ -659,7 +660,7 @@ function HotelCard({
   const imageUrl = sharperWordPressImageUrl(mainOption.hotelImageUrl);
   const badge = mainOption.badge?.trim();
   const hotelReason = mainOption.hotelReason?.trim();
-  const commitmentNote = mainOption.commitmentNote?.trim();
+  const hotelNotes = buildHotelNotes(allGroupOptions, mainOption.commitmentNote);
   const mandatoryFeeNote = getMandatoryHotelFeeNote(mainOption.hotelName);
   const features = extractHighlightedFeatures({
     hotelName: mainOption.hotelName,
@@ -758,8 +759,6 @@ function HotelCard({
           </div>
         )}
 
-        {commitmentNote ? <CommitmentNoteBadge note={commitmentNote} /> : null}
-
         {hotelReason ? (
           <div className="mt-3 rounded-r-lg border-l-[3px] border-[#C9A84C] bg-[#FBF5E6] px-4 py-2">
             <p className="text-xs font-bold uppercase tracking-wide text-[#C9A84C]">Perché te lo proponiamo</p>
@@ -791,6 +790,22 @@ function HotelCard({
             </p>
           </div>
         )}
+
+        {hotelNotes.notes.length > 0 || hotelNotes.commitmentNote ? (
+          <div className="mt-3">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/70">Note struttura / camera</p>
+            {hotelNotes.notes.length > 0 ? (
+              <ul className="mt-1 space-y-0.5">
+                {hotelNotes.notes.map((note) => <li key={note} className="text-sm leading-6 text-ischia-ink/80">{note}</li>)}
+              </ul>
+            ) : null}
+            {hotelNotes.commitmentNote ? (
+              <p className="mt-1.5 rounded-r-lg border-l-[3px] border-ischia-sun bg-[#FFF8E6] px-3 py-1.5 text-sm font-semibold leading-6 text-ischia-navy">
+                {hotelNotes.commitmentNote}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {services.length > 0 && (
           <div className="mt-3">
