@@ -439,9 +439,10 @@ function CompareView({
           }}
         >
           {groups.map(({ groupId, mainOption }, colIndex) => {
-            const isRecommended = mainOption.badge?.trim() === "Consigliato";
+            const rawBadge = mainOption.badge?.trim();
+            const isRecommended = rawBadge === "Consigliato";
             const imageUrl = sharperWordPressImageUrl(mainOption.hotelImageUrl);
-            const badge = mainOption.badge?.trim();
+            const badge = rawBadge && !["Più economica", "Più completa"].includes(rawBadge) ? rawBadge : undefined;
             const hotelReason = mainOption.hotelReason?.trim();
             const commitmentNote = mainOption.commitmentNote?.trim();
             const services = splitLines(mainOption.includedServices);
