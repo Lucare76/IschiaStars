@@ -675,19 +675,13 @@ function HotelCard({
           {badge}
         </span>
       ) : null}
-      <div className="">
-        {imageUrl && (
-          <div className="relative h-64 overflow-hidden bg-ischia-mist sm:h-80 lg:h-[360px]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img alt={mainOption.hotelName} className="h-full w-full object-cover object-center" decoding="async" src={imageUrl} />
-          </div>
-        )}
-      <div className="p-5 sm:p-7">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+      <div>
+      <div className="p-6 sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{mainOption.hotelLocation}</p>
             <div className="mt-1 flex flex-wrap items-center gap-3">
-              <h3 className="text-3xl font-black tracking-[-0.03em] text-ischia-navy sm:text-4xl">{mainOption.hotelName}</h3>
+              <h3 className="text-3xl font-black tracking-[-0.035em] text-ischia-navy sm:text-4xl lg:text-5xl">{mainOption.hotelName}</h3>
               {mainOption.sourceUrl ? (
                 <a
                   className="no-print rounded-full bg-white px-3 py-1 text-xs font-black text-ischia-blue ring-1 ring-ischia-blue/20"
@@ -792,7 +786,7 @@ function HotelCard({
         )}
 
         {hotelNotes.notes.length > 0 || hotelNotes.commitmentNote ? (
-          <div className="mt-4 rounded-2xl bg-ischia-navy px-4 py-4 text-white shadow-sm">
+          <div className="mt-3 rounded-2xl bg-ischia-navy px-5 py-3.5 text-white shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.12em] text-white">Note struttura / camera</p>
             {hotelNotes.notes.length > 0 ? (
               <ul className="mt-2 space-y-1">
@@ -840,12 +834,12 @@ function HotelCard({
                     const frontDetails = details || treatmentDescription(treatment);
                     return (
                     <div key={detailKey} className="overflow-hidden rounded-[24px] bg-white shadow-[0_16px_40px_rgba(8,63,115,0.10)] ring-1 ring-ischia-blue/10">
-                      <div className="grid lg:grid-cols-[280px_minmax(0,1fr)_250px]">
-                        <div className="relative min-h-[220px] overflow-hidden bg-ischia-mist">
+                      <div className="grid lg:grid-cols-[320px_minmax(0,1fr)_260px]">
+                        <div className="relative min-h-[240px] overflow-hidden bg-ischia-mist">
                           {imageUrl ? (
                             <>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img alt={opt.roomTypeLabel || opt.hotelName} className="absolute inset-0 h-full w-full object-cover" src={imageUrl} />
+                              <img alt={opt.roomTypeLabel || opt.hotelName} className="absolute inset-0 h-full w-full object-cover object-center" src={imageUrl} />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                             </>
                           ) : (
@@ -862,7 +856,7 @@ function HotelCard({
                           {opt.roomTypeLabel ? (
                             <p className="text-xs font-black uppercase tracking-[0.12em] text-ischia-blue/70">{opt.roomTypeLabel}</p>
                           ) : null}
-                          <p className="mt-1 text-2xl font-black tracking-[-0.02em] text-ischia-navy">{treatment.label}</p>
+                          <p className="mt-1 text-3xl font-black tracking-[-0.03em] text-ischia-navy">{treatment.label}</p>
 
                           <div className="mt-4">
                             <p className="text-xs font-black uppercase tracking-[0.12em] text-ischia-blue/70">Cosa include</p>
@@ -881,7 +875,7 @@ function HotelCard({
 
                         <div className="flex flex-col justify-center bg-[#F6FBFF] p-5 sm:p-6">
                           <p className="text-xs font-black uppercase tracking-[0.12em] text-ischia-blue/70">{priceScopeLabel}</p>
-                          <p className="mt-1 text-4xl font-black tabular-nums tracking-[-0.035em] text-ischia-navy">{formatCurrency(treatment.price)}</p>
+                          <p className="mt-1 text-5xl font-black tabular-nums tracking-[-0.04em] text-ischia-navy">{formatCurrency(treatment.price)}</p>
                           {priceDelta ? (
                             <p className="mt-2 text-sm font-semibold text-ischia-ink/65">+ {formatCurrency(priceDelta)} rispetto all&apos;opzione precedente</p>
                           ) : null}
