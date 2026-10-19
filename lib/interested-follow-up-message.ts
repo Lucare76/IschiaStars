@@ -42,7 +42,7 @@ export function interestedHotelPriceText(quote: Quote, hotelName: string, hotelG
   }
 
   return {
-    text: `${rooms.length > 1 ? "tariffe a partire da" : "a partire da"} ${formatCurrency(minPrice)} per camera`,
+    text: `${formatCurrency(minPrice)} per camera`,
     multiline: false
   };
 }

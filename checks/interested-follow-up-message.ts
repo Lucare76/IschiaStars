@@ -95,13 +95,13 @@ Vuoi che controllo subito la disponibilità aggiornata e, se è tutto ok, ti spi
   assert.ok(message.includes(`La proposta è ancora molto interessante:\nMatrimoniale ${eur(870)} · Tripla ${eur(1050)} · Singola ${eur(620)}.`));
 }
 
-// 3b. Tipologie senza etichetta (dettaglio non ricostruibile) -> "a partire da"
+// 3b. Tipologie senza etichetta (dettaglio non ricostruibile) -> mostra il prezzo minimo per camera senza "a partire da"
 {
   const q = quote({ hotelOptions: [option(undefined, [halfBoard(870)]), option(undefined, [halfBoard(620)], { position: 2 })] });
-  assert.equal(interestedHotelPriceText(q, HOTEL)?.text, `tariffe a partire da ${eur(620)} per camera`);
+  assert.equal(interestedHotelPriceText(q, HOTEL)?.text, `${eur(620)} per camera`);
 }
 
-// 3c. Più trattamenti per tipologia -> "a partire da" (nessun prezzo attribuito a una tipologia a caso)
+// 3c. Più trattamenti per tipologia -> mostra il prezzo minimo per camera senza "a partire da"
 {
   const q = quote({
     hotelOptions: [
@@ -109,7 +109,7 @@ Vuoi che controllo subito la disponibilità aggiornata e, se è tutto ok, ti spi
       option("Tripla", [halfBoard(1050)], { position: 2 })
     ]
   });
-  assert.equal(interestedHotelPriceText(q, HOTEL)?.text, `tariffe a partire da ${eur(800)} per camera`);
+  assert.equal(interestedHotelPriceText(q, HOTEL)?.text, `${eur(800)} per camera`);
 }
 
 // 3d. Stessa tipologia/prezzo su più opzioni -> un solo prezzo per camera
