@@ -687,7 +687,7 @@ function HotelCard({
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{mainOption.hotelLocation}</p>
             <div className="mt-1 flex flex-wrap items-center gap-3">
-              <h3 className="text-2xl font-black text-ischia-navy">{mainOption.hotelName}</h3>
+              <h3 className="text-3xl font-black tracking-[-0.03em] text-ischia-navy sm:text-4xl">{mainOption.hotelName}</h3>
               {mainOption.sourceUrl ? (
                 <a
                   className="no-print rounded-full bg-white px-3 py-1 text-xs font-black text-ischia-blue ring-1 ring-ischia-blue/20"
@@ -704,7 +704,7 @@ function HotelCard({
                 </a>
               ) : null}
             </div>
-            {stars && <p className="mt-1 text-sm text-ischia-sun">{stars}</p>}
+            {stars && <p className="mt-2 text-base tracking-[0.12em] text-ischia-sun">{stars}</p>}
             <PopularityBadge count={popularity} />
           </div>
           {isAnySelected && (
@@ -808,10 +808,15 @@ function HotelCard({
         ) : null}
 
         {services.length > 0 && (
-          <div className="mt-3">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/70">Servizi inclusi</p>
-            <ul className="mt-1 grid gap-1 sm:grid-cols-2">
-              {services.map((s) => <li key={s} className="text-sm text-ischia-ink/78">{s}</li>)}
+          <div className="mt-4 rounded-2xl bg-[#F3F9FD] p-4 ring-1 ring-ischia-blue/10">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-ischia-blue">Servizi inclusi</p>
+            <ul className="mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-2">
+              {services.map((s) => (
+                <li key={s} className="flex items-center gap-2 text-sm font-medium text-ischia-ink/80">
+                  <span className="text-ischia-blue">•</span>
+                  <span>{s}</span>
+                </li>
+              ))}
             </ul>
           </div>
         )}
@@ -834,41 +839,69 @@ function HotelCard({
                     const benefit = details ? undefined : treatmentBenefit(treatment);
                     const frontDetails = details || treatmentDescription(treatment);
                     return (
-                    <div key={detailKey} className="rounded-[22px] bg-gradient-to-br from-[#F3F9FD] to-white p-5 shadow-sm ring-1 ring-ischia-blue/10">
-                      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-end">
-                        <div className="min-w-0">
-                          {opt.roomTypeLabel ? (
-                            <p className="text-xs font-bold uppercase tracking-wide text-ischia-blue/60">{opt.roomTypeLabel}</p>
-                          ) : null}
-                          <p className="font-black text-ischia-navy">{treatment.label}</p>
-                          <div className="mt-2 rounded-xl bg-ischia-navy px-4 py-3 text-sm leading-6 text-white">
-                            <p className="text-xs font-black uppercase tracking-wide text-white/70">Cosa include</p>
-                            <p className="mt-1 whitespace-pre-line">{frontDetails}</p>
-                          </div>
-                          <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <p className="text-3xl font-black tabular-nums tracking-[-0.02em] text-ischia-navy">{formatCurrency(treatment.price)}</p>
-                          </div>
-                          <p className="mt-0.5 text-xs font-bold uppercase tracking-wide text-ischia-blue/70">{priceScopeLabel}</p>
-                          {benefit ? (
-                            <p className="mt-0.5 text-xs italic text-gray-500">{benefit}</p>
-                          ) : null}
+                    <div key={detailKey} className="overflow-hidden rounded-[24px] bg-white shadow-[0_16px_40px_rgba(8,63,115,0.10)] ring-1 ring-ischia-blue/10">
+                      <div className="grid lg:grid-cols-[280px_minmax(0,1fr)_250px]">
+                        <div className="relative min-h-[220px] overflow-hidden bg-ischia-mist">
+                          {imageUrl ? (
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img alt={opt.roomTypeLabel || opt.hotelName} className="absolute inset-0 h-full w-full object-cover" src={imageUrl} />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                            </>
+                          ) : (
+                            <div className="flex h-full min-h-[220px] items-center justify-center">
+                              <BuildingIcon />
+                            </div>
+                          )}
+                          <span className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-ischia-navy shadow-sm">
+                            {treatment.key === "half_board" ? "Più economica" : treatment.key === "full_board" ? "Più completa" : "Soluzione"}
+                          </span>
                         </div>
-                        <div className="flex w-full flex-wrap items-start gap-3 sm:justify-end">
-                          {!isConfirmed && (
-                            <div className="no-print w-full text-center">
+
+                        <div className="p-5 sm:p-6">
+                          {opt.roomTypeLabel ? (
+                            <p className="text-xs font-black uppercase tracking-[0.12em] text-ischia-blue/70">{opt.roomTypeLabel}</p>
+                          ) : null}
+                          <p className="mt-1 text-2xl font-black tracking-[-0.02em] text-ischia-navy">{treatment.label}</p>
+
+                          <div className="mt-4">
+                            <p className="text-xs font-black uppercase tracking-[0.12em] text-ischia-blue/70">Cosa include</p>
+                            <ul className="mt-2 space-y-2">
+                              {frontDetails.split(",").map((item) => item.trim()).filter(Boolean).map((item) => (
+                                <li key={item} className="flex items-start gap-2 text-sm leading-5 text-ischia-ink/80">
+                                  <span className="mt-0.5 font-black text-emerald-600">✓</span>
+                                  <span>{item}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {benefit ? <p className="mt-4 text-sm font-semibold text-ischia-blue">{benefit}</p> : null}
+                        </div>
+
+                        <div className="flex flex-col justify-center bg-[#F6FBFF] p-5 sm:p-6">
+                          <p className="text-xs font-black uppercase tracking-[0.12em] text-ischia-blue/70">{priceScopeLabel}</p>
+                          <p className="mt-1 text-4xl font-black tabular-nums tracking-[-0.035em] text-ischia-navy">{formatCurrency(treatment.price)}</p>
+                          {priceDelta ? (
+                            <p className="mt-2 text-sm font-semibold text-ischia-ink/65">+ {formatCurrency(priceDelta)} rispetto all&apos;opzione precedente</p>
+                          ) : null}
+
+                          {!isConfirmed ? (
+                            <div className="no-print mt-5">
                               <button
-                                className="w-full rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
+                                className="w-full rounded-full bg-ischia-sun px-5 py-3 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95"
                                 onClick={() => setPendingSelection({ option: opt, treatment })}
                                 type="button"
                               >
-                                Scegli questa camera
+                                Scegli questa proposta →
                               </button>
-                              <p className="mt-1 text-center text-xs leading-snug text-gray-400">Nessun pagamento online — ti ricontattiamo per finalizzare</p>
+                              <p className="mt-3 text-center text-xs leading-5 text-ischia-ink/45">Nessun pagamento online — ti ricontattiamo per finalizzare</p>
                             </div>
-                          )}
-                          {isConfirmed && opt.isSelected && (
-                            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Confermato</span>
-                          )}
+                          ) : null}
+
+                          {isConfirmed && opt.isSelected ? (
+                            <span className="mt-4 rounded-full bg-emerald-100 px-3 py-2 text-center text-xs font-black text-emerald-800">Confermato</span>
+                          ) : null}
                         </div>
                       </div>
                     </div>
