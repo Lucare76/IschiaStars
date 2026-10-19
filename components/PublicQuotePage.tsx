@@ -38,28 +38,28 @@ export function PublicQuotePage({
 
   return (
     <QuotePageWrapper>
-    <main className="print-page mx-auto max-w-5xl px-5 py-6">
+    <main className="print-page mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-7">
       {trackOpening ? <PublicEventTracker quoteCode={quote.code} token={quote.token} source={openingSource} /> : null}
 
-      <header className="no-print mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/90 p-4 shadow-soft">
+      <header className="no-print mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/95 px-4 py-3 shadow-soft ring-1 ring-ischia-blue/10">
         <IschiaStarsLogo />
         <PublicQuoteHeaderActions quote={quote} contentSettings={contentSettings} />
       </header>
 
-      <section className="print-card overflow-hidden rounded-[28px] bg-white shadow-soft">
-        <div className="brand-shell p-6 text-white sm:p-9">
+      <section className="print-card overflow-hidden rounded-[30px] bg-white shadow-soft ring-1 ring-ischia-blue/10">
+        <div className="brand-shell p-6 text-white sm:p-8">
           <IschiaStarsLogo light />
-          <p className="mt-10 text-sm font-bold uppercase tracking-[0.16em] text-ischia-sand">Preventivo {quote.code}</p>
-          <h1 className="mt-2 max-w-2xl text-4xl font-black leading-tight sm:text-5xl">
+          <p className="mt-7 text-xs font-black uppercase tracking-[0.18em] text-ischia-sand sm:mt-8">Preventivo {quote.code}</p>
+          <h1 className="mt-2 max-w-3xl text-4xl font-black leading-[1.02] tracking-[-0.02em] sm:text-5xl lg:text-6xl">
             {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
           </h1>
-          <p className="mt-4 max-w-xl text-white/84">
+          <p className="mt-4 max-w-2xl text-base leading-7 text-white/88">
             Ciao {quote.customerFirstName},{" "}
             {hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro}
           </p>
         </div>
 
-        <div className="p-5 sm:p-8">
+        <div className="p-5 sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.14em] text-ischia-blue">Dati soggiorno</p>
@@ -109,7 +109,7 @@ export function PublicQuotePage({
             </div>
           )}
 
-          <div className="no-print mt-5 flex justify-end">
+          <div className="no-print mt-4 flex justify-end">
             <PrintButton quoteCode={quote.code} token={quote.token} />
           </div>
         </div>
@@ -121,10 +121,23 @@ export function PublicQuotePage({
         token={quote.token}
       />
 
-      <section className="mt-6">
-        <div className="mb-4">
-          <h2 className="text-3xl font-black text-ischia-navy">{contentSettings.proposalsTitle}</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-ischia-ink/70">
+      <section className="no-print mt-5 grid gap-3 sm:grid-cols-3">
+        {[
+          ["Strutture selezionate", "Hotel scelti e verificati dal nostro team"],
+          ["Prezzi trasparenti", "Condizioni e servizi sempre visibili"],
+          ["Assistenza dedicata", "Ti seguiamo prima e durante il soggiorno"]
+        ].map(([title, text]) => (
+          <div key={title} className="rounded-2xl bg-white px-4 py-4 text-center shadow-sm ring-1 ring-ischia-blue/10">
+            <p className="text-sm font-black text-ischia-navy">{title}</p>
+            <p className="mt-1 text-xs leading-5 text-ischia-ink/60">{text}</p>
+          </div>
+        ))}
+      </section>
+
+      <section className="mt-7">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-3xl font-black tracking-[-0.02em] text-ischia-navy sm:text-4xl">{contentSettings.proposalsTitle}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-ischia-ink/65">
             {contentSettings.proposalsDescription}
           </p>
         </div>
@@ -155,11 +168,11 @@ function PublicQuoteStatusBadge({ quote }: { quote: PublicQuoteDTO }) {
 
 function InfoGrid({ items }: { items: [string, string][] }) {
   return (
-    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {items.map(([label, value]) => (
-        <div key={label} className="flex flex-col gap-1 rounded-2xl bg-ischia-mist p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{label}</p>
-          <p className="font-bold text-ischia-ink">{value}</p>
+        <div key={label} className="flex min-h-[92px] flex-col justify-center gap-1 rounded-2xl bg-gradient-to-br from-white to-ischia-mist p-4 shadow-sm ring-1 ring-ischia-blue/10">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ischia-blue">{label}</p>
+          <p className="text-[15px] font-black leading-5 text-ischia-navy">{value}</p>
         </div>
       ))}
     </div>
