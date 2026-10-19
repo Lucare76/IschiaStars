@@ -15,6 +15,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     stars: body.stars !== undefined ? Number(body.stars) : undefined,
     shortDescription: body.shortDescription,
     imageUrl: body.imageUrl,
+    roomImages: Array.isArray(body.roomImages) ? body.roomImages : undefined,
     standardServices: body.standardServices,
     defaultDepositPercent: parseOptionalNumber(body.defaultDepositPercent),
     defaultBalanceMethod: body.defaultBalanceMethod,
