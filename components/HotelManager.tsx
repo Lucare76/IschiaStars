@@ -30,6 +30,11 @@ type LrSyncReport = {
   items: LrSyncItem[];
 };
 
+type HotelRoomImageForm = {
+  label: string;
+  imageUrl: string;
+};
+
 type HotelForm = {
   id?: string;
   name: string;
@@ -37,6 +42,7 @@ type HotelForm = {
   stars: number;
   shortDescription: string;
   imageUrl: string;
+  roomImages: HotelRoomImageForm[];
   standardServices: string;
   defaultDepositPercent: string;
   defaultBalanceMethod: string;
@@ -55,6 +61,7 @@ const emptyForm: HotelForm = {
   stars: 4,
   shortDescription: "",
   imageUrl: "",
+  roomImages: [],
   standardServices: "",
   defaultDepositPercent: "",
   defaultBalanceMethod: "",
@@ -300,6 +307,62 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
           <Textarea label="Note pagamento standard" value={form.defaultPaymentNotes} onChange={(value) => setForm({ ...form, defaultPaymentNotes: value })} />
           <Textarea label="Note operative interne" value={form.internalNotes} onChange={(value) => setForm({ ...form, internalNotes: value })} />
         </div>
+        <div className="mt-5 rounded-2xl bg-ischia-mist/50 p-4 ring-1 ring-ischia-blue/10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-black text-ischia-navy">Foto camere</p>
+              <p className="mt-1 text-xs text-ischia-ink/60">Salvale una volta qui: nei preventivi verranno associate alla tipologia camera. Se una camera non ha foto, verrà usata quella dell&apos;hotel.</p>
+            </div>
+            <button
+              className="rounded-full bg-white px-3 py-2 text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/15 disabled:opacity-50"
+              disabled={form.roomImages.length >= 10}
+              onClick={() => setForm({ ...form, roomImages: [...form.roomImages, { label: "", imageUrl: "" }] })}
+              type="button"
+            >
+              + Aggiungi camera
+            </button>
+          </div>
+
+          <div className="mt-3 space-y-3">
+            {form.roomImages.length === 0 ? (
+              <p className="rounded-xl bg-white px-3 py-3 text-xs font-semibold text-ischia-ink/55">Nessuna foto camera salvata.</p>
+            ) : form.roomImages.map((room, index) => (
+              <div key={index} className="grid gap-3 rounded-xl bg-white p-3 ring-1 ring-ischia-blue/10 lg:grid-cols-[1fr_1.4fr_auto] lg:items-end">
+                <Input
+                  label={`Tipologia camera ${index + 1}`}
+                  value={room.label}
+                  onChange={(value) => setForm({
+                    ...form,
+                    roomImages: form.roomImages.map((item, itemIndex) => itemIndex === index ? { ...item, label: value } : item)
+                  })}
+                />
+                <Input
+                  label="URL foto camera"
+                  type="url"
+                  value={room.imageUrl}
+                  onChange={(value) => setForm({
+                    ...form,
+                    roomImages: form.roomImages.map((item, itemIndex) => itemIndex === index ? { ...item, imageUrl: value } : item)
+                  })}
+                />
+                <div className="flex items-center gap-2">
+                  {room.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img alt={room.label || "Camera"} className="h-14 w-20 rounded-lg object-cover ring-1 ring-ischia-blue/10" src={room.imageUrl} />
+                  ) : null}
+                  <button
+                    className="rounded-full bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 ring-1 ring-rose-100"
+                    onClick={() => setForm({ ...form, roomImages: form.roomImages.filter((_, itemIndex) => itemIndex !== index) })}
+                    type="button"
+                  >
+                    Rimuovi
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <label className="mt-4 flex items-center gap-3 text-sm font-semibold">
           <input checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} type="checkbox" />
           Hotel attivo
@@ -390,6 +453,7 @@ function fromHotel(hotel: Hotel): HotelForm {
     stars: hotel.stars,
     shortDescription: hotel.description,
     imageUrl: hotel.imageUrl ?? "",
+    roomImages: hotel.roomImages?.map((room) => ({ label: room.label, imageUrl: room.imageUrl })) ?? [],
     standardServices: hotel.standardServices.join("\n"),
     defaultDepositPercent: hotel.defaultDepositPercent != null ? String(hotel.defaultDepositPercent) : "",
     defaultBalanceMethod: hotel.defaultBalanceMethod ?? "",
@@ -410,6 +474,9 @@ function toPayload(form: HotelForm) {
     stars: form.stars,
     shortDescription: form.shortDescription,
     imageUrl: form.imageUrl.trim() || null,
+    roomImages: form.roomImages
+      .map((room) => ({ label: room.label.trim(), imageUrl: room.imageUrl.trim() }))
+      .filter((room) => room.label && room.imageUrl),
     standardServices: form.standardServices.split("\n").map((item) => item.trim()).filter(Boolean),
     defaultDepositPercent: form.defaultDepositPercent.trim() ? Number(form.defaultDepositPercent) : null,
     defaultBalanceMethod: form.defaultBalanceMethod,
