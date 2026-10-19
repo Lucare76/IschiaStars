@@ -9,6 +9,7 @@ export type QuoteHotelOptionInput = {
   badge?: string | null;
   hotelReason?: string | null;
   roomTypeLabel?: string;
+  roomImageUrl?: string;
   hotelName: string;
   hotelLocation?: string;
   hotelStars?: number;
@@ -56,6 +57,7 @@ export function mapHotelOptionRow(row: Record<string, unknown>): QuoteHotelOptio
     badge: row.badge ? String(row.badge) : null,
     hotelReason: row.hotel_reason ? String(row.hotel_reason) : null,
     roomTypeLabel: row.room_type_label ? String(row.room_type_label) : undefined,
+    roomImageUrl: row.room_image_url ? String(row.room_image_url) : undefined,
     hotelName: String(row.hotel_name),
     hotelLocation: row.hotel_location ? String(row.hotel_location) : undefined,
     hotelStars: row.hotel_stars != null ? Number(row.hotel_stars) : undefined,
@@ -116,6 +118,7 @@ export function buildHotelOptionRows(options: QuoteHotelOptionInput[]) {
       badge: opt.badge || null,
       hotel_reason: opt.hotelReason || null,
       room_type_label: opt.roomTypeLabel ?? null,
+      room_image_url: opt.roomImageUrl ?? null,
       hotel_name: opt.hotelName,
       hotel_location: opt.hotelLocation ?? null,
       hotel_stars: opt.hotelStars ?? null,
