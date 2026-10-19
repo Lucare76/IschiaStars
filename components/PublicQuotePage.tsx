@@ -56,19 +56,21 @@ export function PublicQuotePage({
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img alt="" className="absolute inset-0 h-full w-full object-cover object-center" src={heroImage} />
-                <div className="absolute inset-0 bg-gradient-to-r from-white/98 via-white/96 to-white/45 sm:from-white/97 sm:via-white/88 sm:to-white/10" />
-                <div className="absolute inset-0 bg-gradient-to-t from-white/20 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-white/40 via-white/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/10 via-transparent to-transparent" />
               </>
             ) : null}
 
-            <div className="relative z-10 max-w-[650px] p-7 sm:p-10 lg:p-12">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#C89217] sm:text-sm">Preventivo {quote.code}</p>
-              <h1 className="mt-3 max-w-[620px] text-[38px] font-black leading-[0.98] tracking-[-0.04em] text-ischia-navy sm:text-[52px] lg:text-[58px]">
-                {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
-              </h1>
-              <p className="mt-5 max-w-[560px] rounded-2xl bg-white/82 px-4 py-3 text-[16px] font-semibold leading-7 text-ischia-navy shadow-[0_8px_24px_rgba(8,63,115,0.08)] ring-1 ring-white/70 backdrop-blur-[2px] sm:bg-white/68 sm:text-[17px]">
-                Ciao {quote.customerFirstName}, {hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro}
-              </p>
+            <div className="relative z-10 p-5 sm:p-8 lg:p-10">
+              <div className="max-w-[650px] rounded-[26px] bg-white/96 p-6 shadow-[0_18px_45px_rgba(8,63,115,0.18)] ring-1 ring-white/90 backdrop-blur-[3px] sm:p-8">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#C89217] sm:text-sm">Preventivo {quote.code}</p>
+                <h1 className="mt-3 max-w-[620px] text-[38px] font-black leading-[0.98] tracking-[-0.04em] text-ischia-navy sm:text-[52px] lg:text-[58px]">
+                  {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
+                </h1>
+                <p className="mt-5 max-w-[560px] text-[16px] font-semibold leading-7 text-ischia-navy sm:text-[17px]">
+                  Ciao {quote.customerFirstName}, {hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro}
+                </p>
+              </div>
             </div>
           </div>
 
