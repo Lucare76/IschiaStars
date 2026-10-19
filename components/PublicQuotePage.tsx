@@ -62,12 +62,12 @@ export function PublicQuotePage({
             ) : null}
 
             <div className="relative z-10 p-5 sm:p-8 lg:p-10">
-              <div className="max-w-[650px] rounded-[26px] bg-white/96 p-6 shadow-[0_18px_45px_rgba(8,63,115,0.18)] ring-1 ring-white/90 backdrop-blur-[3px] sm:p-8">
+              <div className="max-w-[650px] rounded-[26px] bg-white p-6 shadow-[0_18px_45px_rgba(8,63,115,0.18)] ring-1 ring-ischia-blue/10 sm:p-8">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-[#C89217] sm:text-sm">Preventivo {quote.code}</p>
                 <h1 className="mt-3 max-w-[620px] text-[38px] font-black leading-[0.98] tracking-[-0.04em] text-ischia-navy sm:text-[52px] lg:text-[58px]">
                   {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
                 </h1>
-                <p className="mt-5 max-w-[560px] text-[16px] font-semibold leading-7 text-ischia-navy sm:text-[17px]">
+                <p className="mt-5 max-w-[560px] text-[16px] font-bold leading-7 text-[#173A5E] sm:text-[17px]">
                   Ciao {quote.customerFirstName}, {hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro}
                 </p>
               </div>
