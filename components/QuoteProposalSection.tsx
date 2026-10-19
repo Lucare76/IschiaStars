@@ -793,7 +793,7 @@ function HotelCard({
 
         {hotelNotes.notes.length > 0 || hotelNotes.commitmentNote ? (
           <div className="mt-3">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/70">Note struttura / camera</p>
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue">Note struttura / camera</p>
             {hotelNotes.notes.length > 0 ? (
               <ul className="mt-1 space-y-0.5">
                 {hotelNotes.notes.map((note) => <li key={note} className="text-sm leading-6 text-ischia-ink/80">{note}</li>)}
