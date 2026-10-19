@@ -47,26 +47,29 @@ export function PublicQuotePage({
         </header>
 
         <section className="overflow-hidden rounded-[30px] bg-white shadow-[0_22px_70px_rgba(8,63,115,0.12)] ring-1 ring-ischia-blue/10">
-          <div className="relative min-h-[430px] overflow-hidden">
+          <div className="relative min-h-[350px] overflow-hidden sm:min-h-[390px]">
             {heroImage ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img alt="" className="absolute inset-0 h-full w-full object-cover" src={heroImage} />
-                <div className="absolute inset-0 bg-gradient-to-r from-white via-white/94 to-white/0" />
+                <img alt="" className="absolute inset-0 h-full w-full object-cover object-center" src={heroImage} />
+                <div className="absolute inset-0 bg-gradient-to-r from-white via-white/94 to-white/5" />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/20 via-transparent to-transparent" />
               </>
             ) : null}
 
             <div className="relative z-10 max-w-[650px] p-7 sm:p-10 lg:p-12">
-              <p className="text-sm font-black uppercase tracking-[0.12em] text-[#C89217]">Preventivo {quote.code}</p>
-              <h1 className="mt-3 text-[42px] font-black leading-[0.98] tracking-[-0.04em] text-ischia-navy sm:text-[56px]">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#C89217] sm:text-sm">Preventivo {quote.code}</p>
+              <h1 className="mt-3 max-w-[620px] text-[38px] font-black leading-[0.98] tracking-[-0.04em] text-ischia-navy sm:text-[52px] lg:text-[58px]">
                 {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
               </h1>
-              <p className="mt-5 max-w-xl text-[17px] leading-7 text-ischia-ink/75">
+              <p className="mt-5 max-w-[560px] text-[16px] leading-7 text-ischia-ink/75 sm:text-[17px]">
                 Ciao {quote.customerFirstName}, {hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro}
               </p>
             </div>
+          </div>
 
-            <div className="absolute bottom-5 left-5 right-5 z-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.1fr_1.4fr_0.8fr_0.7fr_1.7fr]">
+          <div className="relative z-20 px-5 pt-4 sm:px-7 md:-mt-10 md:pt-0">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.1fr_1.4fr_0.8fr_0.7fr_1.7fr]">
               <HeroStat icon="user" label="Cliente" value={formatClientName(quote.customerFirstName, quote.customerLastName)} />
               <HeroStat icon="calendar" label="Date" value={`${formatDate(quote.arrivalDate)} — ${formatDate(quote.departureDate)}`} />
               <HeroStat icon="guests" label="Ospiti" value={guests} />
