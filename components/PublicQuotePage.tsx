@@ -34,7 +34,11 @@ export function PublicQuotePage({
 }) {
   const guests = `${quote.adults} adulti${quote.children.length ? `, ${quote.children.length} bambini` : ""}`;
   const hasMultipleOptions = quote.hotelOptions.length > 1;
-  const heroImage = quote.hotelOptions[0]?.hotelImageUrl;
+  const ischiaHeroImage =
+    "https://images.unsplash.com/photo-1678147407075-057c937baf3b?auto=format&fit=crop&fm=jpg&q=85&w=2400";
+  const heroImage = hasMultipleOptions
+    ? ischiaHeroImage
+    : quote.hotelOptions[0]?.hotelImageUrl || ischiaHeroImage;
 
   return (
     <QuotePageWrapper>
