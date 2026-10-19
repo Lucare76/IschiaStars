@@ -226,7 +226,7 @@ export function QuoteProposalSection({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Bottone toggle confronto — visibile solo con 2+ gruppi hotel */}
       {groupedHotels.length >= 2 && (
         <div className="no-print">
@@ -255,7 +255,7 @@ export function QuoteProposalSection({
         />
       ) : (
         /* Hotel cards raggruppate per struttura */
-        <div className="space-y-4">
+        <div className="space-y-6">
           {renderableGroups.map(([groupId, groupOptions]) => {
             const optionsWithTreatments = groupOptions.filter((o) => visibleTreatments(o).length > 0);
             const firstOpt = optionsWithTreatments[0];
@@ -539,7 +539,7 @@ function CompareView({
                   {!isConfirmed && firstTreatment ? (
                     <>
                       <button
-                        className="w-full rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
+                        className="w-full rounded-full bg-ischia-blue px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:brightness-95"
                         onClick={() => setPendingSelection({ option: mainOption, treatment: firstTreatment })}
                         type="button"
                       >
@@ -669,7 +669,7 @@ function HotelCard({
   });
 
   return (
-    <div className={`print-card relative overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ${isAnySelected ? "ring-emerald-400" : "ring-ischia-blue/10"} ${badge === "Consigliato" ? "ring-2 ring-[#C9A84C]" : ""}`}>
+    <div className={`print-card relative overflow-hidden rounded-[26px] bg-white shadow-[0_18px_55px_rgba(8,63,115,0.10)] ring-1 ${isAnySelected ? "ring-emerald-400" : "ring-ischia-blue/10"} ${badge === "Consigliato" ? "ring-2 ring-[#C9A84C]" : ""}`}>
       {badge ? (
         <span className={`absolute left-0 top-0 z-10 rounded-br-lg px-3 py-1 text-xs font-bold uppercase text-white ${badgeColorClass(badge)}`}>
           {badge}
@@ -682,7 +682,7 @@ function HotelCard({
             <img alt={mainOption.hotelName} className="h-56 max-h-72 w-full object-cover object-center sm:h-64 lg:h-72" decoding="async" src={imageUrl} />
           </div>
         )}
-      <div className="p-5">
+      <div className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{mainOption.hotelLocation}</p>
@@ -760,7 +760,7 @@ function HotelCard({
         )}
 
         {hotelReason ? (
-          <div className="mt-3 rounded-r-lg border-l-[3px] border-[#C9A84C] bg-[#FBF5E6] px-4 py-2">
+          <div className="mt-4 rounded-2xl border border-[#E8D7A2] bg-[#FBF5E6] px-4 py-3">
             <p className="text-xs font-bold uppercase tracking-wide text-[#C9A84C]">Perché te lo proponiamo</p>
             <p className="mt-1 text-sm text-gray-700">{hotelReason}</p>
           </div>
@@ -792,7 +792,7 @@ function HotelCard({
         )}
 
         {hotelNotes.notes.length > 0 || hotelNotes.commitmentNote ? (
-          <div className="mt-3 rounded-2xl bg-ischia-navy px-4 py-3 text-white">
+          <div className="mt-4 rounded-2xl bg-ischia-navy px-4 py-4 text-white shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.12em] text-white">Note struttura / camera</p>
             {hotelNotes.notes.length > 0 ? (
               <ul className="mt-2 space-y-1">
@@ -834,7 +834,7 @@ function HotelCard({
                     const benefit = details ? undefined : treatmentBenefit(treatment);
                     const frontDetails = details || treatmentDescription(treatment);
                     return (
-                    <div key={detailKey} className="rounded-2xl bg-ischia-mist p-4">
+                    <div key={detailKey} className="rounded-2xl bg-gradient-to-br from-ischia-mist to-white p-4 shadow-sm ring-1 ring-ischia-blue/10">
                       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-end">
                         <div className="min-w-0">
                           {opt.roomTypeLabel ? (
