@@ -3,7 +3,7 @@ import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 import { MobileFloatingWhatsApp, PublicQuoteHeaderActions } from "@/components/PublicQuoteActions";
 import { PublicEventTracker } from "@/components/PublicEventTracker";
 import { HesitantClientBanner } from "@/components/public/HesitantClientBanner";
-import { CountdownBanner } from "@/components/public/CountdownBanner";
+import { CompactCountdownBanner } from "@/components/public/CompactCountdownBanner";
 import { QuotePageWrapper } from "@/components/public/QuotePageWrapper";
 import { QuoteProposalSection } from "@/components/QuoteProposalSection";
 import { PrintButton } from "@/components/PrintButton";
@@ -68,18 +68,13 @@ export function PublicQuotePage({
             </div>
           </div>
 
-          <div className="relative z-20 px-5 pt-4 sm:px-7 md:-mt-10 md:pt-0">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.1fr_1.4fr_0.8fr_0.7fr_1.7fr]">
+          <div className="relative z-20 px-5 pt-5 sm:px-7">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.05fr_1.35fr_0.8fr_0.7fr_1.7fr] lg:items-stretch">
               <HeroStat icon="user" label="Cliente" value={formatClientName(quote.customerFirstName, quote.customerLastName)} />
               <HeroStat icon="calendar" label="Date" value={`${formatDate(quote.arrivalDate)} — ${formatDate(quote.departureDate)}`} />
               <HeroStat icon="guests" label="Ospiti" value={guests} />
               <HeroStat icon="bed" label="Camere" value={String(quote.rooms)} />
-              <div className="rounded-[22px] bg-ischia-navy px-4 py-3.5 text-white shadow-[0_14px_30px_rgba(8,63,115,0.24)]">
-                <p className="text-[10px] font-black uppercase tracking-[0.13em] text-white/75">Questa proposta è valida ancora</p>
-                <div className="mt-2 [&>div]:!mt-0 [&>div]:!border-0 [&>div]:!bg-transparent [&>div]:!p-0 [&>div]:!shadow-none [&>div]:!ring-0">
-                  <CountdownBanner offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
-                </div>
-              </div>
+              <CompactCountdownBanner offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
             </div>
           </div>
 
@@ -142,7 +137,7 @@ export function PublicQuotePage({
 function HeroStat({ icon, label, value }: { icon: "user" | "calendar" | "guests" | "bed"; label: string; value: string }) {
   const glyph = icon === "user" ? "◯" : icon === "calendar" ? "▣" : icon === "guests" ? "◎" : "▤";
   return (
-    <div className="flex min-h-[92px] items-center gap-3 rounded-[20px] bg-white/95 px-4 py-3 shadow-[0_8px_20px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10 backdrop-blur-sm">
+    <div className="flex min-h-[116px] items-center gap-3 rounded-[20px] bg-white px-4 py-4 shadow-[0_8px_20px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EAF5FC] text-lg font-black text-ischia-blue">{glyph}</div>
       <div className="min-w-0">
         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-ischia-blue">{label}</p>
