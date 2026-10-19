@@ -140,6 +140,49 @@ function BuildingIcon() {
     </svg>
   );
 }
+function ServiceIcon({ service }: { service: string }) {
+  const s = service.toLowerCase();
+  const common = {
+    fill: "none",
+    height: 18,
+    stroke: "currentColor",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    strokeWidth: 1.8,
+    viewBox: "0 0 24 24",
+    width: 18
+  };
+
+  if (s.includes("wi-fi") || s.includes("wifi")) {
+    return <svg {...common}><path d="M5 12.5a10 10 0 0 1 14 0" /><path d="M8.5 16a5 5 0 0 1 7 0" /><circle cx="12" cy="19" r="1" /></svg>;
+  }
+  if (s.includes("piscina")) {
+    return <svg {...common}><path d="M3 8h5v5" /><path d="M8 10h5v5" /><path d="M3 17c1 .8 2 1.2 3 1.2S8 17.8 9 17s2-1.2 3-1.2 2 .4 3 1.2 2 1.2 3 1.2 2-.4 3-1.2" /></svg>;
+  }
+  if (s.includes("spa") || s.includes("terme")) {
+    return <svg {...common}><path d="M12 21s-6-3.5-6-9a6 6 0 0 1 12 0c0 5.5-6 9-6 9Z" /><path d="M12 21V8" /><path d="M8.5 11.5 12 15l3.5-3.5" /></svg>;
+  }
+  if (s.includes("aria") || s.includes("climat")) {
+    return <svg {...common}><path d="M12 2v20M4.9 6l14.2 12M19.1 6 4.9 18M2 12h20" /></svg>;
+  }
+  if (s.includes("parcheggio")) {
+    return <svg {...common}><rect x="5" y="3" width="14" height="18" rx="3" /><path d="M9 16V8h4a3 3 0 1 1 0 6H9" /></svg>;
+  }
+  if (s.includes("ristorante")) {
+    return <svg {...common}><path d="M6 3v8M3 3v5a3 3 0 0 0 6 0V3M6 11v10M16 3v18M16 3c3 2 3 7 0 9" /></svg>;
+  }
+  if (s.includes("palestra")) {
+    return <svg {...common}><path d="M3 10v4M6 8v8M18 8v8M21 10v4M6 12h12" /></svg>;
+  }
+  if (s.includes("colazione")) {
+    return <svg {...common}><path d="M4 10h12v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-4Z" /><path d="M16 11h2a2 2 0 0 1 0 4h-2" /><path d="M7 3v3M11 3v3" /></svg>;
+  }
+  if (s.includes("animali")) {
+    return <svg {...common}><circle cx="8" cy="8" r="1.5" /><circle cx="16" cy="8" r="1.5" /><circle cx="6" cy="13" r="1.5" /><circle cx="18" cy="13" r="1.5" /><path d="M9 18c1.2-2.3 4.8-2.3 6 0" /></svg>;
+  }
+  return <svg {...common}><circle cx="12" cy="12" r="7" /><path d="m9 12 2 2 4-4" /></svg>;
+}
+
 
 function CommitmentNoteBadge({ note }: { note: string }) {
   return (
@@ -750,10 +793,10 @@ function HotelCard({
           <div className="mt-5 rounded-[22px] bg-[#F2F8FC] p-5 ring-1 ring-ischia-blue/10">
             <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">Servizi inclusi</p>
             <ul className="mt-4 grid gap-x-10 gap-y-3 sm:grid-cols-2">
-              {services.map((service, index) => (
+              {services.map((service) => (
                 <li key={service} className="flex items-center gap-3 text-sm font-semibold text-ischia-ink/78">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm font-black text-ischia-blue ring-1 ring-ischia-blue/10">
-                    {["⌁","≈","✿","❄","P","⌂","●","☕"][index % 8]}
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-ischia-blue ring-1 ring-ischia-blue/10">
+                    <ServiceIcon service={service} />
                   </span>
                   <span>{service}</span>
                 </li>
