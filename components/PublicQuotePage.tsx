@@ -35,7 +35,7 @@ export function PublicQuotePage({
   const guests = `${quote.adults} adulti${quote.children.length ? `, ${quote.children.length} bambini` : ""}`;
   const hasMultipleOptions = quote.hotelOptions.length > 1;
   const ischiaHeroImage =
-    "https://images.unsplash.com/photo-1678147407075-057c937baf3b?auto=format&fit=crop&fm=jpg&q=85&w=2400";
+    "https://images.musement.com/cover/0002/63/thumb_162850_cover_header.jpeg";
   const heroImage = hasMultipleOptions
     ? ischiaHeroImage
     : quote.hotelOptions[0]?.hotelImageUrl || ischiaHeroImage;
