@@ -36,9 +36,7 @@ export function PublicQuotePage({
   const hasMultipleOptions = quote.hotelOptions.length > 1;
   const ischiaHeroImage =
     "https://images.musement.com/cover/0002/63/thumb_162850_cover_header.jpeg";
-  const heroImage = hasMultipleOptions
-    ? ischiaHeroImage
-    : quote.hotelOptions[0]?.hotelImageUrl || ischiaHeroImage;
+  const heroImage = ischiaHeroImage;
 
   return (
     <QuotePageWrapper>
