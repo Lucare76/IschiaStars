@@ -284,7 +284,7 @@ export function QuoteProposalSection({
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {selectedRooms.map((room, index) => (
               <div key={`${room.optionId}-${room.treatmentKey}-${index}`} className="rounded-xl bg-ischia-mist p-3 text-sm">
-                <p className="font-black text-ischia-navy">Camera {index + 1}</p>
+                <p className="text-lg font-black text-ischia-navy">Camera {index + 1}</p>
                 <p>{room.roomTypeLabel || "Camera standard"}</p>
                 <p>{room.treatmentLabel} - {formatCurrency(room.price)}</p>
                 <button className="mt-2 text-xs font-bold text-rose-700" type="button" onClick={() => setSelectedRooms((rooms) => rooms.filter((_, roomIndex) => roomIndex !== index))}>
@@ -539,7 +539,7 @@ function CompareView({
                   {!isConfirmed && firstTreatment ? (
                     <>
                       <button
-                        className="w-full rounded-full bg-ischia-blue px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:brightness-95"
+                        className="w-full rounded-full bg-ischia-sun px-4 py-3 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95"
                         onClick={() => setPendingSelection({ option: mainOption, treatment: firstTreatment })}
                         type="button"
                       >
@@ -669,20 +669,20 @@ function HotelCard({
   });
 
   return (
-    <div className={`print-card relative overflow-hidden rounded-[26px] bg-white shadow-[0_18px_55px_rgba(8,63,115,0.10)] ring-1 ${isAnySelected ? "ring-emerald-400" : "ring-ischia-blue/10"} ${badge === "Consigliato" ? "ring-2 ring-[#C9A84C]" : ""}`}>
+    <div className={`print-card relative overflow-hidden rounded-[30px] bg-white shadow-[0_24px_70px_rgba(8,63,115,0.12)] ring-1 ${isAnySelected ? "ring-emerald-400" : "ring-ischia-blue/10"} ${badge === "Consigliato" ? "ring-2 ring-[#C9A84C]" : ""}`}>
       {badge ? (
         <span className={`absolute left-0 top-0 z-10 rounded-br-lg px-3 py-1 text-xs font-bold uppercase text-white ${badgeColorClass(badge)}`}>
           {badge}
         </span>
       ) : null}
-      <div className={imageUrl ? "grid lg:grid-cols-[minmax(18rem,0.42fr)_1fr]" : ""}>
+      <div className="">
         {imageUrl && (
-          <div className="max-h-72 overflow-hidden bg-ischia-mist">
+          <div className="relative h-64 overflow-hidden bg-ischia-mist sm:h-80 lg:h-[360px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img alt={mainOption.hotelName} className="h-56 max-h-72 w-full object-cover object-center sm:h-64 lg:h-72" decoding="async" src={imageUrl} />
+            <img alt={mainOption.hotelName} className="h-full w-full object-cover object-center" decoding="async" src={imageUrl} />
           </div>
         )}
-      <div className="p-5 sm:p-6">
+      <div className="p-5 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{mainOption.hotelLocation}</p>
@@ -819,7 +819,7 @@ function HotelCard({
       </div>
 
         {/* Per ogni tipologia camera, mostra i trattamenti */}
-        <div className={imageUrl ? "mt-4 space-y-4 px-5 pb-5 lg:col-span-2 lg:mt-0" : "mt-4 space-y-4 px-5 pb-5"}>
+        <div className="mt-1 space-y-4 px-5 pb-6 sm:px-7 sm:pb-7">
           {allGroupOptions.map((opt) => (
             <div key={opt.id}>
               {hasMultipleRoomTypes && opt.roomTypeLabel && (
@@ -834,7 +834,7 @@ function HotelCard({
                     const benefit = details ? undefined : treatmentBenefit(treatment);
                     const frontDetails = details || treatmentDescription(treatment);
                     return (
-                    <div key={detailKey} className="rounded-2xl bg-gradient-to-br from-ischia-mist to-white p-4 shadow-sm ring-1 ring-ischia-blue/10">
+                    <div key={detailKey} className="rounded-[22px] bg-gradient-to-br from-[#F3F9FD] to-white p-5 shadow-sm ring-1 ring-ischia-blue/10">
                       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-end">
                         <div className="min-w-0">
                           {opt.roomTypeLabel ? (
@@ -846,7 +846,7 @@ function HotelCard({
                             <p className="mt-1 whitespace-pre-line">{frontDetails}</p>
                           </div>
                           <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
+                            <p className="text-3xl font-black tabular-nums tracking-[-0.02em] text-ischia-navy">{formatCurrency(treatment.price)}</p>
                           </div>
                           <p className="mt-0.5 text-xs font-bold uppercase tracking-wide text-ischia-blue/70">{priceScopeLabel}</p>
                           {benefit ? (
