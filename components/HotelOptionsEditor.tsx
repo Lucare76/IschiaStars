@@ -8,6 +8,7 @@ import type { Hotel, QuoteHotelOption } from "@/lib/types";
 
 export type RoomTypeState = {
   label: string;
+  roomImageUrl: string;
   breakfastPrice: string;
   halfBoardPrice: string;
   fullBoardPrice: string;
@@ -52,7 +53,7 @@ const DEFAULT_ROOM_TYPE_PRESETS = [
 ] as const;
 
 export function emptyRoomType(): RoomTypeState {
-  return { label: "", breakfastPrice: "", halfBoardPrice: "", fullBoardPrice: "" };
+  return { label: "", roomImageUrl: "", breakfastPrice: "", halfBoardPrice: "", fullBoardPrice: "" };
 }
 
 export function createHotelOption(hotel?: Hotel, hotelGroup?: number): HotelOptionState {
@@ -129,6 +130,7 @@ export function mapHotelOptionsToPayload(hotelOptions: HotelOptionState[], optio
         halfBoardDetails: opt.halfBoardDetails || undefined,
         fullBoardDetails: opt.fullBoardDetails || undefined,
         roomTypeLabel: rt.label.trim() || options.defaultRoomTypeLabel?.trim() || undefined,
+        roomImageUrl: rt.roomImageUrl.trim() || undefined,
         hotelName: opt.hotelName,
         hotelLocation: opt.hotelLocation || undefined,
         hotelStars: opt.hotelStars ? Number(opt.hotelStars) : undefined,
@@ -187,6 +189,7 @@ export function quoteOptionsToHotelOptionState(opts: QuoteHotelOption[]): HotelO
         notes: first.notes ?? "",
         roomTypes: groupOpts.map((opt) => ({
           label: opt.roomTypeLabel ?? "",
+          roomImageUrl: opt.roomImageUrl ?? "",
           breakfastPrice: opt.breakfastPrice != null ? String(opt.breakfastPrice) : "",
           halfBoardPrice: opt.halfBoardPrice != null ? String(opt.halfBoardPrice) : "",
           fullBoardPrice: opt.fullBoardPrice != null ? String(opt.fullBoardPrice) : ""
@@ -533,6 +536,32 @@ function HotelOptionBlock({
                   Rimuovi
                 </button>
               )}
+            </div>
+            <div className="mb-3 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+              <label className="text-xs font-semibold text-ischia-ink">
+                Foto camera (URL, facoltativa)
+                <input
+                  className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2 text-sm"
+                  placeholder="https://... — se vuoto useremo la foto della struttura"
+                  type="url"
+                  value={rt.roomImageUrl}
+                  onChange={(e) => onUpdateRoomType(roomIdx, { roomImageUrl: e.target.value })}
+                />
+              </label>
+              {rt.roomImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt={rt.label || "Anteprima camera"}
+                  className="h-20 w-28 rounded-lg object-cover ring-1 ring-ischia-blue/10"
+                  src={rt.roomImageUrl}
+                />
+              ) : opt.hotelImageUrl ? (
+                <div className="flex items-center gap-2 rounded-xl bg-ischia-mist px-3 py-2 text-xs font-semibold text-ischia-ink/65">
+                  <span>Fallback:</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img alt="Foto struttura" className="h-12 w-16 rounded-md object-cover" src={opt.hotelImageUrl} />
+                </div>
+              ) : null}
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
               <label className="text-xs font-semibold text-ischia-ink">
