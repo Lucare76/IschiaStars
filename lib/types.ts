@@ -7,6 +7,11 @@ export type ChildGuest = {
   age?: number;        // declared age at quote/request time
 };
 
+export type HotelRoomImage = {
+  label: string;
+  imageUrl: string;
+};
+
 export type Hotel = {
   id: string;
   name: string;
@@ -17,6 +22,7 @@ export type Hotel = {
   externalImageUrl?: string;
   sourceUrl?: string;
   slug?: string;
+  roomImages?: HotelRoomImage[];
   standardServices: string[];
   defaultDepositPercent?: number;
   defaultBalanceMethod?: string;

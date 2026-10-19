@@ -239,6 +239,8 @@ export function HotelOptionsEditor({
   function selectHotel(index: number, hotelId: string) {
     const hotel = activeHotels.find((h) => h.id === hotelId);
     const policies = hotelPolicies(hotel);
+    const normalizedRoomImages = hotel?.roomImages ?? [];
+    const roomImageFor = (label: string) => normalizedRoomImages.find((room) => room.label.trim().toLowerCase() === label.trim().toLowerCase())?.imageUrl ?? "";
     updateOption(index, {
       hotelId,
       hotelName: hotel?.name ?? "",
@@ -247,6 +249,12 @@ export function HotelOptionsEditor({
       hotelImageUrl: hotel?.imageUrl ?? hotel?.externalImageUrl ?? "",
       sourceUrl: hotel?.sourceUrl ?? "",
       includedServices: hotel?.standardServices.join("\n") ?? "",
+      roomTypes: hotel
+        ? hotelOptions[index].roomTypes.map((room) => ({
+            ...room,
+            roomImageUrl: room.roomImageUrl || roomImageFor(room.label)
+          }))
+        : hotelOptions[index].roomTypes,
       depositPercent: policies.depositPercent != null ? String(policies.depositPercent) : "",
       balanceMethod: policies.balanceMethod,
       paymentPolicy: policies.paymentPolicy,
@@ -520,7 +528,13 @@ function HotelOptionBlock({
                 roomLabel={rt.label}
                 suggestedCapacity={suggestedCapacity}
                 roomTypePresets={roomTypePresets}
-                onChange={(label) => onUpdateRoomType(roomIdx, { label })}
+                onChange={(label) => {
+                  const selectedHotel = activeHotels.find((hotel) => hotel.id === opt.hotelId);
+                  const roomImageUrl = selectedHotel?.roomImages?.find(
+                    (room) => room.label.trim().toLowerCase() === label.trim().toLowerCase()
+                  )?.imageUrl ?? "";
+                  onUpdateRoomType(roomIdx, { label, roomImageUrl });
+                }}
               />
               <label className="text-sm font-semibold text-ischia-ink">
                 Nome editabile
@@ -528,7 +542,14 @@ function HotelOptionBlock({
                   className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
                   placeholder="Scrivi una nuova categoria..."
                   value={rt.label}
-                  onChange={(e) => onUpdateRoomType(roomIdx, { label: e.target.value })}
+                  onChange={(e) => {
+                    const label = e.target.value;
+                    const selectedHotel = activeHotels.find((hotel) => hotel.id === opt.hotelId);
+                    const roomImageUrl = selectedHotel?.roomImages?.find(
+                      (room) => room.label.trim().toLowerCase() === label.trim().toLowerCase()
+                    )?.imageUrl ?? rt.roomImageUrl;
+                    onUpdateRoomType(roomIdx, { label, roomImageUrl });
+                  }}
                 />
               </label>
               {opt.roomTypes.length > 1 && (
