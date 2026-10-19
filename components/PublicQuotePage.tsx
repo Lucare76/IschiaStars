@@ -54,7 +54,7 @@ export function PublicQuotePage({
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img alt="" className="absolute inset-0 h-full w-full object-cover object-center" src={heroImage} />
-                <div className="absolute inset-0 bg-gradient-to-r from-white/72 via-white/34 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-white/78 via-white/38 to-transparent" />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/10 via-transparent to-transparent" />
               </>
             ) : null}
@@ -64,7 +64,10 @@ export function PublicQuotePage({
               <h1 className="mt-3 max-w-[620px] text-[38px] font-black leading-[0.98] tracking-[-0.04em] text-ischia-navy sm:text-[52px] lg:text-[58px]">
                 {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
               </h1>
-              <p className="mt-5 max-w-[560px] text-[16px] font-black leading-7 text-ischia-navy sm:text-[17px]">
+              <p
+                className="mt-5 max-w-[560px] rounded-2xl px-5 py-4 text-[16px] font-black leading-7 text-ischia-navy shadow-[0_8px_24px_rgba(8,63,115,0.12)] ring-1 ring-white/80 sm:text-[17px]"
+                style={{ backgroundColor: "rgba(255,255,255,0.88)", backdropFilter: "blur(4px)" }}
+              >
                 Ciao {quote.customerFirstName}, {hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro}
               </p>
             </div>
