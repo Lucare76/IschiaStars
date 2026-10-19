@@ -53,6 +53,17 @@ export function mapHotel(row: Record<string, unknown>): Hotel {
   const standardServices = Array.isArray(row.standard_services) && row.standard_services.length
     ? row.standard_services as string[]
     : metadataServices;
+  const roomImages = Array.isArray(row.room_images)
+    ? row.room_images
+        .map((item) => {
+          if (!item || typeof item !== "object") return null;
+          const value = item as { label?: unknown; imageUrl?: unknown; image_url?: unknown };
+          const label = String(value.label ?? "").trim();
+          const imageUrl = String(value.imageUrl ?? value.image_url ?? "").trim();
+          return label && imageUrl ? { label, imageUrl } : null;
+        })
+        .filter((item): item is { label: string; imageUrl: string } => Boolean(item))
+    : [];
 
   return {
     id: String(row.id),
@@ -64,6 +75,7 @@ export function mapHotel(row: Record<string, unknown>): Hotel {
     externalImageUrl: row.external_image_url ? String(row.external_image_url) : metadataImageUrl,
     sourceUrl: row.source_url ? String(row.source_url) : undefined,
     slug: row.slug ? String(row.slug) : undefined,
+    roomImages,
     standardServices,
     defaultDepositPercent: row.default_deposit_percent != null ? Number(row.default_deposit_percent) : undefined,
     defaultBalanceMethod: row.default_balance_method ? String(row.default_balance_method) : undefined,
