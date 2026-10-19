@@ -792,15 +792,15 @@ function HotelCard({
         )}
 
         {hotelNotes.notes.length > 0 || hotelNotes.commitmentNote ? (
-          <div className="mt-3">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue">Note struttura / camera</p>
+          <div className="mt-3 rounded-2xl bg-ischia-navy px-4 py-3 text-white">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-white">Note struttura / camera</p>
             {hotelNotes.notes.length > 0 ? (
-              <ul className="mt-1 space-y-0.5">
-                {hotelNotes.notes.map((note) => <li key={note} className="text-sm leading-6 text-ischia-ink/80">{note}</li>)}
+              <ul className="mt-2 space-y-1">
+                {hotelNotes.notes.map((note) => <li key={note} className="text-sm leading-6 text-white/95">{note}</li>)}
               </ul>
             ) : null}
             {hotelNotes.commitmentNote ? (
-              <p className="mt-1.5 rounded-r-lg border-l-[3px] border-ischia-sun bg-[#FFF8E6] px-3 py-1.5 text-sm font-semibold leading-6 text-ischia-navy">
+              <p className="mt-2 rounded-r-lg border-l-[3px] border-ischia-sun bg-white/10 px-3 py-2 text-sm font-semibold leading-6 text-white">
                 {hotelNotes.commitmentNote}
               </p>
             ) : null}
