@@ -46,13 +46,13 @@ export function PublicQuotePage({
           <PublicQuoteHeaderActions quote={quote} contentSettings={contentSettings} />
         </header>
 
-        <section className="print-card overflow-hidden rounded-[32px] bg-white shadow-[0_24px_70px_rgba(8,63,115,0.12)] ring-1 ring-ischia-blue/10">
-          <div className="grid lg:grid-cols-[1.25fr_0.75fr]">
-            <div className="p-6 sm:p-8 lg:p-10">
-              <p className="inline-flex rounded-full bg-ischia-sun/20 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-amber-800">
+        <section className="print-card overflow-hidden rounded-[34px] bg-white shadow-[0_28px_80px_rgba(8,63,115,0.14)] ring-1 ring-ischia-blue/10">
+          <div className="grid lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="order-2 p-6 sm:p-8 lg:order-1 lg:p-10">
+              <p className="inline-flex rounded-full bg-[#FFF3CF] px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-amber-800">
                 Preventivo {quote.code}
               </p>
-              <h1 className="mt-5 max-w-3xl text-4xl font-black leading-[1.02] tracking-[-0.035em] text-ischia-navy sm:text-5xl lg:text-6xl">
+              <h1 className="mt-5 max-w-3xl text-4xl font-black leading-[1.02] tracking-[-0.04em] text-ischia-navy sm:text-5xl lg:text-6xl">
                 {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-7 text-ischia-ink/70">
@@ -68,33 +68,33 @@ export function PublicQuotePage({
               </div>
             </div>
 
-            <div className="bg-ischia-navy p-6 text-white sm:p-8 lg:flex lg:flex-col lg:justify-between lg:p-10">
-              <div>
+            <div className="relative order-1 min-h-[300px] overflow-hidden bg-ischia-navy lg:order-2 lg:min-h-[520px]">
+              {quote.hotelOptions[0]?.hotelImageUrl ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt="Ischia"
+                    className="absolute inset-0 h-full w-full object-cover"
+                    src={quote.hotelOptions[0].hotelImageUrl}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-ischia-navy/85 via-ischia-navy/10 to-transparent" />
+                </>
+              ) : null}
+              <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
                 <IschiaStarsLogo light />
-                <p className="mt-8 text-xs font-black uppercase tracking-[0.18em] text-ischia-sand">La tua vacanza, più semplice</p>
-                <p className="mt-3 text-2xl font-black leading-tight">Confronta. Scegli. Conferma.</p>
-                <p className="mt-3 text-sm leading-6 text-white/75">
-                  Tutto quello che ti serve per decidere è raccolto qui, in modo chiaro e trasparente.
-                </p>
-              </div>
-              <div className="mt-8 grid gap-2 text-sm">
-                <div className="rounded-2xl bg-white/10 px-4 py-3">✓ Strutture selezionate</div>
-                <div className="rounded-2xl bg-white/10 px-4 py-3">✓ Prezzi e condizioni visibili</div>
-                <div className="rounded-2xl bg-white/10 px-4 py-3">✓ Assistenza IschiaStars</div>
+                <p className="mt-6 text-xs font-black uppercase tracking-[0.16em] text-ischia-sand">IschiaStars</p>
+                <p className="mt-2 max-w-md text-2xl font-black leading-tight">La tua vacanza a Ischia, costruita su misura.</p>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-ischia-blue/10 bg-[#F8FBFD] p-5 sm:p-7">
-            <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-              <div>
-                <CountdownBanner offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
-              </div>
-
+          <div className="border-t border-ischia-blue/10 bg-[#F7FBFE] p-5 sm:p-7">
+            <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+              <CountdownBanner offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
               {quote.customerNotes ? (
-                <section className="rounded-2xl bg-ischia-navy p-5 shadow-sm">
-                  <h3 className="text-base font-black text-white">Note per te</h3>
-                  <div className="mt-2 whitespace-pre-line text-sm leading-6 text-white/90">{quote.customerNotes}</div>
+                <section className="rounded-2xl bg-ischia-navy p-5 shadow-[0_14px_32px_rgba(8,63,115,0.18)]">
+                  <h3 className="text-lg font-black text-white">Note per te</h3>
+                  <div className="mt-3 whitespace-pre-line text-sm leading-6 text-white/90">{quote.customerNotes}</div>
                 </section>
               ) : (
                 <div className="rounded-2xl bg-white p-5 ring-1 ring-ischia-blue/10">
@@ -104,26 +104,18 @@ export function PublicQuotePage({
               )}
             </div>
 
-            {quote.isAlternative && quote.requestedHotel ? (
-              <div className="mt-4 rounded-2xl bg-ischia-sun/15 p-4 text-sm font-semibold leading-6 text-ischia-navy ring-1 ring-ischia-sun/30">
-                La struttura richiesta era {quote.requestedHotel}. Di seguito trovi la soluzione proposta disponibile per le date selezionate.
-              </div>
-            ) : null}
-
-            {quote.children.length > 0 && (
-              <div className="mt-4">
-                <ContentBlock title="Bambini">
-                  <ul className="grid gap-2">
-                    {quote.children.map((child, index) => (
-                      <li key={child.id} className="rounded-xl bg-white p-3 ring-1 ring-ischia-blue/10">
-                        Bambino {index + 1}:{" "}
-                        {child.age != null ? `${child.age} ${child.age === 1 ? "anno" : "anni"}` : "—"}
-                      </li>
-                    ))}
-                  </ul>
-                </ContentBlock>
-              </div>
-            )}
+            <section className="no-print mt-4 grid gap-3 sm:grid-cols-3">
+              {[
+                ["Strutture selezionate", "Hotel scelti e verificati dal nostro team"],
+                ["Prezzi trasparenti", "Condizioni e servizi sempre visibili"],
+                ["Assistenza dedicata", "Ti seguiamo prima e durante il soggiorno"]
+              ].map(([title, text]) => (
+                <div key={title} className="rounded-2xl bg-white px-4 py-4 text-center shadow-sm ring-1 ring-ischia-blue/10">
+                  <p className="text-sm font-black text-ischia-navy">{title}</p>
+                  <p className="mt-1 text-xs leading-5 text-ischia-ink/60">{text}</p>
+                </div>
+              ))}
+            </section>
 
             <div className="no-print mt-4 flex justify-end">
               <PrintButton quoteCode={quote.code} token={quote.token} />
