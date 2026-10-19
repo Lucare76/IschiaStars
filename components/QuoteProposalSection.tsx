@@ -140,6 +140,49 @@ function BuildingIcon() {
     </svg>
   );
 }
+function ServiceIcon({ service }: { service: string }) {
+  const s = service.toLowerCase();
+  const common = {
+    fill: "none",
+    height: 18,
+    stroke: "currentColor",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    strokeWidth: 1.8,
+    viewBox: "0 0 24 24",
+    width: 18
+  };
+
+  if (s.includes("wi-fi") || s.includes("wifi")) {
+    return <svg {...common}><path d="M5 12.5a10 10 0 0 1 14 0" /><path d="M8.5 16a5 5 0 0 1 7 0" /><circle cx="12" cy="19" r="1" /></svg>;
+  }
+  if (s.includes("piscina")) {
+    return <svg {...common}><path d="M3 8h5v5" /><path d="M8 10h5v5" /><path d="M3 17c1 .8 2 1.2 3 1.2S8 17.8 9 17s2-1.2 3-1.2 2 .4 3 1.2 2 1.2 3 1.2 2-.4 3-1.2" /></svg>;
+  }
+  if (s.includes("spa") || s.includes("terme")) {
+    return <svg {...common}><path d="M12 21s-6-3.5-6-9a6 6 0 0 1 12 0c0 5.5-6 9-6 9Z" /><path d="M12 21V8" /><path d="M8.5 11.5 12 15l3.5-3.5" /></svg>;
+  }
+  if (s.includes("aria") || s.includes("climat")) {
+    return <svg {...common}><path d="M12 2v20M4.9 6l14.2 12M19.1 6 4.9 18M2 12h20" /></svg>;
+  }
+  if (s.includes("parcheggio")) {
+    return <svg {...common}><rect x="5" y="3" width="14" height="18" rx="3" /><path d="M9 16V8h4a3 3 0 1 1 0 6H9" /></svg>;
+  }
+  if (s.includes("ristorante")) {
+    return <svg {...common}><path d="M6 3v8M3 3v5a3 3 0 0 0 6 0V3M6 11v10M16 3v18M16 3c3 2 3 7 0 9" /></svg>;
+  }
+  if (s.includes("palestra")) {
+    return <svg {...common}><path d="M3 10v4M6 8v8M18 8v8M21 10v4M6 12h12" /></svg>;
+  }
+  if (s.includes("colazione")) {
+    return <svg {...common}><path d="M4 10h12v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-4Z" /><path d="M16 11h2a2 2 0 0 1 0 4h-2" /><path d="M7 3v3M11 3v3" /></svg>;
+  }
+  if (s.includes("animali")) {
+    return <svg {...common}><circle cx="8" cy="8" r="1.5" /><circle cx="16" cy="8" r="1.5" /><circle cx="6" cy="13" r="1.5" /><circle cx="18" cy="13" r="1.5" /><path d="M9 18c1.2-2.3 4.8-2.3 6 0" /></svg>;
+  }
+  return <svg {...common}><circle cx="12" cy="12" r="7" /><path d="m9 12 2 2 4-4" /></svg>;
+}
+
 
 function CommitmentNoteBadge({ note }: { note: string }) {
   return (
@@ -226,7 +269,7 @@ export function QuoteProposalSection({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Bottone toggle confronto — visibile solo con 2+ gruppi hotel */}
       {groupedHotels.length >= 2 && (
         <div className="no-print">
@@ -255,7 +298,7 @@ export function QuoteProposalSection({
         />
       ) : (
         /* Hotel cards raggruppate per struttura */
-        <div className="space-y-4">
+        <div className="space-y-6">
           {renderableGroups.map(([groupId, groupOptions]) => {
             const optionsWithTreatments = groupOptions.filter((o) => visibleTreatments(o).length > 0);
             const firstOpt = optionsWithTreatments[0];
@@ -284,7 +327,7 @@ export function QuoteProposalSection({
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {selectedRooms.map((room, index) => (
               <div key={`${room.optionId}-${room.treatmentKey}-${index}`} className="rounded-xl bg-ischia-mist p-3 text-sm">
-                <p className="font-black text-ischia-navy">Camera {index + 1}</p>
+                <p className="text-lg font-black text-ischia-navy">Camera {index + 1}</p>
                 <p>{room.roomTypeLabel || "Camera standard"}</p>
                 <p>{room.treatmentLabel} - {formatCurrency(room.price)}</p>
                 <button className="mt-2 text-xs font-bold text-rose-700" type="button" onClick={() => setSelectedRooms((rooms) => rooms.filter((_, roomIndex) => roomIndex !== index))}>
@@ -539,7 +582,7 @@ function CompareView({
                   {!isConfirmed && firstTreatment ? (
                     <>
                       <button
-                        className="w-full rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
+                        className="w-full rounded-full bg-ischia-sun px-4 py-3 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95"
                         onClick={() => setPendingSelection({ option: mainOption, treatment: firstTreatment })}
                         type="button"
                       >
@@ -629,9 +672,6 @@ function HotelCard({
   quote: PublicQuoteDTO;
   onSelectTreatment: (option: PublicQuoteHotelOptionDTO, treatment: TreatmentOption) => void;
 }) {
-  // TODO: wow6_adaptive — da implementare
-  // Quando featureFlags.wow6_adaptive === true, evidenziare l'hotel più visto dal cliente
-  // nelle sessioni precedenti (leggi quote_events con eventType "hotel_view" o simile).
   const [pendingSelection, setPendingSelection] = useState<{ option: PublicQuoteHotelOptionDTO; treatment: TreatmentOption } | null>(null);
   const [reaction, setReaction] = useState<"interested" | "too_expensive" | null>(null);
   const reactionKey = `reaction_${quoteCode}_${mainOption.hotelGroup}`;
@@ -665,240 +705,225 @@ function HotelCard({
   const features = extractHighlightedFeatures({
     hotelName: mainOption.hotelName,
     includedServices: mainOption.includedServices,
-    notes: mainOption.notes,
+    notes: mainOption.notes
   });
 
   return (
-    <div className={`print-card relative overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ${isAnySelected ? "ring-emerald-400" : "ring-ischia-blue/10"} ${badge === "Consigliato" ? "ring-2 ring-[#C9A84C]" : ""}`}>
-      {badge ? (
-        <span className={`absolute left-0 top-0 z-10 rounded-br-lg px-3 py-1 text-xs font-bold uppercase text-white ${badgeColorClass(badge)}`}>
-          {badge}
-        </span>
-      ) : null}
-      <div className={imageUrl ? "grid lg:grid-cols-[minmax(18rem,0.42fr)_1fr]" : ""}>
-        {imageUrl && (
-          <div className="max-h-72 overflow-hidden bg-ischia-mist">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img alt={mainOption.hotelName} className="h-56 max-h-72 w-full object-cover object-center sm:h-64 lg:h-72" decoding="async" src={imageUrl} />
-          </div>
-        )}
-      <div className="p-5">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{mainOption.hotelLocation}</p>
+    <div className={`print-card overflow-hidden rounded-[30px] bg-white shadow-[0_24px_70px_rgba(8,63,115,0.11)] ring-1 ${isAnySelected ? "ring-emerald-400" : "ring-ischia-blue/10"}`}>
+      <div className="p-6 sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-[0.15em] text-ischia-blue">{mainOption.hotelLocation}</p>
             <div className="mt-1 flex flex-wrap items-center gap-3">
-              <h3 className="text-2xl font-black text-ischia-navy">{mainOption.hotelName}</h3>
-              {mainOption.sourceUrl ? (
-                <a
-                  className="no-print rounded-full bg-white px-3 py-1 text-xs font-black text-ischia-blue ring-1 ring-ischia-blue/20"
-                  href={mainOption.sourceUrl}
-                  onClick={() => trackQuoteEvent({ quoteCode, token }, "hotel_link_clicked", {
-                    hotelOptionId: mainOption.id,
-                    hotelName: mainOption.hotelName,
-                    sourceUrl: mainOption.sourceUrl
-                  })}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  Vedi l&apos;hotel
-                </a>
+              <h3 className="text-3xl font-black tracking-[-0.035em] text-ischia-navy sm:text-4xl lg:text-5xl">{mainOption.hotelName}</h3>
+              {stars ? <span className="text-lg tracking-[0.12em] text-ischia-sun">{stars}</span> : null}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <PopularityBadge count={popularity} />
+              {featureFlags.instant_reaction ? (
+                <>
+                  <button
+                    className={`no-print rounded-full border px-3 py-1.5 text-xs font-black transition ${reaction === "interested" ? "border-emerald-600 bg-emerald-600 text-white" : "border-emerald-500 bg-white text-emerald-700"}`}
+                    onClick={() => handleReactionClick("interested")}
+                    type="button"
+                  >
+                    👍 Mi interessa
+                  </button>
+                  <button
+                    className={`no-print rounded-full border px-3 py-1.5 text-xs font-black transition ${reaction === "too_expensive" ? "border-rose-600 bg-rose-600 text-white" : "border-rose-400 bg-white text-rose-600"}`}
+                    onClick={() => handleReactionClick("too_expensive")}
+                    type="button"
+                  >
+                    💸 Troppo caro
+                  </button>
+                </>
               ) : null}
             </div>
-            {stars && <p className="mt-1 text-sm text-ischia-sun">{stars}</p>}
-            <PopularityBadge count={popularity} />
           </div>
-          {isAnySelected && (
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Scelta dal cliente</span>
-          )}
+
+          {mainOption.sourceUrl ? (
+            <a
+              className="no-print shrink-0 rounded-full bg-white px-4 py-2 text-sm font-black text-ischia-blue ring-1 ring-ischia-blue/20"
+              href={mainOption.sourceUrl}
+              onClick={() => trackQuoteEvent({ quoteCode, token }, "hotel_link_clicked", {
+                hotelOptionId: mainOption.id,
+                hotelName: mainOption.hotelName,
+                sourceUrl: mainOption.sourceUrl
+              })}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Vedi l&apos;hotel →
+            </a>
+          ) : null}
         </div>
 
-        {featureFlags.instant_reaction && (
-          <div className="no-print mt-3">
-            <div className="flex flex-wrap gap-2">
-              <button
-                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                  reaction === "interested"
-                    ? "border border-[#16A34A] bg-[#16A34A] text-white"
-                    : "border border-[#16A34A] bg-white text-[#16A34A]"
-                }`}
-                onClick={() => handleReactionClick("interested")}
-                type="button"
-              >
-                👍 Mi interessa
-              </button>
-              <button
-                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                  reaction === "too_expensive"
-                    ? "border border-[#DC2626] bg-[#DC2626] text-white"
-                    : "border border-[#DC2626] bg-white text-[#DC2626]"
-                }`}
-                onClick={() => handleReactionClick("too_expensive")}
-                type="button"
-              >
-                💸 Troppo caro
-              </button>
-            </div>
-            {reaction === "interested" ? (
-              <p className="mt-2 text-xs font-medium text-[#16A34A]" style={{ animation: "fadeIn 300ms ease-in" }}>
-                Ottima scelta! Conferma quando sei pronto.
-              </p>
-            ) : null}
-            {reaction === "too_expensive" ? (
-              <p className="mt-2 text-xs font-medium text-[#DC2626]" style={{ animation: "fadeIn 300ms ease-in" }}>
-                Capito. Scrivici, possiamo trovare una soluzione.{" "}
-                <a
-                  className="underline"
-                  href={publicWhatsappLink(`Ciao IschiaStars, riguardo al preventivo ${quoteCode} (${mainOption.hotelName}): vorrei parlare del prezzo, magari c'è una soluzione più adatta?`)}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  Scrivici su WhatsApp
-                </a>
-              </p>
-            ) : null}
-          </div>
-        )}
-
         {hotelReason ? (
-          <div className="mt-3 rounded-r-lg border-l-[3px] border-[#C9A84C] bg-[#FBF5E6] px-4 py-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#C9A84C]">Perché te lo proponiamo</p>
-            <p className="mt-1 text-sm text-gray-700">{hotelReason}</p>
+          <div className="mt-5 rounded-[20px] border border-[#E4C46C] bg-[#FFF8E8] px-5 py-4">
+            <div className="flex gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFF0BD] text-lg">★</div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-[#B88716]">Perché te lo proponiamo</p>
+                <p className="mt-1 text-sm leading-6 text-ischia-ink/75">{hotelReason}</p>
+              </div>
+            </div>
           </div>
         ) : null}
 
         {mandatoryFeeNote ? (
-          <div className="mt-3 rounded-r-lg border-l-[3px] border-amber-500 bg-amber-50 px-4 py-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Da pagare in loco</p>
-            <p className="mt-1 text-sm text-amber-900">{mandatoryFeeNote}</p>
+          <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
+            <strong>Da pagare in loco:</strong> {mandatoryFeeNote}
           </div>
         ) : null}
 
-        {features.length > 0 && (
-          <div className="mt-3">
-            <div className="no-print">
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">Plus inclusi</p>
-              <div className="mt-1.5 flex flex-wrap gap-2">
-                {features.map((f) => (
-                  <span key={f} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200/60">
-                    ✓ {f}
-                  </span>
-                ))}
-              </div>
+        {features.length > 0 ? (
+          <div className="mt-5">
+            <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-navy">Plus inclusi</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {features.map((feature) => (
+                <span key={feature} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200/70">
+                  ✓ {feature}
+                </span>
+              ))}
             </div>
-            <p className="hidden print:block text-sm text-ischia-ink/80">
-              <strong>Plus inclusi:</strong> {features.join(", ")}
-            </p>
-          </div>
-        )}
-
-        {hotelNotes.notes.length > 0 || hotelNotes.commitmentNote ? (
-          <div className="mt-3 rounded-2xl bg-ischia-navy px-4 py-3 text-white">
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-white">Note struttura / camera</p>
-            {hotelNotes.notes.length > 0 ? (
-              <ul className="mt-2 space-y-1">
-                {hotelNotes.notes.map((note) => <li key={note} className="text-sm leading-6 text-white/95">{note}</li>)}
-              </ul>
-            ) : null}
-            {hotelNotes.commitmentNote ? (
-              <p className="mt-2 rounded-r-lg border-l-[3px] border-ischia-sun bg-white/10 px-3 py-2 text-sm font-semibold leading-6 text-white">
-                {hotelNotes.commitmentNote}
-              </p>
-            ) : null}
           </div>
         ) : null}
 
-        {services.length > 0 && (
-          <div className="mt-3">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue/70">Servizi inclusi</p>
-            <ul className="mt-1 grid gap-1 sm:grid-cols-2">
-              {services.map((s) => <li key={s} className="text-sm text-ischia-ink/78">{s}</li>)}
+        {services.length > 0 ? (
+          <div className="mt-5 rounded-[22px] bg-[#F2F8FC] p-5 ring-1 ring-ischia-blue/10">
+            <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">Servizi inclusi</p>
+            <ul className="mt-4 grid gap-x-10 gap-y-3 sm:grid-cols-2">
+              {services.map((service) => (
+                <li key={service} className="flex items-center gap-3 text-sm font-semibold text-ischia-ink/78">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-ischia-blue ring-1 ring-ischia-blue/10">
+                    <ServiceIcon service={service} />
+                  </span>
+                  <span>{service}</span>
+                </li>
+              ))}
             </ul>
           </div>
-        )}
+        ) : null}
 
+        {hotelNotes.notes.length > 0 || hotelNotes.commitmentNote ? (
+          <div className="mt-4 rounded-[20px] bg-ischia-navy px-5 py-4 text-white shadow-sm">
+            <div className="flex items-start gap-3">
+              <span className="text-lg">▤</span>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.13em] text-white">Note struttura / camera</p>
+                {hotelNotes.notes.length > 0 ? (
+                  <div className="mt-2 space-y-1 text-sm leading-6 text-white/95">
+                    {hotelNotes.notes.map((note) => <p key={note}>{note}</p>)}
+                  </div>
+                ) : null}
+                {hotelNotes.commitmentNote ? (
+                  <p className="mt-2 border-l-2 border-ischia-sun pl-3 text-sm font-semibold leading-6 text-white">
+                    {hotelNotes.commitmentNote}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
-        {/* Per ogni tipologia camera, mostra i trattamenti */}
-        <div className={imageUrl ? "mt-4 space-y-4 px-5 pb-5 lg:col-span-2 lg:mt-0" : "mt-4 space-y-4 px-5 pb-5"}>
-          {allGroupOptions.map((opt) => (
-            <div key={opt.id}>
-              {hasMultipleRoomTypes && opt.roomTypeLabel && (
-                <p className="mb-2 text-sm font-black text-ischia-navy">{opt.roomTypeLabel}</p>
-              )}
-              {opt.treatments.length > 0 && (
-                <div className="space-y-3">
-                  {visibleTreatments(opt).map((treatment) => {
-                    const detailKey = `${opt.id}-${treatment.key}`;
-                    const details = treatmentDetails(opt, treatment);
-                    const priceDelta = treatmentPriceDeltas(opt).get(treatment.key);
-                    const benefit = details ? undefined : treatmentBenefit(treatment);
-                    const frontDetails = details || treatmentDescription(treatment);
-                    return (
-                    <div key={detailKey} className="rounded-2xl bg-ischia-mist p-4">
-                      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-end">
-                        <div className="min-w-0">
-                          {opt.roomTypeLabel ? (
-                            <p className="text-xs font-bold uppercase tracking-wide text-ischia-blue/60">{opt.roomTypeLabel}</p>
-                          ) : null}
-                          <p className="font-black text-ischia-navy">{treatment.label}</p>
-                          <div className="mt-2 rounded-xl bg-ischia-navy px-4 py-3 text-sm leading-6 text-white">
-                            <p className="text-xs font-black uppercase tracking-wide text-white/70">Cosa include</p>
-                            <p className="mt-1 whitespace-pre-line">{frontDetails}</p>
+      <div className="space-y-4 bg-[#FBFDFE] px-5 pb-6 sm:px-7 sm:pb-8">
+        {allGroupOptions.map((opt) => {
+          const activeTreatments = visibleTreatments(opt);
+          return (
+            <div key={opt.id} className="space-y-4">
+              {activeTreatments.map((treatment, treatmentIndex) => {
+                const details = treatmentDetails(opt, treatment);
+                const frontDetails = details || treatmentDescription(treatment);
+                const previous = activeTreatments[treatmentIndex - 1];
+                const delta = previous ? treatment.price - previous.price : null;
+                const previewRoomImage = quote.token === "preview-demo-token"
+                  ? treatment.key === "full_board"
+                    ? "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=85"
+                    : "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1200&q=85"
+                  : imageUrl;
+
+                return (
+                  <div key={`${opt.id}-${treatment.key}`} className="overflow-hidden rounded-[24px] bg-white shadow-[0_14px_34px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
+                    <div className="grid lg:grid-cols-[330px_minmax(0,1fr)_270px]">
+                      <div className="relative min-h-[245px] overflow-hidden bg-ischia-mist">
+                        {previewRoomImage ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={previewRoomImage} alt={opt.roomTypeLabel || mainOption.hotelName} className="absolute inset-0 h-full w-full object-cover object-center" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                          </>
+                        ) : (
+                          <div className="flex h-full min-h-[245px] items-center justify-center"><BuildingIcon /></div>
+                        )}
+                        <span className={`absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1.5 text-xs font-black shadow-sm ${treatmentIndex === 0 ? "text-emerald-700 ring-1 ring-emerald-200" : "text-amber-700 ring-1 ring-amber-200"}`}>
+                          {treatmentIndex === 0 ? "Più economica" : "Più completa"}
+                        </span>
+                      </div>
+
+                      <div className="p-5 sm:p-6">
+                        {opt.roomTypeLabel ? (
+                          <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue/70">{opt.roomTypeLabel}</p>
+                        ) : null}
+                        <h4 className="mt-1 text-3xl font-black tracking-[-0.03em] text-ischia-navy">{treatment.label}</h4>
+                        <p className="mt-4 text-xs font-black uppercase tracking-[0.13em] text-ischia-blue/70">Cosa include</p>
+                        <ul className="mt-3 space-y-2">
+                          {frontDetails.split(",").map((item) => item.trim()).filter(Boolean).map((item) => (
+                            <li key={item} className="flex gap-2 text-sm leading-5 text-ischia-ink/80">
+                              <span className="font-black text-emerald-600">✓</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="flex flex-col justify-center bg-[#F5FAFD] p-5 sm:p-6">
+                        <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue/70">{priceScopeLabel}</p>
+                        <p className="mt-1 text-5xl font-black tabular-nums tracking-[-0.045em] text-ischia-navy">{formatCurrency(treatment.price)}</p>
+                        {delta && delta > 0 ? (
+                          <p className="mt-2 text-sm font-semibold text-ischia-ink/60">+ {formatCurrency(delta)} rispetto all&apos;opzione precedente</p>
+                        ) : null}
+
+                        {!isConfirmed ? (
+                          <div className="no-print mt-5">
+                            <button
+                              className="w-full rounded-full bg-ischia-sun px-5 py-3.5 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95"
+                              onClick={() => setPendingSelection({ option: opt, treatment })}
+                              type="button"
+                            >
+                              Scegli questa proposta →
+                            </button>
+                            <p className="mt-3 text-center text-xs leading-5 text-ischia-ink/45">Nessun pagamento online — ti ricontattiamo per finalizzare</p>
                           </div>
-                          <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <p className="text-2xl font-black tabular-nums text-ischia-navy">{formatCurrency(treatment.price)}</p>
-                          </div>
-                          <p className="mt-0.5 text-xs font-bold uppercase tracking-wide text-ischia-blue/70">{priceScopeLabel}</p>
-                          {benefit ? (
-                            <p className="mt-0.5 text-xs italic text-gray-500">{benefit}</p>
-                          ) : null}
-                        </div>
-                        <div className="flex w-full flex-wrap items-start gap-3 sm:justify-end">
-                          {!isConfirmed && (
-                            <div className="no-print w-full text-center">
-                              <button
-                                className="w-full rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
-                                onClick={() => setPendingSelection({ option: opt, treatment })}
-                                type="button"
-                              >
-                                Scegli questa camera
-                              </button>
-                              <p className="mt-1 text-center text-xs leading-snug text-gray-400">Nessun pagamento online — ti ricontattiamo per finalizzare</p>
-                            </div>
-                          )}
-                          {isConfirmed && opt.isSelected && (
-                            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">Confermato</span>
-                          )}
-                        </div>
+                        ) : null}
+
+                        {isConfirmed && opt.isSelected ? (
+                          <span className="mt-4 rounded-full bg-emerald-100 px-3 py-2 text-center text-xs font-black text-emerald-800">Confermato</span>
+                        ) : null}
                       </div>
                     </div>
-                  );})}
-                </div>
-              )}
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
+
       {pendingSelection ? (
-        <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5" role="dialog" aria-modal="true" aria-labelledby={`confirm-selection-${pendingSelection.option.id}`}>
+        <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5" role="dialog" aria-modal="true">
           <div className="mx-auto w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-black text-ischia-navy" id={`confirm-selection-${pendingSelection.option.id}`}>Aggiungi questa camera</h3>
+            <h3 className="text-xl font-black text-ischia-navy">Aggiungi questa camera</h3>
             <p className="mt-3 text-sm leading-6 text-gray-600">
               Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà per completare la prenotazione.
             </p>
             <div className="mt-4 rounded-xl bg-ischia-mist p-3 text-sm text-ischia-ink/80">
               <p><strong>Hotel:</strong> {pendingSelection.option.hotelName}</p>
-              {pendingSelection.option.roomTypeLabel ? (
-                <p><strong>Camera:</strong> {pendingSelection.option.roomTypeLabel}</p>
-              ) : null}
+              {pendingSelection.option.roomTypeLabel ? <p><strong>Camera:</strong> {pendingSelection.option.roomTypeLabel}</p> : null}
               <p><strong>Trattamento:</strong> {pendingSelection.treatment.label}</p>
             </div>
             <div className="mt-6 flex flex-wrap justify-end gap-3">
-              <button
-                className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20"
-                onClick={() => setPendingSelection(null)}
-                type="button"
-              >
+              <button className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" onClick={() => setPendingSelection(null)} type="button">
                 Annulla
               </button>
               <button
