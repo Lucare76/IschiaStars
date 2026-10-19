@@ -15,6 +15,7 @@ export type HotelInput = {
   stars: number;
   shortDescription?: string;
   imageUrl?: string | null;
+  roomImages?: { label: string; imageUrl: string }[];
   standardServices?: string[];
   defaultDepositPercent?: number | null;
   defaultBalanceMethod?: string | null;
@@ -148,6 +149,7 @@ export async function createHotel(input: HotelInput): Promise<RepositoryResult<H
         stars: input.stars,
         description: input.shortDescription ?? "",
         imageUrl: input.imageUrl ?? undefined,
+        roomImages: input.roomImages ?? [],
         standardServices: input.standardServices ?? [],
         defaultDepositPercent: input.defaultDepositPercent ?? undefined,
         defaultBalanceMethod: input.defaultBalanceMethod ?? undefined,
@@ -187,6 +189,7 @@ export async function updateHotel(id: string, input: Partial<HotelInput>): Promi
         stars: input.stars ?? current.stars,
         description: input.shortDescription ?? current.description,
         imageUrl: input.imageUrl === undefined ? current.imageUrl : input.imageUrl ?? undefined,
+        roomImages: input.roomImages === undefined ? current.roomImages : input.roomImages,
         standardServices: input.standardServices ?? current.standardServices,
         defaultDepositPercent: input.defaultDepositPercent === undefined ? current.defaultDepositPercent : input.defaultDepositPercent ?? undefined,
         defaultBalanceMethod: input.defaultBalanceMethod === undefined ? current.defaultBalanceMethod : input.defaultBalanceMethod ?? undefined,
@@ -251,6 +254,7 @@ function toHotelRow(input: Partial<HotelInput>, options: { fillDefaults: boolean
     ...(input.stars !== undefined ? { stars: input.stars } : {}),
     ...(input.shortDescription !== undefined ? { short_description: input.shortDescription } : {}),
     ...(input.imageUrl !== undefined ? { image_url: input.imageUrl } : {}),
+    ...(input.roomImages !== undefined ? { room_images: input.roomImages } : {}),
     ...(input.standardServices !== undefined ? { standard_services: input.standardServices } : {}),
     ...(input.defaultDepositPercent !== undefined || policies.depositPercent !== undefined ? { default_deposit_percent: policies.depositPercent ?? null } : {}),
     ...(input.defaultBalanceMethod !== undefined || policies.balanceMethod ? { default_balance_method: policies.balanceMethod || null } : {}),
