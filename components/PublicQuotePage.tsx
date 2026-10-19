@@ -38,49 +38,41 @@ export function PublicQuotePage({
 
   return (
     <QuotePageWrapper>
-      <main className="print-page mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
+      <main className="print-page mx-auto max-w-[1180px] px-4 py-5 sm:px-6 sm:py-7">
         {trackOpening ? <PublicEventTracker quoteCode={quote.code} token={quote.token} source={openingSource} /> : null}
 
-        <header className="no-print mb-5 flex flex-wrap items-center justify-between gap-4 rounded-[24px] bg-white px-5 py-4 shadow-[0_10px_30px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
+        <header className="no-print mb-4 flex items-center justify-between gap-4 rounded-[22px] bg-white px-5 py-4 shadow-[0_10px_28px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
           <IschiaStarsLogo />
           <PublicQuoteHeaderActions quote={quote} contentSettings={contentSettings} />
         </header>
 
-        <section className="overflow-hidden rounded-[34px] bg-white shadow-[0_26px_80px_rgba(8,63,115,0.13)] ring-1 ring-ischia-blue/10">
-          <div className="relative overflow-hidden">
+        <section className="overflow-hidden rounded-[30px] bg-white shadow-[0_22px_70px_rgba(8,63,115,0.12)] ring-1 ring-ischia-blue/10">
+          <div className="relative min-h-[430px] overflow-hidden">
             {heroImage ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={heroImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/10" />
+                <img alt="" className="absolute inset-0 h-full w-full object-cover" src={heroImage} />
+                <div className="absolute inset-0 bg-gradient-to-r from-white via-white/94 to-white/0" />
               </>
             ) : null}
 
-            <div className="relative z-10 grid min-h-[420px] items-center lg:grid-cols-[1.05fr_0.95fr]">
-              <div className="p-7 sm:p-10 lg:p-12">
-                <p className="inline-flex rounded-full bg-[#FFF2CC] px-3 py-1 text-[11px] font-black uppercase tracking-[0.17em] text-amber-800">
-                  Preventivo {quote.code}
-                </p>
-                <h1 className="mt-5 max-w-3xl text-4xl font-black leading-[1.01] tracking-[-0.045em] text-ischia-navy sm:text-5xl lg:text-6xl">
-                  {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
-                </h1>
-                <p className="mt-5 max-w-xl text-base leading-7 text-ischia-ink/72">
-                  Ciao <strong className="text-ischia-navy">{quote.customerFirstName}</strong>,{" "}
-                  {hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro}
-                </p>
-              </div>
-              <div className="hidden min-h-[420px] lg:block" />
+            <div className="relative z-10 max-w-[650px] p-7 sm:p-10 lg:p-12">
+              <p className="text-sm font-black uppercase tracking-[0.12em] text-[#C89217]">Preventivo {quote.code}</p>
+              <h1 className="mt-3 text-[42px] font-black leading-[0.98] tracking-[-0.04em] text-ischia-navy sm:text-[56px]">
+                {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
+              </h1>
+              <p className="mt-5 max-w-xl text-[17px] leading-7 text-ischia-ink/75">
+                Ciao {quote.customerFirstName}, {hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro}
+              </p>
             </div>
-          </div>
 
-          <div className="relative z-20 -mt-7 px-5 sm:px-7">
-            <div className="grid gap-3 lg:grid-cols-[1fr_1.25fr_0.8fr_0.7fr_1.55fr]">
-              <SummaryCard label="Cliente" value={formatClientName(quote.customerFirstName, quote.customerLastName)} />
-              <SummaryCard label="Date" value={`${formatDate(quote.arrivalDate)} — ${formatDate(quote.departureDate)}`} />
-              <SummaryCard label="Ospiti" value={guests} />
-              <SummaryCard label="Camere" value={`${quote.rooms}`} />
-              <div className="rounded-[22px] bg-ischia-navy p-4 text-white shadow-[0_14px_30px_rgba(8,63,115,0.24)]">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/70">Questa proposta è valida ancora</p>
+            <div className="absolute bottom-5 left-5 right-5 z-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.1fr_1.4fr_0.8fr_0.7fr_1.7fr]">
+              <HeroStat icon="user" label="Cliente" value={formatClientName(quote.customerFirstName, quote.customerLastName)} />
+              <HeroStat icon="calendar" label="Date" value={`${formatDate(quote.arrivalDate)} — ${formatDate(quote.departureDate)}`} />
+              <HeroStat icon="guests" label="Ospiti" value={guests} />
+              <HeroStat icon="bed" label="Camere" value={String(quote.rooms)} />
+              <div className="rounded-[22px] bg-ischia-navy px-4 py-3.5 text-white shadow-[0_14px_30px_rgba(8,63,115,0.24)]">
+                <p className="text-[10px] font-black uppercase tracking-[0.13em] text-white/75">Questa proposta è valida ancora</p>
                 <div className="mt-2 [&>div]:!mt-0 [&>div]:!border-0 [&>div]:!bg-transparent [&>div]:!p-0 [&>div]:!shadow-none [&>div]:!ring-0">
                   <CountdownBanner offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
                 </div>
@@ -88,28 +80,27 @@ export function PublicQuotePage({
             </div>
           </div>
 
-          <div className="p-5 sm:p-7">
-            {quote.customerNotes ? (
-              <section className="rounded-[22px] bg-ischia-navy px-5 py-4 text-white shadow-sm">
-                <h3 className="text-lg font-black">Note per te</h3>
-                <div className="mt-2 whitespace-pre-line text-sm leading-6 text-white/90">{quote.customerNotes}</div>
-              </section>
-            ) : null}
+          {quote.customerNotes ? (
+            <div className="mx-5 mt-5 rounded-[20px] bg-ischia-navy px-5 py-4 text-white sm:mx-7">
+              <p className="text-sm font-black">Note per te</p>
+              <div className="mt-2 whitespace-pre-line text-sm leading-6 text-white/92">{quote.customerNotes}</div>
+            </div>
+          ) : null}
 
+          <div className="p-5 sm:p-7">
             {quote.isAlternative && quote.requestedHotel ? (
-              <div className="mt-4 rounded-2xl bg-ischia-sun/15 p-4 text-sm font-semibold leading-6 text-ischia-navy ring-1 ring-ischia-sun/30">
+              <div className="mb-4 rounded-2xl bg-ischia-sun/15 p-4 text-sm font-semibold leading-6 text-ischia-navy ring-1 ring-ischia-sun/30">
                 La struttura richiesta era {quote.requestedHotel}. Di seguito trovi la soluzione proposta disponibile per le date selezionate.
               </div>
             ) : null}
 
             {quote.children.length > 0 ? (
-              <div className="mt-4">
+              <div className="mb-4">
                 <ContentBlock title="Bambini">
                   <ul className="grid gap-2">
                     {quote.children.map((child, index) => (
                       <li key={child.id} className="rounded-xl bg-white p-3 ring-1 ring-ischia-blue/10">
-                        Bambino {index + 1}:{" "}
-                        {child.age != null ? `${child.age} ${child.age === 1 ? "anno" : "anni"}` : "—"}
+                        Bambino {index + 1}: {child.age != null ? `${child.age} ${child.age === 1 ? "anno" : "anni"}` : "—"}
                       </li>
                     ))}
                   </ul>
@@ -117,13 +108,7 @@ export function PublicQuotePage({
               </div>
             ) : null}
 
-            <section className="no-print mt-4 grid gap-3 sm:grid-cols-3">
-              <TrustCard title="Strutture selezionate" text="Hotel scelti e verificati dal nostro team" symbol="◇" />
-              <TrustCard title="Prezzi trasparenti" text="Condizioni e servizi sempre visibili" symbol="✓" />
-              <TrustCard title="Assistenza dedicata" text="Ti seguiamo prima e durante il soggiorno" symbol="◉" />
-            </section>
-
-            <div className="no-print mt-4 flex justify-end">
+            <div className="no-print flex justify-end">
               <PrintButton quoteCode={quote.code} token={quote.token} />
             </div>
           </div>
@@ -135,19 +120,7 @@ export function PublicQuotePage({
           token={quote.token}
         />
 
-        <section className="mt-10">
-          <div className="mb-6">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-ischia-blue">Le soluzioni che abbiamo scelto per te</p>
-            <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
-              <h2 className="max-w-2xl text-3xl font-black tracking-[-0.03em] text-ischia-navy sm:text-4xl">
-                {contentSettings.proposalsTitle}
-              </h2>
-              <p className="max-w-xl text-sm leading-6 text-ischia-ink/60">
-                {contentSettings.proposalsDescription}
-              </p>
-            </div>
-          </div>
-
+        <section className="mt-5">
           <QuoteProposalSection
             quote={quote}
             hotelPopularity={hotelPopularity}
@@ -163,21 +136,15 @@ export function PublicQuotePage({
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+function HeroStat({ icon, label, value }: { icon: "user" | "calendar" | "guests" | "bed"; label: string; value: string }) {
+  const glyph = icon === "user" ? "◯" : icon === "calendar" ? "▣" : icon === "guests" ? "◎" : "▤";
   return (
-    <div className="min-h-[96px] rounded-[22px] bg-white px-4 py-4 shadow-[0_10px_24px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
-      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-ischia-blue">{label}</p>
-      <p className="mt-1 text-sm font-black leading-5 text-ischia-navy">{value}</p>
-    </div>
-  );
-}
-
-function TrustCard({ title, text, symbol }: { title: string; text: string; symbol: string }) {
-  return (
-    <div className="rounded-[20px] bg-[#F5FAFD] px-4 py-4 text-center ring-1 ring-ischia-blue/10">
-      <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-white text-lg font-black text-ischia-blue ring-1 ring-ischia-blue/10">{symbol}</div>
-      <p className="mt-2 text-sm font-black text-ischia-navy">{title}</p>
-      <p className="mt-1 text-xs leading-5 text-ischia-ink/60">{text}</p>
+    <div className="flex min-h-[92px] items-center gap-3 rounded-[20px] bg-white/95 px-4 py-3 shadow-[0_8px_20px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10 backdrop-blur-sm">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EAF5FC] text-lg font-black text-ischia-blue">{glyph}</div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-ischia-blue">{label}</p>
+        <p className="mt-1 text-sm font-black leading-5 text-ischia-navy">{value}</p>
+      </div>
     </div>
   );
 }
