@@ -858,9 +858,6 @@ function HotelCard({
                         ) : (
                           <div className="flex h-full min-h-[245px] items-center justify-center"><BuildingIcon /></div>
                         )}
-                        <span className={`absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1.5 text-xs font-black shadow-sm ${treatmentIndex === 0 ? "text-emerald-700 ring-1 ring-emerald-200" : "text-amber-700 ring-1 ring-amber-200"}`}>
-                          {treatmentIndex === 0 ? "Più economica" : "Più completa"}
-                        </span>
                       </div>
 
                       <div className="p-5 sm:p-6">
