@@ -794,15 +794,20 @@ function HotelCard({
                 const frontDetails = details || treatmentDescription(treatment);
                 const previous = activeTreatments[treatmentIndex - 1];
                 const delta = previous ? treatment.price - previous.price : null;
+                const previewRoomImage = quote.token === "preview-demo-token"
+                  ? treatment.key === "full_board"
+                    ? "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=85"
+                    : "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1200&q=85"
+                  : imageUrl;
 
                 return (
                   <div key={`${opt.id}-${treatment.key}`} className="overflow-hidden rounded-[24px] bg-white shadow-[0_14px_34px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
                     <div className="grid lg:grid-cols-[330px_minmax(0,1fr)_270px]">
                       <div className="relative min-h-[245px] overflow-hidden bg-ischia-mist">
-                        {imageUrl ? (
+                        {previewRoomImage ? (
                           <>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={imageUrl} alt={mainOption.hotelName} className="absolute inset-0 h-full w-full object-cover" />
+                            <img src={previewRoomImage} alt={opt.roomTypeLabel || mainOption.hotelName} className="absolute inset-0 h-full w-full object-cover object-center" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                           </>
                         ) : (
