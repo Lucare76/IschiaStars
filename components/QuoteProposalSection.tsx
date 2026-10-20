@@ -283,53 +283,22 @@ export function QuoteProposalSection({
   return (
     <div className="space-y-6">
       {isMultiRoom ? (
-        <div className="no-print rounded-[24px] bg-white p-5 shadow-soft ring-1 ring-ischia-blue/10 sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">Scelta camere</p>
-              <h2 className="mt-1 text-2xl font-black text-ischia-navy">
-                {editingRoomIndex !== null ? `Stai modificando la Camera ${targetRoomNumber}` : `Devi scegliere ${quote.rooms} camere`}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-ischia-ink/70">
-                {editingRoomIndex !== null
-                  ? "Scegli qui sotto la nuova soluzione per questa camera."
-                  : selectedRooms.length === 0
-                    ? "Prima scegli la soluzione per la Camera 1, poi passerai alla successiva."
-                    : selectionComplete
-                      ? "Perfetto: hai scelto tutte le camere. Controlla il riepilogo e continua."
-                      : `Camera ${selectedRooms.length} scelta. Ora scegli la Camera ${targetRoomNumber}.`}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {Array.from({ length: quote.rooms }, (_, index) => {
-                const done = index < selectedRooms.length && editingRoomIndex !== index;
-                const active = targetRoomNumber === index + 1 && !selectionComplete;
-                return (
-                  <div
-                    key={index}
-                    className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-black ring-1 ${
-                      done
-                        ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
-                        : active
-                          ? "bg-[#FFF8E8] text-[#9A6B00] ring-[#E4C46C]"
-                          : "bg-white text-ischia-ink/45 ring-ischia-blue/10"
-                    }`}
-                  >
-                    <span>{done ? "✓" : index + 1}</span>
-                    <span>Camera {index + 1}</span>
-                  </div>
-                );
-              })}
-              <div className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-black ring-1 ${
-                selectionComplete
-                  ? "bg-[#FFF8E8] text-[#9A6B00] ring-[#E4C46C]"
-                  : "bg-white text-ischia-ink/45 ring-ischia-blue/10"
-              }`}>
-                <span>{quote.rooms + 1}</span>
-                <span>Conferma</span>
-              </div>
-            </div>
-          </div>
+        <div className="no-print rounded-[22px] bg-white px-5 py-4 shadow-soft ring-1 ring-ischia-blue/10 sm:px-6">
+          <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">Le tue camere</p>
+          <h2 className="mt-1 text-xl font-black text-ischia-navy">
+            {editingRoomIndex !== null
+              ? `Modifica la Camera ${targetRoomNumber}`
+              : `Scegli le soluzioni per le tue ${quote.rooms} camere`}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-ischia-ink/65">
+            {editingRoomIndex !== null
+              ? "Tocca la nuova soluzione che preferisci."
+              : selectedRooms.length === 0
+                ? "Scegli una proposta per la prima camera e poi per la seconda."
+                : selectionComplete
+                  ? "Scelta completata: controlla il riepilogo e continua."
+                  : `Camera ${selectedRooms.length} scelta. Ora scegli la Camera ${targetRoomNumber}.`}
+          </p>
         </div>
       ) : null}
 
@@ -441,15 +410,11 @@ export function QuoteProposalSection({
                   type="button"
                   onClick={() => confirmRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
                 >
-                  Continua con queste {quote.rooms} camere →
+                  Continua →
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="mt-4 rounded-[18px] bg-[#FFF8E8] px-4 py-3 text-sm font-black text-[#8A650D] ring-1 ring-[#E4C46C]">
-              ✓ Camera {selectedRooms.length} scelta. Ora scegli la Camera {targetRoomNumber}.
-            </div>
-          )}
+          ) : null}
         </div>
       ) : null}
 
@@ -704,11 +669,14 @@ function CompareView({
                       <button
                         className="w-full rounded-full bg-ischia-sun px-4 py-3 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95 disabled:cursor-default disabled:opacity-55"
                         disabled={selectionComplete}
-                        onClick={() => setPendingSelection({ option: mainOption, treatment: firstTreatment })}
+                        onClick={() => {
+                          if (roomCount > 1) onSelectTreatment(mainOption, firstTreatment);
+                          else setPendingSelection({ option: mainOption, treatment: firstTreatment });
+                        }}
                         type="button"
                       >
                         {selectionComplete
-                          ? `${roomCount} camere già scelte ✓`
+                          ? `${roomCount} camere scelte ✓`
                           : roomCount > 1
                             ? `Scegli per Camera ${targetRoomNumber}`
                             : "Scegli questo hotel"}
@@ -731,8 +699,8 @@ function CompareView({
         )}
       </div>
 
-      {/* Modal conferma — stessa logica di HotelCard */}
-      {pendingSelection ? (
+      {/* La conferma intermedia resta solo per i preventivi con una camera. */}
+      {roomCount === 1 && pendingSelection ? (
         <div
           aria-modal="true"
           className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5"
@@ -1018,11 +986,14 @@ function HotelCard({
                             <button
                               className="w-full rounded-full bg-ischia-sun px-5 py-3.5 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95 disabled:cursor-default disabled:opacity-55"
                               disabled={selectionComplete}
-                              onClick={() => setPendingSelection({ option: opt, treatment })}
+                              onClick={() => {
+                                if (quote.rooms > 1) onSelectTreatment(opt, treatment);
+                                else setPendingSelection({ option: opt, treatment });
+                              }}
                               type="button"
                             >
                               {selectionComplete
-                                ? `${quote.rooms} camere già scelte ✓`
+                                ? `${quote.rooms} camere scelte ✓`
                                 : quote.rooms > 1
                                   ? `Scegli per Camera ${targetRoomNumber} →`
                                   : "Scegli questa proposta →"}
@@ -1044,12 +1015,10 @@ function HotelCard({
         })}
       </div>
 
-      {pendingSelection ? (
+      {quote.rooms === 1 && pendingSelection ? (
         <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5" role="dialog" aria-modal="true">
           <div className="mx-auto w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-black text-ischia-navy">
-              {quote.rooms > 1 ? `Conferma Camera ${targetRoomNumber}` : "Aggiungi questa camera"}
-            </h3>
+            <h3 className="text-xl font-black text-ischia-navy">Conferma questa proposta</h3>
             <p className="mt-3 text-sm leading-6 text-gray-600">
               Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà per completare la prenotazione.
             </p>
@@ -1070,7 +1039,7 @@ function HotelCard({
                 }}
                 type="button"
               >
-                {quote.rooms > 1 ? `Sì, scegli per Camera ${targetRoomNumber}` : "Sì, aggiungi"}
+                Sì, confermo
               </button>
             </div>
           </div>
