@@ -208,8 +208,10 @@ export function QuoteProposalSection({
   contentSettings?: QuoteContentSettings;
 }) {
   const [selectedRooms, setSelectedRooms] = useState<QuoteRoomSelection[]>([]);
+  const [editingRoomIndex, setEditingRoomIndex] = useState<number | null>(null);
   const [compareMode, setCompareMode] = useState(false);
   const confirmRef = useRef<HTMLDivElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
 
   const allOptions = quote.hotelOptions;
 
@@ -255,21 +257,82 @@ export function QuoteProposalSection({
       roomTypeLabel: option.roomTypeLabel
     };
     setSelectedRooms((current) => {
+      if (editingRoomIndex !== null && current[editingRoomIndex]) {
+        const updated = [...current];
+        updated[editingRoomIndex] = roomSelection;
+        return updated;
+      }
       const sameHotel = current.length === 0 || current[0].hotelGroup === roomSelection.hotelGroup;
       const base = sameHotel && current.length < quote.rooms ? current : [];
       return [...base, roomSelection].slice(0, quote.rooms);
     });
+    setEditingRoomIndex(null);
     trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "confirm_clicked", {
       optionId: option.id,
       treatmentKey: treatment.key
     });
-    if (selectedRooms.length + 1 >= quote.rooms) {
-      setTimeout(() => confirmRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
-    }
   }
+
+  const isMultiRoom = quote.rooms > 1;
+  const selectionComplete = selectedRooms.length >= quote.rooms && editingRoomIndex === null;
+  const targetRoomNumber = editingRoomIndex !== null
+    ? editingRoomIndex + 1
+    : Math.min(selectedRooms.length + 1, quote.rooms);
+  const selectedRoomsTotal = selectedRooms.reduce((sum, room) => sum + room.price, 0);
 
   return (
     <div className="space-y-6">
+      {isMultiRoom ? (
+        <div className="no-print rounded-[24px] bg-white p-5 shadow-soft ring-1 ring-ischia-blue/10 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">Scelta camere</p>
+              <h2 className="mt-1 text-2xl font-black text-ischia-navy">
+                {editingRoomIndex !== null ? `Stai modificando la Camera ${targetRoomNumber}` : `Devi scegliere ${quote.rooms} camere`}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-ischia-ink/70">
+                {editingRoomIndex !== null
+                  ? "Scegli qui sotto la nuova soluzione per questa camera."
+                  : selectedRooms.length === 0
+                    ? "Prima scegli la soluzione per la Camera 1, poi passerai alla successiva."
+                    : selectionComplete
+                      ? "Perfetto: hai scelto tutte le camere. Controlla il riepilogo e continua."
+                      : `Camera ${selectedRooms.length} scelta. Ora scegli la Camera ${targetRoomNumber}.`}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {Array.from({ length: quote.rooms }, (_, index) => {
+                const done = index < selectedRooms.length && editingRoomIndex !== index;
+                const active = targetRoomNumber === index + 1 && !selectionComplete;
+                return (
+                  <div
+                    key={index}
+                    className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-black ring-1 ${
+                      done
+                        ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
+                        : active
+                          ? "bg-[#FFF8E8] text-[#9A6B00] ring-[#E4C46C]"
+                          : "bg-white text-ischia-ink/45 ring-ischia-blue/10"
+                    }`}
+                  >
+                    <span>{done ? "✓" : index + 1}</span>
+                    <span>Camera {index + 1}</span>
+                  </div>
+                );
+              })}
+              <div className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-black ring-1 ${
+                selectionComplete
+                  ? "bg-[#FFF8E8] text-[#9A6B00] ring-[#E4C46C]"
+                  : "bg-white text-ischia-ink/45 ring-ischia-blue/10"
+              }`}>
+                <span>{quote.rooms + 1}</span>
+                <span>Conferma</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Bottone toggle confronto — visibile solo con 2+ gruppi hotel */}
       {groupedHotels.length >= 2 && (
         <div className="no-print">
@@ -289,12 +352,16 @@ export function QuoteProposalSection({
         </div>
       )}
 
+      <div ref={optionsRef}>
       {compareMode ? (
         <CompareView
           groupedHotels={groupedHotels}
           hotelPopularity={hotelPopularity}
           isConfirmed={isConfirmed}
           onSelectTreatment={handleSelectTreatment}
+          roomCount={quote.rooms}
+          targetRoomNumber={targetRoomNumber}
+          selectionComplete={selectionComplete}
         />
       ) : (
         /* Hotel cards raggruppate per struttura */
@@ -314,29 +381,75 @@ export function QuoteProposalSection({
                   featureFlags={featureFlags}
                   quote={quote}
                   onSelectTreatment={handleSelectTreatment}
+                  targetRoomNumber={targetRoomNumber}
+                  selectionComplete={selectionComplete}
                 />
               </div>
             );
           })}
         </div>
       )}
+      </div>
 
       {quote.rooms > 1 && selectedRooms.length > 0 ? (
-        <div className="no-print rounded-2xl bg-white p-5 shadow-soft ring-1 ring-ischia-blue/10">
-          <p className="text-sm font-black text-ischia-navy">Composizione camere: {selectedRooms.length} di {quote.rooms}</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="no-print rounded-[24px] bg-white p-5 shadow-soft ring-1 ring-ischia-blue/10 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">La tua scelta</p>
+              <h3 className="mt-1 text-2xl font-black text-ischia-navy">
+                {selectionComplete ? "Hai scelto tutte le camere" : `Camera ${selectedRooms.length} di ${quote.rooms} scelta`}
+              </h3>
+            </div>
+            {selectionComplete ? (
+              <span className="rounded-full bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-800 ring-1 ring-emerald-200">✓ Completo</span>
+            ) : (
+              <span className="rounded-full bg-[#FFF8E8] px-3 py-2 text-sm font-black text-[#9A6B00] ring-1 ring-[#E4C46C]">
+                Manca Camera {targetRoomNumber}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {selectedRooms.map((room, index) => (
-              <div key={`${room.optionId}-${room.treatmentKey}-${index}`} className="rounded-xl bg-ischia-mist p-3 text-sm">
+              <div key={`${room.optionId}-${room.treatmentKey}-${index}`} className="rounded-[18px] bg-ischia-mist p-4 text-sm ring-1 ring-ischia-blue/10">
                 <p className="text-lg font-black text-ischia-navy">Camera {index + 1}</p>
-                <p>{room.roomTypeLabel || "Camera standard"}</p>
-                <p>{room.treatmentLabel} - {formatCurrency(room.price)}</p>
-                <button className="mt-2 text-xs font-bold text-rose-700" type="button" onClick={() => setSelectedRooms((rooms) => rooms.filter((_, roomIndex) => roomIndex !== index))}>
-                  Cambia questa camera
+                <p className="mt-1 text-ischia-ink/70">{room.roomTypeLabel || "Camera standard"}</p>
+                <p className="mt-1 font-black text-ischia-navy">{room.treatmentLabel} · {formatCurrency(room.price)}</p>
+                <button
+                  className="mt-3 rounded-full bg-white px-3 py-2 text-xs font-black text-ischia-blue ring-1 ring-ischia-blue/20"
+                  type="button"
+                  onClick={() => {
+                    setEditingRoomIndex(index);
+                    setTimeout(() => optionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                  }}
+                >
+                  Modifica Camera {index + 1}
                 </button>
               </div>
             ))}
           </div>
-          {selectedRooms.length < quote.rooms ? <p className="mt-3 text-sm font-semibold text-amber-800">Ora scegli tipologia e trattamento per la camera {selectedRooms.length + 1} nello stesso hotel.</p> : null}
+
+          {selectionComplete ? (
+            <div className="mt-5 rounded-[18px] bg-[#F5FAFD] p-4 ring-1 ring-ischia-blue/10">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">Totale camere selezionate</p>
+                  <p className="mt-1 text-3xl font-black tabular-nums text-ischia-navy">{formatCurrency(selectedRoomsTotal)}</p>
+                </div>
+                <button
+                  className="rounded-full bg-ischia-sun px-6 py-3.5 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95"
+                  type="button"
+                  onClick={() => confirmRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                >
+                  Continua con queste {quote.rooms} camere →
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-[18px] bg-[#FFF8E8] px-4 py-3 text-sm font-black text-[#8A650D] ring-1 ring-[#E4C46C]">
+              ✓ Camera {selectedRooms.length} scelta. Ora scegli la Camera {targetRoomNumber}.
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -396,11 +509,17 @@ function CompareView({
   hotelPopularity,
   isConfirmed,
   onSelectTreatment,
+  roomCount,
+  targetRoomNumber,
+  selectionComplete,
 }: {
   groupedHotels: [number, PublicQuoteHotelOptionDTO[]][];
   hotelPopularity: Record<string, number>;
   isConfirmed: boolean;
   onSelectTreatment: (option: PublicQuoteHotelOptionDTO, treatment: TreatmentOption) => void;
+  roomCount: number;
+  targetRoomNumber: number;
+  selectionComplete: boolean;
 }) {
   const [pendingSelection, setPendingSelection] = useState<{
     option: PublicQuoteHotelOptionDTO;
@@ -583,11 +702,16 @@ function CompareView({
                   {!isConfirmed && firstTreatment ? (
                     <>
                       <button
-                        className="w-full rounded-full bg-ischia-sun px-4 py-3 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95"
+                        className="w-full rounded-full bg-ischia-sun px-4 py-3 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95 disabled:cursor-default disabled:opacity-55"
+                        disabled={selectionComplete}
                         onClick={() => setPendingSelection({ option: mainOption, treatment: firstTreatment })}
                         type="button"
                       >
-                        Scegli questo hotel
+                        {selectionComplete
+                          ? `${roomCount} camere già scelte ✓`
+                          : roomCount > 1
+                            ? `Scegli per Camera ${targetRoomNumber}`
+                            : "Scegli questo hotel"}
                       </button>
                       <p className="mt-1 text-center text-xs leading-snug text-gray-400">
                         Nessun pagamento online — ti ricontattiamo per finalizzare
@@ -615,7 +739,9 @@ function CompareView({
           role="dialog"
         >
           <div className="mx-auto w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-black text-ischia-navy">Stai confermando la tua preferenza</h3>
+            <h3 className="text-xl font-black text-ischia-navy">
+              {roomCount > 1 ? `Conferma Camera ${targetRoomNumber}` : "Stai confermando la tua preferenza"}
+            </h3>
             <p className="mt-3 text-sm leading-6 text-gray-600">
               Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà per completare la prenotazione.
             </p>
@@ -661,7 +787,9 @@ function HotelCard({
   token,
   featureFlags,
   quote,
-  onSelectTreatment
+  onSelectTreatment,
+  targetRoomNumber,
+  selectionComplete
 }: {
   mainOption: PublicQuoteHotelOptionDTO;
   allGroupOptions: PublicQuoteHotelOptionDTO[];
@@ -672,6 +800,8 @@ function HotelCard({
   featureFlags: FeatureFlags;
   quote: PublicQuoteDTO;
   onSelectTreatment: (option: PublicQuoteHotelOptionDTO, treatment: TreatmentOption) => void;
+  targetRoomNumber: number;
+  selectionComplete: boolean;
 }) {
   const [pendingSelection, setPendingSelection] = useState<{ option: PublicQuoteHotelOptionDTO; treatment: TreatmentOption } | null>(null);
   const [reaction, setReaction] = useState<"interested" | "too_expensive" | null>(null);
@@ -886,11 +1016,16 @@ function HotelCard({
                         {!isConfirmed ? (
                           <div className="no-print mt-5">
                             <button
-                              className="w-full rounded-full bg-ischia-sun px-5 py-3.5 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95"
+                              className="w-full rounded-full bg-ischia-sun px-5 py-3.5 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95 disabled:cursor-default disabled:opacity-55"
+                              disabled={selectionComplete}
                               onClick={() => setPendingSelection({ option: opt, treatment })}
                               type="button"
                             >
-                              Scegli questa proposta →
+                              {selectionComplete
+                                ? `${quote.rooms} camere già scelte ✓`
+                                : quote.rooms > 1
+                                  ? `Scegli per Camera ${targetRoomNumber} →`
+                                  : "Scegli questa proposta →"}
                             </button>
                             <p className="mt-3 text-center text-xs leading-5 text-ischia-ink/45">Nessun pagamento online — ti ricontattiamo per finalizzare</p>
                           </div>
@@ -912,7 +1047,9 @@ function HotelCard({
       {pendingSelection ? (
         <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5" role="dialog" aria-modal="true">
           <div className="mx-auto w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-black text-ischia-navy">Aggiungi questa camera</h3>
+            <h3 className="text-xl font-black text-ischia-navy">
+              {quote.rooms > 1 ? `Conferma Camera ${targetRoomNumber}` : "Aggiungi questa camera"}
+            </h3>
             <p className="mt-3 text-sm leading-6 text-gray-600">
               Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà per completare la prenotazione.
             </p>
@@ -933,7 +1070,7 @@ function HotelCard({
                 }}
                 type="button"
               >
-                Sì, aggiungi
+                {quote.rooms > 1 ? `Sì, scegli per Camera ${targetRoomNumber}` : "Sì, aggiungi"}
               </button>
             </div>
           </div>
