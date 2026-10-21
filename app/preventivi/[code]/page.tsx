@@ -66,7 +66,11 @@ export function generateQuoteMetadataFromQuote(quote: Quote): Metadata {
   const description = hotelName
     ? `La proposta IschiaStars per ${hotelName}, pronta da consultare e confermare online.`
     : "La tua proposta personalizzata per una vacanza a Ischia.";
-  const imageUrl = hotelImage ? absoluteUrl(hotelImage) : absoluteUrl("/ischiastars-logo.png");
+  const imageUrl = hotelImage
+    ? quote.publicShortCode
+      ? absoluteUrl(`/og/quote/${encodeURIComponent(quote.publicShortCode)}`)
+      : absoluteUrl(hotelImage)
+    : absoluteUrl("/ischiastars-logo.png");
 
   return {
     ...defaultMetadata,
