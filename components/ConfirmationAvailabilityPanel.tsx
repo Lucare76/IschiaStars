@@ -1060,16 +1060,19 @@ IschiaStars 🌊`;
                 />
               </label>
               <label className="block text-sm font-semibold text-ischia-ink">
-                Costo totale lordo
+                Costo totale pratica <span className="font-normal text-ischia-ink/55">(modificabile)</span>
                 <input
                   className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
-                  placeholder="es. 1500"
+                  placeholder="es. 2536"
                   type="number"
                   min="0"
                   step="0.01"
                   value={supplierGrossPrice}
                   onChange={(event) => setSupplierGrossPrice(event.target.value)}
                 />
+                <span className="mt-1 block text-xs font-normal leading-5 text-ischia-ink/55">
+                  Inserisci qui il totale complessivo da comunicare, includendo anche eventuali treni, traghetti o altri servizi.
+                </span>
               </label>
               <label className="block text-sm font-semibold text-ischia-ink">
                 Saldo totale netto in struttura
