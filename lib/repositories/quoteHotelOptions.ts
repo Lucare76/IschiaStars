@@ -102,7 +102,7 @@ export async function upsertHotelOptions(quoteId: string, options: QuoteHotelOpt
 }
 
 export function buildHotelOptionRows(options: QuoteHotelOptionInput[]) {
-  return options.slice(0, 9).map((opt, index) => {
+  return options.slice(0, 15).map((opt, index) => {
     const policies = fillMissingHotelPolicies({
       hotelName: opt.hotelName,
       depositPercent: opt.depositPercent,
