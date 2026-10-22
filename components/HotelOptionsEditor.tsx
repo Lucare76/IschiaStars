@@ -272,7 +272,7 @@ export function HotelOptionsEditor({
 
   function addRoomType(optIndex: number) {
     onChange(hotelOptions.map((opt, i) => {
-      if (i !== optIndex || opt.roomTypes.length >= 3) return opt;
+      if (i !== optIndex || opt.roomTypes.length >= 5) return opt;
       return { ...opt, roomTypes: [...opt.roomTypes, emptyRoomType()] };
     }));
   }
@@ -513,9 +513,9 @@ function HotelOptionBlock({
       <div className="mt-4 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-bold uppercase tracking-wide text-ischia-blue/70">Tipologie camera e prezzi</p>
-          {opt.roomTypes.length < 3 && (
+          {opt.roomTypes.length < 5 && (
             <button className="rounded-full bg-ischia-mist px-3 py-1 text-xs font-black text-ischia-navy ring-1 ring-ischia-blue/15" onClick={onAddRoomType} type="button">
-              + Aggiungi camera ({opt.roomTypes.length}/3)
+              + Aggiungi camera ({opt.roomTypes.length}/5)
             </button>
           )}
         </div>
