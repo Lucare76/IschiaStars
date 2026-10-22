@@ -110,7 +110,9 @@ export function mapQuote(
 
   // hotelOptions già mappati da fetchHotelOptionsForQuotes; se vuoti, crea opzione virtuale legacy
   const effectiveHotelOptions: QuoteHotelOption[] = hotelOptions.length > 0
-    ? [...hotelOptions].sort((a, b) => a.position - b.position)
+    ? [...hotelOptions]
+        .sort((a, b) => a.position - b.position)
+        .map((option) => withLiveHotelMediaFallback(option, allHotels))
     : buildVirtualHotelOptions(row, proposedHotel);
 
   return {
@@ -199,6 +201,37 @@ export function mapQuote(
       : undefined,
     hotelOptions: effectiveHotelOptions
   };
+}
+
+function withLiveHotelMediaFallback(option: QuoteHotelOption, allHotels: Hotel[]): QuoteHotelOption {
+  const hotel = option.hotelId
+    ? allHotels.find((item) => item.id === option.hotelId)
+    : allHotels.find((item) => normalizeMediaLabel(item.name) === normalizeMediaLabel(option.hotelName));
+
+  if (!hotel) return option;
+
+  const roomImageUrl = option.roomImageUrl || (
+    option.roomTypeLabel
+      ? hotel.roomImages?.find(
+          (room) => normalizeMediaLabel(room.label) === normalizeMediaLabel(option.roomTypeLabel)
+        )?.imageUrl
+      : undefined
+  );
+
+  const hotelImageUrl = option.hotelImageUrl || hotel.imageUrl || hotel.externalImageUrl;
+
+  return {
+    ...option,
+    roomImageUrl,
+    hotelImageUrl
+  };
+}
+
+function normalizeMediaLabel(value: string | undefined) {
+  return (value ?? "")
+    .trim()
+    .toLocaleLowerCase("it-IT")
+    .replace(/\s+/g, " ");
 }
 
 function mapHotelOptionRowInline(row: Record<string, unknown>): QuoteHotelOption {
