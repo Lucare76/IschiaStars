@@ -5,6 +5,10 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "ischiastars.it"
+      },
+      {
+        protocol: "https",
+        hostname: "**.supabase.co"
       }
     ]
   },
