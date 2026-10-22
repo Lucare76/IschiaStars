@@ -18,12 +18,17 @@ export function adminApiHeaders(headers: HeadersInit = {}) {
 }
 
 export async function adminApiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const isFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
+  const headers = new Headers(init.headers);
+  if (isFormData) headers.delete("Content-Type");
+  else if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+
   const requestInit: RequestInit = {
     ...init,
-    body: asciiSafeJsonBody(init.body),
+    body: isFormData ? init.body : asciiSafeJsonBody(init.body),
     cache: init.cache ?? "no-store",
     credentials: init.credentials ?? "include",
-    headers: adminApiHeaders(init.headers)
+    headers
   };
 
   const response = await fetch(input, requestInit);
