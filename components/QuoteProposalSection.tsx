@@ -306,7 +306,7 @@ export function QuoteProposalSection({
       {groupedHotels.length >= 2 && (
         <div className="no-print">
           <button
-            className="inline-flex items-center gap-2 rounded-full border border-[#C9A84C] bg-transparent px-5 py-2 text-sm font-medium text-[#C9A84C] transition-colors hover:bg-[#FBF5E6]"
+            className="inline-flex items-center gap-2 rounded-full border border-[#0B67A3] bg-white px-5 py-2 text-sm font-bold text-[#0B67A3] transition-colors hover:bg-[#EAF5FC]"
             onClick={() => {
               if (!compareMode) {
                 trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "compare_opened");
@@ -600,12 +600,12 @@ function CompareView({
                   {hotelReason ? (
                     <>
                       <p
-                        className="font-bold uppercase text-[#C9A84C]"
+                        className="font-bold uppercase text-[#15803D]"
                         style={{ fontSize: 10, letterSpacing: "0.07em" }}
                       >
                         Perché te lo proponiamo
                       </p>
-                      <p className="mt-1 text-xs italic text-[#8B7355]">{hotelReason}</p>
+                      <p className="mt-1 text-xs italic text-[#3F6650]">{hotelReason}</p>
                     </>
                   ) : null}
                 </div>
@@ -858,11 +858,11 @@ function HotelCard({
         </div>
 
         {hotelReason ? (
-          <div className="mt-5 rounded-[20px] border border-[#E4C46C] bg-[#FFF8E8] px-5 py-4">
+          <div className="mt-5 rounded-[20px] border border-[#BBF7D0] bg-[#F0FDF4] px-5 py-4">
             <div className="flex gap-3">
-              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFF0BD] text-lg">★</div>
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#DCFCE7] text-lg text-[#15803D]">★</div>
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.12em] text-[#B88716]">Perché te lo proponiamo</p>
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-[#15803D]">Perché te lo proponiamo</p>
                 <p className="mt-1 text-sm leading-6 text-ischia-ink/75">{hotelReason}</p>
               </div>
             </div>
