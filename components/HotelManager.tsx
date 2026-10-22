@@ -84,9 +84,43 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
   const [lrSyncLoading, setLrSyncLoading] = useState(false);
   const [lrSyncReport, setLrSyncReport] = useState<LrSyncReport | null>(null);
   const [importLoading, setImportLoading] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState<string | null>(null);
   const editing = Boolean(form.id);
 
   const sortedHotels = useMemo(() => [...hotels].sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name)), [hotels]);
+
+  async function uploadMedia(file: File, target: { type: "hotel" } | { type: "room"; index: number }) {
+    const uploadKey = target.type === "hotel" ? "hotel" : `room-${target.index}`;
+    setUploadingMedia(uploadKey);
+    setMessage(null);
+
+    const payload = new FormData();
+    payload.append("file", file);
+    payload.append("scope", target.type);
+
+    const response = await adminApiFetch("/api/hotels/media", {
+      method: "POST",
+      body: payload
+    });
+    const result = await readAdminApiJson<{ ok?: boolean; url?: string; error?: string }>(response);
+    setUploadingMedia(null);
+
+    if (!response.ok || !result?.ok || !result.url) {
+      setMessage({ text: adminApiErrorMessage(response, result, "Caricamento foto non riuscito."), ok: false });
+      return;
+    }
+
+    if (target.type === "hotel") {
+      setForm((current) => ({ ...current, imageUrl: result.url! }));
+    } else {
+      setForm((current) => ({
+        ...current,
+        roomImages: current.roomImages.map((room, index) => index === target.index ? { ...room, imageUrl: result.url! } : room)
+      }));
+    }
+
+    setMessage({ text: "Foto caricata. Ricorda di salvare l'hotel per confermare la modifica.", ok: true });
+  }
 
   async function saveHotel() {
     setLoading(true);
@@ -297,7 +331,39 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
         </div>
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
           <Textarea label="Descrizione breve" value={form.shortDescription} onChange={(value) => setForm({ ...form, shortDescription: value })} />
-          <Textarea label="Immagine URL opzionale (link diretto al file, es. .jpg/.png — non la pagina hotel)" value={form.imageUrl} onChange={(value) => setForm({ ...form, imageUrl: value })} />
+          <div className="rounded-xl border border-ischia-blue/15 bg-white p-3">
+            <p className="text-sm font-semibold text-ischia-ink">Foto principale hotel</p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <label className="cursor-pointer rounded-full bg-ischia-blue px-4 py-2 text-sm font-black text-white hover:brightness-95">
+                {uploadingMedia === "hotel" ? "Caricamento..." : "Carica foto"}
+                <input
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  className="hidden"
+                  disabled={uploadingMedia === "hotel"}
+                  type="file"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void uploadMedia(file, { type: "hotel" });
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </label>
+              {form.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img alt={form.name || "Hotel"} className="h-16 w-24 rounded-lg object-cover ring-1 ring-ischia-blue/10" src={form.imageUrl} />
+              ) : <span className="text-xs font-semibold text-ischia-ink/50">Nessuna foto caricata</span>}
+            </div>
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs font-bold text-ischia-blue">Oppure inserisci un URL</summary>
+              <input
+                className="mt-2 w-full rounded-xl border border-ischia-blue/20 px-3 py-2 text-sm"
+                placeholder="https://..."
+                type="url"
+                value={form.imageUrl}
+                onChange={(event) => setForm({ ...form, imageUrl: event.target.value })}
+              />
+            </details>
+          </div>
           <Input label="URL pagina hotel su IschiaStars.it (visibile sul preventivo cliente)" value={form.sourceUrl} onChange={(value) => setForm({ ...form, sourceUrl: value })} />
           <Textarea label="Servizi inclusi standard" value={form.standardServices} onChange={(value) => setForm({ ...form, standardServices: value })} />
           <Input label="Acconto standard (%)" type="number" value={form.defaultDepositPercent} onChange={(value) => setForm({ ...form, defaultDepositPercent: value })} />
@@ -336,15 +402,50 @@ export function HotelManager({ initialHotels }: { initialHotels: Hotel[] }) {
                     roomImages: form.roomImages.map((item, itemIndex) => itemIndex === index ? { ...item, label: value } : item)
                   })}
                 />
-                <Input
-                  label="URL foto camera"
-                  type="url"
-                  value={room.imageUrl}
-                  onChange={(value) => setForm({
-                    ...form,
-                    roomImages: form.roomImages.map((item, itemIndex) => itemIndex === index ? { ...item, imageUrl: value } : item)
-                  })}
-                />
+                <div>
+                  <p className="text-sm font-semibold text-ischia-ink">Foto camera</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <label className="cursor-pointer rounded-full bg-ischia-blue px-3 py-2 text-xs font-black text-white hover:brightness-95">
+                      {uploadingMedia === `room-${index}` ? "Caricamento..." : "Carica foto"}
+                      <input
+                        accept="image/jpeg,image/png,image/webp,image/avif"
+                        className="hidden"
+                        disabled={uploadingMedia === `room-${index}`}
+                        type="file"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) void uploadMedia(file, { type: "room", index });
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                    {room.imageUrl ? (
+                      <button
+                        className="rounded-full bg-white px-3 py-2 text-xs font-bold text-ischia-blue ring-1 ring-ischia-blue/15"
+                        type="button"
+                        onClick={() => setForm({
+                          ...form,
+                          roomImages: form.roomImages.map((item, itemIndex) => itemIndex === index ? { ...item, imageUrl: "" } : item)
+                        })}
+                      >
+                        Togli foto
+                      </button>
+                    ) : null}
+                  </div>
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-xs font-bold text-ischia-blue">Oppure inserisci un URL</summary>
+                    <input
+                      className="mt-2 w-full rounded-xl border border-ischia-blue/20 px-3 py-2 text-sm"
+                      placeholder="https://..."
+                      type="url"
+                      value={room.imageUrl}
+                      onChange={(event) => setForm({
+                        ...form,
+                        roomImages: form.roomImages.map((item, itemIndex) => itemIndex === index ? { ...item, imageUrl: event.target.value } : item)
+                      })}
+                    />
+                  </details>
+                </div>
                 <div className="flex items-center gap-2">
                   {room.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
