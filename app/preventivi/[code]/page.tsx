@@ -68,7 +68,7 @@ export function generateQuoteMetadataFromQuote(quote: Quote): Metadata {
     : "La tua proposta personalizzata per una vacanza a Ischia.";
   const imageUrl = hotelImage
     ? quote.publicShortCode
-      ? absoluteUrl(`/og/quote/${encodeURIComponent(quote.publicShortCode)}`)
+      ? absoluteUrl(`/og/quote/${encodeURIComponent(quote.publicShortCode)}?v=jpeg1`)
       : absoluteUrl(hotelImage)
     : absoluteUrl("/ischiastars-logo.png");
 
@@ -81,7 +81,7 @@ export function generateQuoteMetadataFromQuote(quote: Quote): Metadata {
       title,
       description,
       url: absoluteUrl(quote.publicShortCode ? `/p/${quote.publicShortCode}` : `/preventivi/${quote.code}/${quote.token}`),
-      images: [{ url: imageUrl, alt: hotelName ?? "IschiaStars" }]
+      images: [{ url: imageUrl, alt: hotelName ?? "IschiaStars", ...(hotelImage && quote.publicShortCode ? { type: "image/jpeg" } : {}) }]
     },
     twitter: {
       ...defaultMetadata.twitter,
