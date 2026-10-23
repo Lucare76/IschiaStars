@@ -311,7 +311,10 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
       const treatmentsHtml = o.treatments
         .map((t) => `<tr><td style="padding:4px 0;font-size:13px;color:#555;">${escapeHtml(t.label)}</td><td style="padding:4px 0;font-size:13px;color:#1a3a5c;text-align:right;font-weight:600;">${formatPrice(t.price)}</td></tr>`)
         .join("");
-      return `<tr><td colspan="2" style="padding:10px 0 4px;font-size:14px;font-weight:bold;color:#1a3a5c;">${escapeHtml(o.hotelName)}${o.hotelLocation ? ` — ${escapeHtml(o.hotelLocation)}` : ""}</td></tr>${treatmentsHtml}`;
+      const roomTypeHtml = o.roomTypeLabel?.trim()
+        ? `<tr><td colspan="2" style="padding:1px 0 6px;font-size:13px;font-weight:700;color:#4b5563;">🛏 ${escapeHtml(o.roomTypeLabel.trim())}</td></tr>`
+        : "";
+      return `<tr><td colspan="2" style="padding:10px 0 4px;font-size:14px;font-weight:bold;color:#1a3a5c;">${escapeHtml(o.hotelName)}${o.hotelLocation ? ` — ${escapeHtml(o.hotelLocation)}` : ""}</td></tr>${roomTypeHtml}${treatmentsHtml}`;
     })
     .join("");
 
@@ -319,7 +322,8 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     .filter((o) => o.treatments.length > 0)
     .map((o) => {
       const tr = o.treatments.map((t) => `  ${t.label}: ${formatPrice(t.price)}`).join("\n");
-      return `${o.hotelName}${o.hotelLocation ? ` — ${o.hotelLocation}` : ""}:\n${tr}`;
+      const roomType = o.roomTypeLabel?.trim() ? `\n  Camera: ${o.roomTypeLabel.trim()}` : "";
+      return `${o.hotelName}${o.hotelLocation ? ` — ${o.hotelLocation}` : ""}:${roomType}\n${tr}`;
     })
     .join("\n\n");
 
