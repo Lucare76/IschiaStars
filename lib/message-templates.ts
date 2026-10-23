@@ -67,6 +67,55 @@ function visibleNoteLines(value: string | null | undefined): string[] {
     .filter((note) => note && !isAvailabilityReminderNote(note));
 }
 
+function roomCapacityFromLabel(label: string | null | undefined): number | undefined {
+  const normalized = (label ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (normalized.includes("singola")) return 1;
+  if (normalized.includes("tripla")) return 3;
+  if (normalized.includes("quadrupla")) return 4;
+  if (normalized.includes("doppia") || normalized.includes("matrimoniale")) return 2;
+  return undefined;
+}
+
+function roomShortName(label: string | null | undefined): string {
+  const capacity = roomCapacityFromLabel(label);
+  if (capacity === 1) return "singola";
+  if (capacity === 2) return "doppia";
+  if (capacity === 3) return "tripla";
+  if (capacity === 4) return "quadrupla";
+  return (label ?? "camera").trim().toLowerCase();
+}
+
+function roomShortNamePlural(name: string): string {
+  if (name === "singola") return "singole";
+  if (name === "doppia") return "doppie";
+  if (name === "tripla") return "triple";
+  if (name === "quadrupla") return "quadruple";
+  return name;
+}
+
+function multiRoomSummary(group: QuoteHotelOption[] | undefined, roomCount: number): string | undefined {
+  if (!group?.length) return undefined;
+  if (group.length === 1 && roomCount > 1) {
+    const name = roomShortName(group[0].roomTypeLabel);
+    return `${roomCount} ${roomShortNamePlural(name)}`;
+  }
+
+  const counts = new Map<string, number>();
+  for (const option of group) {
+    const name = roomShortName(option.roomTypeLabel);
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([name, count]) => `${count} ${count === 1 ? name : roomShortNamePlural(name)}`)
+    .join(" · ");
+}
+
+function formatMultiRoomPriceScope(label: string | null | undefined): string {
+  const capacity = roomCapacityFromLabel(label);
+  if (!capacity) return "totale camera";
+  return `totale PER ${capacity} PERSON${capacity === 1 ? "A" : "E"}`;
+}
+
 function formatGuestTotalLabel(guestCount: number): string {
   if (guestCount === 1) return "totale per una persona";
 
@@ -129,15 +178,14 @@ export function adminQuoteWhatsappMessage(input: {
     ? "Le tue proposte personalizzate per Ischia sono pronte 🌊"
     : "La tua proposta personalizzata per Ischia è pronta 🌊";
 
-  const totalCostsHeading = quote.rooms > 1
-    ? `💰 *COSTI TOTALI PER ${guestCount} PERSONE — ${quote.rooms} CAMERE*`
-    : `💰 *COSTI TOTALI PER ${guestCount} PERSON${guestCount === 1 ? "A" : "E"}*`;
+  const singleRoomCostsHeading = `💰 COSTI TOTALI PER ${guestCount} PERSON${guestCount === 1 ? "A" : "E"}`;
+  const multiRoomCostsHeading = "💰 COSTI TOTALI PER OGNI CAMERA";
 
   const hotelBlocks = hotelEntries.map(group => {
     const first = group[0];
     const starsStr = first.hotelStars && first.hotelStars > 0 ? " " + "⭐".repeat(first.hotelStars) : "";
     const lines: string[] = [`🏨 ${first.hotelName}${starsStr}`];
-    const priceScopeLabel = group.length > 1 || quote.rooms > 1 ? "totale camera" : formatGuestTotalLabel(guestCount);
+    const priceScopeLabel = quote.rooms > 1 ? undefined : formatGuestTotalLabel(guestCount);
 
     if (group.length === 1) {
       const optionLabel = first.roomTypeLabel?.trim();
@@ -145,7 +193,7 @@ export function adminQuoteWhatsappMessage(input: {
         lines.push(`   🛏 ${optionLabel}`);
       }
       for (const treatment of first.treatments) {
-        lines.push(`${optionLabel && !roomTypeLine ? "      " : "   "}· ${treatment.label}: ${formatWAPrice(treatment.price)} ${priceScopeLabel}`);
+        lines.push(`${optionLabel && !roomTypeLine ? "      " : "   "}· ${treatment.label}: ${formatWAPrice(treatment.price)} ${quote.rooms > 1 ? formatMultiRoomPriceScope(first.roomTypeLabel) : priceScopeLabel}`);
       }
     } else {
       for (let index = 0; index < group.length; index++) {
@@ -154,7 +202,7 @@ export function adminQuoteWhatsappMessage(input: {
         if (index > 0) lines.push("", "");
         lines.push(`   🛏 ${optionLabel}`);
         for (const treatment of option.treatments) {
-          lines.push(`      · ${treatment.label}: ${formatWAPrice(treatment.price)} ${priceScopeLabel}`);
+          lines.push(`      · ${treatment.label}: ${formatWAPrice(treatment.price)} ${quote.rooms > 1 ? formatMultiRoomPriceScope(option.roomTypeLabel) : priceScopeLabel}`);
         }
       }
     }
@@ -191,21 +239,22 @@ export function adminQuoteWhatsappMessage(input: {
     ? "⚠️ Disponibilità limitata e su richiesta. Ti consigliamo di contattarci telefonicamente."
     : "⚠️ Le disponibilità per questo periodo sono limitate. Ti consigliamo di contattarci telefonicamente.";
 
+  const multiRoomTypeSummary = quote.rooms > 1 ? multiRoomSummary(hotelEntries[0], quote.rooms) : undefined;
   const stayLines = [
-    `🗒 ${stayLine}`,
-    `👥 ${guestsLine}`,
-    ...(roomTypeLine ? [`🛏 ${roomTypeLine}`] : []),
+    `🗒️ ${stayLine}`,
+    quote.rooms > 1 ? `👥 ${guestCount} person${guestCount === 1 ? "a" : "e"}` : `👥 ${guestsLine}`,
+    ...(quote.rooms > 1
+      ? (multiRoomTypeSummary ? [`🛏️ ${multiRoomTypeSummary}`] : [])
+      : (roomTypeLine ? [`🛏️ ${roomTypeLine}`] : [])),
   ].join("\n");
 
   return `👋 Ciao ${quote.customerFirstName}!
 ${proposalTitle}
-
+${quote.rooms === 1 ? `\n${singleRoomCostsHeading}\n` : `\n${multiRoomCostsHeading}\n`}
 ${stayLines}
 
 Apri il link per i dettagli ⬇️
 ${quoteUrl}
-
-${totalCostsHeading}
 
 ${hotelsBlock}
 ${mandatoryFeeBlock}
