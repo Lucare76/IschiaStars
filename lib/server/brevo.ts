@@ -333,6 +333,10 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
   const guestsLabel = childCount > 0
     ? `${adultsLabel}, ${childCount} bambin${childCount === 1 ? "o" : "i"}`
     : adultsLabel;
+  const guestCount = quote.adults + childCount;
+  const costsScopeLabel = quote.rooms > 1
+    ? "COSTI TOTALI PER OGNI CAMERA"
+    : `COSTI TOTALI PER ${guestCount} PERSON${guestCount === 1 ? "A" : "E"}`;
   const firstRoomType = options[0]?.roomTypeLabel?.trim() || "";
   const uniqueGroups = new Set(options.map(o => o.hotelGroup));
   const primaryHotelName = options[0]?.hotelName ?? "";
@@ -378,6 +382,14 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
             <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">${introText}</p>
 
             ${staySummaryBoxHtml}
+
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 24px;background:#FFF4C7;border:2px solid #F4B73A;border-radius:10px;">
+              <tr>
+                <td align="center" style="padding:16px 18px;font-size:16px;line-height:1.35;font-weight:800;color:#1A3A5C;letter-spacing:0.35px;">
+                  💰 ${escapeHtml(costsScopeLabel)}
+                </td>
+              </tr>
+            </table>
 
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f6ff;border-radius:6px;padding:20px 20px 12px;margin-bottom:28px;">
               <tr>
