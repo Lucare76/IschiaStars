@@ -5,14 +5,39 @@ import { siteBaseUrl } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest, { params }: { params: { shortCode: string } }) {
+  const startedAt = Date.now();
+  const requestId = crypto.randomUUID();
+  // Non registrare codici pubblici, URL delle foto o dati del cliente.
+  const report = (outcome: string, details: Record<string, string | number> = {}) => {
+    console.info("[quote-preview]", JSON.stringify({
+      requestId, outcome, durationMs: Date.now() - startedAt, ...details
+    }));
+  };
+  const fallback = (reason: string, details: Record<string, string | number> = {}) => {
+    report(reason, details);
+    const response = fallbackLogo(request);
+    response.headers.set("cache-control", "no-store");
+    response.headers.set("x-preview-request-id", requestId);
+    return response;
+  };
   const shortCode = safeDecode(params.shortCode);
   if (!shortCode || !/^[0-9a-f]{16}$/.test(shortCode)) {
-    return fallbackLogo(request);
+    return fallback("invalid_code");
   }
 
-  const quoteResult = await getQuoteByShortCode(shortCode);
+  const lookupStartedAt = Date.now();
+  let quoteResult;
+  try {
+    quoteResult = await getQuoteByShortCode(shortCode);
+  } catch (error) {
+    return fallback("quote_lookup_error", {
+      lookupMs: Date.now() - lookupStartedAt,
+      errorType: error instanceof Error ? error.name : "unknown"
+    });
+  }
+  const lookupMs = Date.now() - lookupStartedAt;
   const quote = quoteResult.data;
-  if (!quote || quote.deletedAt) return fallbackLogo(request);
+  if (!quote || quote.deletedAt) return fallback("quote_unavailable", { lookupMs });
 
   const hotelOptions = quote.hotelOptions.length ? quote.hotelOptions : [];
   const hotelGroups = new Set(hotelOptions.map((option) => option.hotelGroup ?? 1));
@@ -21,35 +46,40 @@ export async function GET(request: NextRequest, { params }: { params: { shortCod
     ? singleHotel?.hotelImageUrl || quote.proposedHotel.imageUrl || quote.proposedHotel.externalImageUrl
     : undefined;
 
-  if (!hotelImage) return fallbackLogo(request);
+  if (!hotelImage) return fallback("no_hotel_image", { lookupMs });
 
-  const imageUrl = absoluteImageUrl(hotelImage);
+  const imageStartedAt = Date.now();
   try {
+    const imageUrl = absoluteImageUrl(hotelImage);
     const response = await fetch(imageUrl, {
-      cache: "no-store",
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(8000),
       headers: {
         "user-agent": "Mozilla/5.0 (compatible; IschiaStarsOpenGraph/1.0)",
         accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
       }
     });
 
-    if (!response.ok) return fallbackLogo(request);
+    if (!response.ok) return fallback("image_http_error", { lookupMs, status: response.status });
 
     const contentType = response.headers.get("content-type") || "";
-    if (!contentType.toLowerCase().startsWith("image/")) return fallbackLogo(request);
+    if (!contentType.toLowerCase().startsWith("image/")) return fallback("invalid_image_type", { lookupMs });
 
     const bytes = await response.arrayBuffer();
-    if (!bytes.byteLength) return fallbackLogo(request);
+    if (!bytes.byteLength) return fallback("empty_image", { lookupMs });
+
+    report("success", { lookupMs, imageMs: Date.now() - imageStartedAt, bytes: bytes.byteLength, contentType });
 
     return new NextResponse(bytes, {
       status: 200,
       headers: {
         "content-type": contentType,
+        "x-preview-request-id": requestId,
         "cache-control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800"
       }
     });
-  } catch {
-    return fallbackLogo(request);
+  } catch (error) {
+    return fallback("image_fetch_error", { lookupMs, errorType: error instanceof Error ? error.name : "unknown" });
   }
 }
 
