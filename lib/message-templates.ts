@@ -129,9 +129,7 @@ export function adminQuoteWhatsappMessage(input: {
     ? "Le tue proposte personalizzate per Ischia sono pronte 🌊"
     : "La tua proposta personalizzata per Ischia è pronta 🌊";
 
-  const totalCostsHeading = quote.rooms > 1
-    ? `💰 *COSTI TOTALI PER ${guestCount} PERSONE — ${quote.rooms} CAMERE*`
-    : `💰 *COSTI TOTALI PER ${guestCount} PERSON${guestCount === 1 ? "A" : "E"}*`;
+  const totalCostsHeading = `💰 *COSTI TOTALI PER ${guestCount} PERSON${guestCount === 1 ? "A" : "E"} — ${quote.rooms} CAMER${quote.rooms === 1 ? "A" : "E"}*`;
 
   const hotelBlocks = hotelEntries.map(group => {
     const first = group[0];
@@ -199,13 +197,11 @@ export function adminQuoteWhatsappMessage(input: {
 
   return `👋 Ciao ${quote.customerFirstName}!
 ${proposalTitle}
-
+${totalCostsHeading}
 ${stayLines}
 
 Apri il link per i dettagli ⬇️
 ${quoteUrl}
-
-${totalCostsHeading}
 
 ${hotelsBlock}
 ${mandatoryFeeBlock}
