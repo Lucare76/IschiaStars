@@ -304,12 +304,29 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     `${quoteContentSettings.travelDisclaimer} ${quoteContentSettings.travelCta}`
   ].join("\n") : "";
 
+  // Ogni sistemazione deve indicare il proprio ambito di prezzo.
+  const distinctRoomTypes = new Set(options.map((option) => option.roomTypeLabel?.trim().toLowerCase() || ""));
+  const hasRoomSpecificPrices = quote.rooms > 1 || distinctRoomTypes.size > 1;
+  const priceScopeForRoom = (label: string | undefined): string => {
+    if (!hasRoomSpecificPrices) {
+      const guests = quote.adults + quote.children.length;
+      return `totale per ${guests} person${guests === 1 ? "a" : "e"}`;
+    }
+    const normalized = (label || "").toLowerCase();
+    const capacity = normalized.includes("singola") ? 1
+      : normalized.includes("tripla") ? 3
+      : normalized.includes("quadrupla") ? 4
+      : normalized.includes("doppia") || normalized.includes("matrimoniale") ? 2
+      : undefined;
+    return capacity ? `totale per ${capacity} person${capacity === 1 ? "a" : "e"}` : "totale camera";
+  };
+
   // Riepilogo opzioni per email
   const optionsSummaryHtml = options
     .filter((o) => o.treatments.length > 0)
     .map((o) => {
       const treatmentsHtml = o.treatments
-        .map((t) => `<tr><td style="padding:4px 0;font-size:13px;color:#555;">${escapeHtml(t.label)}</td><td style="padding:4px 0;font-size:13px;color:#1a3a5c;text-align:right;font-weight:600;">${formatPrice(t.price)}</td></tr>`)
+        .map((t) => `<tr><td style="padding:4px 0;font-size:13px;color:#555;">${escapeHtml(t.label)}</td><td style="padding:4px 0;font-size:13px;color:#1a3a5c;text-align:right;font-weight:600;">${formatPrice(t.price)}<br><span style="font-size:11px;font-weight:normal;">${escapeHtml(priceScopeForRoom(o.roomTypeLabel))}</span></td></tr>`)
         .join("");
       const roomTypeHtml = o.roomTypeLabel?.trim()
         ? `<tr><td colspan="2" style="padding:1px 0 6px;font-size:13px;font-weight:700;color:#4b5563;">🛏 ${escapeHtml(o.roomTypeLabel.trim())}</td></tr>`
@@ -321,7 +338,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
   const optionsSummaryText = options
     .filter((o) => o.treatments.length > 0)
     .map((o) => {
-      const tr = o.treatments.map((t) => `  ${t.label}: ${formatPrice(t.price)}`).join("\n");
+      const tr = o.treatments.map((t) => `  ${t.label}: ${formatPrice(t.price)} — ${priceScopeForRoom(o.roomTypeLabel)}`).join("\n");
       const roomType = o.roomTypeLabel?.trim() ? `\n  Camera: ${o.roomTypeLabel.trim()}` : "";
       return `${o.hotelName}${o.hotelLocation ? ` — ${o.hotelLocation}` : ""}:${roomType}\n${tr}`;
     })
@@ -338,10 +355,10 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     ? `${adultsLabel}, ${childCount} bambin${childCount === 1 ? "o" : "i"}`
     : adultsLabel;
   const guestCount = quote.adults + childCount;
-  const costsScopeLabel = quote.rooms > 1
+  const costsScopeLabel = hasRoomSpecificPrices
     ? "COSTI TOTALI PER OGNI CAMERA"
     : `COSTI TOTALI PER ${guestCount} PERSON${guestCount === 1 ? "A" : "E"}`;
-  const firstRoomType = options[0]?.roomTypeLabel?.trim() || "";
+  const firstRoomType = distinctRoomTypes.size === 1 ? options[0]?.roomTypeLabel?.trim() || "" : "";
   const uniqueGroups = new Set(options.map(o => o.hotelGroup));
   const primaryHotelName = options[0]?.hotelName ?? "";
   const hotelSummaryLabel = uniqueGroups.size > 1
@@ -465,6 +482,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     `Arrivo:            ${formatDate(quote.arrivalDate)}`,
     `Partenza:          ${formatDate(quote.departureDate)}`,
     "",
+    costsScopeLabel,
     "Proposte:",
     optionsSummaryText,
     ...(quote.offerExpiresAt ? [`\nOfferta valida fino al: ${formatDate(quote.offerExpiresAt)}`] : []),
