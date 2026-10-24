@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { roomLabelForOccupancy } from "@/lib/room-occupancy-default";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
@@ -142,6 +143,23 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
   const [checkIn, setCheckIn] = useState(quote.arrivalDate);
   const [checkOut, setCheckOut] = useState(quote.departureDate);
   const [hotelOptions, setHotelOptions] = useState<HotelOptionState[]>(quoteOptionsToHotelOptionState(effective));
+  const totalGuests = adultsCount + (hasChildren ? childrenCount : 0);
+  const previousGuestCount = useRef(totalGuests);
+  useEffect(() => {
+    const changed = previousGuestCount.current !== totalGuests;
+    previousGuestCount.current = totalGuests;
+    // Only react to a guest-count change: manual room choices stay editable.
+    if (!changed || roomsCount !== 1) return;
+    setHotelOptions((options) => options.map((option) => {
+      if (option.roomTypes.length !== 1) return option;
+      const room = option.roomTypes[0];
+      const label = roomLabelForOccupancy(room.label, totalGuests);
+      return label === room.label ? option : {
+        ...option,
+        roomTypes: [{ ...room, label, roomImageUrl: "" }]
+      };
+    }));
+  }, [totalGuests, roomsCount]);
   const [transportOffers] = useState<TransportOffer[]>(withDefaultTransportOffers(quote.transportOffers));
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
