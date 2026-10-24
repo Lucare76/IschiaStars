@@ -53,15 +53,25 @@ export async function GET(request: NextRequest, { params }: { params: { shortCod
   const imageStartedAt = Date.now();
   try {
     const imageUrl = absoluteImageUrl(hotelImage);
-    const response = await fetch(imageUrl, {
+    let response = await fetch(imageUrl, {
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(8000),
       headers: {
         "user-agent": "Mozilla/5.0 (compatible; IschiaStarsOpenGraph/1.0)",
-        accept: "image/jpeg,image/png,image/webp,image/*;q=0.8"
+        accept: "*/*"
       }
     });
 
+    // Alcuni CDN negoziano male il formato o conservano una risposta 415.
+    // Un solo nuovo tentativo, senza cache, prima del ripiego sul logo.
+    if (response.status === 415) {
+      report("image_retry", { lookupMs, status: response.status });
+      response = await fetch(imageUrl, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+        headers: { accept: "*/*" }
+      });
+    }
     if (!response.ok) return fallback("image_http_error", { lookupMs, status: response.status });
 
     const contentType = response.headers.get("content-type") || "";
