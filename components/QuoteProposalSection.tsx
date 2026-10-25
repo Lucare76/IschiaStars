@@ -681,9 +681,6 @@ function CompareView({
                             ? `Scegli per Camera ${targetRoomNumber}`
                             : "Scegli questo hotel"}
                       </button>
-                      <p className="mt-1 text-center text-xs leading-snug text-gray-400">
-                        Nessun pagamento online — ti ricontattiamo per finalizzare
-                      </p>
                     </>
                   ) : null}
                 </div>
@@ -993,7 +990,6 @@ function HotelCard({
                                   ? `Scegli per Camera ${targetRoomNumber} →`
                                   : "Scegli questa proposta →"}
                             </button>
-                            <p className="mt-3 text-center text-xs leading-5 text-ischia-ink/45">Nessun pagamento online — ti ricontattiamo per finalizzare</p>
                           </div>
                         ) : null}
 
