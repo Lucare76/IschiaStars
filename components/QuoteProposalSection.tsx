@@ -931,11 +931,9 @@ function HotelCard({
           const activeTreatments = visibleTreatments(opt);
           return (
             <div key={opt.id} className="space-y-4">
-              {activeTreatments.map((treatment, treatmentIndex) => {
+              {activeTreatments.map((treatment) => {
                 const details = treatmentDetails(opt, treatment);
                 const frontDetails = details || treatmentDescription(treatment);
-                const previous = activeTreatments[treatmentIndex - 1];
-                const delta = previous ? treatment.price - previous.price : null;
                 const roomImage = opt.roomImageUrl || imageUrl;
                 const previewRoomImage = quote.token === "preview-demo-token" && !opt.roomImageUrl
                   ? treatment.key === "full_board"
@@ -977,9 +975,6 @@ function HotelCard({
                       <div className="flex flex-col justify-center bg-[#F5FAFD] p-5 sm:p-6">
                         <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue/70">{priceScopeLabel}</p>
                         <p className="mt-1 text-5xl font-black tabular-nums tracking-[-0.045em] text-ischia-navy">{formatCurrency(treatment.price)}</p>
-                        {delta && delta > 0 ? (
-                          <p className="mt-2 text-sm font-semibold text-ischia-ink/60">+ {formatCurrency(delta)} rispetto all&apos;opzione precedente</p>
-                        ) : null}
 
                         {!isConfirmed ? (
                           <div className="no-print mt-5">
