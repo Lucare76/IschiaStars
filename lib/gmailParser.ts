@@ -419,7 +419,7 @@ export async function pollGmail(): Promise<PollGmailResult> {
           continue;
         }
 
-        if (input.parseWarnings.length) {
+        if (input.parseWarnings.some((warning) => warning !== 'suspicious_children_count_single_age')) {
           const reason = `parse_warning:${input.parseWarnings.join(',')}`;
           const detail = `msg ${message.id}: needs_review reason=${reason}`;
           console.info(`[email-import] needs_review reason=${reason} adults=${input.adults} children=${input.children.length} body_len=${bodyLen} snippet="${snippet}" msgId=${message.id}`);
@@ -447,7 +447,21 @@ export async function pollGmail(): Promise<PollGmailResult> {
           continue;
         }
 
-        const createResult = await createQuoteRequest(input);
+        if (input.parseWarnings.includes('suspicious_children_count_single_age')) {
+          const warning = `ATTENZIONE: dati bambini da verificare. La mail dichiara ${input.children.length} bambini ma riporta una sola età. Controllare la richiesta originale prima di preparare il preventivo.`;
+          input.message = [warning, input.message].filter(Boolean).join('\n\n');
+        }
+
+        const createResult = await createQuoteRequest({
+          ...input,
+          metadata: {
+            ...input.metadata,
+            ...(input.parseWarnings.length ? { import_warnings: input.parseWarnings, requires_guest_review: true } : {})
+          },
+          children: input.parseWarnings.includes('suspicious_children_count_single_age')
+            ? input.children.map((child, index) => ({ ...child, age: index === 0 ? child.age : undefined }))
+            : input.children
+        });
 
         if (createResult.data) {
           console.info(`[email-import] inserted quote_request id=${createResult.data.id} client="${input.firstName} ${input.lastName}"`);
