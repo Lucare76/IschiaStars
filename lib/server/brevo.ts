@@ -1,3 +1,4 @@
+import { buildHotelNotes } from "@/lib/hotel-notes";
 import type { Quote, QuoteConfirmation } from "@/lib/types";
 import { logEmailAttempt } from "@/lib/repositories/emailLogs";
 import { formatConfirmationAdditionalService, getConfirmationAdditionalServices } from "@/lib/confirmation-additional-services";
@@ -344,6 +345,27 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     })
     .join("\n\n");
 
+  const noteGroups = new Map<number, typeof options>();
+  for (const option of options.filter((option) => option.treatments.length > 0)) {
+    const key = option.hotelGroup ?? 1;
+    noteGroups.set(key, [...(noteGroups.get(key) ?? []), option]);
+  }
+  const hotelNotes = Array.from(noteGroups.values()).map((group) => ({
+    hotelName: group[0].hotelName,
+    ...buildHotelNotes(group, group[0].commitmentNote)
+  })).filter((group) => group.notes.length > 0 || group.commitmentNote);
+  const hotelNotesHtml = hotelNotes.length ? `<tr><td colspan="2" style="padding:14px 0 12px;font-size:13px;color:#374151;line-height:1.6;">
+    <strong style="color:#1a3a5c;">Note struttura/camera</strong>
+    ${hotelNotes.map((group) => `<div style="margin-top:8px;"><strong>${escapeHtml(group.hotelName)}</strong>
+      ${group.notes.map((note) => `<div>${escapeHtml(note)}</div>`).join("")}
+      ${group.commitmentNote ? `<div><strong>${escapeHtml(group.commitmentNote)}</strong></div>` : ""}
+    </div>`).join("")}
+  </td></tr>` : "";
+  const hotelNotesText = hotelNotes.length ? [
+    "Note struttura/camera:",
+    ...hotelNotes.map((group) => [group.hotelName, ...group.notes, group.commitmentNote].filter(Boolean).join("\n"))
+  ].join("\n\n") : "";
+
   const introText = hasMultiple
     ? `Abbiamo preparato <strong>più proposte</strong> per il tuo soggiorno a Ischia. Confronta le opzioni e conferma quella che preferisci direttamente online.`
     : `Abbiamo preparato la tua proposta personalizzata per il soggiorno a Ischia.`;
@@ -426,6 +448,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
                 <td style="padding:6px 0;font-size:14px;color:#222;text-align:right;">${formatDate(quote.departureDate)}</td>
               </tr>
               ${optionsSummaryHtml}
+              ${hotelNotesHtml}
               ${quote.offerExpiresAt ? `<tr>
                 <td style="padding:10px 0 6px;font-size:13px;color:#c05000;border-top:1px solid #cdd8e8;"><strong>Offerta valida fino al</strong></td>
                 <td style="padding:10px 0 6px;font-size:13px;color:#c05000;text-align:right;font-weight:600;border-top:1px solid #cdd8e8;">${formatDate(quote.offerExpiresAt)}</td>
@@ -485,6 +508,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     costsScopeLabel,
     "Proposte:",
     optionsSummaryText,
+    ...(hotelNotesText ? ["", hotelNotesText] : []),
     ...(quote.offerExpiresAt ? [`\nOfferta valida fino al: ${formatDate(quote.offerExpiresAt)}`] : []),
     "",
     hasMultiple ? "Vedi le proposte e conferma:" : "Apri il preventivo:",
