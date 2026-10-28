@@ -463,10 +463,10 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
             </div>
 
             <p style="text-align:center;margin:0 0 6px;font-size:12px;color:#999;">
-              Se il pulsante non funziona, copia e incolla questo link nel browser:
+              In alternativa al pulsante, usa questo collegamento:
             </p>
             <p style="text-align:center;margin:0 0 28px;font-size:12px;word-break:break-all;">
-              <a href="${safeEmailUrl(quoteUrl)}" style="color:#1a3a5c;">${escapeHtml(quoteUrl)}</a>
+              <a href="${safeEmailUrl(quoteUrl)}" style="color:#1a3a5c;">Visualizza il tuo preventivo IschiaStars</a>
             </p>
 
             ${travelServicesBoxHtml}
@@ -1750,7 +1750,7 @@ export async function sendInterestedFollowUpEmailToClient(quote: Quote, hotelNam
           </a>
         </div>
         <p style="text-align:center;margin:0 0 24px;font-size:12px;word-break:break-all;">
-          <a href="${safeEmailUrl(quoteUrl)}" style="color:#1a3a5c;">${escapeHtml(quoteUrl)}</a>
+          <a href="${safeEmailUrl(quoteUrl)}" style="color:#1a3a5c;">Visualizza il tuo preventivo IschiaStars</a>
         </p>
         <p style="margin:0 0 5px;font-size:16px;color:#1F2937;line-height:1.6;">Grazie</p>
         <p style="margin:0 0 26px;font-size:16px;color:#1F2937;line-height:1.6;">Cordiali saluti</p>
@@ -1851,7 +1851,7 @@ export async function sendFollowUpEmailToClient(quote: Quote): Promise<SendFollo
           </a>
         </div>
         <p style="text-align:center;margin:0 0 24px;font-size:12px;word-break:break-all;">
-          <a href="${safeEmailUrl(quoteUrl)}" style="color:#1a3a5c;">${escapeHtml(quoteUrl)}</a>
+          <a href="${safeEmailUrl(quoteUrl)}" style="color:#1a3a5c;">Visualizza il tuo preventivo IschiaStars</a>
         </p>
         <p style="margin:0 0 12px;font-size:15px;color:#374151;line-height:1.6;">
           Se Le interessa Le consiglio di confermare al più presto, perché la disponibilità è in continuo aggiornamento e potrebbe presto terminare.
