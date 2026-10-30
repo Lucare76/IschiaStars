@@ -107,6 +107,7 @@ export type BrevoWebhookEvent = {
   message_id?: string;
   MessageId?: string;
   "Message-Id"?: string;
+  email?: string;
   ts_event?: number;
   date?: string;
   reason?: string;
@@ -142,11 +143,15 @@ export async function updateEmailLogFromBrevoEvent(event: BrevoWebhookEvent): Pr
   const normalized = normalizeBrevoMessageId(rawMessageId);
   if (!normalized) return false;
 
+  // Brevo reuses the message ID for To and CC recipients. Never attribute
+  // delivery, opening or rejection without matching the actual recipient.
+  const recipient = typeof event.email === "string" ? event.email.trim().toLowerCase() : "";
+  if (!recipient) return false;
   const variants = Array.from(new Set([normalized, `<${normalized}>`, rawMessageId.trim()]));
 
   const { data: existing, error: lookupError } = await supabase
     .from("email_logs")
-    .select("id, status, raw_events, delivered_at, opened_at, clicked_at, bounced_at")
+    .select("id, recipient_email, status, raw_events, delivered_at, opened_at, clicked_at, bounced_at, last_event_at")
     .in("brevo_message_id", variants)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -162,11 +167,13 @@ export async function updateEmailLogFromBrevoEvent(event: BrevoWebhookEvent): Pr
     return false;
   }
 
+  if (String(existing.recipient_email).trim().toLowerCase() !== recipient) return false;
+
   const eventTs = event.ts_event ? new Date(event.ts_event * 1000).toISOString() : new Date().toISOString();
   const brevoEvent = event.event?.toLowerCase();
 
   const updates: Record<string, unknown> = {
-    last_event_at: eventTs,
+    last_event_at: existing.last_event_at && existing.last_event_at > eventTs ? existing.last_event_at : eventTs,
     updated_at: new Date().toISOString(),
   };
 
@@ -215,14 +222,32 @@ export async function updateEmailLogFromBrevoEvent(event: BrevoWebhookEvent): Pr
   if (newStatus) {
     const currentPriority = STATUS_PRIORITY[existing.status] ?? 0;
     const newPriority = STATUS_PRIORITY[newStatus] ?? 0;
-    if (newPriority >= currentPriority) {
+    const isFailure = ["soft_bounce", "hard_bounce", "blocked", "error"].includes(newStatus);
+    const wasFailure = ["failed", "soft_bounce", "hard_bounce", "blocked", "error"].includes(existing.status);
+    const isOlder = existing.last_event_at && eventTs < existing.last_event_at;
+    if ((isFailure && !isOlder) || (!wasFailure && !isOlder && newPriority >= currentPriority) ||
+        (wasFailure && !isOlder && brevoEvent === "delivered" && eventTs !== existing.last_event_at)) {
       updates.status = newStatus;
+      if (isFailure) {
+        updates.delivered_at = null;
+        updates.opened_at = null;
+        updates.clicked_at = null;
+      } else if (wasFailure) {
+        updates.bounced_at = null;
+        updates.error_message = null;
+      }
     }
+  }
+
+  if (newStatus && !updates.status) {
+    delete updates.delivered_at;
+    delete updates.opened_at;
+    delete updates.clicked_at;
   }
 
   const rawEvents = Array.isArray(existing.raw_events) ? existing.raw_events : [];
   if (rawEvents.length < 50) {
-    updates.raw_events = [...rawEvents, { event: brevoEvent, ts: eventTs, reason: event.reason }];
+    updates.raw_events = [...rawEvents, { event: brevoEvent, ts: eventTs, reason: event.reason, email: recipient }];
   }
 
   const { error: updateError } = await supabase.from("email_logs").update(updates).eq("id", existing.id);
