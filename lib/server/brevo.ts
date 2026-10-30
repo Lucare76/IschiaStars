@@ -1,3 +1,4 @@
+import { sendSupplierSmtp, supplierSmtpEnabled } from "@/lib/server/supplier-smtp";
 import { buildHotelNotes } from "@/lib/hotel-notes";
 import type { Quote, QuoteConfirmation } from "@/lib/types";
 import { logEmailAttempt } from "@/lib/repositories/emailLogs";
@@ -1354,7 +1355,7 @@ export async function sendSupplierConfirmationEmail(params: {
 }): Promise<boolean> {
   const { to, quote, confirmation, customerPhone, grossPrice, netPrice, commission, roomCosts = [], notes } = params;
 
-  const missingEnvReason = brevoMissingEnvReason();
+  const missingEnvReason = supplierSmtpEnabled() ? null : brevoMissingEnvReason();
   if (missingEnvReason) {
     console.info(`[brevo] skipped supplier confirmation email code=${quote.code} reason=${missingEnvReason}`);
     return false;
@@ -1583,7 +1584,9 @@ export async function sendSupplierConfirmationEmail(params: {
   ].join("\n");
 
   const supplierSubject = `Richiesta disponibilità — ${hotelName} — ${quote.code}`;
-  const supplierResult = await sendBrevoEmailWithResult({
+  const supplierResult = supplierSmtpEnabled()
+    ? await sendSupplierSmtp({ to, subject: supplierSubject, html, text })
+    : await sendBrevoEmailWithResult({
     to: [{ email: to }],
     cc: [{ email: "info@ischiastars.it", name: "IschiaStars" }],
     subject: supplierSubject,
