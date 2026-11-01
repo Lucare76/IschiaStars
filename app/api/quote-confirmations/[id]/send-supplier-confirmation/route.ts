@@ -5,6 +5,8 @@ import { getQuoteById } from "@/lib/repositories/quotes";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 import { sendSupplierConfirmationEmail } from "@/lib/server/brevo";
 
+import { getEffectiveBalancePaymentSchedule } from "@/lib/hotel-policies";
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -46,6 +48,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const quote = quoteResult.data;
   if (!quote?.confirmation) return NextResponse.json({ ok: false, error: "Preventivo non trovato" }, { status: 404 });
 
+  const balanceSchedule = getEffectiveBalancePaymentSchedule({
+    balanceMethod: quote.confirmation.selectedBalanceMethod,
+    arrivalDate: quote.arrivalDate,
+    hotelName: quote.confirmation.selectedHotelName ?? quote.proposedHotel.name
+  });
+  if (balanceSchedule.type === "before_arrival" && commission !== undefined && commission > 100) {
+    return NextResponse.json({ ok: false, error: "La commissione percentuale deve essere compresa tra 0 e 100" }, { status: 400 });
+  }
+
   const sent = await sendSupplierConfirmationEmail({
     to: recipientEmail,
     quote,
@@ -64,7 +75,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     recipientEmail,
     ...(grossPrice !== undefined ? { grossPrice } : {}),
     ...(netPrice !== undefined ? { netPrice } : {}),
-    ...(commission !== undefined ? { commission } : {}),
+    ...(commission !== undefined ? { commission, commissionUnit: balanceSchedule.type === "before_arrival" ? "percent" : "euro" } : {}),
     ...(roomCosts.length ? { roomCosts } : {}),
     sentAt
   });
