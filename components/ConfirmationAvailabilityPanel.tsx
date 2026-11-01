@@ -33,6 +33,7 @@ export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureF
     arrivalDate: quote.arrivalDate,
     hotelName: selectedHotelName
   });
+  const supplierBalanceBeforeArrival = balanceSchedule.type === "before_arrival";
   const isFullBalanceDueAtConfirmation = isBalanceDueAtConfirmation(balanceSchedule);
   const defaultPaymentDueAt = useMemo(() => defaultPaymentDueAtForFinalConfirmation({
     arrivalDate: quote.arrivalDate,
@@ -382,7 +383,7 @@ IschiaStars 🌊`;
       setSupplierError("Inserisci un costo netto valido oppure lascia il campo vuoto.");
       return;
     }
-    if (commissionValue !== undefined && (!Number.isFinite(commissionValue) || commissionValue < 0)) {
+    if (commissionValue !== undefined && (!Number.isFinite(commissionValue) || commissionValue < 0 || (supplierBalanceBeforeArrival && commissionValue > 100))) {
       setSupplierError("Inserisci una commissione trattenuta valida oppure lascia il campo vuoto.");
       return;
     }
@@ -1075,7 +1076,7 @@ IschiaStars 🌊`;
                 </span>
               </label>
               <label className="block text-sm font-semibold text-ischia-ink">
-                Saldo totale netto in struttura
+                {supplierBalanceBeforeArrival ? "Costo netto da saldare 14 giorni prima dell’arrivo" : "Saldo totale netto in struttura"}
                 <input
                   className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
                   placeholder="es. 1200"
@@ -1087,10 +1088,11 @@ IschiaStars 🌊`;
                 />
               </label>
               <label className="block text-sm font-semibold text-ischia-ink">
-                Commissione trattenuta
+                Commissione trattenuta{supplierBalanceBeforeArrival ? " (%)" : ""}
                 <input
                   className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
-                  placeholder="es. 300"
+                  placeholder={supplierBalanceBeforeArrival ? "es. 15" : "es. 300"}
+                  max={supplierBalanceBeforeArrival ? 100 : undefined}
                   type="number"
                   min="0"
                   step="0.01"

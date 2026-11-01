@@ -1398,7 +1398,19 @@ export async function sendSupplierConfirmationEmail(params: {
 
   const grossPriceFormatted = grossPrice != null ? formatPrice(grossPrice) : undefined;
   const netPriceFormatted = netPrice != null ? formatPrice(netPrice) : undefined;
-  const commissionFormatted = commission != null ? formatPrice(commission) : undefined;
+  const supplierBalanceBeforeArrival = getEffectiveBalancePaymentSchedule({
+    balanceMethod: confirmation.selectedBalanceMethod,
+    arrivalDate: quote.arrivalDate,
+    hotelName
+  }).type === "before_arrival";
+  const supplierNetLabel = supplierBalanceBeforeArrival
+    ? "Costo netto da saldare 14 giorni prima dell’arrivo"
+    : "Saldo totale in struttura all'arrivo";
+  const commissionFormatted = commission != null
+    ? supplierBalanceBeforeArrival
+      ? `${new Intl.NumberFormat("it-IT", { maximumFractionDigits: 2 }).format(commission)}%`
+      : formatPrice(commission)
+    : undefined;
 
   const roomCostRowsHtml = roomCosts
     .filter((room) => room.grossPrice != null || room.netPrice != null)
@@ -1499,7 +1511,7 @@ export async function sendSupplierConfirmationEmail(params: {
           <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #D9E2EC;border-radius:12px;">
             <tr><td style="background:#F6F9FC;padding:12px 18px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#1B3A5C;">Riepilogo economico</td></tr>
             ${grossPriceFormatted ? `<tr><td style="padding:11px 18px;border-top:1px solid #E8EDF2;"><strong>Costo totale:</strong> ${grossPriceFormatted}</td></tr>` : ""}
-            ${netPriceFormatted ? `<tr><td style="padding:11px 18px;border-top:1px solid #E8EDF2;"><strong>Saldo totale in struttura all'arrivo:</strong> ${netPriceFormatted}</td></tr>` : ""}
+            ${netPriceFormatted ? `<tr><td style="padding:11px 18px;border-top:1px solid #E8EDF2;"><strong>${supplierNetLabel}:</strong> ${netPriceFormatted}</td></tr>` : ""}
             ${commissionFormatted ? `<tr><td style="padding:11px 18px;border-top:1px solid #E8EDF2;"><strong>Commissione trattenuta:</strong> ${commissionFormatted}</td></tr>` : ""}
           </table>` : ""}
 
@@ -1565,7 +1577,7 @@ export async function sendSupplierConfirmationEmail(params: {
     `Periodo: Dal ${formatDate(quote.arrivalDate)} al ${formatDate(quote.departureDate)}`,
     "",
     ...(grossPriceFormatted ? [`Costo totale: ${grossPriceFormatted}`] : []),
-    ...(netPriceFormatted ? [`Saldo totale in struttura all'arrivo: ${netPriceFormatted}`] : []),
+    ...(netPriceFormatted ? [`${supplierNetLabel}: ${netPriceFormatted}`] : []),
     ...(commissionFormatted ? [`Commissione trattenuta: ${commissionFormatted}`] : []),
     ...(roomCostRowsText.length ? ["", ...roomCostRowsText] : []),
     "",
