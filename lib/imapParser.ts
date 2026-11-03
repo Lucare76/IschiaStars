@@ -418,7 +418,7 @@ export async function pollImapInbox(): Promise<PollImapResult> {
     const cursorKey = `imap_cursor_${createHash('sha256').update(`${config.host}|${config.user}|${config.folder}`).digest('hex').slice(0, 24)}`;
     const cursorResult = await supabase.from('settings').select('value').eq('key', cursorKey).maybeSingle();
     if (cursorResult.error) throw new Error('Impossibile leggere avanzamento email');
-    const saved = cursorResult.data?.value as { uidValidity?: string; lastUid?: number; since?: string } | undefined;
+    const saved = cursorResult.data?.value as { uidValidity?: string; lastUid?: number; priorityUid?: number; since?: string } | undefined;
     const validCursor = saved?.uidValidity === uidValidity && Number.isSafeInteger(saved.lastUid) && (saved.lastUid ?? -1) >= 0;
     let lastUid = validCursor ? saved!.lastUid! : 0;
     // Keep the initial recovery window fixed until its backlog is drained.
@@ -427,11 +427,18 @@ export async function pollImapInbox(): Promise<PollImapResult> {
     // IMAP n:* can include the last message even when n exceeds UIDNEXT.
     const uids = (searchResult || []).filter(uid => uid > lastUid).sort((a, b) => a - b);
     console.info(`[mail-inbox] incremental candidates=${uids.length} afterUid=${lastUid}`);
-    const limited = uids.slice(0, 20);
-    if (!limited.length) return result;
+    // A separate recent-mail cursor must never move the contiguous backlog cursor.
+    let priorityUid = validCursor && Number.isSafeInteger(saved?.priorityUid)
+      ? saved!.priorityUid!
+      : Math.max(lastUid, (uids.slice(-20)[0] ?? lastUid + 1) - 1);
+    const priority = uids.filter(uid => uid > priorityUid).slice(0, 20);
+    const backlog = uids.filter(uid => !priority.includes(uid)).slice(0, 20);
     const batchStartedAt = Date.now();
-    for await (const msg of client.fetch(limited.length ? limited : [], { source: true }, { uid: true })) {
-      if (Date.now() - batchStartedAt > 30_000) break;
+    let stop = false;
+    for (const phase of [{ kind: 'recent', ids: priority }, { kind: 'backlog', ids: backlog }]) {
+    if (!phase.ids.length || stop) continue;
+    for await (const msg of client.fetch(phase.ids, { source: true }, { uid: true })) {
+      if (Date.now() - batchStartedAt > 30_000) { stop = true; break; }
       const errorsBefore = result.errors.length;
       try {
         if (!msg.source) {
@@ -673,18 +680,27 @@ export async function pollImapInbox(): Promise<PollImapResult> {
         result.errors.push(`Uid ${msg.uid}: ${errMsg}`);
       } finally {
         // Do not pass a failed message: retries must start from this UID.
-        if (result.errors.length > errorsBefore) break;
+        if (result.errors.length > errorsBefore) { stop = true; break; }
+        const advancesBacklog = phase.kind === 'backlog' || uids.find(uid => uid > lastUid) === msg.uid;
         const checkpoint = await supabase.from('settings').upsert({
           key: cursorKey,
-          value: { uidValidity, lastUid: msg.uid, since: since.toISOString() },
+          value: {
+            uidValidity,
+            lastUid: advancesBacklog ? msg.uid : lastUid,
+            priorityUid: phase.kind === 'recent' ? msg.uid : priorityUid,
+            since: since.toISOString()
+          },
           updated_at: new Date().toISOString()
         }, { onConflict: 'key' });
         if (checkpoint.error) {
           result.errors.push('Salvataggio avanzamento email non riuscito; il prossimo controllo riproverà.');
+          stop = true;
           break;
         }
-        lastUid = msg.uid;
+        if (advancesBacklog) lastUid = msg.uid;
+        if (phase.kind === 'recent') priorityUid = msg.uid;
       }
+    }
     }
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
