@@ -8,9 +8,17 @@ Object.assign(process.env,{MAIL_INBOX_HOST:'test',MAIL_INBOX_USER:'test',MAIL_IN
 (async()=>{
 let r=await e.pollImapInbox();assert.equal(r.errors.length,0);assert.equal(cursor.lastUid,3);
 fetched=[];await e.pollImapInbox();assert.deepEqual(fetched,[]);
-uids=Array.from({length:50},(_,i)=>i+1);fetched=[];await e.pollImapInbox();assert.deepEqual(fetched,Array.from({length:20},(_,i)=>i+4));assert.equal(cursor.lastUid,23);
-fail=true;r=await e.pollImapInbox();assert.equal(cursor.lastUid,23);assert.equal(r.errors.length,1);
-fail=false;await e.pollImapInbox();assert.equal(cursor.lastUid,43);
+// Migrating an existing backlog: newest 20 are processed first, then oldest 20.
+uids=Array.from({length:100},(_,i)=>i+1);cursor={uidValidity:'1',lastUid:3,since:new Date().toISOString()};fetched=[];
+await e.pollImapInbox();assert.deepEqual(fetched.slice(0,20),Array.from({length:20},(_,i)=>i+81));assert.equal(cursor.priorityUid,100);assert.equal(cursor.lastUid,23);
+// A new arrival is never queued behind old messages.
+uids.push(101);fetched=[];await e.pollImapInbox();assert.equal(fetched[0],101);assert.equal(cursor.priorityUid,101);assert.equal(cursor.lastUid,43);
+// A failed recent message prevents both cursors from passing it.
+uids.push(102);fail=true;r=await e.pollImapInbox();assert.equal(cursor.priorityUid,101);assert.equal(cursor.lastUid,43);assert.equal(r.errors.length,1);
+fail=false;await e.pollImapInbox();assert.equal(cursor.priorityUid,102);assert.equal(cursor.lastUid,63);
+// Drain recovery without skipping any UID.
+await e.pollImapInbox();await e.pollImapInbox();assert.equal(cursor.lastUid,102);
+fetched=[];await e.pollImapInbox();assert.deepEqual(fetched,[]);
 validity='2';uids=[1,2];await e.pollImapInbox();assert.equal(cursor.uidValidity,'2');assert.equal(cursor.lastUid,2);
-console.log('PASS incremental no-repeat, oldest-first bounded backlog, failed message stops cursor, retry, UIDVALIDITY reset');
+console.log('PASS recent-first, separate cursors, new mail ahead of backlog, failure and retry, full backlog recovery, no repeat, UIDVALIDITY reset');
 })().catch(e=>{console.error(e);process.exit(1)});
