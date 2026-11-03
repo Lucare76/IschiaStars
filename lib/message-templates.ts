@@ -199,7 +199,7 @@ export function adminQuoteWhatsappMessage(input: {
       for (let index = 0; index < group.length; index++) {
         const option = group[index];
         const optionLabel = option.roomTypeLabel?.trim() || `Soluzione ${index + 1}`;
-        if (index > 0) lines.push("", "");
+        if (index > 0) lines.push("");
         lines.push(`   🛏 ${optionLabel}`);
         for (const treatment of option.treatments) {
           lines.push(`      · ${treatment.label}: ${formatWAPrice(treatment.price)} ${quote.rooms > 1 ? formatMultiRoomPriceScope(option.roomTypeLabel) : priceScopeLabel}`);
