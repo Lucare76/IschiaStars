@@ -250,11 +250,17 @@ async function reserveLedgerMessage(input: {
 
   const existing = await supabase
     .from('email_import_ledger')
-    .select('status')
+    .select('status,metadata')
     .eq('gmail_message_id', input.messageId)
     .maybeSingle();
   if (existing.error) return { exists: false, error: existing.error.message };
-  if (existing.data) return { exists: true, status: String(existing.data.status ?? '') };
+  if (existing.data) {
+    const metadata = existing.data.metadata as Record<string, unknown> | null;
+    const interrupted = existing.data.status === 'needs_review' && metadata?.reserved_at && !metadata?.reason;
+    const retryableFailure = existing.data.status === 'parse_failed' && metadata?.error;
+    if (interrupted || retryableFailure) return { exists: false };
+    return { exists: true, status: String(existing.data.status ?? '') };
+  }
 
   const inserted = await supabase.from('email_import_ledger').insert({
     gmail_message_id: input.messageId,
@@ -275,7 +281,7 @@ async function reserveLedgerMessage(input: {
   if (inserted.error.code === '23505') {
     const raced = await supabase
       .from('email_import_ledger')
-      .select('status')
+      .select('status,metadata')
       .eq('gmail_message_id', input.messageId)
       .maybeSingle();
     return { exists: true, status: String(raced.data?.status ?? 'unknown') };
@@ -304,8 +310,7 @@ async function updateLedgerMessage(
       updated_at: new Date().toISOString(),
     })
     .eq('gmail_message_id', messageId);
-  if (error)
-    console.warn(`[mail-inbox] ledger update failed msgId=${messageId.slice(0, 40)} reason=${error.message}`);
+  if (error) throw new Error(`Salvataggio registro email fallito: ${error.message}`);
 }
 
 async function saveInboundNeedsReview(input: {
@@ -405,19 +410,29 @@ export async function pollImapInbox(): Promise<PollImapResult> {
   const lock = await client.getMailboxLock(config.folder);
 
   try {
-    const since = new Date(Date.now() - config.lookbackDays * 24 * 60 * 60 * 1000);
-    const searchResult = await client.search({ since }, { uid: true });
-    const uids: number[] = searchResult || [];
-    console.info(
-      `[mail-inbox] messages found count=${uids.length} since=${since.toISOString().slice(0, 10)}`
-    );
-
-    if (!uids.length) return result;
-
-    // Cap to most recent 200 to stay within Vercel function timeout
-    const limited = uids.slice(-200);
-
-    for await (const msg of client.fetch(limited, { source: true }, { uid: true })) {
+    const supabase = createSupabaseAdminClient();
+    if (!supabase) throw new Error('Database non disponibile: controllo email interrotto senza avanzare.');
+    const mailbox = client.mailbox;
+    if (!mailbox) throw new Error('Casella IMAP non aperta');
+    const uidValidity = String(mailbox.uidValidity);
+    const cursorKey = `imap_cursor_${createHash('sha256').update(`${config.host}|${config.user}|${config.folder}`).digest('hex').slice(0, 24)}`;
+    const cursorResult = await supabase.from('settings').select('value').eq('key', cursorKey).maybeSingle();
+    if (cursorResult.error) throw new Error('Impossibile leggere avanzamento email');
+    const saved = cursorResult.data?.value as { uidValidity?: string; lastUid?: number; since?: string } | undefined;
+    const validCursor = saved?.uidValidity === uidValidity && Number.isSafeInteger(saved.lastUid) && (saved.lastUid ?? -1) >= 0;
+    let lastUid = validCursor ? saved!.lastUid! : 0;
+    // Keep the initial recovery window fixed until its backlog is drained.
+    const since = validCursor && saved?.since ? new Date(saved.since) : new Date(Date.now() - config.lookbackDays * 86400000);
+    const searchResult = await client.search(lastUid > 0 ? { uid: `${lastUid + 1}:*` } : { since }, { uid: true });
+    // IMAP n:* can include the last message even when n exceeds UIDNEXT.
+    const uids = (searchResult || []).filter(uid => uid > lastUid).sort((a, b) => a - b);
+    console.info(`[mail-inbox] incremental candidates=${uids.length} afterUid=${lastUid}`);
+    const limited = uids.slice(0, 20);
+    if (!limited.length) return result;
+    const batchStartedAt = Date.now();
+    for await (const msg of client.fetch(limited.length ? limited : [], { source: true }, { uid: true })) {
+      if (Date.now() - batchStartedAt > 30_000) break;
+      const errorsBefore = result.errors.length;
       try {
         if (!msg.source) {
           result.errors.push(`Uid ${msg.uid}: source vuoto`);
@@ -465,9 +480,7 @@ export async function pollImapInbox(): Promise<PollImapResult> {
           continue;
         }
         if (ledger.error) {
-          console.warn(
-            `[mail-inbox] ledger reserve failed uid=${msg.uid} reason=${ledger.error} — DB constraint is safety net`
-          );
+          throw new Error(`Registro importazione non disponibile: ${ledger.error}`);
         }
 
         // Step 2: secondary dedup via quote_requests metadata
@@ -658,6 +671,19 @@ export async function pollImapInbox(): Promise<PollImapResult> {
         const errMsg = msgErr instanceof Error ? msgErr.message : String(msgErr);
         console.error(`[mail-inbox] error processing uid ${msg.uid}: ${errMsg}`);
         result.errors.push(`Uid ${msg.uid}: ${errMsg}`);
+      } finally {
+        // Do not pass a failed message: retries must start from this UID.
+        if (result.errors.length > errorsBefore) break;
+        const checkpoint = await supabase.from('settings').upsert({
+          key: cursorKey,
+          value: { uidValidity, lastUid: msg.uid, since: since.toISOString() },
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+        if (checkpoint.error) {
+          result.errors.push('Salvataggio avanzamento email non riuscito; il prossimo controllo riproverà.');
+          break;
+        }
+        lastUid = msg.uid;
       }
     }
   } catch (err) {

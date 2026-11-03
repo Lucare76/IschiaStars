@@ -43,9 +43,15 @@ export function PendingRequestsRefresh() {
     setImportState({ type: "loading" });
     try {
       const res = await adminApiFetch("/api/admin/poll-email-now", { method: "POST" });
-      const data = await res.json() as PollEmailResponse;
+      const data = await res.json().catch(() => null) as PollEmailResponse | null;
+      if (!data) {
+        setImportState({ type: "error", message: res.status === 504 || res.status === 502
+          ? "Il controllo email ha superato il tempo disponibile. Riprova: le richieste già salvate restano disponibili."
+          : `Il server non ha restituito una risposta valida (HTTP ${res.status}). Riprova.` });
+        return;
+      }
       if (!res.ok || !data.ok) {
-        const errorMsg = data.message ?? data.error ?? data.errors?.[0] ?? "Errore durante l'importazione";
+        const errorMsg = res.status === 401 ? "Sessione scaduta. Effettua nuovamente l’accesso." : data.message ?? data.error ?? data.errors?.[0] ?? "Errore durante l'importazione";
         setImportState({ type: "error", message: errorMsg });
       } else {
         setImportState({ type: "done", message: formatImportMessage(data) });
