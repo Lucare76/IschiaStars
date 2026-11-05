@@ -1,3 +1,4 @@
+import { formatDateRome } from "@/lib/date-format";
 import { Quote, QuoteHotelOption } from "@/lib/types";
 import { getMandatoryHotelFeeNote } from "@/lib/hotel-policies";
 
@@ -235,6 +236,10 @@ export function adminQuoteWhatsappMessage(input: {
   const customerNotesBlock = customerNotes.length > 0
     ? `\n📝 Note generali preventivo:\n${customerNotes.map((note) => `· ${note}`).join("\n")}\n`
     : "";
+  const expiryDate = quote.offerExpiresAt ? formatDateRome(quote.offerExpiresAt) : "-";
+  const expiryBlock = expiryDate !== "-"
+    ? `📅 *SCADENZA DEL PREVENTIVO: ${expiryDate.toLocaleUpperCase("it-IT")}*\n\n`
+    : "";
   const availabilityNotice = stayIncludesAugust(quote.arrivalDate, quote.departureDate)
     ? "⚠️ Disponibilità limitata e su richiesta. Ti consigliamo di contattarci telefonicamente."
     : "⚠️ Le disponibilità per questo periodo sono limitate. Ti consigliamo di contattarci telefonicamente.";
@@ -259,9 +264,7 @@ ${quoteUrl}
 ${hotelsBlock}
 ${mandatoryFeeBlock}
 ${customerNotesBlock}
-Dal link puoi vedere tutti i dettagli e confermare direttamente online.
-
-${availabilityNotice}
+${expiryBlock}${availabilityNotice}
 
 Per dubbi o richieste:
 📞 081 90 54 81
