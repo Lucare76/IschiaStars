@@ -9,9 +9,9 @@ type PublicQuoteMessageTarget = {
 function formatWAPrice(price: number): string {
   const rounded = Math.round(price);
   if (Math.abs(price - rounded) < 0.005) {
-    return `€${new Intl.NumberFormat("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(rounded)}`;
+    return `€${rounded}`;
   }
-  return `€${new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price)}`;
+  return `€${new Intl.NumberFormat("it-IT", { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price)}`;
 }
 
 function nightsCount(arrival: string, departure: string): number {
@@ -194,7 +194,7 @@ export function adminQuoteWhatsappMessage(input: {
         lines.push(`   🛏 ${optionLabel}`);
       }
       for (const treatment of first.treatments) {
-        lines.push(`${optionLabel && !roomTypeLine ? "      " : "   "}· ${treatment.label}: ${formatWAPrice(treatment.price)} ${quote.rooms > 1 ? formatMultiRoomPriceScope(first.roomTypeLabel) : priceScopeLabel}`);
+        lines.push(`${optionLabel && !roomTypeLine ? "   " : ""}· ${treatment.label}: ${formatWAPrice(treatment.price)} ${quote.rooms > 1 ? formatMultiRoomPriceScope(first.roomTypeLabel) : priceScopeLabel}`);
       }
     } else {
       for (let index = 0; index < group.length; index++) {
@@ -219,7 +219,10 @@ export function adminQuoteWhatsappMessage(input: {
     return lines.join("\n");
   });
 
-  const hotelsBlock = hotelBlocks.join("\n─────────\n");
+  const [firstHotel, ...otherHotels] = hotelBlocks;
+  const otherProposals = otherHotels.length > 0
+    ? ["ALTRE PROPOSTE:", ...otherHotels].join("\n\n")
+    : "";
 
   const showMandatoryHotelFees = hotelEntries.length <= 1;
   const mandatoryFeeNotes = showMandatoryHotelFees
@@ -230,19 +233,19 @@ export function adminQuoteWhatsappMessage(input: {
       ))
     : [];
   const mandatoryFeeBlock = mandatoryFeeNotes.length > 0
-    ? `\n⚠️ ${mandatoryFeeNotes.join("\n⚠️ ")}\n`
+    ? `⚠️ ${mandatoryFeeNotes.join("\n⚠️ ")}`
     : "";
   const customerNotes = visibleNoteLines(quote.customerNotes);
   const customerNotesBlock = customerNotes.length > 0
-    ? `\n📝 Note generali preventivo:\n${customerNotes.map((note) => `· ${note}`).join("\n")}\n`
+    ? `📝 Note generali preventivo:\n${customerNotes.map((note) => `· ${note}`).join("\n")}`
     : "";
   const expiryDate = quote.offerExpiresAt ? formatDateRome(quote.offerExpiresAt) : "-";
   const expiryBlock = expiryDate !== "-"
-    ? `📅 *SCADENZA DEL PREVENTIVO: ${expiryDate.toLocaleUpperCase("it-IT")}*\n\n`
+    ? `📅 *SCADENZA DEL PREVENTIVO: ${expiryDate.toLocaleUpperCase("it-IT")}*`
     : "";
   const availabilityNotice = stayIncludesAugust(quote.arrivalDate, quote.departureDate)
     ? "⚠️ Disponibilità limitata e su richiesta. Ti consigliamo di contattarci telefonicamente."
-    : "⚠️ Le disponibilità per questo periodo sono limitate. Ti consigliamo di contattarci telefonicamente.";
+    : "⚠️ Disponibilità limitate. Ti consigliamo di contattarci telefonicamente.";
 
   const multiRoomTypeSummary = quote.rooms > 1 ? multiRoomSummary(hotelEntries[0], quote.rooms) : undefined;
   const stayLines = [
@@ -253,26 +256,23 @@ export function adminQuoteWhatsappMessage(input: {
       : (roomTypeLine ? [`🛏️ ${roomTypeLine}`] : [])),
   ].join("\n");
 
-  return `👋 Ciao ${quote.customerFirstName}!
-${proposalTitle}
-${quote.rooms === 1 ? `\n${singleRoomCostsHeading}\n` : `\n${multiRoomCostsHeading}\n`}
-${stayLines}
-
-Apri il link per i dettagli ⬇️
-${quoteUrl}
-
-${hotelsBlock}
-${mandatoryFeeBlock}
-${customerNotesBlock}
-${expiryBlock}${availabilityNotice}
-
-Per dubbi o richieste:
+  return [
+    `Ciao ${quote.customerFirstName}!\n${proposalTitle}`,
+    quote.rooms === 1 ? singleRoomCostsHeading : multiRoomCostsHeading,
+    stayLines,
+    `Apri il link per tutti i dettagli ⬇️\n${quoteUrl}`,
+    firstHotel,
+    otherProposals,
+    mandatoryFeeBlock,
+    customerNotesBlock,
+    expiryBlock,
+    availabilityNotice,
+    `Per dubbi o richieste:
 📞 081 90 54 81
 💬 WhatsApp 371 75 90 017
-🌐 ischiastars.it
-
-A presto,
-Diego - IschiaStars ☀️`;
+🌐 ischiastars.it`,
+    "A presto,\nDiego – Ischia Stars ☀️",
+  ].filter(Boolean).join("\n\n");
 }
 
 export function publicQuoteInfoWhatsappMessage(quote: PublicQuoteMessageTarget, quoteUrl?: string) {
