@@ -274,6 +274,12 @@ export function QuoteProposalSection({
   }
 
   const isMultiRoom = quote.rooms > 1;
+  useEffect(() => {
+    if (isMultiRoom || isConfirmed || selectedRooms.length !== 1) return;
+    const formSection = confirmRef.current;
+    formSection?.focus({ preventScroll: true });
+    formSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [isMultiRoom, isConfirmed, selectedRooms]);
   const selectionComplete = selectedRooms.length >= quote.rooms && editingRoomIndex === null;
   const targetRoomNumber = editingRoomIndex !== null
     ? editingRoomIndex + 1
@@ -459,7 +465,7 @@ export function QuoteProposalSection({
       ) : null}
 
       {/* Conferma form */}
-      <div ref={confirmRef} id="conferma" className="no-print">
+      <div ref={confirmRef} id="conferma" className="no-print" tabIndex={-1}>
         <ConfirmQuoteForm
           quote={quote}
           selectedRooms={selectedRooms}
@@ -486,10 +492,6 @@ function CompareView({
   targetRoomNumber: number;
   selectionComplete: boolean;
 }) {
-  const [pendingSelection, setPendingSelection] = useState<{
-    option: PublicQuoteHotelOptionDTO;
-    treatment: TreatmentOption;
-  } | null>(null);
 
   const groups = groupedHotels
     .map(([groupId, options]) => {
@@ -669,10 +671,7 @@ function CompareView({
                       <button
                         className="w-full rounded-full bg-ischia-sun px-4 py-3 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95 disabled:cursor-default disabled:opacity-55"
                         disabled={selectionComplete}
-                        onClick={() => {
-                          if (roomCount > 1) onSelectTreatment(mainOption, firstTreatment);
-                          else setPendingSelection({ option: mainOption, treatment: firstTreatment });
-                        }}
+                        onClick={() => onSelectTreatment(mainOption, firstTreatment)}
                         type="button"
                       >
                         {selectionComplete
@@ -696,49 +695,6 @@ function CompareView({
         )}
       </div>
 
-      {/* La conferma intermedia resta solo per i preventivi con una camera. */}
-      {roomCount === 1 && pendingSelection ? (
-        <div
-          aria-modal="true"
-          className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5"
-          role="dialog"
-        >
-          <div className="mx-auto w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-black text-ischia-navy">
-              {roomCount > 1 ? `Conferma Camera ${targetRoomNumber}` : "Stai confermando la tua preferenza"}
-            </h3>
-            <p className="mt-3 text-sm leading-6 text-gray-600">
-              Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà per completare la prenotazione.
-            </p>
-            <div className="mt-4 rounded-xl bg-ischia-mist p-3 text-sm text-ischia-ink/80">
-              <p><strong>Hotel:</strong> {pendingSelection.option.hotelName}</p>
-              {pendingSelection.option.roomTypeLabel ? (
-                <p><strong>Camera:</strong> {pendingSelection.option.roomTypeLabel}</p>
-              ) : null}
-              <p><strong>Trattamento:</strong> {pendingSelection.treatment.label}</p>
-            </div>
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
-              <button
-                className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20"
-                onClick={() => setPendingSelection(null)}
-                type="button"
-              >
-                Annulla
-              </button>
-              <button
-                className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
-                onClick={() => {
-                  onSelectTreatment(pendingSelection.option, pendingSelection.treatment);
-                  setPendingSelection(null);
-                }}
-                type="button"
-              >
-                Sì, confermo
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }
@@ -768,7 +724,6 @@ function HotelCard({
   targetRoomNumber: number;
   selectionComplete: boolean;
 }) {
-  const [pendingSelection, setPendingSelection] = useState<{ option: PublicQuoteHotelOptionDTO; treatment: TreatmentOption } | null>(null);
   const [reaction, setReaction] = useState<"interested" | "too_expensive" | null>(null);
   const reactionKey = `reaction_${quoteCode}_${mainOption.hotelGroup}`;
 
@@ -978,10 +933,7 @@ function HotelCard({
                             <button
                               className="w-full rounded-full bg-ischia-sun px-5 py-3.5 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95 disabled:cursor-default disabled:opacity-55"
                               disabled={selectionComplete}
-                              onClick={() => {
-                                if (quote.rooms > 1) onSelectTreatment(opt, treatment);
-                                else setPendingSelection({ option: opt, treatment });
-                              }}
+                              onClick={() => onSelectTreatment(opt, treatment)}
                               type="button"
                             >
                               {selectionComplete
@@ -1006,36 +958,6 @@ function HotelCard({
         })}
       </div>
 
-      {quote.rooms === 1 && pendingSelection ? (
-        <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5" role="dialog" aria-modal="true">
-          <div className="mx-auto w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-black text-ischia-navy">Conferma questa proposta</h3>
-            <p className="mt-3 text-sm leading-6 text-gray-600">
-              Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà per completare la prenotazione.
-            </p>
-            <div className="mt-4 rounded-xl bg-ischia-mist p-3 text-sm text-ischia-ink/80">
-              <p><strong>Hotel:</strong> {pendingSelection.option.hotelName}</p>
-              {pendingSelection.option.roomTypeLabel ? <p><strong>Camera:</strong> {pendingSelection.option.roomTypeLabel}</p> : null}
-              <p><strong>Trattamento:</strong> {pendingSelection.treatment.label}</p>
-            </div>
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
-              <button className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ischia-navy ring-1 ring-ischia-blue/20" onClick={() => setPendingSelection(null)} type="button">
-                Annulla
-              </button>
-              <button
-                className="rounded-full bg-ischia-sun px-4 py-2 text-sm font-black text-ischia-navy"
-                onClick={() => {
-                  onSelectTreatment(pendingSelection.option, pendingSelection.treatment);
-                  setPendingSelection(null);
-                }}
-                type="button"
-              >
-                Sì, confermo
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
