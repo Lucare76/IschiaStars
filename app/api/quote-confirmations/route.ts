@@ -132,8 +132,11 @@ export async function POST(request: NextRequest) {
 
 function validateConfirmation(body: ConfirmationPayload | null) {
   if (!body?.quoteCode || !body.token) return "Link preventivo non valido";
-  const required = [body.firstName, body.lastName, body.phone, body.email];
-  if (required.some((v) => !v?.trim())) return "Compila tutti i campi obbligatori";
+  const required = [
+    body.firstName, body.lastName, body.phone, body.email, body.fiscalCode,
+    body.address, body.city, body.postalCode, body.province
+  ];
+  if (required.some((value) => typeof value !== "string" || !value.trim())) return "Compila tutti i campi obbligatori";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email!.trim())) return "Email non valida";
   if (body.fiscalCode?.trim() && body.fiscalCode.trim().length < 11) return "Codice fiscale troppo breve";
   if (body.postalCode?.trim() && !/^\d{5}$/.test(body.postalCode.trim())) return "CAP non valido";
