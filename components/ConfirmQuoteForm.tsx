@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type Ref } from "react";
 import type { PublicQuoteDTO } from "@/lib/public-quote-dto";
 import type { QuoteRoomSelection } from "@/lib/types";
 import { formatCurrency, ischiastarsWhatsappNumber } from "@/lib/utils";
@@ -20,7 +20,11 @@ function isOfferExpired(offerExpiresAt: string | null | undefined) {
   return Boolean(offerExpiresAt && offerExpiresAt < todayRomeDateString());
 }
 
-export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: PublicQuoteDTO; selectedRooms?: QuoteRoomSelection[] }) {
+export function ConfirmQuoteForm({ quote, selectedRooms = [], paymentSummaryRef }: {
+  quote: PublicQuoteDTO;
+  selectedRooms?: QuoteRoomSelection[];
+  paymentSummaryRef?: Ref<HTMLDivElement>;
+}) {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,7 +133,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: PublicQ
       )}
 
       {selectedOption ? (
-        <div className="rounded-xl bg-white p-4 text-sm leading-6 text-ischia-ink/78 ring-1 ring-ischia-blue/10">
+        <div ref={paymentSummaryRef} tabIndex={-1} className="rounded-xl bg-white p-4 text-sm leading-6 text-ischia-ink/78 ring-1 ring-ischia-blue/10">
           <p className="font-black text-ischia-navy">Riepilogo pagamento</p>
           <p><strong>Prezzo totale:</strong> {formatCurrency(totalPrice)}</p>
           {selectedOption.depositPercent != null && selectedOption.depositPercent > 0 ? (
