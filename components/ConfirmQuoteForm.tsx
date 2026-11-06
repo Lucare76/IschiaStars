@@ -99,9 +99,6 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: PublicQ
           });
       }}
     >
-      <h3 className="rounded-xl bg-ischia-sun px-4 py-4 text-2xl font-black leading-tight text-ischia-navy sm:px-6 sm:text-3xl">
-        Compila il modulo con tutti i tuoi dati anagrafici
-      </h3>
       <p className="text-sm leading-6 text-ischia-ink/70">Completa i dati per confermare questa proposta. IschiaStars verificherà la disponibilità con la struttura prima dei passaggi definitivi.</p>
       {expiredOffer ? (
         <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
@@ -148,6 +145,10 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: PublicQ
           </p>
         </div>
       ) : null}
+
+      <h3 className="rounded-xl bg-ischia-sun px-4 py-4 text-2xl font-black leading-tight text-ischia-navy sm:px-6 sm:text-3xl">
+        Compila il modulo con tutti i tuoi dati anagrafici
+      </h3>
 
       {!canSubmit && requiresSelection && (
         <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 ring-1 ring-rose-200">
