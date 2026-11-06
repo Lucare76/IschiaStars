@@ -99,7 +99,9 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: PublicQ
           });
       }}
     >
-      <h3 className="text-2xl font-black text-ischia-navy">Conferma il preventivo</h3>
+      <h3 className="rounded-xl bg-ischia-sun px-4 py-4 text-2xl font-black leading-tight text-ischia-navy sm:px-6 sm:text-3xl">
+        Compila il modulo con tutti i tuoi dati anagrafici
+      </h3>
       <p className="text-sm leading-6 text-ischia-ink/70">Completa i dati per confermare questa proposta. IschiaStars verificherà la disponibilità con la struttura prima dei passaggi definitivi.</p>
       {expiredOffer ? (
         <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
@@ -165,11 +167,11 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [] }: { quote: PublicQ
         <Input required name="lastName" label="Cognome" defaultValue={quote.customerLastName} />
         <Input required name="phone" label="Telefono WhatsApp" defaultValue={quote.customerPhone} />
         <Input required name="email" label="Email" type="email" defaultValue={quote.customerEmail} />
-        <Input name="fiscalCode" label="Codice fiscale (facoltativo)" minLength={11} />
-        <Input name="address" label="Indirizzo di residenza (facoltativo)" />
-        <Input name="city" label="Città (facoltativo)" />
-        <Input name="postalCode" label="CAP (facoltativo)" pattern="[0-9]{5}" />
-        <Input name="province" label="Provincia (facoltativo)" />
+        <Input required name="fiscalCode" label="Codice fiscale" minLength={11} />
+        <Input required name="address" label="Indirizzo di residenza" />
+        <Input required name="city" label="Città" />
+        <Input required name="postalCode" label="CAP" pattern="[0-9]{5}" />
+        <Input required name="province" label="Provincia" />
       </div>
 
       {quote.children.length > 0 && (
