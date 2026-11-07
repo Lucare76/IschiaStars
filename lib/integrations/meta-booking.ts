@@ -15,6 +15,8 @@ export type MetaBookingEvent = {
   fbp?: string;
   fbc?: string;
   consentGranted: boolean;
+  /** Only website-originated bookings are eligible for this adapter. */
+  websiteOriginVerified: boolean;
 };
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -22,15 +24,15 @@ const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, "");
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 
 export function buildMetaBookingPayload(event: MetaBookingEvent) {
-  if (!event.consentGranted) return null;
+  if (!event.consentGranted || !event.websiteOriginVerified) return null;
   if (!event.confirmationId || !Number.isFinite(Date.parse(event.occurredAt))) {
     throw new Error("Invalid confirmation identifier or timestamp");
   }
   const user_data: Record<string, string | string[]> = {};
-  if (event.email) user_data.em = [hash(normalizeEmail(event.email))];
-  if (event.phone) user_data.ph = [hash(normalizePhone(event.phone))];
-  if (event.fbp) user_data.fbp = event.fbp;
-  if (event.fbc) user_data.fbc = event.fbc;
+  if (event.email && normalizeEmail(event.email)) user_data.em = [hash(normalizeEmail(event.email))];
+  if (event.phone && normalizePhone(event.phone)) user_data.ph = [hash(normalizePhone(event.phone))];
+  if (event.fbp && /^fb\.1\.\d+\.\d+$/.test(event.fbp)) user_data.fbp = event.fbp;
+  if (event.fbc && /^fb\.1\.\d+\..+$/.test(event.fbc)) user_data.fbc = event.fbc;
   if (!Object.keys(user_data).length) return null;
 
   return {
