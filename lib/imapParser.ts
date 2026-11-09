@@ -440,7 +440,7 @@ export async function pollImapInbox(): Promise<PollImapResult> {
     let priorityUid = validCursor && Number.isSafeInteger(saved?.priorityUid)
       ? saved!.priorityUid!
       : Math.max(lastUid, (uids.slice(-20)[0] ?? lastUid + 1) - 1);
-    const priority = uids.filter(uid => uid > priorityUid).slice(0, 20);
+    const priority = uids.filter(uid => uid > priorityUid).slice(-20);
     const backlog = uids.filter(uid => !priority.includes(uid)).slice(0, 20);
     const batchStartedAt = Date.now();
     let stop = false;
