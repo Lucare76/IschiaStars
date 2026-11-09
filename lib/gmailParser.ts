@@ -1,3 +1,4 @@
+import { parseChildAges } from '@/lib/child-age-parser';
 import { google } from 'googleapis';
 import { createQuoteRequest } from '@/lib/repositories/quoteRequests';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
@@ -156,9 +157,10 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
   const checkOut = normalizeFormDate(rawCheckOut);
   const checkIn = normalizeFormDate(rawCheckIn, yearFromDate(checkOut));
 
-  const parsedAges = etaBambini && bambini > 0
-    ? etaBambini.split(/[.,\/;\s\-]+/).map((eta: string) => parseInt(eta.trim())).filter((n) => !isNaN(n))
-    : [];
+  const parsedAges = etaBambini && bambini > 0 ? parseChildAges(etaBambini) : [];
+  const childAgeNote = etaBambini && bambini > 0 && /\b(mesi|mese|months?)\b/i.test(etaBambini)
+    ? `Età bambini indicata nella richiesta: ${etaBambini}. Età nel PMS espressa in anni compiuti.`
+    : undefined;
 
   const parseWarnings: string[] = [];
   if (bambini > 4 && parsedAges.length === 1) {
@@ -184,10 +186,11 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     children,
     parseWarnings,
     rooms: parseInt(get('Numero di Camere') ?? '1'),
-    message: getMultiline('Messaggio') ?? undefined,
+    message: [getMultiline('Messaggio'), childAgeNote].filter(Boolean).join('\n\n') || undefined,
     receivedAt: typeof metadata.email_date === "string" ? metadata.email_date : undefined,
     metadata: {
       requested_hotel: hotel,
+      original_children_ages: etaBambini,
       utm_source: utmSource,
       utm_campaign: utmCampaign,
       source_url: pageUrl,
