@@ -57,7 +57,8 @@ export const defaultQuoteChipSettings: QuoteChipSettings = {
     { label: "Camera tripla standard", capacity: 3 },
     { label: "Camera tripla con balcone", capacity: 3 },
     { label: "Camera quadrupla standard", capacity: 4 },
-    { label: "Camera quadrupla con balcone", capacity: 4 }
+    { label: "Camera quadrupla con balcone", capacity: 4 },
+    { label: "Camera quintupla standard", capacity: 5 }
   ]
 };
 
@@ -142,5 +143,6 @@ function inferRoomTypeCapacity(label: string) {
   if (/\b(matrimoniale|doppia|double|twin)\b/.test(normalized)) return 2;
   if (/\b(tripla|triple)\b/.test(normalized)) return 3;
   if (/\b(quadrupla|quadruple|family|familiare)\b/.test(normalized)) return 4;
+  if (/\b(quintupla|quintuple)\b/.test(normalized)) return 5;
   return 2;
 }
