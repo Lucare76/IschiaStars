@@ -103,7 +103,7 @@ function yearFromDate(value: string): number | null {
 
 function parseEmailText(text: string, metadata: Record<string, unknown>) {
   const get = (field: string) => {
-    const match = text.match(new RegExp(`${field}:\\s*([^\\n\\r]+)`, 'i'));
+    const match = text.match(new RegExp(`(?:^|\\n)${field}:[ \t]*([^\\n\\r]*)`, 'i'));
     return match ? match[1].trim() : null;
   };
 
@@ -140,7 +140,9 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
   const utmCampaign = pageUrl.match(/utm_campaign=([^&]+)/)?.[1]?.replace(/\+/g, ' ') ?? null;
   const hotel = get('Hotel');
   const etaBambini = get('Età Bambini') ?? get('Eta Bambini') ?? get('EtÃ  Bambini');
-  const bambini = parseInt(get('Bambini') ?? '0');
+  const bambini = Number(get('Bambini') || '0');
+  const adults = Number(get('Adulti') || '2');
+  const rooms = Number(get('Numero di Camere') || '1');
   const rawCheckIn = get('Data di arrivo') ?? '';
   const rawCheckOut = get('Data di partenza') ?? '';
   const checkOut = normalizeFormDate(rawCheckOut);
@@ -152,12 +154,17 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     : undefined;
 
   const parseWarnings: string[] = [];
+  if (!Number.isInteger(adults) || adults < 1 || adults > 2147483647) parseWarnings.push('invalid_adults');
+  if (!Number.isInteger(rooms) || rooms < 1 || rooms > 2147483647) parseWarnings.push('invalid_rooms');
+  if (!Number.isInteger(bambini) || bambini < 0 || bambini > 100) parseWarnings.push('invalid_children_count');
+  if (parsedAges.some((age) => !Number.isInteger(age) || age < 0 || age > 17)) parseWarnings.push('invalid_child_age');
+  if (bambini > 0 && parsedAges.length !== bambini && parsedAges.length !== 1) parseWarnings.push('missing_children_ages');
   if (bambini > 4 && parsedAges.length === 1) {
     parseWarnings.push('suspicious_children_count_single_age');
   }
 
   // Una sola età con più bambini dichiarati = gemelli (stessa età per tutti)
-  const childAges = parsedAges.length === 1 && bambini > 1
+  const childAges = parsedAges.length === 1 && bambini > 1 && bambini <= 100
     ? Array(bambini).fill(parsedAges[0])
     : parsedAges;
 
@@ -175,10 +182,10 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     destination: 'Ischia',
     checkIn,
     checkOut,
-    adults: parseInt(get('Adulti') ?? '2'),
+    adults,
     children,
     parseWarnings,
-    rooms: parseInt(get('Numero di Camere') ?? '1'),
+    rooms,
     message: [getMultiline('Messaggio'), childAgeNote].filter(Boolean).join('\n\n') || undefined,
     receivedAt: typeof metadata.email_date === 'string' ? metadata.email_date : undefined,
     metadata: {
