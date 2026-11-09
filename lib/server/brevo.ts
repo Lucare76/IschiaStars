@@ -318,6 +318,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     const capacity = normalized.includes("singola") ? 1
       : normalized.includes("tripla") ? 3
       : normalized.includes("quadrupla") ? 4
+      : normalized.includes("quintupla") ? 5
       : normalized.includes("doppia") || normalized.includes("matrimoniale") ? 2
       : undefined;
     return capacity ? `totale per ${capacity} person${capacity === 1 ? "a" : "e"}` : "totale camera";

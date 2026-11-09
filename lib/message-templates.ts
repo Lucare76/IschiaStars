@@ -73,6 +73,7 @@ function roomCapacityFromLabel(label: string | null | undefined): number | undef
   if (normalized.includes("singola")) return 1;
   if (normalized.includes("tripla")) return 3;
   if (normalized.includes("quadrupla")) return 4;
+  if (normalized.includes("quintupla")) return 5;
   if (normalized.includes("doppia") || normalized.includes("matrimoniale")) return 2;
   return undefined;
 }
@@ -83,6 +84,7 @@ function roomShortName(label: string | null | undefined): string {
   if (capacity === 2) return "doppia";
   if (capacity === 3) return "tripla";
   if (capacity === 4) return "quadrupla";
+  if (capacity === 5) return "quintupla";
   return (label ?? "camera").trim().toLowerCase();
 }
 
@@ -91,6 +93,7 @@ function roomShortNamePlural(name: string): string {
   if (name === "doppia") return "doppie";
   if (name === "tripla") return "triple";
   if (name === "quadrupla") return "quadruple";
+  if (name === "quintupla") return "quintuple";
   return name;
 }
 

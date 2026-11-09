@@ -49,7 +49,8 @@ const DEFAULT_ROOM_TYPE_PRESETS = [
   { label: "Camera tripla standard", capacity: 3 },
   { label: "Camera tripla con balcone", capacity: 3 },
   { label: "Camera quadrupla standard", capacity: 4 },
-  { label: "Camera quadrupla con balcone", capacity: 4 }
+  { label: "Camera quadrupla con balcone", capacity: 4 },
+    { label: "Camera quintupla standard", capacity: 5 }
 ] as const;
 
 export function emptyRoomType(): RoomTypeState {
@@ -203,8 +204,8 @@ export function suggestedGuestsPerRoom(totalGuests: number, rooms: number) {
 }
 
 export function suggestedRoomTypeLabel(guestsPerRoom: number, roomTypePresets?: readonly RoomTypePresetSetting[]) {
-  const capacity = Math.min(4, Math.max(1, guestsPerRoom));
-  return buildRoomTypePresets(roomTypePresets).find((preset) => preset.capacity === capacity)?.label ?? "Tipologia camera da confermare";
+  const capacity = Math.max(1, guestsPerRoom);
+  return buildRoomTypePresets(roomTypePresets).find((preset) => preset.capacity === capacity)?.label ?? (capacity === 5 ? "Camera quintupla standard" : "Tipologia camera da confermare");
 }
 
 export function HotelOptionsEditor({
@@ -684,7 +685,7 @@ function RoomTypeSelect({
   roomTypePresets: readonly RoomTypePresetSetting[];
   onChange: (label: string) => void;
 }) {
-  const normalizedCapacity = suggestedCapacity != null ? Math.min(4, Math.max(1, suggestedCapacity)) : undefined;
+  const normalizedCapacity = suggestedCapacity != null ? Math.max(1, suggestedCapacity) : undefined;
   const presets = buildRoomTypePresets(roomTypePresets);
   const recommended = normalizedCapacity ? presets.filter((preset) => preset.capacity === normalizedCapacity) : [];
   const otherPresets = presets.filter((preset) => !recommended.some((item) => item.label === preset.label));
