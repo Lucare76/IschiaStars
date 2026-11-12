@@ -1088,7 +1088,7 @@ IschiaStars 🌊`;
                 />
               </label>
               <label className="block text-sm font-semibold text-ischia-ink">
-                Commissione trattenuta{supplierBalanceBeforeArrival ? " (%)" : ""}
+                Commissione trattenuta
                 <input
                   className="mt-1 w-full rounded-xl border border-ischia-blue/20 px-3 py-2"
                   placeholder={supplierBalanceBeforeArrival ? "es. 15" : "es. 300"}
