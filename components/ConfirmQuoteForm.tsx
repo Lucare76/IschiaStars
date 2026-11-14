@@ -20,10 +20,10 @@ function isOfferExpired(offerExpiresAt: string | null | undefined) {
   return Boolean(offerExpiresAt && offerExpiresAt < todayRomeDateString());
 }
 
-export function ConfirmQuoteForm({ quote, selectedRooms = [], paymentSummaryRef }: {
+export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFieldsRef }: {
   quote: PublicQuoteDTO;
   selectedRooms?: QuoteRoomSelection[];
-  paymentSummaryRef?: Ref<HTMLDivElement>;
+  confirmationFieldsRef?: Ref<HTMLHeadingElement>;
 }) {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -133,7 +133,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], paymentSummaryRef 
       )}
 
       {selectedOption ? (
-        <div ref={paymentSummaryRef} tabIndex={-1} className="rounded-xl bg-white p-4 text-sm leading-6 text-ischia-ink/78 ring-1 ring-ischia-blue/10">
+        <div className="rounded-xl bg-white p-4 text-sm leading-6 text-ischia-ink/78 ring-1 ring-ischia-blue/10">
           <p className="font-black text-ischia-navy">Riepilogo pagamento</p>
           <p><strong>Prezzo totale:</strong> {formatCurrency(totalPrice)}</p>
           {selectedOption.depositPercent != null && selectedOption.depositPercent > 0 ? (
@@ -150,7 +150,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], paymentSummaryRef 
         </div>
       ) : null}
 
-      <h3 className="rounded-xl bg-ischia-sun px-4 py-4 text-2xl font-black leading-tight text-ischia-navy sm:px-6 sm:text-3xl">
+      <h3 ref={confirmationFieldsRef} tabIndex={-1} className="scroll-mt-4 rounded-xl bg-ischia-sun px-4 py-4 text-2xl font-black leading-tight text-ischia-navy sm:px-6 sm:text-3xl">
         Compila il modulo con tutti i tuoi dati anagrafici
       </h3>
 
