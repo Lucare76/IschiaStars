@@ -10,15 +10,15 @@ import { absolutePublicQuoteUrl, publicWhatsappLink } from "@/lib/utils";
 export function PublicQuoteHeaderActions({ quote, contentSettings = defaultQuoteContentSettings }: { quote: PublicQuoteDTO; contentSettings?: QuoteContentSettings }) {
   const quoteUrl = absolutePublicQuoteUrl(quote);
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex w-full gap-2 sm:w-auto sm:flex-wrap">
       <a
-        className="rounded-full bg-ischia-leaf px-4 py-2 text-sm font-black text-white"
+        className="flex-1 whitespace-nowrap rounded-full bg-ischia-leaf px-4 py-2 text-center text-xs sm:flex-none sm:text-sm font-black text-white"
         href={publicWhatsappLink(publicQuoteInfoWhatsappMessage(quote, quoteUrl))}
         onClick={() => trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "whatsapp_clicked", { placement: "public_header" })}
       >
         {contentSettings.headerWhatsappLabel}
       </a>
-      <PrintButton className="rounded-full bg-ischia-navy px-4 py-2 text-sm font-black text-white" quoteCode={quote.code} token={quote.token} />
+      <PrintButton className="flex-1 whitespace-nowrap rounded-full bg-ischia-navy px-4 py-2 text-xs sm:flex-none sm:text-sm font-black text-white" quoteCode={quote.code} token={quote.token} />
     </div>
   );
 }
