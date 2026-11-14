@@ -418,6 +418,10 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
             <img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="120" style="display:block;width:120px;max-width:100%;height:auto;margin:0 auto 8px;">
             <p class="section-title" style="margin:0;color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:1px;">Preventivi IschiaStars</p>
             <p style="margin:6px 0 0;color:#a8c4e0;font-size:13px;">Soggiorni a Ischia</p>
+            <p style="margin:16px 0 0;font-size:14px;line-height:1.8;">
+              <a href="tel:+39081905481" style="color:#ffffff;text-decoration:underline;">Telefono: 081 90 54 81</a><br>
+              <a href="https://wa.me/393717590017" style="color:#ffffff;text-decoration:underline;">WhatsApp: 371 75 90 017 — apri la chat</a>
+            </p>
           </td>
         </tr>
 
@@ -485,7 +489,10 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
         <tr>
           <td class="footer-padding" style="background:#f0f6ff;padding:20px 32px;text-align:center;border-top:1px solid #e0e8f0;">
             <p style="margin:0;font-size:13px;color:#666;">Il team IschiaStars</p>
-            <p style="margin:4px 0 0;font-size:12px;color:#999;">info@ischiastars.it</p>
+            <p style="margin:4px 0 0;font-size:13px;line-height:1.8;">
+              <a href="mailto:info@ischiastars.it" style="color:#0B67A3;text-decoration:underline;">info@ischiastars.it</a><br>
+              <a href="https://ischiastars.it" style="color:#0B67A3;text-decoration:underline;">ischiastars.it</a>
+            </p>
           </td>
         </tr>
 
@@ -520,7 +527,11 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     "Per domande puoi rispondere a questa email oppure scriverci su WhatsApp.",
     "",
     "Il team IschiaStars",
-    "info@ischiastars.it"
+    "Telefono: 081 90 54 81",
+    "WhatsApp: 371 75 90 017",
+    "Apri la chat WhatsApp: https://wa.me/393717590017",
+    "Email: info@ischiastars.it",
+    "Sito: https://ischiastars.it"
   ].join("\n");
 
   const subject = hasMultiple
