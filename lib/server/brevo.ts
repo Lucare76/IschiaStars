@@ -418,10 +418,23 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
             <img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="120" style="display:block;width:120px;max-width:100%;height:auto;margin:0 auto 8px;">
             <p class="section-title" style="margin:0;color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:1px;">Preventivi IschiaStars</p>
             <p style="margin:6px 0 0;color:#a8c4e0;font-size:13px;">Soggiorni a Ischia</p>
-            <p style="margin:16px 0 0;font-size:14px;line-height:1.8;">
-              <a href="tel:+39081905481" style="color:#ffffff;text-decoration:underline;">Telefono: 081 90 54 81</a><br>
-              <a href="https://wa.me/393717590017" style="color:#ffffff;text-decoration:underline;">WhatsApp: 371 75 90 017 — apri la chat</a>
-            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;margin:22px auto 0;">
+              <tr>
+                <td width="48%" align="center" valign="middle" bgcolor="#294f74" style="background:#294f74;border:1px solid #547493;border-radius:12px;">
+                  <a href="tel:+39081905481" style="display:block;padding:14px 8px;color:#ffffff;text-decoration:none;">
+                    <span style="display:block;font-size:12px;line-height:22px;font-weight:600;color:#dce9f5;">Chiamaci</span>
+                    <span style="display:block;margin-top:4px;font-size:16px;line-height:22px;font-weight:bold;white-space:nowrap;">081 90 54 81</span>
+                  </a>
+                </td>
+                <td width="4%" style="font-size:0;line-height:0;">&nbsp;</td>
+                <td width="48%" align="center" valign="middle" bgcolor="#168742" style="background:#168742;border:1px solid #35a15d;border-radius:12px;">
+                  <a href="https://wa.me/393717590017" style="display:block;padding:14px 8px;color:#ffffff;text-decoration:none;">
+                    <span style="display:block;font-size:12px;line-height:22px;font-weight:600;"><img src="${safeEmailUrl(`${siteUrl}/icons/whatsapp-white.png`)}" alt="" width="22" height="22" style="display:inline-block;width:22px;height:22px;vertical-align:middle;margin-right:5px;border:0;">Scrivici su WhatsApp</span>
+                    <span style="display:block;margin-top:4px;font-size:16px;line-height:22px;font-weight:bold;white-space:nowrap;">371 75 90 017</span>
+                  </a>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
 
