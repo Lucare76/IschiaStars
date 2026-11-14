@@ -836,6 +836,10 @@ function HotelCard({
                 {option.roomTypeLabel ? <p className="mt-1 text-xs text-ischia-ink/75">{option.roomTypeLabel}</p> : null}
                 <p className="mt-2 text-3xl font-black text-ischia-navy">{formatCurrency(treatment.price)}</p>
                 <p className="text-xs text-ischia-ink/70">{priceScopeLabel}</p>
+                <details className="mt-2 text-xs leading-5 text-ischia-ink/80">
+                  <summary className="cursor-pointer font-semibold text-ischia-blue">Cosa include</summary>
+                  <p className="mt-1">{treatmentDetails(option, treatment) || treatmentDescription(treatment)}</p>
+                </details>
                 {option.commitmentNote ? <p className="mt-2 text-xs font-semibold text-ischia-navy">{option.commitmentNote}</p> : null}
                 <button
                   className="mt-3 w-full rounded-full bg-ischia-sun px-4 py-3 text-sm font-black text-ischia-navy disabled:opacity-55"
@@ -905,7 +909,7 @@ function HotelCard({
         ) : null}
       </div>
 
-      <div className="space-y-4 bg-[#FBFDFE] px-5 pb-6 sm:px-7 sm:pb-8">
+      <div className={`${!isConfirmed ? "hidden sm:block print:block" : ""} space-y-4 bg-[#FBFDFE] px-5 pb-6 sm:px-7 sm:pb-8`}>
         {allGroupOptions.map((opt) => {
           const activeTreatments = visibleTreatments(opt);
           return (
