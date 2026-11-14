@@ -43,8 +43,8 @@ export function PublicQuotePage({
       <main className="print-page mx-auto max-w-[1180px] px-4 py-5 sm:px-6 sm:py-7">
         {trackOpening ? <PublicEventTracker quoteCode={quote.code} token={quote.token} source={openingSource} /> : null}
 
-        <header className="no-print mb-4 flex items-center justify-between gap-4 rounded-[22px] bg-white px-5 py-4 shadow-[0_10px_28px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
-          <IschiaStarsLogo />
+        <header className="no-print mb-4 flex flex-col items-stretch justify-between gap-3 rounded-[22px] bg-white px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5 sm:py-4 shadow-[0_10px_28px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
+          <IschiaStarsLogo size={56} />
           <PublicQuoteHeaderActions quote={quote} contentSettings={contentSettings} />
         </header>
 
@@ -76,7 +76,7 @@ export function PublicQuotePage({
           <div className="relative z-20 px-5 pt-5 sm:px-7">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-[1.05fr_1.35fr_0.8fr_0.7fr_1.7fr] lg:items-stretch">
               <HeroStat icon="user" label="Cliente" value={formatClientName(quote.customerFirstName, quote.customerLastName)} />
-              <HeroStat icon="calendar" label="Date" value={`${formatDate(quote.arrivalDate)} — ${formatDate(quote.departureDate)}`} />
+              <HeroStat icon="calendar" label="Date" mobileValue={`${new Date(quote.arrivalDate).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", timeZone: "Europe/Rome" })} → ${new Date(quote.departureDate).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Rome" })}`} value={`${formatDate(quote.arrivalDate)} — ${formatDate(quote.departureDate)}`} />
               <HeroStat icon="guests" label="Ospiti" value={guests} />
               <HeroStat icon="bed" label="Camere" value={String(quote.rooms)} />
               <div className="col-span-2 sm:col-span-1">
@@ -141,14 +141,17 @@ export function PublicQuotePage({
   );
 }
 
-function HeroStat({ icon, label, value }: { icon: "user" | "calendar" | "guests" | "bed"; label: string; value: string }) {
+function HeroStat({ icon, label, value, mobileValue }: { icon: "user" | "calendar" | "guests" | "bed"; label: string; value: string; mobileValue?: string }) {
   const glyph = icon === "user" ? "◯" : icon === "calendar" ? "▣" : icon === "guests" ? "◎" : "▤";
   return (
-    <div className="flex min-h-[72px] items-center gap-3 sm:min-h-[116px] rounded-[20px] bg-white px-4 py-4 shadow-[0_8px_20px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EAF5FC] text-lg font-black text-ischia-blue">{glyph}</div>
+    <div className="flex min-h-[64px] items-center gap-3 sm:min-h-[116px] rounded-[20px] bg-white p-3 sm:p-4 shadow-[0_8px_20px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
+      <div className="hidden h-10 w-10 shrink-0 sm:flex items-center justify-center rounded-full bg-[#EAF5FC] text-lg font-black text-ischia-blue">{glyph}</div>
       <div className="min-w-0">
         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-ischia-blue">{label}</p>
-        <p className="mt-1 text-sm font-black leading-5 text-ischia-navy">{value}</p>
+        <p className="mt-1 text-xs font-black leading-5 text-ischia-navy sm:text-sm">
+          <span className="sm:hidden">{mobileValue ?? value}</span>
+          <span className="hidden sm:inline">{value}</span>
+        </p>
       </div>
     </div>
   );
