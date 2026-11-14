@@ -49,7 +49,7 @@ export function PublicQuotePage({
         </header>
 
         <section className="overflow-hidden rounded-[30px] bg-white shadow-[0_22px_70px_rgba(8,63,115,0.12)] ring-1 ring-ischia-blue/10">
-          <div className="relative min-h-[350px] overflow-hidden sm:min-h-[390px]">
+          <div className="relative min-h-[210px] overflow-hidden sm:min-h-[390px]">
             {heroImage ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -59,13 +59,13 @@ export function PublicQuotePage({
               </>
             ) : null}
 
-            <div className="relative z-10 max-w-[650px] p-7 sm:p-10 lg:p-12">
+            <div className="relative z-10 max-w-[650px] p-5 sm:p-10 lg:p-12">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#C89217] sm:text-sm">Preventivo {quote.code}</p>
-              <h1 className="mt-3 max-w-[620px] text-[38px] font-black leading-[0.98] tracking-[-0.04em] text-ischia-navy sm:text-[52px] lg:text-[58px]">
+              <h1 className="mt-3 max-w-[620px] text-[28px] font-black leading-[0.98] tracking-[-0.04em] text-ischia-navy sm:text-[52px] lg:text-[58px]">
                 {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
               </h1>
               <p
-                className="mt-5 max-w-[560px] rounded-2xl px-5 py-4 text-[16px] font-black leading-7 text-ischia-navy shadow-[0_8px_24px_rgba(8,63,115,0.12)] ring-1 ring-white/80 sm:text-[17px]"
+                className="mt-3 max-w-[560px] rounded-2xl px-4 py-3 text-[14px] font-black leading-7 text-ischia-navy shadow-[0_8px_24px_rgba(8,63,115,0.12)] ring-1 ring-white/80 sm:text-[17px]"
                 style={{ backgroundColor: "rgba(255,255,255,0.88)", backdropFilter: "blur(4px)" }}
               >
                 Ciao {quote.customerFirstName}, {hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro}
@@ -74,12 +74,14 @@ export function PublicQuotePage({
           </div>
 
           <div className="relative z-20 px-5 pt-5 sm:px-7">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.05fr_1.35fr_0.8fr_0.7fr_1.7fr] lg:items-stretch">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-[1.05fr_1.35fr_0.8fr_0.7fr_1.7fr] lg:items-stretch">
               <HeroStat icon="user" label="Cliente" value={formatClientName(quote.customerFirstName, quote.customerLastName)} />
               <HeroStat icon="calendar" label="Date" value={`${formatDate(quote.arrivalDate)} — ${formatDate(quote.departureDate)}`} />
               <HeroStat icon="guests" label="Ospiti" value={guests} />
               <HeroStat icon="bed" label="Camere" value={String(quote.rooms)} />
-              <CompactCountdownBanner offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
+              <div className="col-span-2 sm:col-span-1">
+                <CompactCountdownBanner offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
+              </div>
             </div>
           </div>
 
@@ -142,7 +144,7 @@ export function PublicQuotePage({
 function HeroStat({ icon, label, value }: { icon: "user" | "calendar" | "guests" | "bed"; label: string; value: string }) {
   const glyph = icon === "user" ? "◯" : icon === "calendar" ? "▣" : icon === "guests" ? "◎" : "▤";
   return (
-    <div className="flex min-h-[116px] items-center gap-3 rounded-[20px] bg-white px-4 py-4 shadow-[0_8px_20px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
+    <div className="flex min-h-[72px] items-center gap-3 sm:min-h-[116px] rounded-[20px] bg-white px-4 py-4 shadow-[0_8px_20px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EAF5FC] text-lg font-black text-ischia-blue">{glyph}</div>
       <div className="min-w-0">
         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-ischia-blue">{label}</p>
