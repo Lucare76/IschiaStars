@@ -828,6 +828,32 @@ function HotelCard({
           </div>
         ) : null}
 
+        {!isConfirmed ? (
+          <div className="no-print mt-5 space-y-3 sm:hidden">
+            {allGroupOptions.flatMap((option) => visibleTreatments(option).map((treatment) => (
+              <div key={`quick-${option.id}-${treatment.key}`} className="rounded-2xl bg-ischia-mist p-4 ring-1 ring-ischia-blue/10">
+                <p className="text-base font-black text-ischia-navy">{treatment.label}</p>
+                {option.roomTypeLabel ? <p className="mt-1 text-xs text-ischia-ink/75">{option.roomTypeLabel}</p> : null}
+                <p className="mt-2 text-3xl font-black text-ischia-navy">{formatCurrency(treatment.price)}</p>
+                <p className="text-xs text-ischia-ink/70">{priceScopeLabel}</p>
+                {option.commitmentNote ? <p className="mt-2 text-xs font-semibold text-ischia-navy">{option.commitmentNote}</p> : null}
+                <button
+                  className="mt-3 w-full rounded-full bg-ischia-sun px-4 py-3 text-sm font-black text-ischia-navy disabled:opacity-55"
+                  disabled={selectionComplete}
+                  onClick={() => onSelectTreatment(option, treatment)}
+                  type="button"
+                >
+                  {selectionComplete
+                    ? `${quote.rooms} camere scelte ✓`
+                    : quote.rooms > 1
+                      ? `Scegli per Camera ${targetRoomNumber} →`
+                      : "Scegli questa proposta →"}
+                </button>
+              </div>
+            )))}
+          </div>
+        ) : null}
+
         {features.length > 0 ? (
           <div className="mt-5">
             <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-navy">Plus inclusi</p>
