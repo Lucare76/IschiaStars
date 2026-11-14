@@ -210,7 +210,7 @@ export function QuoteProposalSection({
   const [selectedRooms, setSelectedRooms] = useState<QuoteRoomSelection[]>([]);
   const [editingRoomIndex, setEditingRoomIndex] = useState<number | null>(null);
   const [compareMode, setCompareMode] = useState(false);
-  const paymentSummaryRef = useRef<HTMLDivElement>(null);
+  const confirmationFieldsRef = useRef<HTMLHeadingElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
 
   const allOptions = quote.hotelOptions;
@@ -276,9 +276,9 @@ export function QuoteProposalSection({
   const isMultiRoom = quote.rooms > 1;
   useEffect(() => {
     if (isMultiRoom || isConfirmed || selectedRooms.length !== 1) return;
-    const paymentSummary = paymentSummaryRef.current;
-    paymentSummary?.focus({ preventScroll: true });
-    paymentSummary?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const confirmationFields = confirmationFieldsRef.current;
+    confirmationFields?.focus({ preventScroll: true });
+    confirmationFields?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [isMultiRoom, isConfirmed, selectedRooms]);
   const selectionComplete = selectedRooms.length >= quote.rooms && editingRoomIndex === null;
   const targetRoomNumber = editingRoomIndex !== null
@@ -414,7 +414,7 @@ export function QuoteProposalSection({
                 <button
                   className="rounded-full bg-ischia-sun px-6 py-3.5 text-sm font-black text-ischia-navy shadow-sm transition hover:brightness-95"
                   type="button"
-                  onClick={() => paymentSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  onClick={() => confirmationFieldsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
                 >
                   Continua →
                 </button>
@@ -469,7 +469,7 @@ export function QuoteProposalSection({
         <ConfirmQuoteForm
           quote={quote}
           selectedRooms={selectedRooms}
-          paymentSummaryRef={paymentSummaryRef}
+          confirmationFieldsRef={confirmationFieldsRef}
         />
       </div>
     </div>
