@@ -150,7 +150,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
         </div>
       ) : null}
 
-      <h3 ref={confirmationFieldsRef} tabIndex={-1} className="scroll-mt-4 rounded-xl bg-ischia-sun px-4 py-4 text-2xl font-black leading-tight text-ischia-navy sm:px-6 sm:text-3xl">
+      <h3 ref={confirmationFieldsRef} tabIndex={-1} className="scroll-mt-4 rounded-xl bg-ischia-sun px-4 py-3 text-lg font-bold leading-snug text-ischia-navy sm:px-5 sm:text-xl">
         Compila il modulo con tutti i tuoi dati anagrafici
       </h3>
 
