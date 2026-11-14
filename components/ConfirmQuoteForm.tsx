@@ -208,18 +208,19 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
       </label>
 
       <button
-        className="focus-ring rounded-full bg-ischia-sun px-5 py-3 font-black text-ischia-navy disabled:cursor-not-allowed disabled:opacity-60"
+        className="focus-ring justify-self-center rounded-full bg-ischia-sun px-5 py-2.5 text-sm font-bold leading-5 text-ischia-navy disabled:cursor-not-allowed disabled:opacity-60"
         disabled={loading || !canSubmit}
         type="submit"
       >
         {loading
-          ? "Conferma in corso..."
-          : selectedOption
-            ? expiredOffer ? `Conferma e richiedi verifica — ${selectedOption.hotelName}` : `Conferma — ${selectedOption.hotelName}`
-            : requiresSelection
-              ? "Seleziona prima una proposta"
-              : expiredOffer ? "Conferma e richiedi verifica" : "Conferma il preventivo"}
+          ? "Invio in corso..."
+          : !canSubmit
+            ? "Seleziona prima una proposta"
+            : "Invia richiesta di prenotazione"}
       </button>
+      <p className="text-center text-xs leading-5 text-ischia-ink/70">
+        Confermeremo la disponibilità prima di richiedere la caparra.
+      </p>
     </form>
   );
 }
