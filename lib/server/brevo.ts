@@ -414,24 +414,55 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
   <table class="email-container" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
 
         <tr>
-          <td class="header-padding" style="background:#1a3a5c;padding:28px 32px;text-align:center;">
-            <img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="120" style="display:block;width:120px;max-width:100%;height:auto;margin:0 auto 8px;">
-            <p class="section-title" style="margin:0;color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:1px;">Preventivi IschiaStars</p>
-            <p style="margin:6px 0 0;color:#a8c4e0;font-size:13px;">Soggiorni a Ischia</p>
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;margin:22px auto 0;">
+          <td class="header-padding" style="background:#1a3a5c;padding:22px 28px;border-top:4px solid #f4b63f;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td width="48%" align="center" valign="middle" bgcolor="#294f74" style="background:#294f74;border:1px solid #547493;border-radius:12px;">
-                  <a href="tel:+39081905481" style="display:block;padding:14px 8px;color:#ffffff;text-decoration:none;">
-                    <span style="display:block;font-size:12px;line-height:22px;font-weight:600;color:#dce9f5;">Chiamaci</span>
-                    <span style="display:block;margin-top:4px;font-size:16px;line-height:22px;font-weight:bold;white-space:nowrap;">081 90 54 81</span>
-                  </a>
+                <td width="78" valign="middle" style="width:78px;">
+                  <img src="${safeEmailUrl(logoUrl)}" alt="IschiaStars" width="64" height="64" style="display:block;width:64px;height:64px;border:0;">
                 </td>
-                <td width="4%" style="font-size:0;line-height:0;">&nbsp;</td>
-                <td width="48%" align="center" valign="middle" bgcolor="#168742" style="background:#168742;border:1px solid #35a15d;border-radius:12px;">
-                  <a href="https://wa.me/393717590017" style="display:block;padding:14px 8px;color:#ffffff;text-decoration:none;">
-                    <span style="display:block;font-size:12px;line-height:22px;font-weight:600;"><img src="${safeEmailUrl(`${siteUrl}/icons/whatsapp-white.png`)}" alt="" width="22" height="22" style="display:inline-block;width:22px;height:22px;vertical-align:middle;margin-right:5px;border:0;">Scrivici su WhatsApp</span>
-                    <span style="display:block;margin-top:4px;font-size:16px;line-height:22px;font-weight:bold;white-space:nowrap;">371 75 90 017</span>
-                  </a>
+                <td valign="middle" style="text-align:left;">
+                  <p class="section-title" style="margin:0;color:#ffffff;font-size:21px;font-weight:bold;line-height:1.3;">Preventivi IschiaStars</p>
+                  <p style="margin:5px 0 0;color:#c1d4e6;font-size:13px;line-height:1.5;">Soggiorni a Ischia</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f7fafc;padding:16px 20px;border-bottom:1px solid #e3edf3;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="50%" valign="middle" style="padding-right:12px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td width="38" valign="middle" style="width:38px;">
+                        <a href="tel:+39081905481" aria-label="Chiama Ischia Stars" style="display:block;width:30px;height:30px;line-height:30px;text-align:center;border-radius:50%;background:#e3edf5;color:#1a3a5c;font-size:19px;text-decoration:none;">☎</a>
+                      </td>
+                      <td valign="middle">
+                        <a href="tel:+39081905481" style="display:block;color:#1a3a5c;text-decoration:none;">
+                          <span style="display:block;font-size:10px;line-height:16px;letter-spacing:0.8px;color:#63798c;">CHIAMACI</span>
+                          <span style="display:block;font-size:15px;line-height:22px;font-weight:bold;white-space:nowrap;">081 90 54 81</span>
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td width="50%" valign="middle" style="padding-left:12px;border-left:1px solid #dce7ee;">
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td width="38" valign="middle" style="width:38px;">
+                        <a href="https://wa.me/393717590017" aria-label="Apri la chat WhatsApp" style="display:block;width:30px;height:30px;border-radius:50%;background:#168742;text-align:center;text-decoration:none;">
+                          <img src="${safeEmailUrl(`${siteUrl}/icons/whatsapp-white.png`)}" alt="" width="22" height="22" style="display:block;width:22px;height:22px;padding:4px;border:0;">
+                        </a>
+                      </td>
+                      <td valign="middle">
+                        <a href="https://wa.me/393717590017" style="display:block;color:#16733f;text-decoration:none;">
+                          <span style="display:block;font-size:10px;line-height:16px;letter-spacing:0.8px;">WHATSAPP</span>
+                          <span style="display:block;font-size:15px;line-height:22px;font-weight:bold;white-space:nowrap;">371 75 90 017</span>
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
                 </td>
               </tr>
             </table>
