@@ -471,7 +471,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
 
   return (
     <div className="space-y-6">
-      {currentQuote.confirmation ? <ConfirmationAvailabilityPanel quote={currentQuote} paymentSettings={paymentSettings} featureFlags={featureFlags} onConfirmationUpdated={setCurrentQuote} /> : null}
+      {currentQuote.confirmation ? <ConfirmationAvailabilityPanel voucherNoteChips={quoteChipSettings.voucherNoteChips} quote={currentQuote} paymentSettings={paymentSettings} featureFlags={featureFlags} onConfirmationUpdated={setCurrentQuote} /> : null}
 
       {reactionEvents.length > 0 ? (
         <div className="rounded-2xl bg-white p-5 shadow-soft ring-1 ring-ischia-blue/10">
