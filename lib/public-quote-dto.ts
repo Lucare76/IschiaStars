@@ -1,3 +1,4 @@
+import { getQuoteCostBreakdown } from "@/lib/confirmation-additional-services";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import type { Quote, TreatmentOption } from "@/lib/types";
 
@@ -52,6 +53,7 @@ export type PublicQuoteDTO = {
   offerExpiresAt: string;
   customerNotes: string;
   status: Quote["status"];
+  costBreakdown?: ReturnType<typeof getQuoteCostBreakdown>;
   hasConfirmation: boolean;
   confirmationAvailabilityStatus?: string;
   hotelOptions: PublicQuoteHotelOptionDTO[];
@@ -80,6 +82,7 @@ export function toPublicQuoteDTO(quote: Quote): PublicQuoteDTO {
     offerExpiresAt: quote.offerExpiresAt,
     customerNotes: quote.customerNotes,
     status: quote.status,
+    costBreakdown: getQuoteCostBreakdown(quote),
     hasConfirmation: Boolean(quote.confirmation),
     confirmationAvailabilityStatus: quote.confirmation?.availabilityStatus,
     hotelOptions: getEffectiveHotelOptions(quote).map((option) => ({
