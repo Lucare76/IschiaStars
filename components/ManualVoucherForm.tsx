@@ -1,5 +1,8 @@
 "use client";
 
+import { VoucherNotePresets } from "@/components/VoucherNotePresets";
+import { defaultQuoteChipSettings } from "@/lib/quote-chip-settings";
+
 import { FormEvent, useState } from "react";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 
@@ -47,7 +50,7 @@ const initialForm: ManualVoucherPayload = {
   voucherNotes: "",
 };
 
-export function ManualVoucherForm() {
+export function ManualVoucherForm({ voucherNoteChips = defaultQuoteChipSettings.voucherNoteChips }: { voucherNoteChips?: string[] }) {
   const [form, setForm] = useState<ManualVoucherPayload>(initialForm);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -125,12 +128,15 @@ export function ManualVoucherForm() {
             onChange={(value) => updateField("includedServices", value)}
             placeholder="Uno per riga: spiaggia inclusa, transfer, bevande..."
           />
+          <div>
           <Textarea
             label="Note voucher"
             value={form.voucherNotes}
             onChange={(value) => updateField("voucherNotes", value)}
             placeholder="Richieste cliente, orari, dettagli da mostrare nel PDF..."
           />
+          <VoucherNotePresets presets={voucherNoteChips} value={form.voucherNotes} onChange={(value) => updateField("voucherNotes", value)} />
+          </div>
           <div className="md:col-span-2">
             <Textarea
               label="Policy cancellazione"

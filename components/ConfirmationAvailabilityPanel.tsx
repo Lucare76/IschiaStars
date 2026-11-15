@@ -1,5 +1,8 @@
 "use client";
 
+import { VoucherNotePresets } from "@/components/VoucherNotePresets";
+import { defaultQuoteChipSettings } from "@/lib/quote-chip-settings";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
@@ -22,7 +25,7 @@ type VoucherEmailApiResult = {
   voucherEmailError?: string | null;
 };
 
-export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureFlags, onConfirmationUpdated }: { quote: Quote; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; onConfirmationUpdated?: (quote: Quote) => void }) {
+export function ConfirmationAvailabilityPanel({ quote, paymentSettings, featureFlags, onConfirmationUpdated, voucherNoteChips = defaultQuoteChipSettings.voucherNoteChips }: { voucherNoteChips?: string[]; quote: Quote; paymentSettings: PaymentSettings; featureFlags: FeatureFlags; onConfirmationUpdated?: (quote: Quote) => void }) {
   const router = useRouter();
   const confirmation = quote.confirmation;
   const defaultSelectedPrice = confirmation?.selectedPrice ?? quote.totalPrice;
@@ -1184,6 +1187,7 @@ IschiaStars 🌊`;
             />
             <span className="mt-1 block text-xs font-normal text-ischia-ink/65">Queste note compariranno nel voucher inviato al cliente.</span>
           </label>
+          <VoucherNotePresets presets={voucherNoteChips} value={voucherNotes} onChange={setVoucherNotes} />
           <button
             className="mt-3 rounded-full border border-[#1B3A5C] bg-white px-4 py-2 text-sm font-black text-[#1B3A5C] hover:bg-[#EFF6FF] disabled:opacity-60"
             disabled={Boolean(loadingAction)}

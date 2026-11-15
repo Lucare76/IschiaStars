@@ -6,6 +6,7 @@ export type RoomTypePresetSetting = {
 };
 
 export type QuoteChipSettings = {
+  voucherNoteChips: string[];
   publicNoteChips: string[];
   hotelNoteChips: string[];
   hotelReasonPhrases: string[];
@@ -15,6 +16,7 @@ export type QuoteChipSettings = {
 };
 
 export const defaultQuoteChipSettings: QuoteChipSettings = {
+  voucherNoteChips: [],
   publicNoteChips: [
     "Traghetto da Napoli € 33 a persona a/r con transfer",
     "Ultime disponibilità",
@@ -68,6 +70,7 @@ export function normalizeQuoteChipSettings(value: unknown): QuoteChipSettings {
     : {};
 
   return {
+    voucherNoteChips: normalizeChipList(record.voucher_note_chips ?? record.voucherNoteChips, defaultQuoteChipSettings.voucherNoteChips),
     publicNoteChips: normalizeChipList(record.public_note_chips ?? record.publicNoteChips, defaultQuoteChipSettings.publicNoteChips),
     hotelNoteChips: normalizeChipList(record.hotel_note_chips ?? record.hotelNoteChips, defaultQuoteChipSettings.hotelNoteChips),
     hotelReasonPhrases: normalizeChipList(record.hotel_reason_phrases ?? record.hotelReasonPhrases, defaultQuoteChipSettings.hotelReasonPhrases),
@@ -84,6 +87,7 @@ export function normalizeQuoteChipSettings(value: unknown): QuoteChipSettings {
 export function quoteChipSettingsToDbValue(settings: QuoteChipSettings) {
   const normalized = normalizeQuoteChipSettings(settings);
   return {
+    voucher_note_chips: normalized.voucherNoteChips,
     public_note_chips: normalized.publicNoteChips,
     hotel_note_chips: normalized.hotelNoteChips,
     hotel_reason_phrases: normalized.hotelReasonPhrases,

@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { adminApiErrorMessage, adminApiFetch, adminApiHeaders, readAdminApiJson } from "@/lib/admin-api-client";
 import { QuoteChipSettings, RoomTypePresetSetting } from "@/lib/quote-chip-settings";
 
-type ChipGroup = "publicNoteChips" | "hotelNoteChips" | "hotelReasonPhrases" | "treatmentDetailPhrases";
+type ChipGroup = "voucherNoteChips" | "publicNoteChips" | "hotelNoteChips" | "hotelReasonPhrases" | "treatmentDetailPhrases";
 
 export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: QuoteChipSettings }) {
   const router = useRouter();
   const [form, setForm] = useState(initialSettings);
   const [drafts, setDrafts] = useState<Record<ChipGroup, string>>({
+    voucherNoteChips: "",
     publicNoteChips: "",
     hotelNoteChips: "",
     hotelReasonPhrases: "",
@@ -114,7 +115,7 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
       return;
     }
     setForm(result.data);
-    setMessage("Frasi rapide preventivi salvate.");
+    setMessage("Frasi rapide preventivi e voucher salvate.");
     router.refresh();
   }
 
@@ -122,7 +123,7 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
     <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black text-ischia-navy">Frasi rapide preventivi</h2>
+          <h2 className="text-xl font-black text-ischia-navy">Frasi rapide preventivi e voucher</h2>
           <p className="mt-1 text-sm text-ischia-ink/68">Chip e frasi usate durante la creazione e modifica dei preventivi.</p>
         </div>
         <button className="rounded-full bg-ischia-navy px-5 py-2 text-sm font-black text-white disabled:opacity-60" disabled={loading} onClick={() => void save()} type="button">
@@ -133,6 +134,17 @@ export function QuoteChipSettingsForm({ initialSettings }: { initialSettings: Qu
       {message ? <p className="mt-3 rounded-xl bg-ischia-mist p-3 text-sm font-semibold text-ischia-navy">{message}</p> : null}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <ChipList
+          title="Note voucher"
+          description="Frasi da inserire con un clic nei voucher cliente e manuali."
+          chips={form.voucherNoteChips}
+          draft={drafts.voucherNoteChips}
+          onDraftChange={(value) => setDrafts((current) => ({ ...current, voucherNoteChips: value }))}
+          onAdd={() => addChip("voucherNoteChips")}
+          onUpdate={(index, value) => updateChip("voucherNoteChips", index, value)}
+          onRemove={(index) => removeChip("voucherNoteChips", index)}
+          onMove={(index, direction) => moveChip("voucherNoteChips", index, direction)}
+        />
         <ChipList
           title="Note generali preventivo"
           description="Chip mostrati nel campo note generali del preventivo."
