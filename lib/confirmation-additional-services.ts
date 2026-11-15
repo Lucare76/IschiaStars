@@ -21,3 +21,14 @@ export function getConfirmationAdditionalServices(metadata: Record<string, unkno
 export function formatConfirmationAdditionalService(service: ConfirmationAdditionalService) {
   return service.cost != null ? `${service.label} (${formatCurrency(service.cost)})` : service.label;
 }
+
+// Service amounts are already included in the confirmed total.
+export function getQuoteCostBreakdown(quote: { totalPrice: number; confirmation?: { selectedPrice?: number; metadata?: Record<string, unknown> } }) {
+  const services = getConfirmationAdditionalServices(quote.confirmation?.metadata);
+  if (!services.length) return null;
+  const total = quote.confirmation?.selectedPrice ?? quote.totalPrice;
+  const extrasTotal = Math.round(services.reduce((sum, service) => sum + (service.cost ?? 0), 0) * 100) / 100;
+  const accommodation = Math.round((total - extrasTotal) * 100) / 100;
+  if (!Number.isFinite(total) || services.some((service) => service.cost != null && service.cost < 0) || accommodation < 0) return null;
+  return { total, accommodation, services, hasUnpricedServices: services.some((service) => service.cost == null) };
+}

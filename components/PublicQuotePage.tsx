@@ -1,3 +1,4 @@
+import { QuoteCostBreakdown } from "@/components/QuoteCostBreakdown";
 import type { ReactNode } from "react";
 import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
 import { MobileFloatingWhatsApp, PublicQuoteHeaderActions } from "@/components/PublicQuoteActions";
@@ -124,6 +125,8 @@ export function PublicQuotePage({
           quoteCode={quote.code}
           token={quote.token}
         />
+
+        <div className="mt-5"><QuoteCostBreakdown breakdown={quote.costBreakdown} /></div>
 
         <section className="mt-5">
           <QuoteProposalSection
