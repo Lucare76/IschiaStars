@@ -1,3 +1,4 @@
+import { getQuoteCostBreakdown } from "@/lib/confirmation-additional-services";
 import { sendSupplierSmtp, supplierSmtpEnabled } from "@/lib/server/supplier-smtp";
 import { buildHotelNotes } from "@/lib/hotel-notes";
 import type { Quote, QuoteConfirmation } from "@/lib/types";
@@ -519,6 +520,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
               <a href="${safeEmailUrl(quoteUrl)}" style="color:#1a3a5c;">Visualizza il tuo preventivo IschiaStars</a>
             </p>
 
+            ${quoteCostBreakdownHtml(quote)}
             ${travelServicesBoxHtml}
 
             <p style="margin:0 0 12px;font-size:14px;color:#444444;line-height:1.7;">
@@ -558,6 +560,7 @@ export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEma
     `Arrivo:            ${formatDate(quote.arrivalDate)}`,
     `Partenza:          ${formatDate(quote.departureDate)}`,
     "",
+    ...(quoteCostBreakdownText(quote) ? [quoteCostBreakdownText(quote), ""] : []),
     costsScopeLabel,
     "Proposte:",
     optionsSummaryText,
@@ -895,9 +898,6 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
         : `Il saldo restante è di <strong style="color:#1B3A5C;">${balanceLabel}</strong>.`
     : "";
   const additionalServices = getConfirmationAdditionalServices(confirmation?.metadata);
-  const additionalServicesHtml = additionalServices.length
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#374151;"><strong>Servizi aggiuntivi</strong><br>${additionalServices.map((service) => escapeHtml(formatConfirmationAdditionalService(service))).join("<br>")}</td></tr></table>`
-    : "";
 
   const coordinatesHtml = snapshot.configured === true
     ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 22px;">
@@ -985,7 +985,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
         </tr>` : ""}
       </table>
 
-      ${additionalServicesHtml}
+      ${quoteCostBreakdownHtml(quote)}
       ${coordinatesHtml}
       ${confirmation?.selectedCancellationPolicy ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#FBF5E6;border:1px solid #C9A84C;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#5F4B16;"><strong>Policy cancellazione</strong><br>${escapeHtml(confirmation.selectedCancellationPolicy)}</td></tr></table>` : ""}
       ${details.notes ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border-radius:10px;margin:0 0 22px;"><tr><td style="padding:16px 18px;font-size:13px;color:#374151;"><strong>Note</strong><br>${escapeHtml(details.notes)}</td></tr></table>` : ""}
@@ -1092,7 +1092,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
     `Prezzo totale: ${confirmation?.selectedPrice != null ? formatPrice(confirmation.selectedPrice) : formatPrice(quote.totalPrice)}`,
     ...(isFullBalanceRequest ? [`Saldo da versare: ${paymentRequestLabel}`] : confirmation?.selectedDepositAmount != null ? [`Caparra: ${formatPrice(confirmation.selectedDepositAmount)}`] : []),
     ...(isFullBalanceRequest && paymentDueLabel ? [`Scadenza pagamento: entro il ${paymentDueLabel}`] : []),
-    ...(additionalServices.length ? ["", "Servizi aggiuntivi:", ...additionalServices.map((service) => `- ${formatConfirmationAdditionalService(service)}`)] : []),
+    ...(additionalServices.length ? ["", quoteCostBreakdownText(quote)] : []),
     ...(snapshot.configured === true ? [
       snapshot.bank_account_holder ? `Intestatario: ${snapshot.bank_account_holder}` : "",
       snapshot.bank_name ? `Banca: ${snapshot.bank_name}` : "",
@@ -1311,12 +1311,6 @@ export function buildDepositBalanceSummaryEmail(quote: Quote): DepositBalanceSum
   const stayLabel = `${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`;
   const logoUrl = `${siteBaseUrl()}/ischiastars-logo.png`;
   const additionalServices = getConfirmationAdditionalServices(confirmation.metadata);
-  const additionalServicesHtml = additionalServices.length
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8FB;border:1px solid #D9E2EC;border-radius:10px;margin:0 0 20px;">
-        <tr><td style="padding:14px 16px;color:#1B3A5C;font-weight:bold;font-size:14px;">Servizi aggiuntivi</td></tr>
-        ${additionalServices.map((service) => `<tr><td style="padding:0 16px 12px;color:#374151;font-size:14px;line-height:1.5;">${escapeHtml(formatConfirmationAdditionalService(service))}</td></tr>`).join("")}
-      </table>`
-    : "";
   const subject = `Caparra ricevuta e riepilogo saldo - ${quote.code}`;
 
   const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>${escapeHtml(subject)}</title><style>@media print{.no-print{display:none!important}body{background:#ffffff!important;padding:0!important}.email-container{box-shadow:none!important}}</style></head><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:24px;">
@@ -1341,7 +1335,7 @@ export function buildDepositBalanceSummaryEmail(quote: Quote): DepositBalanceSum
             <tr><td style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Saldo restante</td><td align="right" style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#1B3A5C;font-weight:bold;">${balanceLabel}</td></tr>
             <tr><td style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#6B7280;font-size:13px;">Da versare entro</td><td align="right" style="padding:12px 16px;border-top:1px solid #E5E7EB;color:#1B3A5C;font-weight:bold;">${balanceDueLabel}</td></tr>
           </table>
-          ${additionalServicesHtml}
+          ${quoteCostBreakdownHtml(quote)}
           <p style="margin:0 0 14px;">Per qualsiasi dubbio puoi rispondere a questa email o scriverci su WhatsApp.</p>
           <p style="margin:0;">IschiaStars</p>
         </td></tr>
@@ -1359,7 +1353,7 @@ export function buildDepositBalanceSummaryEmail(quote: Quote): DepositBalanceSum
     `Caparra ricevuta: ${depositLabel}`,
     `Saldo restante: ${balanceLabel}`,
     `Da versare entro: ${balanceDueLabel}`,
-    ...(additionalServices.length ? ["", "Servizi aggiuntivi:", ...additionalServices.map((service) => `- ${formatConfirmationAdditionalService(service)}`)] : []),
+    ...(additionalServices.length ? ["", quoteCostBreakdownText(quote)] : []),
     "",
     "Per qualsiasi dubbio puoi rispondere a questa email o scriverci su WhatsApp.",
     "",
@@ -1977,4 +1971,19 @@ export async function sendFollowUpEmailToClient(quote: Quote): Promise<SendFollo
   console.warn(`[brevo] failed follow-up email code=${quote.code} status=${sendResult.status ?? "fetch_error"} error=${sendResult.error ?? "-"}`);
   await logEmailAttempt({ quoteId: quote.id, emailType: "follow_up_to_client", recipientEmail: email, subject, ok: false, errorMessage: sendResult.error });
   return { sent: false, error: sendResult.error ?? `brevo_error_${sendResult.status ?? "fetch"}` };
+}
+
+function quoteCostBreakdownText(quote: Quote) {
+  const breakdown = getQuoteCostBreakdown(quote);
+  if (!breakdown) return "";
+  return [
+    "Riepilogo costi della proposta scelta:",
+    `${breakdown.hasUnpricedServices ? "Soggiorno e servizi senza importo distinto" : "Soggiorno hotel"}: ${formatPrice(breakdown.accommodation)}`,
+    ...breakdown.services.map((service) => `${service.label}: ${service.cost != null ? formatPrice(service.cost) : "Importo non specificato"}`),
+    `Totale complessivo: ${formatPrice(breakdown.total)}`
+  ].join("\n");
+}
+function quoteCostBreakdownHtml(quote: Quote) {
+  const text = quoteCostBreakdownText(quote);
+  return text ? `<div style="margin:20px 0;padding:16px;background:#F4F8FC;border:1px solid #D9E5EF;border-radius:10px;font-size:14px;line-height:1.8;color:#1B3A5C;">${escapeHtml(text).replace(/\n/g, "<br>")}</div>` : "";
 }
