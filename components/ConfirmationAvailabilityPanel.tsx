@@ -1,4 +1,7 @@
 "use client";
+import { QuoteCostBreakdown } from "@/components/QuoteCostBreakdown";
+import { getQuoteCostBreakdown } from "@/lib/confirmation-additional-services";
+
 
 import { VoucherNotePresets } from "@/components/VoucherNotePresets";
 import { defaultQuoteChipSettings } from "@/lib/quote-chip-settings";
@@ -678,7 +681,7 @@ IschiaStars 🌊`;
         <Info label="Coordinate" value={hasCurrentCoordinates ? "Configurate per invio definitivo" : "Non configurate"} />
         <Info label="Causale" value={confirmationPaymentReason || "-"} />
         <Info label="Policy cancellazione" value={confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy ?? "-"} />
-        {additionalServices.length ? <Info label="Servizi aggiuntivi" value={additionalServices.map(formatConfirmationAdditionalService).join(" · ")} /> : null}
+        {additionalServices.length ? <QuoteCostBreakdown breakdown={getQuoteCostBreakdown(quote)} /> : null}
         <Info label="Confermata il" value={formatDateTime(confirmation.confirmedAt)} />
         <Info label="Date" value={`${formatDate(quote.arrivalDate)} - ${formatDate(quote.departureDate)}`} />
       </div>
