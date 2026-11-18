@@ -35,6 +35,7 @@ export type PublicQuoteHotelOptionDTO = {
 };
 
 export type PublicQuoteDTO = {
+  customerLanguage?: "it" | "en";
   id: string;
   code: string;
   token: string;
@@ -59,9 +60,16 @@ export type PublicQuoteDTO = {
   hotelOptions: PublicQuoteHotelOptionDTO[];
 };
 
+const englishTreatmentLabels: Record<TreatmentOption["key"], string> = {
+  breakfast: "Bed and breakfast",
+  half_board: "Half board",
+  full_board: "Full board",
+};
+
 export function toPublicQuoteDTO(quote: Quote): PublicQuoteDTO {
   return {
     id: quote.id,
+    customerLanguage: quote.customerLanguage,
     code: quote.code,
     token: quote.token,
     publicShortCode: quote.publicShortCode,
@@ -111,7 +119,7 @@ export function toPublicQuoteDTO(quote: Quote): PublicQuoteDTO {
       isSelected: option.isSelected,
       treatments: option.treatments.map((treatment) => ({
         key: treatment.key,
-        label: treatment.label,
+        label: quote.customerLanguage === "en" ? englishTreatmentLabels[treatment.key] : treatment.label,
         price: treatment.price,
       })),
     })),

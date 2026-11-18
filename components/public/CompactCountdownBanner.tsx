@@ -13,9 +13,11 @@ function remainingParts(iso: string) {
 }
 
 export function CompactCountdownBanner({
+  english = false,
   offerExpiresAt,
   isConfirmed
 }: {
+  english?: boolean;
   offerExpiresAt: string | null;
   isConfirmed: boolean;
 }) {
@@ -32,15 +34,15 @@ export function CompactCountdownBanner({
   if (!offerExpiresAt || isConfirmed || !parts) return null;
 
   const items = [
-    ["giorni", parts.days],
-    ["ore", parts.hours],
+    [english ? "days" : "giorni", parts.days],
+    [english ? "hours" : "ore", parts.hours],
     ["min", parts.minutes],
     ["sec", parts.seconds]
   ] as const;
 
   return (
     <div className="h-full rounded-[20px] bg-ischia-navy px-4 py-4 text-white shadow-[0_12px_28px_rgba(8,63,115,0.22)]">
-      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/75">Questa proposta è valida ancora</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/75">{english ? "This quote expires in" : "Questa proposta è valida ancora"}</p>
       <div className="mt-3 grid grid-cols-4 gap-2">
         {items.map(([label, value]) => (
           <div key={label} className="rounded-xl bg-white/10 px-2 py-2 text-center ring-1 ring-white/10">
@@ -49,7 +51,7 @@ export function CompactCountdownBanner({
           </div>
         ))}
       </div>
-      <p className="mt-3 text-[11px] leading-4 text-white/65">Disponibilità limitata — conferma la proposta che preferisci.</p>
+      <p className="mt-3 text-[11px] leading-4 text-white/65">{english ? "Availability is limited. Choose the option you prefer." : "Disponibilità limitata — conferma la proposta che preferisci."}</p>
     </div>
   );
 }

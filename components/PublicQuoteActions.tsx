@@ -18,7 +18,7 @@ export function PublicQuoteHeaderActions({ quote, contentSettings = defaultQuote
       >
         {contentSettings.headerWhatsappLabel}
       </a>
-      <PrintButton className="flex-1 whitespace-nowrap rounded-full bg-ischia-navy px-4 py-2 text-xs sm:flex-none sm:text-sm font-black text-white" quoteCode={quote.code} token={quote.token} />
+      <PrintButton className="flex-1 whitespace-nowrap rounded-full bg-ischia-navy px-4 py-2 text-xs sm:flex-none sm:text-sm font-black text-white" quoteCode={quote.code} token={quote.token} english={quote.customerLanguage === "en"} />
     </div>
   );
 }
@@ -37,7 +37,7 @@ export function PublicQuoteMainActions({ quote, contentSettings = defaultQuoteCo
       <a className="rounded-full bg-ischia-sun px-5 py-3 text-center font-black text-ischia-navy" href="#conferma" onClick={() => trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "confirm_clicked", { placement: "public_offer_card" })}>
         {contentSettings.mainConfirmLabel}
       </a>
-      <PrintButton quoteCode={quote.code} token={quote.token} />
+      <PrintButton quoteCode={quote.code} token={quote.token} english={quote.customerLanguage === "en"} />
     </div>
   );
 }

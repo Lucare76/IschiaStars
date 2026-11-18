@@ -216,6 +216,7 @@ function demoSort(quotes: Quote[], sort: string): Quote[] {
 
 export type QuoteInput = {
   quoteRequestId?: string;
+  customerLanguage?: Quote["customerLanguage"];
   code?: string;
   publicToken?: string;
   status?: QuoteStatus;
@@ -514,6 +515,7 @@ export async function createQuoteFromRequest(input: QuoteInput, _options: { acce
       code: normalizedInput.code,
       token: normalizedInput.publicToken,
       publicShortCode: secureShortCode(),
+      customerLanguage: normalizedInput.customerLanguage,
       requestId: normalizedInput.quoteRequestId ?? "",
       customerFirstName: normalizedInput.clientFirstName,
       customerLastName: normalizedInput.clientLastName,
@@ -645,6 +647,7 @@ export async function updateQuote(id: string, input: Partial<QuoteInput>): Promi
       const alternativeHotel = input.alternativeHotelId ? hotelResult.data.find((h) => h.id === input.alternativeHotelId) : quote.alternativeHotel;
       return {
         ...quote,
+        customerLanguage: input.customerLanguage ?? quote.customerLanguage,
         customerFirstName: input.clientFirstName ?? quote.customerFirstName,
         customerLastName: input.clientLastName ?? quote.customerLastName,
         customerEmail: input.clientEmail ?? quote.customerEmail,
@@ -784,6 +787,7 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
     }));
 
   return createQuoteFromRequest({
+    customerLanguage: quote.customerLanguage,
     quoteRequestId: quote.requestId || undefined,
     clientFirstName: quote.customerFirstName,
     clientLastName: quote.customerLastName,
@@ -852,6 +856,7 @@ export async function restoreQuote(id: string): Promise<RepositoryResult<Quote |
 
 function toQuoteRow(input: Partial<QuoteInput>) {
   return {
+    ...(input.customerLanguage ? { customer_language: input.customerLanguage } : {}),
     ...(isUuid(input.quoteRequestId) ? { quote_request_id: input.quoteRequestId } : {}),
     ...(input.code !== undefined ? { code: input.code } : {}),
     ...(input.publicToken !== undefined ? { public_token: input.publicToken } : {}),

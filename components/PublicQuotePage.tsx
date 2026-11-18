@@ -33,7 +33,10 @@ export function PublicQuotePage({
   openingSource?: string;
   contentSettings?: QuoteContentSettings;
 }) {
-  const guests = `${quote.adults} adulti${quote.children.length ? `, ${quote.children.length} bambini` : ""}`;
+  const english = quote.customerLanguage === "en";
+  const locale = english ? "en-US" : "it-IT";
+  const englishDate = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "Europe/Rome" });
+  const guests = english ? [`${quote.adults} ${quote.adults === 1 ? "adult" : "adults"}`, quote.children.length ? `${quote.children.length} ${quote.children.length === 1 ? "child" : "children"}` : ""].filter(Boolean).join(", ") : `${quote.adults} adulti${quote.children.length ? `, ${quote.children.length} bambini` : ""}`;
   const hasMultipleOptions = quote.hotelOptions.length > 1;
   const ischiaHeroImage =
     "https://images.musement.com/cover/0002/63/thumb_162850_cover_header.jpeg";
@@ -41,7 +44,7 @@ export function PublicQuotePage({
 
   return (
     <QuotePageWrapper>
-      <main className="print-page mx-auto max-w-[1180px] px-4 py-5 sm:px-6 sm:py-7">
+      <main lang={locale} className="print-page mx-auto max-w-[1180px] px-4 py-5 sm:px-6 sm:py-7">
         {trackOpening ? <PublicEventTracker quoteCode={quote.code} token={quote.token} source={openingSource} /> : null}
 
         <header className="no-print mb-4 flex flex-col items-stretch justify-between gap-3 rounded-[22px] bg-white px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5 sm:py-4 shadow-[0_10px_28px_rgba(8,63,115,0.08)] ring-1 ring-ischia-blue/10">
@@ -61,34 +64,34 @@ export function PublicQuotePage({
             ) : null}
 
             <div className="relative z-10 max-w-[650px] p-5 sm:p-10 lg:p-12">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#C89217] sm:text-sm">Preventivo {quote.code}</p>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#C89217] sm:text-sm">{english ? "Quote" : "Preventivo"} {quote.code}</p>
               <h1 className="mt-3 max-w-[620px] text-[28px] font-black leading-[0.98] tracking-[-0.04em] text-ischia-navy sm:text-[52px] lg:text-[58px]">
-                {hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle}
+                {english ? (hasMultipleOptions ? "Your Ischia vacation options" : "Your Ischia getaway") : (hasMultipleOptions ? contentSettings.multipleHeroTitle : contentSettings.singleHeroTitle)}
               </h1>
               <p
                 className="mt-3 max-w-[560px] rounded-2xl px-4 py-3 text-[14px] font-black leading-7 text-ischia-navy shadow-[0_8px_24px_rgba(8,63,115,0.12)] ring-1 ring-white/80 sm:text-[17px]"
                 style={{ backgroundColor: "rgba(255,255,255,0.88)", backdropFilter: "blur(4px)" }}
               >
-                Ciao {quote.customerFirstName}, {hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro}
+                {english ? "Hi" : "Ciao"} {quote.customerFirstName}, {english ? (hasMultipleOptions ? "Explore the stays we’ve selected for you and choose your favorite." : "We’ve put together a stay for you on the island of Ischia. Explore your proposal below.") : (hasMultipleOptions ? contentSettings.multipleHeroIntro : contentSettings.singleHeroIntro)}
               </p>
             </div>
           </div>
 
           <div className="relative z-20 px-5 pt-5 sm:px-7">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-[1.05fr_1.35fr_0.8fr_0.7fr_1.7fr] lg:items-stretch">
-              <HeroStat icon="user" label="Cliente" value={formatClientName(quote.customerFirstName, quote.customerLastName)} />
-              <HeroStat icon="calendar" label="Date" mobileValue={`${new Date(quote.arrivalDate).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", timeZone: "Europe/Rome" })} → ${new Date(quote.departureDate).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Rome" })}`} value={`${formatDate(quote.arrivalDate)} — ${formatDate(quote.departureDate)}`} />
-              <HeroStat icon="guests" label="Ospiti" value={guests} />
-              <HeroStat icon="bed" label="Camere" value={String(quote.rooms)} />
+              <HeroStat icon="user" label={english ? "Guest" : "Cliente"} value={formatClientName(quote.customerFirstName, quote.customerLastName)} />
+              <HeroStat icon="calendar" label="Date" mobileValue={`${new Date(quote.arrivalDate).toLocaleDateString(locale, { day: "2-digit", month: "2-digit", timeZone: "Europe/Rome" })} → ${new Date(quote.departureDate).toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Rome" })}`} value={`${english ? englishDate.format(new Date(quote.arrivalDate)) : formatDate(quote.arrivalDate)} — ${english ? englishDate.format(new Date(quote.departureDate)) : formatDate(quote.departureDate)}`} />
+              <HeroStat icon="guests" label={english ? "Guests" : "Ospiti"} value={guests} />
+              <HeroStat icon="bed" label={english ? "Rooms" : "Camere"} value={String(quote.rooms)} />
               <div className="col-span-2 sm:col-span-1">
-                <CompactCountdownBanner offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
+                <CompactCountdownBanner english={english} offerExpiresAt={quote.offerExpiresAt} isConfirmed={quote.status === "confermato"} />
               </div>
             </div>
           </div>
 
           {quote.customerNotes ? (
             <div className="mx-5 mt-5 rounded-[20px] bg-ischia-navy px-5 py-4 text-white sm:mx-7">
-              <p className="text-sm font-black">Note per te</p>
+              <p className="text-sm font-black">{english ? "Notes for you" : "Note per te"}</p>
               <div className="mt-2 whitespace-pre-line text-sm leading-6 text-white/92">{quote.customerNotes}</div>
             </div>
           ) : null}
@@ -96,17 +99,17 @@ export function PublicQuotePage({
           <div className="p-5 sm:p-7">
             {quote.isAlternative && quote.requestedHotel ? (
               <div className="mb-4 rounded-2xl bg-ischia-sun/15 p-4 text-sm font-semibold leading-6 text-ischia-navy ring-1 ring-ischia-sun/30">
-                La struttura richiesta era {quote.requestedHotel}. Di seguito trovi la soluzione proposta disponibile per le date selezionate.
+                {english ? `You originally requested ${quote.requestedHotel}. Below is an alternative for your selected dates.` : `La struttura richiesta era ${quote.requestedHotel}. Di seguito trovi la soluzione proposta disponibile per le date selezionate.`}
               </div>
             ) : null}
 
             {quote.children.length > 0 ? (
               <div className="mb-4">
-                <ContentBlock title="Bambini">
+                <ContentBlock title={english ? "Children" : "Bambini"}>
                   <ul className="grid gap-2">
                     {quote.children.map((child, index) => (
                       <li key={child.id} className="rounded-xl bg-white p-3 ring-1 ring-ischia-blue/10">
-                        Bambino {index + 1}: {child.age != null ? `${child.age} ${child.age === 1 ? "anno" : "anni"}` : "—"}
+                        {english ? "Child" : "Bambino"} {index + 1}: {child.age != null ? `${child.age} ${english ? (child.age === 1 ? "year old" : "years old") : (child.age === 1 ? "anno" : "anni")}` : "—"}
                       </li>
                     ))}
                   </ul>
@@ -115,7 +118,7 @@ export function PublicQuotePage({
             ) : null}
 
             <div className="no-print flex justify-end">
-              <PrintButton quoteCode={quote.code} token={quote.token} />
+              <PrintButton quoteCode={quote.code} token={quote.token} english={quote.customerLanguage === "en"} />
             </div>
           </div>
         </section>

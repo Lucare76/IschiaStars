@@ -28,14 +28,18 @@ const INVALID_SELECTION_MESSAGE = "Impossibile completare la conferma. Contattac
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as ConfirmationPayload | null;
-  const validationError = validateConfirmation(body);
-  if (validationError) return NextResponse.json({ ok: false, error: validationError }, { status: 400 });
+  if (typeof body?.quoteCode !== "string" || !body.quoteCode || typeof body.token !== "string" || !body.token) {
+    return NextResponse.json({ ok: false, error: "Link preventivo non valido" }, { status: 400 });
+  }
 
-  console.info(`[confirmation] start code=${body!.quoteCode}`);
+  console.info(`[confirmation] start code=${body.quoteCode}`);
 
-  const quoteResult = await getQuoteByCodeAndToken(body!.quoteCode!, body!.token!);
+  const quoteResult = await getQuoteByCodeAndToken(body.quoteCode, body.token);
   if (!quoteResult.data) return NextResponse.json({ ok: false, error: "Preventivo non trovato o link non valido" }, { status: 404 });
   if (quoteResult.data.deletedAt) return NextResponse.json({ ok: false, error: "Preventivo non disponibile" }, { status: 410 });
+
+  const validationError = validateConfirmation(body, quoteResult.data.customerLanguage === "en");
+  if (validationError) return NextResponse.json({ ok: false, error: validationError }, { status: 400 });
 
   const expectedChildren = quoteResult.data.children.length;
   if (expectedChildren > 0 && (body!.children?.filter((c) => Boolean(c.birthDate)).length ?? 0) < expectedChildren) {
@@ -130,16 +134,17 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ ok: true, source: result.source, confirmedAt: result.data.confirmedAt });
 }
 
-function validateConfirmation(body: ConfirmationPayload | null) {
-  if (!body?.quoteCode || !body.token) return "Link preventivo non valido";
+function validateConfirmation(body: ConfirmationPayload, english: boolean) {
   const required = [
-    body.firstName, body.lastName, body.phone, body.email, body.fiscalCode,
-    body.address, body.city, body.postalCode, body.province
+    body.firstName, body.lastName, body.phone, body.email,
+    body.address, body.city, body.postalCode, body.province,
+    ...(english ? [] : [body.fiscalCode])
   ];
   if (required.some((value) => typeof value !== "string" || !value.trim())) return "Compila tutti i campi obbligatori";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email!.trim())) return "Email non valida";
-  if (body.fiscalCode?.trim() && body.fiscalCode.trim().length < 11) return "Codice fiscale troppo breve";
-  if (body.postalCode?.trim() && !/^\d{5}$/.test(body.postalCode.trim())) return "CAP non valido";
+  if (body.fiscalCode != null && typeof body.fiscalCode !== "string") return "Codice fiscale non valido";
+  if (!english && body.fiscalCode?.trim() && body.fiscalCode.trim().length < 11) return "Codice fiscale troppo breve";
+  if (!english && body.postalCode?.trim() && !/^\d{5}$/.test(body.postalCode.trim())) return "CAP non valido";
   if (!body.acceptedTerms || !body.acceptedPrivacy) return "Accetta condizioni e privacy";
   return null;
 }

@@ -304,6 +304,7 @@ function mapQuoteRequest(row: Record<string, any>): QuoteRequest {
     receivedAt: row.received_at ?? row.created_at,
     importedAt: row.created_at,
     status: normalizeStatus(row.status),
+    customerLanguage: row.metadata?.customer_language === "en" ? "en" : "it",
     requestedHotel: typeof row.metadata?.requested_hotel === "string" ? row.metadata.requested_hotel : undefined,
     processedAt: row.processed_at ? String(row.processed_at) : undefined,
     processedQuoteId: row.processed_quote_id ? String(row.processed_quote_id) : undefined

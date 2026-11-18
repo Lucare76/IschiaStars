@@ -153,6 +153,7 @@ export function mapQuote(
     createdAt: String(row.created_at ?? ""),
     sentAt: row.sent_at ? String(row.sent_at) : undefined,
     excludedFromStats: Boolean(row.excluded_from_stats ?? false),
+    customerLanguage: row.customer_language === "en" ? "en" : "it",
     isLabTest: quoteMetadata.is_lab_test === true,
     deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
     confirmation: row.confirmed_at || confirmationRow

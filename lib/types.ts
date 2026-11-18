@@ -34,6 +34,7 @@ export type Hotel = {
 };
 
 export type QuoteRequest = {
+  customerLanguage?: "it" | "en";
   id: string;
   firstName: string;
   lastName: string;
@@ -205,6 +206,7 @@ export type QuoteHotelOption = {
 };
 
 export type Quote = {
+  customerLanguage?: "it" | "en";
   id: string;
   code: string;
   token: string;

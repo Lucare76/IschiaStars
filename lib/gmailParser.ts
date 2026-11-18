@@ -1,3 +1,4 @@
+import { quoteLanguageFromPageUrl } from "@/lib/quote-customer-language";
 import { parseChildAges } from '@/lib/child-age-parser';
 import { google } from 'googleapis';
 import { createQuoteRequest } from '@/lib/repositories/quoteRequests';
@@ -146,7 +147,7 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
     return match[1].trim() || null;
   };
 
-  const pageUrl = get('Page URL') ?? '';
+  const pageUrl = get('Page URL') ?? get('URL della pagina') ?? '';
   const utmSource = pageUrl.match(/utm_source=([^&]+)/)?.[1] ?? null;
   const utmCampaign = pageUrl.match(/utm_campaign=([^&]+)/)?.[1]?.replace(/\+/g, ' ') ?? null;
   const hotel = get('Hotel');
@@ -200,6 +201,7 @@ function parseEmailText(text: string, metadata: Record<string, unknown>) {
       original_children_ages: etaBambini,
       utm_source: utmSource,
       utm_campaign: utmCampaign,
+      customer_language: quoteLanguageFromPageUrl(pageUrl),
       source_url: pageUrl,
       orario_chiamata: get('Orario di preferenza chiamata'),
       fonte: 'email_automatica',

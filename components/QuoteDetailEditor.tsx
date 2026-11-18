@@ -286,6 +286,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
     }
 
     const payload = {
+      customerLanguage: formData.get("customerLanguage"),
       clientFirstName: formData.get("firstName"),
       clientLastName: formData.get("lastName"),
       clientEmail: formData.get("email"),
@@ -656,6 +657,13 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
 
         <Section title="Cliente e soggiorno">
           <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-semibold">
+              Lingua del preventivo
+              <select name="customerLanguage" className="mt-1 block w-full rounded-lg border bg-white p-2" defaultValue={currentQuote.customerLanguage ?? "it"}>
+                <option value="it">Italiano</option>
+                <option value="en">English (US)</option>
+              </select>
+            </label>
             <Input name="firstName" label="Nome" defaultValue={currentQuote.customerFirstName} required />
             <Input name="lastName" label="Cognome" defaultValue={currentQuote.customerLastName} />
             <Input name="phone" label="Telefono WhatsApp" defaultValue={currentQuote.customerPhone} required />

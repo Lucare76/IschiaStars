@@ -43,6 +43,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 
   const result = await updateQuote(params.id, {
+    customerLanguage: body.customerLanguage === "en" || body.customerLanguage === "it" ? body.customerLanguage : undefined,
     clientFirstName: body.clientFirstName,
     clientLastName: body.clientLastName,
     clientEmail: body.clientEmail,

@@ -53,6 +53,21 @@ function treatmentDescription(treatment: TreatmentOption) {
   return "Include pernottamento, prima colazione, pranzo e cena secondo le condizioni della struttura.";
 }
 
+const englishAmenityLabels: Record<string, string> = {
+  "aria condizionata": "Air conditioning",
+  "animali ammessi": "Pets allowed",
+  "colazione inclusa": "Breakfast included",
+  "parcheggio": "Parking",
+  "piscina": "Pool",
+  "piscina termale": "Thermal pool",
+  "ristorante": "Restaurant",
+  "terme": "Thermal baths",
+};
+
+function amenityLabel(value: string, english: boolean) {
+  return english ? (englishAmenityLabels[value.trim().toLowerCase()] ?? value) : value;
+}
+
 function splitLines(value?: string) {
   return value?.split("\n").map((item) => item.trim()).filter(Boolean) ?? [];
 }
@@ -216,6 +231,7 @@ export function QuoteProposalSection({
   const allOptions = quote.hotelOptions;
 
   // Raggruppa per hotelGroup: ogni gruppo è una struttura con potenziali multiple tipologie camera
+  const english = quote.customerLanguage === "en";
   const groupedHotels = Array.from(
     allOptions.reduce((map, opt) => {
       const g = opt.hotelGroup ?? 1;
@@ -290,7 +306,7 @@ export function QuoteProposalSection({
     <div className="space-y-6">
       {isMultiRoom ? (
         <div className="no-print rounded-[22px] bg-white px-5 py-4 shadow-soft ring-1 ring-ischia-blue/10 sm:px-6">
-          <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">Le tue camere</p>
+          <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">{english ? "Your rooms" : "Le tue camere"}</p>
           <h2 className="mt-1 text-xl font-black text-ischia-navy">
             {editingRoomIndex !== null
               ? `Modifica la Camera ${targetRoomNumber}`
@@ -322,7 +338,7 @@ export function QuoteProposalSection({
             type="button"
           >
             <ColumnsIcon />
-            {compareMode ? "Torna alle proposte" : "Confronta le opzioni"}
+            {compareMode ? (english ? "Back to options" : "Torna alle proposte") : (english ? "Compare options" : "Confronta le opzioni")}
           </button>
         </div>
       )}
@@ -330,6 +346,7 @@ export function QuoteProposalSection({
       <div ref={optionsRef}>
       {compareMode ? (
         <CompareView
+          english={english}
           groupedHotels={groupedHotels}
           hotelPopularity={hotelPopularity}
           isConfirmed={isConfirmed}
@@ -370,7 +387,7 @@ export function QuoteProposalSection({
         <div className="no-print rounded-[24px] bg-white p-5 shadow-soft ring-1 ring-ischia-blue/10 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">La tua scelta</p>
+              <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">{english ? "Your selection" : "La tua scelta"}</p>
               <h3 className="mt-1 text-2xl font-black text-ischia-navy">
                 {selectionComplete ? "Hai scelto tutte le camere" : `Camera ${selectedRooms.length} di ${quote.rooms} scelta`}
               </h3>
@@ -388,7 +405,7 @@ export function QuoteProposalSection({
             {selectedRooms.map((room, index) => (
               <div key={`${room.optionId}-${room.treatmentKey}-${index}`} className="rounded-[18px] bg-ischia-mist p-4 text-sm ring-1 ring-ischia-blue/10">
                 <p className="text-lg font-black text-ischia-navy">Camera {index + 1}</p>
-                <p className="mt-1 text-ischia-ink/70">{room.roomTypeLabel || "Camera standard"}</p>
+                <p className="mt-1 text-ischia-ink/70">{room.roomTypeLabel || (english ? "Standard room" : "Camera standard")}</p>
                 <p className="mt-1 font-black text-ischia-navy">{room.treatmentLabel} · {formatCurrency(room.price)}</p>
                 <button
                   className="mt-3 rounded-full bg-white px-3 py-2 text-xs font-black text-ischia-blue ring-1 ring-ischia-blue/20"
@@ -408,7 +425,7 @@ export function QuoteProposalSection({
             <div className="mt-5 rounded-[18px] bg-[#F5FAFD] p-4 ring-1 ring-ischia-blue/10">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">Totale camere selezionate</p>
+                  <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">{english ? "Total for selected rooms" : "Totale camere selezionate"}</p>
                   <p className="mt-1 text-3xl font-black tabular-nums text-ischia-navy">{formatCurrency(selectedRoomsTotal)}</p>
                 </div>
                 <button
@@ -431,7 +448,7 @@ export function QuoteProposalSection({
           href={publicWhatsappLink(publicQuoteInfoWhatsappMessage(quote))}
           onClick={() => trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "whatsapp_clicked", { placement: "proposal_section" })}
         >
-          Hai domande? Scrivici su WhatsApp
+          {english ? "Questions? Contact us on WhatsApp" : "Hai domande? Scrivici su WhatsApp"}
         </a>
       </div>
 
@@ -477,6 +494,7 @@ export function QuoteProposalSection({
 }
 
 function CompareView({
+  english,
   groupedHotels,
   hotelPopularity,
   isConfirmed,
@@ -485,6 +503,7 @@ function CompareView({
   targetRoomNumber,
   selectionComplete,
 }: {
+  english: boolean;
   groupedHotels: [number, PublicQuoteHotelOptionDTO[]][];
   hotelPopularity: Record<string, number>;
   isConfirmed: boolean;
@@ -606,7 +625,7 @@ function CompareView({
                         className="font-bold uppercase text-[#15803D]"
                         style={{ fontSize: 10, letterSpacing: "0.07em" }}
                       >
-                        Perché te lo proponiamo
+                        {english ? "Why we recommend it" : "Perché te lo proponiamo"}
                       </p>
                       <p className="mt-1 text-xs italic text-[#3F6650]">{hotelReason}</p>
                     </>
@@ -617,7 +636,7 @@ function CompareView({
                 <div style={sep}>
                   {minPrice != null ? (
                     <>
-                      <p className="text-xs text-gray-400">a partire da</p>
+                      <p className="text-xs text-gray-400">{english ? "from" : "a partire da"}</p>
                       <p className="font-bold tabular-nums text-[#1B3A5C]" style={{ fontSize: 20 }}>
                         {formatCurrency(minPrice)}
                       </p>
@@ -678,8 +697,8 @@ function CompareView({
                         {selectionComplete
                           ? `${roomCount} camere scelte ✓`
                           : roomCount > 1
-                            ? `Scegli per Camera ${targetRoomNumber}`
-                            : "Scegli questo hotel"}
+                            ? `${english ? "Choose for room" : "Scegli per Camera"} ${targetRoomNumber}`
+                            : (english ? "Choose this hotel" : "Scegli questo hotel")}
                       </button>
                     </>
                   ) : null}
@@ -691,7 +710,7 @@ function CompareView({
 
         {is3 && (
           <p className="mt-2 text-center text-xs text-gray-400 sm:hidden">
-            Scorri per vedere tutte le proposte
+            {english ? "Scroll to see all options" : "Scorri per vedere tutte le proposte"}
           </p>
         )}
       </div>
@@ -725,6 +744,7 @@ function HotelCard({
   targetRoomNumber: number;
   selectionComplete: boolean;
 }) {
+  const english = quote.customerLanguage === "en";
   const [reaction, setReaction] = useState<"interested" | "too_expensive" | null>(null);
   const reactionKey = `reaction_${quoteCode}_${mainOption.hotelGroup}`;
 
@@ -748,7 +768,9 @@ function HotelCard({
   const stars = mainOption.hotelStars ? "★".repeat(mainOption.hotelStars) : null;
   const isAnySelected = allGroupOptions.some((o) => o.isSelected);
   const hasMultipleRoomTypes = allGroupOptions.length > 1;
-  const priceScopeLabel = hasMultipleRoomTypes || quote.rooms > 1 ? "totale camera" : "totale soggiorno";
+  const priceScopeLabel = hasMultipleRoomTypes || quote.rooms > 1
+    ? (english ? "Room total" : "totale camera")
+    : (english ? "Stay total" : "totale soggiorno");
   const imageUrl = sharperWordPressImageUrl(mainOption.hotelImageUrl);
   const badge = mainOption.badge?.trim();
   const hotelReason = mainOption.hotelReason?.trim();
@@ -779,14 +801,14 @@ function HotelCard({
                     onClick={() => handleReactionClick("interested")}
                     type="button"
                   >
-                    👍 Mi interessa
+                    {english ? "👍 I’m interested" : "👍 Mi interessa"}
                   </button>
                   <button
                     className={`no-print rounded-full border px-3 py-1.5 text-xs font-black transition ${reaction === "too_expensive" ? "border-rose-600 bg-rose-600 text-white" : "border-rose-400 bg-white text-rose-600"}`}
                     onClick={() => handleReactionClick("too_expensive")}
                     type="button"
                   >
-                    💸 Troppo caro
+                    {english ? "💸 Too expensive" : "💸 Troppo caro"}
                   </button>
                 </>
               ) : null}
@@ -805,7 +827,7 @@ function HotelCard({
               rel="noopener noreferrer"
               target="_blank"
             >
-              Vedi l&apos;hotel →
+              {english ? "View hotel →" : "Vedi l'hotel →"}
             </a>
           ) : null}
         </div>
@@ -815,7 +837,7 @@ function HotelCard({
             <div className="flex gap-3">
               <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#DCFCE7] text-lg text-[#15803D]">★</div>
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.12em] text-[#15803D]">Perché te lo proponiamo</p>
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-[#15803D]">{english ? "Why we recommend it" : "Perché te lo proponiamo"}</p>
                 <p className="mt-1 text-sm leading-6 text-ischia-ink/75">{hotelReason}</p>
               </div>
             </div>
@@ -824,7 +846,7 @@ function HotelCard({
 
         {mandatoryFeeNote ? (
           <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
-            <strong>Da pagare in loco:</strong> {mandatoryFeeNote}
+            <strong>{english ? "Payable at the hotel:" : "Da pagare in loco:"}</strong> {mandatoryFeeNote}
           </div>
         ) : null}
 
@@ -837,7 +859,7 @@ function HotelCard({
                 <p className="mt-2 text-3xl font-black text-ischia-navy">{formatCurrency(treatment.price)}</p>
                 <p className="text-xs text-ischia-ink/70">{priceScopeLabel}</p>
                 <details className="mt-2 text-xs leading-5 text-ischia-ink/80">
-                  <summary className="cursor-pointer font-semibold text-ischia-blue">Cosa include</summary>
+                  <summary className="cursor-pointer font-semibold text-ischia-blue">{english ? "What’s included" : "Cosa include"}</summary>
                   <p className="mt-1">{treatmentDetails(option, treatment) || treatmentDescription(treatment)}</p>
                 </details>
                 {option.commitmentNote ? <p className="mt-2 text-xs font-semibold text-ischia-navy">{option.commitmentNote}</p> : null}
@@ -850,8 +872,8 @@ function HotelCard({
                   {selectionComplete
                     ? `${quote.rooms} camere scelte ✓`
                     : quote.rooms > 1
-                      ? `Scegli per Camera ${targetRoomNumber} →`
-                      : "Scegli questa proposta →"}
+                      ? `${english ? "Choose for room" : "Scegli per Camera"} ${targetRoomNumber} →`
+                      : (english ? "Choose this option →" : "Scegli questa proposta →")}
                 </button>
               </div>
             )))}
@@ -860,11 +882,11 @@ function HotelCard({
 
         {features.length > 0 ? (
           <div className="mt-5">
-            <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-navy">Plus inclusi</p>
+            <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-navy">{english ? "Highlights" : "Plus inclusi"}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {features.map((feature) => (
                 <span key={feature} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200/70">
-                  ✓ {feature}
+                  ✓ {amenityLabel(feature, english)}
                 </span>
               ))}
             </div>
@@ -873,14 +895,14 @@ function HotelCard({
 
         {services.length > 0 ? (
           <div className="mt-5 rounded-[22px] bg-[#F2F8FC] p-5 ring-1 ring-ischia-blue/10">
-            <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">Servizi inclusi</p>
+            <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue">{english ? "Included amenities" : "Servizi inclusi"}</p>
             <ul className="mt-4 grid gap-x-10 gap-y-3 sm:grid-cols-2">
               {services.map((service) => (
                 <li key={service} className="flex items-center gap-3 text-sm font-semibold text-ischia-ink/78">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-ischia-blue ring-1 ring-ischia-blue/10">
                     <ServiceIcon service={service} />
                   </span>
-                  <span>{service}</span>
+                  <span>{amenityLabel(service, english)}</span>
                 </li>
               ))}
             </ul>
@@ -892,7 +914,7 @@ function HotelCard({
             <div className="flex items-start gap-3">
               <span className="text-lg">▤</span>
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.13em] text-white">Note struttura / camera</p>
+                <p className="text-xs font-black uppercase tracking-[0.13em] text-white">{english ? "Hotel and room notes" : "Note struttura / camera"}</p>
                 {hotelNotes.notes.length > 0 ? (
                   <div className="mt-2 space-y-1 text-sm leading-6 text-white/95">
                     {hotelNotes.notes.map((note) => <p key={note}>{note}</p>)}
@@ -944,7 +966,7 @@ function HotelCard({
                           <p className="text-xs font-black uppercase tracking-[0.13em] text-ischia-blue/70">{opt.roomTypeLabel}</p>
                         ) : null}
                         <h4 className="mt-1 text-3xl font-black tracking-[-0.03em] text-ischia-navy">{treatment.label}</h4>
-                        <p className="mt-4 text-xs font-black uppercase tracking-[0.13em] text-ischia-blue/70">Cosa include</p>
+                        <p className="mt-4 text-xs font-black uppercase tracking-[0.13em] text-ischia-blue/70">{english ? "What’s included" : "Cosa include"}</p>
                         <ul className="mt-3 space-y-2">
                           {frontDetails.split(",").map((item) => item.trim()).filter(Boolean).map((item) => (
                             <li key={item} className="flex gap-2 text-sm leading-5 text-ischia-ink/80">
@@ -970,8 +992,8 @@ function HotelCard({
                               {selectionComplete
                                 ? `${quote.rooms} camere scelte ✓`
                                 : quote.rooms > 1
-                                  ? `Scegli per Camera ${targetRoomNumber} →`
-                                  : "Scegli questa proposta →"}
+                                  ? `${english ? "Choose for room" : "Scegli per Camera"} ${targetRoomNumber} →`
+                                  : (english ? "Choose this option →" : "Scegli questa proposta →")}
                             </button>
                           </div>
                         ) : null}

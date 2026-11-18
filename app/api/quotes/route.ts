@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
   const accessToken = request.cookies.get(ADMIN_ACCESS_COOKIE)?.value;
   const result = await createQuoteFromRequest({
     quoteRequestId: body.quoteRequestId,
+    customerLanguage: body.customerLanguage === "en" ? "en" : "it",
     code: body.code,
     publicToken: body.publicToken,
     status: "in_lavorazione",
