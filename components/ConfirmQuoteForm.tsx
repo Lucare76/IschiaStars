@@ -25,6 +25,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
   selectedRooms?: QuoteRoomSelection[];
   confirmationFieldsRef?: Ref<HTMLHeadingElement>;
 }) {
+  const english = quote.customerLanguage === "en";
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +43,9 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
   if (confirmed) {
     return (
       <div className="rounded-2xl bg-emerald-50 p-5 text-emerald-900 ring-1 ring-emerald-200">
-        <h3 className="text-2xl font-black">Grazie, abbiamo ricevuto la tua preferenza.</h3>
+        <h3 className="text-2xl font-black">{english ? "Thank you! We received your booking request." : "Grazie, abbiamo ricevuto la tua preferenza."}</h3>
         <p className="mt-2 text-sm leading-6">
-          Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà a breve per completare la prenotazione.
+          {english ? "Our team will check availability with your chosen hotel and contact you to complete the booking." : "Il nostro staff verificherà la disponibilità definitiva della struttura scelta e ti ricontatterà a breve per completare la prenotazione."}
         </p>
         {whatsappNumber ? (
           <a
@@ -53,7 +54,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
             rel="noopener noreferrer"
             target="_blank"
           >
-            Scrivici su WhatsApp
+            {english ? "Contact us on WhatsApp" : "Scrivici su WhatsApp"}
           </a>
         ) : null}
       </div>
@@ -92,7 +93,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
         })
           .then(async (response) => {
             const payload = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-            if (!response.ok || !payload?.ok) throw new Error(payload?.error ?? "Non siamo riusciti a salvare la conferma");
+            if (!response.ok || !payload?.ok) throw new Error(english ? "We couldn’t submit your request. Check your details and try again." : (payload?.error ?? "Non siamo riusciti a salvare la conferma"));
             setConfirmed(true);
           })
           .catch((submitError: unknown) => {
@@ -103,17 +104,17 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
           });
       }}
     >
-      <p className="text-sm leading-6 text-ischia-ink/70">Completa i dati per confermare questa proposta. IschiaStars verificherà la disponibilità con la struttura prima dei passaggi definitivi.</p>
+      <p className="text-sm leading-6 text-ischia-ink/70">{english ? "Enter your details to request this stay. Our team will verify availability." : "Completa i dati per confermare questa proposta. IschiaStars verificherà la disponibilità con la struttura prima dei passaggi definitivi."}</p>
       {expiredOffer ? (
         <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
-          Questo preventivo risulta scaduto, ma puoi comunque confermare la tua preferenza. Prima della prenotazione definitiva verificheremo disponibilità, prezzo e condizioni aggiornate.
+          {english ? "This quote has expired. You can still tell us your preference, and we’ll check availability and pricing before booking." : "Questo preventivo risulta scaduto, ma puoi comunque confermare la tua preferenza. Prima della prenotazione definitiva verificheremo disponibilità, prezzo e condizioni aggiornate."}
         </div>
       ) : null}
 
       {/* Riepilogo selezione */}
       {selectedOption && (
         <div className="rounded-xl bg-ischia-mist p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue">Stai confermando</p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue">{english ? "Your selection" : "Stai confermando"}</p>
           <p className="mt-1 text-lg font-black text-ischia-navy">{selectedOption.hotelName}</p>
           <p className="text-sm font-semibold text-ischia-ink/80">{selectedOption.treatmentLabel} — {formatCurrency(selectedOption.price)}</p>
           {selectedOption.depositPercent != null && selectedOption.depositPercent > 0 ? (
@@ -124,7 +125,7 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
           {selectedRooms.length > 1 ? (
             <div className="mt-3 space-y-1 border-t border-ischia-blue/10 pt-3 text-sm text-ischia-ink/80">
               {selectedRooms.map((room, index) => (
-                <p key={`${room.optionId}-${index}`}><strong>Camera {index + 1}:</strong> {room.roomTypeLabel || "Camera standard"}, {room.treatmentLabel} - {formatCurrency(room.price)}</p>
+                <p key={`${room.optionId}-${index}`}><strong>{english ? "Room" : "Camera"} {index + 1}:</strong> {room.roomTypeLabel || "Camera standard"}, {room.treatmentLabel} - {formatCurrency(room.price)}</p>
               ))}
               <p className="pt-1 font-black text-ischia-navy">Totale: {formatCurrency(totalPrice)} - Acconto: {formatCurrency(totalDeposit)} - Saldo: {formatCurrency(totalBalance)}</p>
             </div>
@@ -134,24 +135,24 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
 
       {selectedOption ? (
         <div className="rounded-xl bg-white p-4 text-sm leading-6 text-ischia-ink/78 ring-1 ring-ischia-blue/10">
-          <p className="font-black text-ischia-navy">Riepilogo pagamento</p>
-          <p><strong>Prezzo totale:</strong> {formatCurrency(totalPrice)}</p>
+          <p className="font-black text-ischia-navy">{english ? "Payment summary" : "Riepilogo pagamento"}</p>
+          <p><strong>{english ? "Total price:" : "Prezzo totale:"}</strong> {formatCurrency(totalPrice)}</p>
           {selectedOption.depositPercent != null && selectedOption.depositPercent > 0 ? (
             <>
-              <p><strong>Caparra richiesta:</strong> {formatCurrency(totalDeposit)}</p>
-              <p><strong>Saldo restante:</strong> {formatCurrency(totalBalance)}</p>
+              <p><strong>{english ? "Deposit:" : "Caparra richiesta:"}</strong> {formatCurrency(totalDeposit)}</p>
+              <p><strong>{english ? "Remaining balance:" : "Saldo restante:"}</strong> {formatCurrency(totalBalance)}</p>
             </>
           ) : null}
-          {selectedOption.balanceMethod ? <p><strong>Saldo:</strong> {selectedOption.balanceMethod}</p> : null}
-          {selectedOption.cancellationPolicy ? <p><strong>Policy cancellazione:</strong> {selectedOption.cancellationPolicy}</p> : null}
+          {selectedOption.balanceMethod ? <p><strong>{english ? "Balance:" : "Saldo:"}</strong> {selectedOption.balanceMethod}</p> : null}
+          {selectedOption.cancellationPolicy ? <p><strong>{english ? "Cancellation policy:" : "Policy cancellazione:"}</strong> {selectedOption.cancellationPolicy}</p> : null}
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 font-semibold text-amber-900">
-            Le coordinate per il versamento della caparra saranno inviate solo dopo la verifica della disponibilità con la struttura.
+            {english ? "We’ll send deposit payment instructions once the hotel confirms availability." : "Le coordinate per il versamento della caparra saranno inviate solo dopo la verifica della disponibilità con la struttura."}
           </p>
         </div>
       ) : null}
 
       <h3 ref={confirmationFieldsRef} tabIndex={-1} className="scroll-mt-4 rounded-xl bg-ischia-sun px-4 py-3 text-lg font-bold leading-snug text-ischia-navy sm:px-5 sm:text-xl">
-        Compila il modulo con tutti i tuoi dati anagrafici
+        {english ? "Enter your personal details" : "Compila il modulo con tutti i tuoi dati anagrafici"}
       </h3>
 
       {!canSubmit && requiresSelection && (
@@ -168,30 +169,30 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
       {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700 ring-1 ring-rose-100">{error}</p> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input required name="firstName" label="Nome" defaultValue={quote.customerFirstName} />
-        <Input required name="lastName" label="Cognome" defaultValue={quote.customerLastName} />
-        <Input required name="phone" label="Telefono WhatsApp" defaultValue={quote.customerPhone} />
+        <Input required name="firstName" label={english ? "First name" : "Nome"} defaultValue={quote.customerFirstName} />
+        <Input required name="lastName" label={english ? "Last name" : "Cognome"} defaultValue={quote.customerLastName} />
+        <Input required name="phone" label={english ? "WhatsApp phone number" : "Telefono WhatsApp"} defaultValue={quote.customerPhone} />
         <Input required name="email" label="Email" type="email" defaultValue={quote.customerEmail} />
-        <Input required name="fiscalCode" label="Codice fiscale" minLength={11} />
-        <Input required name="address" label="Indirizzo di residenza" />
-        <Input required name="city" label="Città" />
-        <Input required name="postalCode" label="CAP" pattern="[0-9]{5}" />
-        <Input required name="province" label="Provincia" />
+        <Input required={!english} name="fiscalCode" label={english ? "Italian tax code (if applicable)" : "Codice fiscale"} minLength={english ? undefined : 11} />
+        <Input required name="address" label={english ? "Street address" : "Indirizzo di residenza"} />
+        <Input required name="city" label={english ? "City" : "Città"} />
+        <Input required name="postalCode" label={english ? "ZIP or postal code" : "CAP"} pattern={english ? undefined : "[0-9]{5}"} />
+        <Input required name="province" label={english ? "State or province" : "Provincia"} />
       </div>
 
       {quote.children.length > 0 && (
         <div className="space-y-3">
-          <p className="text-sm font-black text-ischia-navy">Dati bambini</p>
+          <p className="text-sm font-black text-ischia-navy">{english ? "Children’s details" : "Dati bambini"}</p>
           {quote.children.map((child, index) => (
             <div key={child.id} className="rounded-xl bg-ischia-mist p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue">Bambino {index + 1}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-ischia-blue">{english ? "Child" : "Bambino"} {index + 1}</p>
               {child.age != null && (
                 <p className="mt-1 text-sm text-ischia-ink/70">
                   Età indicata nel preventivo: <strong>{child.age} {child.age === 1 ? "anno" : "anni"}</strong>
                 </p>
               )}
               <div className="mt-2">
-                <Input required name={`child-${child.id}`} label="Data di nascita *" type="date" />
+                <Input required name={`child-${child.id}`} label={english ? "Date of birth *" : "Data di nascita *"} type="date" />
               </div>
             </div>
           ))}
@@ -200,11 +201,11 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
 
       <label className="flex gap-3 text-sm text-ischia-ink/78">
         <input required name="acceptedTerms" type="checkbox" className="mt-1 h-4 w-4" />
-        Accetto condizioni della proposta, pagamento e cancellazione.
+        {english ? "I agree to the offer, payment, and cancellation terms." : "Accetto condizioni della proposta, pagamento e cancellazione."}
       </label>
       <label className="flex gap-3 text-sm text-ischia-ink/78">
         <input required name="acceptedPrivacy" type="checkbox" className="mt-1 h-4 w-4" />
-        Accetto privacy e trattamento dati personali.
+        {english ? "I agree to the privacy terms and processing of my personal data." : "Accetto privacy e trattamento dati personali."}
       </label>
 
       <button
@@ -213,13 +214,13 @@ export function ConfirmQuoteForm({ quote, selectedRooms = [], confirmationFields
         type="submit"
       >
         {loading
-          ? "Invio in corso..."
+          ? (english ? "Sending…" : "Invio in corso...")
           : !canSubmit
-            ? "Seleziona prima una proposta"
-            : "Invia richiesta di prenotazione"}
+            ? (english ? "Choose an option first" : "Seleziona prima una proposta")
+            : (english ? "Send booking request" : "Invia richiesta di prenotazione")}
       </button>
       <p className="text-center text-xs leading-5 text-ischia-ink/70">
-        Confermeremo la disponibilità prima di richiedere la caparra.
+        {english ? "We’ll confirm availability before requesting a deposit." : "Confermeremo la disponibilità prima di richiedere la caparra."}
       </p>
     </form>
   );

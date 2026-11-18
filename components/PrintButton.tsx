@@ -2,7 +2,7 @@
 
 import { trackQuoteEvent } from "@/lib/client-tracking";
 
-export function PrintButton({ className, quoteCode, token }: { className?: string; quoteCode?: string; token?: string }) {
+export function PrintButton({ className, quoteCode, token, english = false }: { className?: string; quoteCode?: string; token?: string; english?: boolean }) {
   return (
     <button
       className={className ?? "rounded-full bg-white px-5 py-3 font-black text-ischia-navy ring-1 ring-ischia-blue/20"}
@@ -12,7 +12,7 @@ export function PrintButton({ className, quoteCode, token }: { className?: strin
         window.print();
       }}
     >
-      Stampa / Salva PDF
+      {english ? "Print / Save PDF" : "Stampa / Salva PDF"}
     </button>
   );
 }

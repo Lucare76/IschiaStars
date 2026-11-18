@@ -98,6 +98,7 @@ function ClientSearch({ onSelect }: { onSelect: (c: ClientResult) => void }) {
 
 export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLabTest = false, manualConfirmation = false, quoteChipSettings = defaultQuoteChipSettings }: { hotels: Hotel[]; initialRequest?: QuoteRequest | null; requestedRequestId?: string; isLabTest?: boolean; manualConfirmation?: boolean; quoteChipSettings?: QuoteChipSettings }) {
   const router = useRouter();
+  const [customerLanguage, setCustomerLanguage] = useState(initialRequest?.customerLanguage ?? "it");
   const activeHotels = hotels.filter((h) => h.active);
   const requestedHotelName = initialRequest?.requestedHotel?.trim() ?? "";
   const requestedHotelMatch = requestedHotelName ? findRequestedHotelInDb(requestedHotelName, activeHotels) : undefined;
@@ -189,6 +190,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
         children,
         rooms: Number(formData.get("rooms") ?? 1),
         quoteRequestId: initialRequest?.id,
+        customerLanguage,
         hotelRequested: formData.get("hotelRequested"),
         hotelId: hotelOptions[0]?.hotelId || undefined,
         alternativeHotelId: isAlternativeOffer ? hotelOptions[0]?.hotelId || undefined : undefined,
@@ -280,6 +282,13 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
             Richiesta non trovata. Puoi comunque creare un preventivo manuale.
           </div>
         ) : null}
+        <label className="block text-sm font-semibold">
+          Lingua del preventivo
+          <select className="ml-3 rounded-lg border bg-white p-2" value={customerLanguage} onChange={(event) => setCustomerLanguage(event.target.value === "en" ? "en" : "it")}>
+            <option value="it">Italiano</option>
+            <option value="en">English (US)</option>
+          </select>
+        </label>
         <RequestMessageBox message={initialRequest?.message} />
         {error ? <p className="rounded-2xl bg-rose-50 p-4 text-sm font-bold text-rose-700 ring-1 ring-rose-100">{error}</p> : null}
         {requestedHotelMissing ? (
