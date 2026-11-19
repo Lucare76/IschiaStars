@@ -1,0 +1,128 @@
+{
+  "updated_at": "2026-11-18T10:46:21.078Z",
+  "hotel_note_chips": [
+    "Extra :Traghetto da Napoli € 33 a persona a/r con transfer",
+    "Ultime disponibilità",
+    "Costi intesi per ogni camera",
+    "Quota cane 20 euro al giorno da pagare in loco",
+    "Offerta da confermare entro le 18:00 di oggi",
+    "Costo extra: Treno alta velocità da  incluso minibus dalla stazione centrale di Napoli al porto, più traghetto e minibus dal porto d’Ischia all’hotel andata e ritorno €  per persona",
+    "Quota cane 20 euro totali  da pagare in loco",
+    "Extra: transfer dalla Stazione di Napoli a\\r incluso passaggio marittimo € 68 per persona",
+    "Senza impegnative mediche il costo totale è di €  in mezza pensione ed €  in pensione completa",
+    "OFFERTA PRENOTA PRIMA",
+    "Quota cane 15 euro al giorno da pagare all'atto della prenotazione",
+    "Cenone di San Silvestro incluso",
+    "SOGGIORNO MINIMO 3 NOTTI",
+    "Senza impegnativa medica supplemento di € 100 per persona adulta",
+    "Costo extra: Auto sup. ai 4 mt con 2 passeggeri € 165 a\\r da Pozzuoli",
+    "Per il viaggio ci indichi la città di partenza -",
+    "Costo extra : Aliscafo da Napoli € 40 a persona a/r con transfer"
+  ],
+  "public_note_chips": [
+    "Ultime disponibilità",
+    "Costi intesi per ogni camera",
+    "Quota cane 20 euro al giorno da pagare in loco",
+    "Offerta da confermare entro le 18:00 di oggi",
+    "Costo extra: Treno alta velocità da  incluso minibus dalla stazione centrale di Napoli al porto, più traghetto e minibus dal porto d’Ischia all’hotel andata e ritorno €  per persona",
+    "Quota cane 20 euro totali  da pagare in loco",
+    "Extra: transfer dalla Stazione di Napoli a\\r incluso passaggio marittimo € 68 per persona",
+    "Senza impegnative mediche il costo totale è di €  in mezza pensione ed €  in pensione completa",
+    "OFFERTA PRENOTA PRIMA",
+    "Costo extra : Traghetto da Napoli € 33 a persona a/r con transfer",
+    "Quota cane 15 euro al giorno da pagare all'atto della prenotazione",
+    "Cenone di San Silvestro incluso",
+    "SOGGIORNO MINIMO 3 NOTTI",
+    "Ultime disponibilità con queste tariffe",
+    "Senza impegnativa medica supplemento di € 100 per persona adulta",
+    "Bevande incluse ( acqua e vino )",
+    "Costo extra: Auto sup. ai 4 mt con 2 passeggeri € 165 a\\r da Pozzuoli",
+    "Costo extra : Aliscafo da Napoli € 40 a persona a/r con transfer"
+  ],
+  "room_type_presets": [
+    {
+      "label": "Camera singola standard",
+      "capacity": 1
+    },
+    {
+      "label": "Camera matrimoniale standard",
+      "capacity": 2
+    },
+    {
+      "label": "Camera matrimoniale con balcone",
+      "capacity": 2
+    },
+    {
+      "label": "Camera tripla standard",
+      "capacity": 3
+    },
+    {
+      "label": "Camera tripla con balcone",
+      "capacity": 3
+    },
+    {
+      "label": "Camera quadrupla standard",
+      "capacity": 4
+    },
+    {
+      "label": "Camera quadrupla con balcone",
+      "capacity": 4
+    },
+    {
+      "label": "Doppia Uso Singola Standard - Edificio Separato",
+      "capacity": 1
+    },
+    {
+      "label": "Doppia Uso Singola Classic",
+      "capacity": 1
+    },
+    {
+      "label": "Doppia Standard- Edificio Separato",
+      "capacity": 2
+    },
+    {
+      "label": "Classic Matrimoniale interna al complesso",
+      "capacity": 2
+    },
+    {
+      "label": "Camera Matrimoniale Grusoni Vista Mare",
+      "capacity": 2
+    },
+    {
+      "label": "Camera con Balcone Vista Giardino",
+      "capacity": 2
+    },
+    {
+      "label": "Camera quintupla standard",
+      "capacity": 5
+    }
+  ],
+  "voucher_note_chips": [
+    "Soggiorno termale con impegnativa medica per fanghi e bagni-Senza impegnativa medica supplemento di € 100.00 per persona adulta-Ove previsto, ticket sanitario nazionale da saldare in struttura-",
+    "Incluso traghetto con auto +  passeggeri a\\r da Pozzuoli",
+    "Incluso treno alta velocità da  + tutti i collegamenti marittimi e terrestri a\\r per   persone",
+    "Incluso traghetto-aliscafo + transfer a\\r da   per    persone"
+  ],
+  "hotel_reason_phrases": [
+    "Struttura centrale, facile da raggiungere",
+    "Ottimo rapporto qualità/prezzo",
+    "Ideale per famiglie con bambini",
+    "Vista mare garantita",
+    "Struttura tranquilla, lontana dal caos",
+    "Consigliato per coppie",
+    "Uno dei più richiesti della stagione",
+    "Struttura confortevole a pochi minuti dal centro",
+    "Struttura confortevole a 100 metri dal mare",
+    "Offerta libera senza impegnativa medica termale",
+    "Elegante e confortevole struttura 4 stelle"
+  ],
+  "treatment_detail_phrases": [
+    "Bevande incluse ( acqua e vino )",
+    "Cenone di San Silvestro incluso",
+    "Accesso spa/terme incluso",
+    "Parcheggio incluso",
+    "Acqua ai pasti inclusa",
+    "Spiaggia convenzionata inclusa",
+    "Transfer incluso"
+  ]
+}

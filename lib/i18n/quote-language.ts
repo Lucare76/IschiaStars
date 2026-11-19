@@ -1,3 +1,4 @@
+import { chipTranslations } from "./chip-translations";
 import {
   CANCELLATION_POLICY_7_DAYS,
   CANCELLATION_POLICY_14_DAYS,
@@ -40,6 +41,7 @@ export function requestLanguage(metadata: unknown): QuoteLanguage {
     : "it";
 }
 const phrases: Record<string, string> = {
+  ...chipTranslations,
   "Inviare copia del pagamento tramite email o WhatsApp.": "Please send a copy of the payment confirmation by email or WhatsApp.",
   "Camera e colazione": "Bed and breakfast",
   "Mezza pensione": "Half board",
