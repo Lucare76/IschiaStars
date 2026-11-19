@@ -32,13 +32,53 @@ export function QuoteLanguageEditor({
     ...quote,
     englishTranslations: translations,
   });
+  async function translatedDraft(customSource?: string) {
+    const response = await adminApiFetch(`/api/quotes/${quote.id}/translate`, {
+      method: "POST",
+      body: JSON.stringify({ translations, customSource }),
+    });
+    const result = await readAdminApiJson<{
+      ok?: boolean;
+      translations?: Record<string, string>;
+      error?: string;
+    }>(response);
+    if (!response.ok || !result?.ok || !result.translations)
+      throw Error(result?.error ?? "Traduzione non riuscita");
+    setTranslations(result.translations);
+    return result.translations;
+  }
+  async function translateCustom() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const draft = await translatedDraft(customSource);
+      setCustomEnglish(
+        draft[customSource.trim()] ??
+          translateQuoteText(customSource, draft) ??
+          "",
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Traduzione non riuscita",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   async function save() {
     setBusy(true);
     setMessage("");
     try {
+      const draft =
+        language === "en" && missing.length
+          ? await translatedDraft()
+          : translations;
       const response = await adminApiFetch(
         `/api/quotes/${quote.id}/localization`,
-        { method: "PATCH", body: JSON.stringify({ language, translations }) },
+        {
+          method: "PATCH",
+          body: JSON.stringify({ language, translations: draft }),
+        },
       );
       const result = await readAdminApiJson<{
         ok?: boolean;
@@ -64,6 +104,7 @@ export function QuoteLanguageEditor({
           Lingua cliente e versione inglese
         </h2>
         <select
+          disabled={busy}
           aria-label="Lingua cliente"
           value={language}
           onChange={(e) => setLanguage(e.target.value as QuoteLanguage)}
@@ -77,8 +118,10 @@ export function QuoteLanguageEditor({
         <>
           <p className="my-3 text-sm">
             Email, WhatsApp, pagina cliente e voucher saranno in inglese. I
-            testi standard sono precompilati; completa e controlla gli altri
-            prima dell’invio. I nomi degli hotel restano invariati.
+            testi standard sono precompilati; al salvataggio DeepL traduce i
+            mancanti. Controlla i risultati prima dell’invio. I nomi degli hotel
+            restano invariati. I campi anagrafici non vengono inviati al
+            traduttore; le note da tradurre sì.
           </p>
           <p
             className={
@@ -88,7 +131,7 @@ export function QuoteLanguageEditor({
             }
           >
             {missing.length
-              ? `${missing.length} testi da tradurre: invio inglese non ancora disponibile.`
+              ? `${missing.length} testi da tradurre automaticamente al salvataggio.`
               : "Tutti i testi hanno una versione inglese."}
           </p>
           <details>
@@ -105,6 +148,7 @@ export function QuoteLanguageEditor({
                     {source}
                   </span>
                   <textarea
+                    disabled={busy}
                     aria-label={`Traduzione: ${source}`}
                     rows={3}
                     className="w-full rounded-lg border p-2"
@@ -128,9 +172,18 @@ export function QuoteLanguageEditor({
               Prepara una nota aggiuntiva in inglese
             </summary>
             <div className="mt-2 grid gap-2">
+              <button
+                type="button"
+                disabled={busy || !customSource.trim()}
+                onClick={() => void translateCustom()}
+                className="justify-self-start rounded-full bg-ischia-mist px-3 py-2 text-sm font-bold disabled:opacity-50"
+              >
+                Traduci questa nota con DeepL
+              </button>
               <label className="text-sm">
                 Nota originale
                 <textarea
+                    disabled={busy}
                   value={customSource}
                   onChange={(e) => setCustomSource(e.target.value)}
                   className="mt-1 w-full rounded-lg border p-2"
@@ -139,6 +192,7 @@ export function QuoteLanguageEditor({
               <label className="text-sm">
                 Versione inglese
                 <textarea
+                    disabled={busy}
                   value={customEnglish}
                   onChange={(e) => setCustomEnglish(e.target.value)}
                   className="mt-1 w-full rounded-lg border p-2"
@@ -146,7 +200,7 @@ export function QuoteLanguageEditor({
               </label>
               <button
                 type="button"
-                disabled={!customSource.trim() || !customEnglish.trim()}
+                disabled={busy || !customSource.trim() || !customEnglish.trim()}
                 className="justify-self-start rounded-full border px-3 py-2 text-sm disabled:opacity-50"
                 onClick={() => {
                   setTranslations((current) => ({
@@ -169,7 +223,11 @@ export function QuoteLanguageEditor({
         onClick={() => void save()}
         className="mt-4 rounded-full bg-ischia-navy px-5 py-2 text-sm font-bold text-white disabled:opacity-50"
       >
-        {busy ? "Salvataggio…" : "Salva lingua e traduzioni"}
+        {busy
+          ? "Traduzione / salvataggio…"
+          : language === "en" && missing.length
+            ? "Traduci e salva in inglese"
+            : "Salva lingua e traduzioni"}
       </button>
       {message && (
         <p role="status" className="mt-2 text-sm">

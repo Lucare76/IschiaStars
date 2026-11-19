@@ -1,7 +1,7 @@
 # Preventivi in inglese
 
 - Nella creazione, **Lingua cliente** parte da English se la richiesta importata ha `language=en` oppure proviene da un URL `/en/`. La lingua si può scegliere manualmente.
-- Dopo il salvataggio, **Lingua cliente e versione inglese** permette di completare e modificare le traduzioni per quel preventivo. Le formule standard sono precompilate. I testi liberi richiedono una traduzione dell'operatore: non è collegato un servizio esterno di traduzione automatica.
+- Dopo il salvataggio, **Lingua cliente e versione inglese** permette di completare e modificare le traduzioni per quel preventivo. Le formule standard sono precompilate. Con `DEEPL_API_KEY` configurata, **Traduci e salva in inglese** traduce i testi mancanti tramite DeepL prima del salvataggio. L’operatore può correggere ogni risultato; le traduzioni già presenti non vengono sovrascritte.
 - Salvare lingua e traduzioni prima di inviare email o WhatsApp. Gli originali italiani rimangono intatti. Se un testo originale cambia, la sua vecchia traduzione non viene riutilizzata.
 - Pagina cliente, richiesta di prenotazione, email al cliente (compresi follow-up e saldo), WhatsApp e voucher automatico seguono la lingua salvata. Le comunicazioni operative interne e ai fornitori restano in italiano.
 - Il modulo inglese richiede il Paese e ammette codici postali esteri; codice fiscale italiano e provincia sono facoltativi. Prezzi e condizioni vengono risolti sul server a partire dagli ID della selezione originale.
@@ -22,3 +22,11 @@ npm run build
 ```
 
 Il test non invia email e genera un voucher fittizio in `tmp/pdfs`. Verifica rilevamento lingua, traduzioni mancanti o obsolete, numeri esteri, pagina e form inglesi, tutti i messaggi cliente e servizi extra nel PDF.
+
+## Attivazione traduzione automatica
+
+Creare una chiave DeepL API dal proprio account e inserirla in Vercel → progetto `preventivi` → Settings → Environment Variables come `DEEPL_API_KEY`, tipo Sensitive, ambiente Production (e Preview solo se desiderato), quindi ridistribuire. Non inserirla nella chat, nel repository o in variabili NEXT_PUBLIC_.
+
+Il servizio invia a DeepL solo i testi selezionati per la traduzione, mai i campi anagrafici. Le note possono contenere informazioni inserite dall’operatore: controllarle prima di tradurle. Vengono conservati importi, date numeriche, percentuali e riferimenti tramite tag XML non traducibili e verifica della risposta. Non c’è invio automatico di email al termine della traduzione.
+
+Senza chiave, il sistema spiega cosa configurare e conserva le traduzioni manuali. Non è attivato alcun abbonamento o pagamento dall’integrazione. Consumi e limiti dipendono dall’account DeepL scelto.
