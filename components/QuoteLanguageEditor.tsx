@@ -65,12 +65,12 @@ export function QuoteLanguageEditor({
       setBusy(false);
     }
   }
-  async function save() {
+  async function save(automatic = false) {
     setBusy(true);
     setMessage("");
     try {
       const draft =
-        language === "en" && missing.length
+        automatic && language === "en" && missing.length
           ? await translatedDraft()
           : translations;
       const response = await adminApiFetch(
@@ -88,7 +88,9 @@ export function QuoteLanguageEditor({
       if (!response.ok || !result?.ok || !result.quote)
         throw Error(result?.error ?? "Salvataggio non riuscito");
       onSaved(result.quote);
-      setMessage("Lingua e traduzioni salvate.");
+      setMessage(language === "en" && missingEnglishTranslations(result.quote).length
+        ? "Traduzioni salvate. Completa i testi mancanti prima di inviare il preventivo in inglese."
+        : "Lingua e traduzioni salvate.");
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Salvataggio non riuscito",
@@ -118,8 +120,8 @@ export function QuoteLanguageEditor({
         <>
           <p className="my-3 text-sm">
             Email, WhatsApp, pagina cliente e voucher saranno in inglese. I
-            testi standard sono precompilati; al salvataggio DeepL traduce i
-            mancanti. Controlla i risultati prima dell’invio. I nomi degli hotel
+            testi standard e i chip configurati sono precompilati. Puoi salvare
+            anche traduzioni parziali; DeepL è facoltativo. Controlla i risultati prima dell’invio. I nomi degli hotel
             restano invariati. I campi anagrafici non vengono inviati al
             traduttore; le note da tradurre sì.
           </p>
@@ -131,7 +133,7 @@ export function QuoteLanguageEditor({
             }
           >
             {missing.length
-              ? `${missing.length} testi da tradurre automaticamente al salvataggio.`
+              ? `${missing.length} testi ancora da tradurre. Puoi salvare e completarli in seguito.`
               : "Tutti i testi hanno una versione inglese."}
           </p>
           <details>
@@ -225,10 +227,14 @@ export function QuoteLanguageEditor({
       >
         {busy
           ? "Traduzione / salvataggio…"
-          : language === "en" && missing.length
-            ? "Traduci e salva in inglese"
-            : "Salva lingua e traduzioni"}
+          : "Salva lingua e traduzioni"}
       </button>
+      {language === "en" && missing.length > 0 && (
+        <button type="button" disabled={busy} onClick={() => void save(true)}
+          className="ml-2 mt-4 rounded-full border px-4 py-2 text-sm font-bold disabled:opacity-50">
+          Traduci mancanti con DeepL e salva
+        </button>
+      )}
       {message && (
         <p role="status" className="mt-2 text-sm">
           {message}

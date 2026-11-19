@@ -30,3 +30,11 @@ Creare una chiave DeepL API dal proprio account e inserirla in Vercel → proget
 Il servizio invia a DeepL solo i testi selezionati per la traduzione, mai i campi anagrafici. Le note possono contenere informazioni inserite dall’operatore: controllarle prima di tradurle. Vengono conservati importi, date numeriche, percentuali e riferimenti tramite tag XML non traducibili e verifica della risposta. Non c’è invio automatico di email al termine della traduzione.
 
 Senza chiave, il sistema spiega cosa configurare e conserva le traduzioni manuali. Non è attivato alcun abbonamento o pagamento dall’integrazione. Consumi e limiti dipendono dall’account DeepL scelto.
+
+## Chip pretradotti e salvataggio manuale
+
+Tutti i chip configurati al 19 novembre 2026, comprese note voucher, motivazioni, trattamenti e categorie camera, hanno una traduzione predefinita senza API. I testi italiani restano invariati. Le parentesi quadre nella versione inglese segnalano campi lasciati vuoti nel modello originale: completarli prima dell'invio. I chip nuovi o modificati richiedono una nuova traduzione.
+
+Il pulsante “Salva lingua e traduzioni” salva anche un lavoro parziale senza contattare DeepL. La traduzione automatica è un comando separato e facoltativo. L'invio in inglese continua a richiedere tutti i testi tradotti.
+
+Verifica: TSX_TSCONFIG_PATH=tests/tsconfig.json node --import tsx tests/chip-translations.test.ts.
