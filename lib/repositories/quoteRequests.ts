@@ -1,3 +1,4 @@
+import { requestLanguage } from "@/lib/i18n/quote-language";
 import { allDemoQuoteRequests, allDemoQuotes, updateDemoQuoteRequestStatus } from "@/lib/demo-store";
 import { fallback, fromSupabase, normalizeStatus, RepositoryResult } from "@/lib/repositories/shared";
 import { createSupabaseAdminClient, createSupabaseAuthenticatedClient } from "@/lib/supabase/admin";
@@ -289,6 +290,7 @@ function mapQuoteRequest(row: Record<string, any>): QuoteRequest {
 
   return {
     id: row.id,
+    language: requestLanguage(row.metadata),
     firstName: row.first_name,
     lastName: row.last_name,
     email: row.email,

@@ -1,3 +1,4 @@
+import { missingEnglishTranslations } from "@/lib/i18n/quote-language";
 import { NextRequest, NextResponse } from "next/server";
 import { BALANCE_METHOD_IN_STRUCTURE, calculatePaymentBreakdown } from "@/lib/hotel-policies";
 import { createQuoteConfirmation } from "@/lib/repositories/quoteConfirmations";
@@ -7,6 +8,7 @@ import { compareDeclaredAge } from "@/lib/age-utils";
 import type { ChildGuest, QuoteRoomSelection } from "@/lib/types";
 
 type ConfirmationPayload = {
+  country?: string;
   quoteCode?: string;
   token?: string;
   firstName?: string;
@@ -28,8 +30,7 @@ const INVALID_SELECTION_MESSAGE = "Impossibile completare la conferma. Contattac
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as ConfirmationPayload | null;
-  const validationError = validateConfirmation(body);
-  if (validationError) return NextResponse.json({ ok: false, error: validationError }, { status: 400 });
+  if (!body?.quoteCode || !body.token) return NextResponse.json({ok:false,error:"Invalid offer link / Link preventivo non valido"},{status:400});
 
   console.info(`[confirmation] start code=${body!.quoteCode}`);
 
@@ -37,9 +38,13 @@ export async function POST(request: NextRequest) {
   if (!quoteResult.data) return NextResponse.json({ ok: false, error: "Preventivo non trovato o link non valido" }, { status: 404 });
   if (quoteResult.data.deletedAt) return NextResponse.json({ ok: false, error: "Preventivo non disponibile" }, { status: 410 });
 
+  const english = quoteResult.data.language === "en";
+  const validationError = validateConfirmation(body, english);
+  if (validationError) return NextResponse.json({ok:false,error:validationError},{status:400});
+  if (english && missingEnglishTranslations(quoteResult.data).length) return NextResponse.json({ok:false,error:"The English version of this offer is still being prepared. Please contact us."},{status:409});
   const expectedChildren = quoteResult.data.children.length;
   if (expectedChildren > 0 && (body!.children?.filter((c) => Boolean(c.birthDate)).length ?? 0) < expectedChildren) {
-    return NextResponse.json({ ok: false, error: "Inserisci la data di nascita per ogni bambino" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: english ? "Enter the date of birth for each child" : "Inserisci la data di nascita per ogni bambino" }, { status: 400 });
   }
 
   let selection: ReturnType<typeof resolveSelection>;
@@ -51,7 +56,7 @@ export async function POST(request: NextRequest) {
       selectedRooms: body!.selectedRooms,
       error: error instanceof Error ? error.message : String(error)
     });
-    return NextResponse.json({ error: INVALID_SELECTION_MESSAGE }, { status: 400 });
+    return NextResponse.json({ error: english ? "We could not complete your selection. Please contact us on WhatsApp." : INVALID_SELECTION_MESSAGE }, { status: 400 });
   }
   const ageComparison = buildChildrenAgeComparison(quoteResult.data.children, body!.children ?? [], quoteResult.data.arrivalDate);
   const hasAgeMismatch = ageComparison.some((c) => c.ageMismatch);
@@ -81,6 +86,8 @@ export async function POST(request: NextRequest) {
     selectedPaymentPolicy: selection.selectedPaymentPolicy,
     selectedCancellationPolicy: selection.selectedCancellationPolicy,
     metadata: {
+      language: quoteResult.data.language ?? "it",
+      country: typeof body!.country === "string" ? body!.country.trim().slice(0, 100) : "",
       children: body!.children ?? [],
       children_age_comparison: ageComparison,
       has_age_mismatch: hasAgeMismatch,
@@ -130,17 +137,18 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ ok: true, source: result.source, confirmedAt: result.data.confirmedAt });
 }
 
-function validateConfirmation(body: ConfirmationPayload | null) {
+function validateConfirmation(body: ConfirmationPayload | null, english = false) {
   if (!body?.quoteCode || !body.token) return "Link preventivo non valido";
   const required = [
-    body.firstName, body.lastName, body.phone, body.email, body.fiscalCode,
-    body.address, body.city, body.postalCode, body.province
+    body.firstName, body.lastName, body.phone, body.email,
+    body.address, body.city, body.postalCode,
+    ...(english ? [body.country] : [body.fiscalCode, body.province])
   ];
-  if (required.some((value) => typeof value !== "string" || !value.trim())) return "Compila tutti i campi obbligatori";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email!.trim())) return "Email non valida";
-  if (body.fiscalCode?.trim() && body.fiscalCode.trim().length < 11) return "Codice fiscale troppo breve";
-  if (body.postalCode?.trim() && !/^\d{5}$/.test(body.postalCode.trim())) return "CAP non valido";
-  if (!body.acceptedTerms || !body.acceptedPrivacy) return "Accetta condizioni e privacy";
+  if (required.some((value) => typeof value !== "string" || !value.trim())) return english ? "Complete all required fields" : "Compila tutti i campi obbligatori";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email!.trim())) return english ? "Invalid email address" : "Email non valida";
+  if (!english && body.fiscalCode?.trim() && body.fiscalCode.trim().length < 11) return "Codice fiscale troppo breve";
+  if (!english && body.postalCode?.trim() && !/^\d{5}$/.test(body.postalCode.trim())) return "CAP non valido";
+  if (!body.acceptedTerms || !body.acceptedPrivacy) return english ? "Accept the terms and privacy notice to continue" : "Accetta condizioni e privacy";
   return null;
 }
 

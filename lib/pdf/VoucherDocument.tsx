@@ -366,6 +366,7 @@ const styles = StyleSheet.create({
 });
 
 export type VoucherDocumentData = {
+  language?: "it" | "en";
   quoteCode: string;
   clientFullName: string;
   clientEmail?: string;
@@ -403,6 +404,8 @@ function ClientDetail({ label, value }: { label: string; value?: string }) {
 }
 
 export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
+  const en = data.language === "en";
+  const v = (it: string, english: string) => en ? english : it;
   const services = (data.includedServices ?? []).filter(Boolean);
   const hasChips = Boolean(data.roomTypeLabel || data.treatmentLabel);
   const voucherNotes = data.voucherNotes?.trim();
@@ -422,24 +425,24 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
               )}
             </View>
             <View style={styles.headerTitleColumn}>
-              <Text style={styles.headerTitle}>Voucher di Prenotazione</Text>
+              <Text style={styles.headerTitle}>{v('Voucher di Prenotazione','Booking Voucher')}</Text>
             </View>
             <View style={styles.badgeColumn}>
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>CONFERMATO</Text>
+                <Text style={styles.badgeText}>{v('CONFERMATO','CONFIRMED')}</Text>
               </View>
             </View>
           </View>
 
           <View style={styles.headerCodeBlock}>
-            <Text style={styles.headerCodeLabel}>CODICE VOUCHER</Text>
+            <Text style={styles.headerCodeLabel}>{v('CODICE VOUCHER','VOUCHER CODE')}</Text>
             <Text style={styles.headerCode}>{data.quoteCode}-V</Text>
           </View>
         </View>
 
         <View style={styles.body}>
           <View style={styles.hero} wrap={false}>
-            <Text style={styles.eyebrow}>IL TUO SOGGIORNO A ISCHIA</Text>
+            <Text style={styles.eyebrow}>{v('IL TUO SOGGIORNO A ISCHIA','YOUR STAY IN ISCHIA')}</Text>
             {data.hotelName ? <Text style={styles.hotelName}>{data.hotelName}</Text> : null}
 
             {hasChips ? (
@@ -460,25 +463,25 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
             <View style={styles.summaryRow}>
               {data.arrivalDate ? (
                 <View style={styles.summaryBox}>
-                  <Text style={styles.summaryLabel}>Arrivo</Text>
+                  <Text style={styles.summaryLabel}>{v('Arrivo','Arrival')}</Text>
                   <Text style={styles.summaryValue}>{data.arrivalDate}</Text>
                 </View>
               ) : null}
               {data.departureDate ? (
                 <View style={styles.summaryBox}>
-                  <Text style={styles.summaryLabel}>Partenza</Text>
+                  <Text style={styles.summaryLabel}>{v('Partenza','Departure')}</Text>
                   <Text style={styles.summaryValue}>{data.departureDate}</Text>
                 </View>
               ) : null}
               {data.nightsCount ? (
                 <View style={[styles.summaryBox, styles.summaryBoxCompact]}>
-                  <Text style={styles.summaryLabel}>Notti</Text>
+                  <Text style={styles.summaryLabel}>{v('Notti','Nights')}</Text>
                   <Text style={styles.summaryValue}>{data.nightsCount}</Text>
                 </View>
               ) : null}
               {data.guestsLabel ? (
                 <View style={[styles.summaryBox, styles.summaryBoxLast]}>
-                  <Text style={styles.summaryLabel}>Ospiti</Text>
+                  <Text style={styles.summaryLabel}>{v('Ospiti','Guests')}</Text>
                   <Text style={styles.summaryValue}>{data.guestsLabel}</Text>
                 </View>
               ) : null}
@@ -488,16 +491,16 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
           <View style={styles.contentRow} wrap={false}>
             <View style={styles.leftColumn}>
               <View style={[styles.card, styles.cardAccentNavy]}>
-                <Text style={styles.sectionTitle}>Dati cliente</Text>
-                <ClientDetail label="Intestatario" value={data.clientFullName} />
+                <Text style={styles.sectionTitle}>{v('Dati cliente','Guest details')}</Text>
+                <ClientDetail label={v("Intestatario", "Lead guest")} value={data.clientFullName} />
                 <ClientDetail label="Email" value={data.clientEmail} />
-                <ClientDetail label="Telefono" value={data.clientPhone} />
+                <ClientDetail label={v("Telefono", "Phone")} value={data.clientPhone} />
               </View>
             </View>
 
             <View style={styles.rightColumn}>
               <View style={[styles.card, styles.cardAccentGold]}>
-                <Text style={styles.sectionTitle}>Servizi inclusi</Text>
+                <Text style={styles.sectionTitle}>{v('Servizi inclusi','Included services')}</Text>
                 {services.length ? (
                   <View style={styles.servicesRow}>
                     {services.map((service, index) => (
@@ -507,40 +510,40 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
                     ))}
                   </View>
                 ) : (
-                  <Text style={styles.paymentMeta}>Come indicato nella proposta confermata.</Text>
+                  <Text style={styles.paymentMeta}>{v('Come indicato nella proposta confermata.','As stated in your confirmed proposal.')}</Text>
                 )}
               </View>
             </View>
           </View>
 
           <View style={styles.payment} wrap={false}>
-            <Text style={styles.sectionTitle}>Riepilogo pagamento</Text>
+            <Text style={styles.sectionTitle}>{v('Riepilogo pagamento','Payment summary')}</Text>
             <View style={styles.paymentContent}>
               <View style={styles.paymentPaid}>
-                <Text style={styles.paymentEyebrow}>{data.isFullBalancePaid ? "Saldo versato" : "Caparra versata"}</Text>
+                <Text style={styles.paymentEyebrow}>{data.isFullBalancePaid ? v("Saldo versato", "Full payment received") : v("Caparra versata", "Deposit received")}</Text>
                 <Text style={styles.paidAmount}>{data.depositAmountLabel}</Text>
-                <Text style={styles.paymentMeta}>Pagamento registrato il {data.depositPaidAtLabel}</Text>
+                <Text style={styles.paymentMeta}>{v("Pagamento registrato il", "Payment recorded on")} {data.depositPaidAtLabel}</Text>
               </View>
               {!data.isFullBalancePaid && data.balanceAmountLabel ? (
                 data.isBalancePaid ? (
                   <View style={styles.paymentPaid}>
-                    <Text style={styles.paymentEyebrow}>Saldo ricevuto</Text>
+                    <Text style={styles.paymentEyebrow}>{v('Saldo ricevuto','Balance received')}</Text>
                     <Text style={styles.paidAmount}>{data.balanceAmountLabel}</Text>
                     {data.balancePaidAtLabel ? (
-                      <Text style={styles.paymentMeta}>Pagamento registrato il {data.balancePaidAtLabel}</Text>
+                      <Text style={styles.paymentMeta}>{v("Pagamento registrato il", "Payment recorded on")} {data.balancePaidAtLabel}</Text>
                     ) : null}
                   </View>
                 ) : (
                   <View style={styles.paymentBalance}>
-                    <Text style={styles.paymentEyebrow}>{data.balanceTitleLabel ?? "Saldo restante"}</Text>
+                    <Text style={styles.paymentEyebrow}>{data.balanceTitleLabel ?? v("Saldo restante", "Remaining balance")}</Text>
                     <Text style={styles.balanceAmount}>{data.balanceAmountLabel}</Text>
                     {data.balanceDueDateLabel ? (
-                      <Text style={styles.paymentMeta}>Da versare entro il {data.balanceDueDateLabel}</Text>
+                      <Text style={styles.paymentMeta}>{v("Da versare entro il", "Due by")} {data.balanceDueDateLabel}</Text>
                     ) : null}
                     {data.balanceMethodLabel ? (
                       <Text style={styles.paymentMeta}>{data.balanceMethodLabel}</Text>
                     ) : (
-                      <Text style={styles.paymentMeta}>Salvo diverse indicazioni di IschiaStars.</Text>
+                      <Text style={styles.paymentMeta}>{v('Salvo diverse indicazioni di IschiaStars.','Unless otherwise advised by IschiaStars.')}</Text>
                     )}
                   </View>
                 )
@@ -550,24 +553,24 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
 
           {voucherNotes ? (
             <View style={[styles.card, styles.cardAccentGold, { marginBottom: 8 }]} wrap={false}>
-              <Text style={styles.sectionTitle}>Note della prenotazione</Text>
+              <Text style={styles.sectionTitle}>{v('Note della prenotazione','Booking notes')}</Text>
               <Text style={styles.notesText}>{voucherNotes}</Text>
             </View>
           ) : null}
 
           {cancellationPolicy ? (
             <View style={[styles.card, styles.cardAccentNavy, { marginBottom: 8 }]}>
-              <Text style={styles.sectionTitle}>Policy di cancellazione</Text>
+              <Text style={styles.sectionTitle}>{v('Policy di cancellazione','Cancellation policy')}</Text>
               <Text style={styles.notesText}>{cancellationPolicy}</Text>
             </View>
           ) : null}
 
           <View style={styles.notes} wrap={false}>
-            <Text style={styles.notesTitle}>Note importanti</Text>
+            <Text style={styles.notesTitle}>{v('Note importanti','Important information')}</Text>
             <Text style={styles.notesText}>
               {data.isBalancePaid
-                ? "Soggiorno interamente saldato. Extra, tasse di soggiorno e servizi non indicati nel voucher sono esclusi. Presentare il voucher al check-in con documento valido."
-                : "Il saldo sarà versato direttamente in struttura, salvo diverse indicazioni. Extra, tasse di soggiorno e servizi non indicati nel voucher sono esclusi. Presentare il voucher al check-in con documento valido."}
+                ? v("Soggiorno interamente saldato. Extra, tasse di soggiorno e servizi non indicati nel voucher sono esclusi. Presentare il voucher al check-in con documento valido.", "Your stay is fully paid. Extras, tourist taxes and services not listed in this voucher are excluded. Present this voucher and valid identification at check-in.")
+                : v("Il saldo sarà versato direttamente in struttura, salvo diverse indicazioni. Extra, tasse di soggiorno e servizi non indicati nel voucher sono esclusi. Presentare il voucher al check-in con documento valido.", "The balance is payable as specified in your booking payment conditions. Extras, tourist taxes and services not listed in this voucher are excluded. Present this voucher and valid identification at check-in.")}
             </Text>
           </View>
         </View>
@@ -575,7 +578,7 @@ export function VoucherDocument({ data }: { data: VoucherDocumentData }) {
         <View style={styles.footer}>
           <View>
             <Text style={styles.footerBrand}>IschiaStars</Text>
-            <Text style={styles.footerContact}>Assistenza WhatsApp +{data.whatsappNumber}</Text>
+            <Text style={styles.footerContact}>{v("Assistenza WhatsApp", "WhatsApp support")} +{data.whatsappNumber}</Text>
           </View>
           <Text style={styles.footerCode}>VOUCHER {data.quoteCode}-V</Text>
         </View>

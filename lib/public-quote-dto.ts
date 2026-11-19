@@ -1,3 +1,4 @@
+import { missingEnglishTranslations, requireEnglishText } from "@/lib/i18n/quote-language";
 import { getQuoteCostBreakdown } from "@/lib/confirmation-additional-services";
 import { getEffectiveHotelOptions } from "@/lib/repositories/shared";
 import type { Quote, TreatmentOption } from "@/lib/types";
@@ -35,6 +36,8 @@ export type PublicQuoteHotelOptionDTO = {
 };
 
 export type PublicQuoteDTO = {
+  language?: "it" | "en";
+  englishReady?: boolean;
   id: string;
   code: string;
   token: string;
@@ -60,7 +63,9 @@ export type PublicQuoteDTO = {
 };
 
 export function toPublicQuoteDTO(quote: Quote): PublicQuoteDTO {
-  return {
+  const dto: PublicQuoteDTO = {
+    language: quote.language ?? "it",
+    englishReady: quote.language !== "en" || missingEnglishTranslations(quote).length === 0,
     id: quote.id,
     code: quote.code,
     token: quote.token,
@@ -116,4 +121,16 @@ export function toPublicQuoteDTO(quote: Quote): PublicQuoteDTO {
       })),
     })),
   };
+  if (quote.language !== "en" || !dto.englishReady) return dto;
+  const t = (value?: string | null) => requireEnglishText(quote, value);
+  dto.customerNotes = t(dto.customerNotes);
+  dto.hotelOptions = dto.hotelOptions.map(option => ({ ...option,
+    hotelReason: t(option.hotelReason), roomTypeLabel: t(option.roomTypeLabel),
+    breakfastDetails: t(option.breakfastDetails), halfBoardDetails: t(option.halfBoardDetails), fullBoardDetails: t(option.fullBoardDetails),
+    includedServices: t(option.includedServices), balanceMethod: t(option.balanceMethod), paymentPolicy: t(option.paymentPolicy),
+    cancellationPolicy: t(option.cancellationPolicy), paymentNotes: t(option.paymentNotes), notes: t(option.notes), commitmentNote: t(option.commitmentNote),
+    treatments: option.treatments.map(treatment => ({ ...treatment, label: t(treatment.label) }))
+  }));
+  if (dto.costBreakdown) dto.costBreakdown.services = dto.costBreakdown.services.map(service => ({...service, label:t(service.label)}));
+  return dto;
 }

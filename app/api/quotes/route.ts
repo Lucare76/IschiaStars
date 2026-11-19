@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
 
   const accessToken = request.cookies.get(ADMIN_ACCESS_COOKIE)?.value;
   const result = await createQuoteFromRequest({
+    language: body.language === "en" ? "en" : "it",
     quoteRequestId: body.quoteRequestId,
     code: body.code,
     publicToken: body.publicToken,

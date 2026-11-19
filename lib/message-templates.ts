@@ -1,3 +1,4 @@
+import { englishQuoteWhatsapp } from "@/lib/i18n/english-client-messages";
 import { formatDateRome } from "@/lib/date-format";
 import { Quote, QuoteHotelOption } from "@/lib/types";
 import { getMandatoryHotelFeeNote } from "@/lib/hotel-policies";
@@ -154,6 +155,7 @@ export function adminQuoteWhatsappMessage(input: {
   quoteUrl: string;
 }) {
   const { quote, options, quoteUrl } = input;
+  if (quote.language === "en") return englishQuoteWhatsapp(quote, options, quoteUrl);
 
   const stayLine = formatWADateRange(quote.arrivalDate, quote.departureDate);
 

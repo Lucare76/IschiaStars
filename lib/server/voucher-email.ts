@@ -1,3 +1,4 @@
+import { localizedVoucherData } from "@/lib/i18n/english-voucher";
 import { getBalancePaymentSchedule } from "@/lib/hotel-policies";
 import { generateVoucherPdf } from "@/lib/pdf/generateVoucher";
 import { sendVoucherEmailToClient } from "@/lib/server/brevo";
@@ -54,7 +55,7 @@ export async function generateAndSendVoucherEmail(
     }
 
     const balanceSchedule = getBalancePaymentSchedule(confirmation.selectedBalanceMethod, quote.arrivalDate);
-    const pdfBuffer = await generateVoucherPdf({
+    const pdfBuffer = await generateVoucherPdf(localizedVoucherData(quote, {
       quoteCode: quote.code,
       clientFullName: formatClientName(confirmation.firstName ?? quote.customerFirstName, confirmation.lastName ?? quote.customerLastName),
       clientEmail: confirmation.email ?? quote.customerEmail,
@@ -79,7 +80,7 @@ export async function generateAndSendVoucherEmail(
       cancellationPolicy: confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy,
       voucherNotes: confirmation.voucherNotes,
       whatsappNumber: ischiastarsWhatsappNumber()
-    });
+    }));
 
     const sent = await sendVoucherEmailToClient(quote, pdfBuffer.toString("base64"));
     if (!sent) return { sent: false, error: "Invio email voucher non riuscito." };

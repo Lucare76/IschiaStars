@@ -48,6 +48,11 @@ export async function generateQuoteMetadata(code: string, token?: string): Promi
 }
 
 export function generateQuoteMetadataFromQuote(quote: Quote): Metadata {
+  if (quote.language === "en") {
+    const title = "Your Ischia Stars holiday offer";
+    const description = "Your personalised Ischia holiday proposals, booking request and stay details.";
+    return {title,description,robots:{index:false,follow:false},openGraph:{title,description,locale:"en_GB",siteName:"IschiaStars",images:[{url:absoluteUrl("/ischiastars-logo.png")}]},twitter:{card:"summary",title,description}};
+  }
   const hotelOptions = quote.hotelOptions.length ? quote.hotelOptions : [];
   const hotelGroups = new Map<number, typeof hotelOptions>();
   for (const option of hotelOptions) {

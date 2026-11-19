@@ -1,4 +1,5 @@
 "use client";
+import { QuoteLanguageEditor } from "@/components/QuoteLanguageEditor";
 
 import { roomLabelForOccupancy } from "@/lib/room-occupancy-default";
 import Link from "next/link";
@@ -471,6 +472,7 @@ export function QuoteDetailEditor({ quote, hotels, paymentSettings, featureFlags
 
   return (
     <div className="space-y-6">
+      <QuoteLanguageEditor quote={currentQuote} onSaved={setCurrentQuote} />
       {currentQuote.confirmation ? <ConfirmationAvailabilityPanel voucherNoteChips={quoteChipSettings.voucherNoteChips} quote={currentQuote} paymentSettings={paymentSettings} featureFlags={featureFlags} onConfirmationUpdated={setCurrentQuote} /> : null}
 
       {reactionEvents.length > 0 ? (

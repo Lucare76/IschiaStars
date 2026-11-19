@@ -1,3 +1,4 @@
+import { buildEnglishClientEmail, type EnglishClientMessageKind } from "@/lib/i18n/english-client-messages";
 import { getQuoteCostBreakdown } from "@/lib/confirmation-additional-services";
 import { sendSupplierSmtp, supplierSmtpEnabled } from "@/lib/server/supplier-smtp";
 import { buildHotelNotes } from "@/lib/hotel-notes";
@@ -238,6 +239,7 @@ function emailSharedStyles(): string {
 export type SendQuoteEmailResult = { sent: boolean; skipReason?: string };
 
 export async function sendQuoteEmailToClient(quote: Quote): Promise<SendQuoteEmailResult> {
+  if (quote.language === "en") return {sent: await sendEnglishLocalizedEmail(quote, "quote")};
   const missingEnvReason = brevoMissingEnvReason();
   if (missingEnvReason) {
     console.info(`[brevo] skipped quote email code=${quote.code} reason=disabled_or_missing_env detail=${missingEnvReason}`);
@@ -1004,6 +1006,7 @@ function buildFinalConfirmationEmailHtml(quote: Quote, details: FinalConfirmatio
 }
 
 export async function sendFinalConfirmationEmailToClient(quote: Quote, details: FinalConfirmationEmailDetails): Promise<boolean> {
+  if (quote.language === "en") return sendEnglishLocalizedEmail(quote, "confirmation", details);
   const missingEnvReason = brevoMissingEnvReason();
   if (missingEnvReason) {
     console.info(`[brevo] skipped final confirmation code=${quote.code} reason=${missingEnvReason}`);
@@ -1121,6 +1124,7 @@ export async function sendFinalConfirmationEmailToClient(quote: Quote, details: 
 }
 
 export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string): Promise<boolean> {
+  if (quote.language === "en") return sendEnglishLocalizedEmail(quote, "voucher", {}, pdfBase64);
   const missingEnvReason = brevoMissingEnvReason();
   if (missingEnvReason) {
     console.info(`[brevo] skipped voucher email code=${quote.code} reason=${missingEnvReason}`);
@@ -1284,6 +1288,7 @@ export async function sendVoucherEmailToClient(quote: Quote, pdfBase64: string):
 }
 
 export function buildDepositBalanceSummaryEmail(quote: Quote): DepositBalanceSummaryEmailPreview | null {
+  if (quote.language === "en") return quote.confirmation?.depositPaidAt && !quote.confirmation.balancePaidAt ? buildEnglishClientEmail(quote, "balance", absoluteShortPublicQuoteUrl(quote)) : null;
   const confirmation = quote.confirmation;
   if (!confirmation?.depositPaidAt || confirmation.balancePaidAt) return null;
 
@@ -1672,6 +1677,7 @@ export async function sendSupplierConfirmationEmail(params: {
 }
 
 export async function sendAvailabilityUnavailableEmailToClient(quote: Quote, details: AvailabilityUnavailableEmailDetails): Promise<boolean> {
+  if (quote.language === "en") return sendEnglishLocalizedEmail(quote, "unavailable", details);
   const missingEnvReason = brevoMissingEnvReason();
   if (missingEnvReason) {
     console.info(`[brevo] skipped unavailable email code=${quote.code} reason=${missingEnvReason}`);
@@ -1749,6 +1755,7 @@ export type SendFollowUpEmailResult = { sent: boolean; skipReason?: string; erro
 export type SendInterestedFollowUpEmailResult = { sent: boolean; skipReason?: string; error?: string };
 
 export async function sendInterestedFollowUpEmailToClient(quote: Quote, hotelName: string): Promise<SendInterestedFollowUpEmailResult> {
+  if (quote.language === "en") return {sent: await sendEnglishLocalizedEmail(quote, "interested")};
   const missingEnvReason = brevoMissingEnvReason();
   if (missingEnvReason) {
     console.info(`[brevo] skipped interested follow-up email code=${quote.code} reason=${missingEnvReason}`);
@@ -1868,6 +1875,7 @@ function normalizeHotelNameForEmail(value: string) {
 }
 
 export async function sendFollowUpEmailToClient(quote: Quote): Promise<SendFollowUpEmailResult> {
+  if (quote.language === "en") return {sent: await sendEnglishLocalizedEmail(quote, "follow_up")};
   const missingEnvReason = brevoMissingEnvReason();
   if (missingEnvReason) {
     console.info(`[brevo] skipped follow-up email code=${quote.code} reason=${missingEnvReason}`);
@@ -1986,4 +1994,14 @@ function quoteCostBreakdownText(quote: Quote) {
 function quoteCostBreakdownHtml(quote: Quote) {
   const text = quoteCostBreakdownText(quote);
   return text ? `<div style="margin:20px 0;padding:16px;background:#F4F8FC;border:1px solid #D9E5EF;border-radius:10px;font-size:14px;line-height:1.8;color:#1B3A5C;">${escapeHtml(text).replace(/\n/g, "<br>")}</div>` : "";
+}
+
+async function sendEnglishLocalizedEmail(quote: Quote, kind: EnglishClientMessageKind, details: {notes?:string;depositDueAt?:string;paymentSettingsSnapshot?:Record<string,unknown>;message?:string} = {}, pdfBase64?:string):Promise<boolean> {
+  if (brevoMissingEnvReason()) return false;
+  const message = buildEnglishClientEmail(quote, kind, absoluteShortPublicQuoteUrl(quote), details);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(message.to.email)) return false;
+  const result = await sendBrevoEmailWithResult({ ...message, to:[message.to], replyTo:{email:process.env.BREVO_FROM_EMAIL || "info@ischiastars.it",name:process.env.BREVO_FROM_NAME || "IschiaStars"}, ...(pdfBase64 ? {attachment:[{name:`voucher-${quote.code}.pdf`,content:pdfBase64}]} : {}) });
+  const types = {quote:"quote_to_client",confirmation:"final_confirmation_to_client",voucher:"voucher_to_client",balance:"final_confirmation_to_client",follow_up:"follow_up_to_client",interested:"follow_up_to_client",unavailable:"unavailability_to_client"} as const;
+  await logEmailAttempt({quoteId:quote.id,confirmationId:quote.confirmation?.id,emailType:types[kind],recipientEmail:message.to.email,subject:message.subject,brevoMessageId:result.messageId,ok:result.ok,errorMessage:result.error});
+  return result.ok;
 }

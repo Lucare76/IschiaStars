@@ -1,3 +1,4 @@
+import { localizedVoucherData } from "@/lib/i18n/english-voucher";
 import { NextRequest, NextResponse } from "next/server";
 import { generateVoucherPdf } from "@/lib/pdf/generateVoucher";
 import { getQuoteConfirmationById } from "@/lib/repositories/quoteConfirmations";
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     && depositAmount >= totalPrice
     && (balanceAmount == null || Number(balanceAmount) <= 0);
 
-  const pdfBuffer = await generateVoucherPdf({
+  const pdfBuffer = await generateVoucherPdf(localizedVoucherData(quote, {
     quoteCode: quote.code,
     clientFullName: formatClientName(confirmation.firstName ?? quote.customerFirstName, confirmation.lastName ?? quote.customerLastName),
     clientEmail: confirmation.email ?? quote.customerEmail,
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     cancellationPolicy: confirmation.selectedCancellationPolicy ?? quote.cancellationPolicy,
     voucherNotes: confirmation.voucherNotes,
     whatsappNumber: ischiastarsWhatsappNumber()
-  });
+  }));
 
   return new NextResponse(new Uint8Array(pdfBuffer), {
     headers: {
