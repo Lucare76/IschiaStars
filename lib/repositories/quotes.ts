@@ -1,3 +1,4 @@
+import { quoteLanguage, normalizeTranslations } from "@/lib/i18n/quote-language";
 import { unstable_noStore as noStore } from "next/cache";
 import { hotels } from "@/lib/mock-data";
 import { addDemoQuote, allDemoQuotes, excludeDemoQuoteFromStats, isQuoteConfirmedInDemo, markQuoteConfirmed as markDemoQuoteConfirmed, restoreDemoQuote, softDeleteDemoQuote, updateDemoQuote } from "@/lib/demo-store";
@@ -215,6 +216,8 @@ function demoSort(quotes: Quote[], sort: string): Quote[] {
 }
 
 export type QuoteInput = {
+  language?: "it" | "en";
+  englishTranslations?: Record<string, string>;
   quoteRequestId?: string;
   code?: string;
   publicToken?: string;
@@ -515,6 +518,8 @@ export async function createQuoteFromRequest(input: QuoteInput, _options: { acce
       token: normalizedInput.publicToken,
       publicShortCode: secureShortCode(),
       requestId: normalizedInput.quoteRequestId ?? "",
+      language: quoteLanguage(normalizedInput.language),
+      englishTranslations: normalizeTranslations(normalizedInput.englishTranslations),
       customerFirstName: normalizedInput.clientFirstName,
       customerLastName: normalizedInput.clientLastName,
       customerEmail: normalizedInput.clientEmail,
@@ -563,8 +568,8 @@ export async function createQuoteFromRequest(input: QuoteInput, _options: { acce
       excluded_from_stats: true
     } : {})
   };
-  const { data, error } = await supabase.rpc("create_quote_with_options", {
-    p_quote_data: row,
+  const { data, error } = await supabase.rpc(normalizedInput.language === "en" ? "create_localized_quote_with_options" : "create_quote_with_options", {
+    p_quote_data: { ...row, language: quoteLanguage(input.language), english_translations: normalizeTranslations(input.englishTranslations) },
     p_children_data: (normalizedInput.children ?? []).map((child) => ({
       birth_date: child.birthDate || null,
       age: child.age ?? null
@@ -784,6 +789,8 @@ export async function duplicateQuote(id: string): Promise<RepositoryResult<Quote
     }));
 
   return createQuoteFromRequest({
+    language: quote.language,
+    englishTranslations: quote.englishTranslations,
     quoteRequestId: quote.requestId || undefined,
     clientFirstName: quote.customerFirstName,
     clientLastName: quote.customerLastName,

@@ -7,6 +7,7 @@ import { FormEvent, useState } from "react";
 import { adminApiErrorMessage, adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
 
 type ManualVoucherPayload = {
+  language: "it" | "en";
   quoteCode: string;
   clientFullName: string;
   clientEmail: string;
@@ -30,6 +31,7 @@ type ManualVoucherPayload = {
 const today = new Date().toISOString().slice(0, 10);
 
 const initialForm: ManualVoucherPayload = {
+  language: "it",
   quoteCode: "",
   clientFullName: "",
   clientEmail: "",
@@ -95,6 +97,10 @@ export function ManualVoucherForm({ voucherNoteChips = defaultQuoteChipSettings.
   return (
     <form onSubmit={onSubmit} className="grid gap-5">
       <section className="rounded-2xl bg-white/90 p-5 shadow-soft">
+        <label className="mb-4 block text-sm font-bold text-ischia-navy">Lingua del voucher
+          <select className="ml-3 rounded-xl border p-2" value={form.language} onChange={(e) => setForm(current => ({ ...current, language: e.target.value as "it" | "en", balanceMethodLabel: e.target.value === "en" && current.balanceMethodLabel === initialForm.balanceMethodLabel ? "Balance payable directly at the hotel." : current.balanceMethodLabel }))}><option value="it">Italiano</option><option value="en">English</option></select>
+          {form.language === "en" ? <span className="mt-2 block text-xs font-normal">Titoli e date saranno in inglese. Inserisci camera, trattamento, servizi, note e condizioni direttamente in inglese.</span> : null}
+        </label>
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Codice voucher" value={form.quoteCode} onChange={(value) => updateField("quoteCode", value)} placeholder="Es. OLD-2024-018" />
           <Field label="Cliente" value={form.clientFullName} onChange={(value) => updateField("clientFullName", value)} placeholder="Nome e cognome" required />

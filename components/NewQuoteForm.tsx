@@ -188,6 +188,7 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
         adults: Number(formData.get("adults") ?? 2),
         children,
         rooms: Number(formData.get("rooms") ?? 1),
+        language: formData.get("language") === "en" ? "en" : "it",
         quoteRequestId: initialRequest?.id,
         hotelRequested: formData.get("hotelRequested"),
         hotelId: hotelOptions[0]?.hotelId || undefined,
@@ -294,6 +295,12 @@ export function NewQuoteForm({ hotels, initialRequest, requestedRequestId, isLab
         ) : null}
 
         <Section title="Cliente e soggiorno">
+          <label className="mb-3 block text-sm font-bold text-ischia-navy">Lingua cliente
+            <select name="language" defaultValue={initialRequest?.language ?? "it"} className="mt-1 block rounded-xl border border-ischia-blue/20 bg-white px-3 py-2">
+              <option value="it">Italiano</option><option value="en">English</option>
+            </select>
+            <span className="mt-1 block text-xs font-normal">Per English, dopo il salvataggio controlla i testi nella sezione Versione inglese.</span>
+          </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <ClientSearch onSelect={(c) => { setFirstName(c.firstName); setLastName(c.lastName); setPhone(c.phone); setEmail(c.email); }} />
             <Input name="firstName" label="Nome cliente" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />

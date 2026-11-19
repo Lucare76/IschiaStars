@@ -1,9 +1,11 @@
+import { englishDate, englishMoney } from "@/lib/i18n/quote-language";
 import { NextRequest, NextResponse } from "next/server";
 import { generateVoucherPdf } from "@/lib/pdf/generateVoucher";
 import { requireAdminApiAccess } from "@/lib/server/auth-guard";
 import { formatCurrency, formatDate, formatDateTime, ischiastarsWhatsappNumber } from "@/lib/utils";
 
 type ManualVoucherBody = {
+  language?: unknown;
   quoteCode?: unknown;
   clientFullName?: unknown;
   clientEmail?: unknown;
@@ -31,6 +33,9 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as ManualVoucherBody | null;
   if (!body) return NextResponse.json({ ok: false, error: "Dati voucher non validi" }, { status: 400 });
 
+  const english = body.language === "en";
+  const formatVoucherDate = english ? englishDate : formatDate;
+  const formatVoucherAmount = english ? englishMoney : formatCurrency;
   const clientFullName = cleanString(body.clientFullName);
   const hotelName = cleanString(body.hotelName);
   const arrivalDate = cleanString(body.arrivalDate);
@@ -56,10 +61,11 @@ export async function POST(request: NextRequest) {
   const services = splitLines(body.includedServices).slice(0, 18);
 
   const guestsParts: string[] = [];
-  if (adults) guestsParts.push(`${adults} ${adults === 1 ? "adulto" : "adulti"}`);
-  if (children) guestsParts.push(`${children} ${children === 1 ? "bambino" : "bambini"}`);
+  if (adults) guestsParts.push(`${adults} ${english ? (adults === 1 ? "adult" : "adults") : adults === 1 ? "adulto" : "adulti"}`);
+  if (children) guestsParts.push(`${children} ${english ? (children === 1 ? "child" : "children") : children === 1 ? "bambino" : "bambini"}`);
 
   const pdfBuffer = await generateVoucherPdf({
+    language: english ? "en" : "it",
     quoteCode,
     clientFullName,
     clientEmail: cleanString(body.clientEmail),
@@ -67,14 +73,14 @@ export async function POST(request: NextRequest) {
     hotelName,
     roomTypeLabel: cleanString(body.roomTypeLabel),
     treatmentLabel: cleanString(body.treatmentLabel),
-    arrivalDate: formatDate(arrivalDate),
-    departureDate: formatDate(departureDate),
+    arrivalDate: formatVoucherDate(arrivalDate),
+    departureDate: formatVoucherDate(departureDate),
     nightsCount,
     guestsLabel: guestsParts.length ? guestsParts.join(", ") : undefined,
     includedServices: services,
-    depositAmountLabel: depositAmount != null ? formatCurrency(depositAmount) : "Da verificare",
+    depositAmountLabel: depositAmount != null ? formatVoucherAmount(depositAmount) : "Da verificare",
     depositPaidAtLabel: isValidDate(depositPaidAt) ? formatDateTime(depositPaidAt) : formatDateTime(new Date().toISOString()),
-    balanceAmountLabel: balanceAmount != null ? formatCurrency(balanceAmount) : undefined,
+    balanceAmountLabel: balanceAmount != null ? formatVoucherAmount(balanceAmount) : undefined,
     balanceMethodLabel: cleanString(body.balanceMethodLabel),
     cancellationPolicy: cleanString(body.cancellationPolicy),
     voucherNotes: cleanString(body.voucherNotes),

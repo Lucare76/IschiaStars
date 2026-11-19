@@ -1,3 +1,4 @@
+import { quoteLanguage, normalizeTranslations } from "@/lib/i18n/quote-language";
 import { hotels } from "@/lib/mock-data";
 import { Hotel, Quote, QuoteHotelOption, QuoteStatus, TransportOffer, TreatmentOption } from "@/lib/types";
 
@@ -153,6 +154,8 @@ export function mapQuote(
     createdAt: String(row.created_at ?? ""),
     sentAt: row.sent_at ? String(row.sent_at) : undefined,
     excludedFromStats: Boolean(row.excluded_from_stats ?? false),
+    language: quoteLanguage(quoteMetadata.language),
+    englishTranslations: normalizeTranslations(quoteMetadata.english_translations),
     isLabTest: quoteMetadata.is_lab_test === true,
     deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
     confirmation: row.confirmed_at || confirmationRow

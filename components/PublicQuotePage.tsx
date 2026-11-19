@@ -1,3 +1,4 @@
+import { EnglishQuotePage } from "@/components/english/EnglishQuotePage";
 import { QuoteCostBreakdown } from "@/components/QuoteCostBreakdown";
 import type { ReactNode } from "react";
 import { IschiaStarsLogo } from "@/components/IschiaStarsLogo";
@@ -33,6 +34,7 @@ export function PublicQuotePage({
   openingSource?: string;
   contentSettings?: QuoteContentSettings;
 }) {
+  if (quote.language === "en") return <EnglishQuotePage quote={quote} trackOpening={trackOpening} openingSource={openingSource} />;
   const guests = `${quote.adults} adulti${quote.children.length ? `, ${quote.children.length} bambini` : ""}`;
   const hasMultipleOptions = quote.hotelOptions.length > 1;
   const ischiaHeroImage =

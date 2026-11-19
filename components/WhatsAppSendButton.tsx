@@ -5,24 +5,29 @@ import { useRouter } from "next/navigation";
 import { Quote } from "@/lib/types";
 import { trackQuoteEvent } from "@/lib/client-tracking";
 import { adminApiFetch, readAdminApiJson } from "@/lib/admin-api-client";
-import { normalizeItalianPhone, whatsappQuoteMessage } from "@/lib/utils";
+import { normalizeQuotePhone, whatsappQuoteMessage } from "@/lib/utils";
 
 export function WhatsAppSendButton({ quote, label = "Invia su WhatsApp" }: { quote: Quote; label?: string }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleClick() {
     trackQuoteEvent({ quoteCode: quote.code, token: quote.token }, "whatsapp_clicked", { placement: "admin_quote_card" });
+    setError("");
+    let phone = "";
     let message = "";
     try {
       message = whatsappQuoteMessage(quote);
+      phone = normalizeQuotePhone(quote);
     } catch (err) {
-      console.error("[WhatsAppSendButton] failed to build message:", err);
+      setError(err instanceof Error ? err.message : "Messaggio non disponibile");
+      return;
     }
     if (message) await copyToClipboard(message);
     setCopied(true);
     setTimeout(() => setCopied(false), 4000);
-    window.open(buildWhatsAppUrl(quote.customerPhone), "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/${phone}`, "_blank", "noopener,noreferrer");
 
     if (quote.status === "in_lavorazione") {
       const response = await adminApiFetch(`/api/quotes/${quote.id}`, {
@@ -38,18 +43,14 @@ export function WhatsAppSendButton({ quote, label = "Invia su WhatsApp" }: { quo
   }
 
   return (
-    <button
+    <span><button
       className="focus-ring rounded-full bg-ischia-leaf px-4 py-2 text-center text-sm font-black text-white shadow-sm transition hover:brightness-95"
       onClick={() => void handleClick()}
       type="button"
     >
       {copied ? "✓ Copiato: incolla su WhatsApp" : label}
-    </button>
+    </button>{error ? <span role="alert" className="mt-1 block text-xs text-rose-700">{error}</span> : null}</span>
   );
-}
-
-function buildWhatsAppUrl(phone: string) {
-  return `https://wa.me/${normalizeItalianPhone(phone)}`;
 }
 
 async function copyToClipboard(message: string) {

@@ -76,6 +76,13 @@ export function normalizeItalianPhone(phone: string) {
   if (digits.startsWith("00")) return digits.slice(2);
   return `39${digits}`;
 }
+export function normalizeQuotePhone(quote: Pick<Quote, "language" | "customerPhone">) {
+  if (quote.language !== "en") return normalizeItalianPhone(quote.customerPhone);
+  const value = quote.customerPhone.trim();
+  if (!/^(\+|00)/.test(value)) throw new Error("Per clienti esteri inserisci il prefisso internazionale, ad esempio +44.");
+  return value.replace(/^00/, "").replace(/\D/g, "");
+}
+
 export function whatsappQuoteMessage(quote: Quote) {
   const options = getEffectiveHotelOptions(quote);
   return adminQuoteWhatsappMessage({
@@ -86,7 +93,7 @@ export function whatsappQuoteMessage(quote: Quote) {
 }
 
 export function whatsappQuoteLink(quote: Quote) {
-  return `https://wa.me/${normalizeItalianPhone(quote.customerPhone)}?text=${encodeURIComponent(whatsappQuoteMessage(quote))}`;
+  return `https://wa.me/${normalizeQuotePhone(quote)}?text=${encodeURIComponent(whatsappQuoteMessage(quote))}`;
 }
 export function ischiastarsWhatsappNumber() {
   const fallback = "393717590017";
