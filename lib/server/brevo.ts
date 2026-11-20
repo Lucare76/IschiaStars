@@ -1527,6 +1527,14 @@ export async function sendSupplierConfirmationEmail(params: {
             si richiede disponibilità come segue presso la vostra struttura.
           </p>
 
+          ${notes?.trim() ? `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#FFF3CD;border:2px solid #D99000;border-left:6px solid #D99000;border-radius:12px;">
+            <tr><td style="padding:18px 20px;">
+              <div style="font-size:16px;font-weight:800;line-height:1.4;text-transform:uppercase;color:#704600;">IMPORTANTE — NOTE DA LEGGERE</div>
+              <div style="margin-top:10px;font-size:18px;font-weight:700;line-height:1.6;white-space:pre-line;color:#25364A;">${escapeHtml(notes.trim()).replace(/\r?\n/g, "<br>")}</div>
+            </td></tr>
+          </table>` : ""}
+
           <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #D9E2EC;border-radius:12px;">
             <tr>
               <td style="background:#F6F9FC;padding:16px 18px;">
@@ -1576,15 +1584,6 @@ export async function sendSupplierConfirmationEmail(params: {
             <tr><td style="padding:14px 18px;">${roomCostRowsHtml}</td></tr>
           </table>` : ""}
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;background:#FFFDF7;border:1px solid #E9DFC0;border-radius:12px;">
-            <tr>
-              <td style="padding:15px 18px;">
-                <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#8A6F2E;">Note</div>
-                <div style="margin-top:5px;white-space:pre-line;color:#4C4C45;">${notes?.trim() ? escapeHtml(notes.trim()) : "Nessuna nota aggiuntiva."}</div>
-              </td>
-            </tr>
-          </table>
-
           <p style="margin:0 0 8px;font-weight:800;color:#1B3A5C;">Restiamo in attesa di Vs. gradita conferma.</p>
           <p style="margin:0 0 24px;">Grazie per la disponibilità.</p>
 
@@ -1623,6 +1622,7 @@ export async function sendSupplierConfirmationEmail(params: {
   const text = [
     `Buongiorno, si richiede disponibilità come segue presso la vostra struttura: ${hotelDisplay}`,
     "",
+    ...(notes?.trim() ? ["IMPORTANTE — NOTE DA LEGGERE", notes.trim(), ""] : []),
     "Signori:",
     `${fullName}${phone ? ` ${phone}` : ""}`,
     "",
@@ -1635,9 +1635,6 @@ export async function sendSupplierConfirmationEmail(params: {
     ...(netPriceFormatted ? [`${supplierNetLabel}: ${netPriceFormatted}`] : []),
     ...(commissionFormatted ? [`Commissione trattenuta: ${commissionFormatted}`] : []),
     ...(roomCostRowsText.length ? ["", ...roomCostRowsText] : []),
-    "",
-    "Note:",
-    ...(notes?.trim() ? [notes.trim()] : []),
     "",
     "Restiamo in attesa di Vs. gradita conferma.",
     "",
