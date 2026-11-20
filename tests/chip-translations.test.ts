@@ -8,7 +8,7 @@ for (const settings of [configured, defaultQuoteChipSettings]) {
     if (Array.isArray(list)) for (const item of list) sources.push(typeof item === "string" ? item : item.label);
   }
 }
-const unique = [...new Set(sources)];
+const unique = Array.from(new Set(sources));
 const missing = unique.filter(source => translateQuoteText(source) === undefined);
 assert.deepEqual(missing, []);
 for (const source of unique) {

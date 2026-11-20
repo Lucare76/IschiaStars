@@ -435,6 +435,15 @@ export function QuoteProposalSection({
         </a>
       </div>
 
+      {/* Conferma form */}
+      <div id="conferma" className="no-print">
+        <ConfirmQuoteForm
+          quote={quote}
+          selectedRooms={selectedRooms}
+          confirmationFieldsRef={confirmationFieldsRef}
+        />
+      </div>
+
       {travelServices.length > 0 ? (
         <div className="no-print rounded-2xl bg-ischia-mist p-6 ring-1 ring-ischia-blue/15">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-ischia-blue">{contentSettings.travelEyebrow}</p>
@@ -463,15 +472,6 @@ export function QuoteProposalSection({
           <p className="mt-2 text-sm font-semibold text-ischia-navy">{contentSettings.travelCta}</p>
         </div>
       ) : null}
-
-      {/* Conferma form */}
-      <div id="conferma" className="no-print">
-        <ConfirmQuoteForm
-          quote={quote}
-          selectedRooms={selectedRooms}
-          confirmationFieldsRef={confirmationFieldsRef}
-        />
-      </div>
     </div>
   );
 }
